@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Broadcasting - Python Data Science</title>
+    <link href="styles/main.css" rel="stylesheet"/>
+    <link href="/favicon.png" rel="icon" type="image/png"/>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true });
+    </script>
+    <style>
+        .breadcrumb {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+        }
+        
+        .breadcrumb a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+        
+        .navigation-links {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2rem 0;
+            margin-top: 3rem;
+            border-top: 2px solid #e0e0e0;
+        }
+        
+        .navigation-links a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .navigation-links a:hover {
+            background: #f0f0f0;
+        }
+        
+        .nav-prev, .nav-next {
+            flex: 1;
+        }
+        
+        .nav-next {
+            text-align: right;
+        }
+        
+        .nav-home {
+            text-align: center;
+        }
+        
+        canvas {
+            display: block;
+            margin: 20px auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+        }
+        
+        .broadcasting-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .broadcasting-example {
+            padding: 15px;
+            border: 2px solid #4ecdc4;
+            border-radius: 8px;
+            background: #f0ffff;
+        }
+        
+        .shape-box {
+            display: inline-block;
+            padding: 5px 10px;
+            background: #667eea;
+            color: white;
+            border-radius: 4px;
+            margin: 2px;
+            font-family: monospace;
+        }
+        
+        .rule-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .rule-card h3 {
+            background: none;
+            color: white;
+            margin: 0 0 10px 0;
+            padding: 0;
+        }
+        
+        .visual-array {
+            display: inline-block;
+            margin: 10px;
+            padding: 10px;
+            border: 2px solid #333;
+            border-radius: 5px;
+            background: #f9f9f9;
+            font-family: monospace;
+        }
+        
+        .broadcast-animation {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .success-badge {
+            background: #51cf66;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+        
+        .error-badge {
+            background: #ff6b6b;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="breadcrumb">
+        <a href="index.html">Home</a> &gt; 
+        <a href="index.html#foundation">Foundation Module</a> &gt; 
+        <a href="index.html#numpy-fundamentals">NumPy Fundamentals</a> &gt;
+        <span>Broadcasting</span>
+    </nav>
+
+    <h1>📡 Broadcasting: NumPy's Magic Trick for Dimension Mismatches</h1>
+    
+    <p>Imagine you're a DJ mixing tracks. You have a 3-minute beat and a 10-second sound effect. To mix them, you don't need to extend the sound effect manually to 3 minutes - your mixing board automatically repeats it! That's broadcasting! 🎵 NumPy automatically "stretches" smaller arrays to match larger ones, enabling elegant operations between arrays of different shapes.</p>
+
+    <h2>The Broadcasting Miracle: From Confusion to Clarity 🌟</h2>
+    
+    <p>Broadcasting is what happens when you add a single number to an entire array and it "just works." But it's so much more powerful than that! It's a set of rules that NumPy follows to make arrays with different shapes compatible for element-wise operations. Think of it as NumPy's automatic dimension negotiator.</p>
+
+    <div class="mermaid">
+    graph TB
+        A[Two Arrays] --> B{Same Shape?}
+        B -->|Yes| C[Direct Operation]
+        B -->|No| D{Broadcasting<br/>Compatible?}
+        D -->|Yes| E[Apply Broadcasting Rules]
+        D -->|No| F[Error!]
+        
+        E --> G[Rule 1: Pad with 1s]
+        E --> H[Rule 2: Stretch 1s]
+        E --> I[Rule 3: Check Compatibility]
+        
+        G --> J[Virtual Expansion]
+        H --> J
+        I --> J
+        J --> K[Perform Operation]
+        
+        style A fill:#f9f9f9
+        style E fill:#4ecdc4
+        style K fill:#51cf66
+        style F fill:#ff6b6b
+    </div>
+
+    <h3>The Stadium Wave Analogy 🏟️</h3>
+    
+    <p>Imagine a stadium wave. One person stands up (scalar), then a whole row copies them (1D array), then the entire section joins in (2D array). That's broadcasting! The single action propagates across dimensions without you explicitly telling each person what to do. NumPy does the same with your data.</p>
+
+    <canvas id="broadcastCanvas" width="800" height="400"></canvas>
+    <script>
+        const canvas = document.getElementById('broadcastCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let animFrame = 0;
+        let wavePosition = 0;
+        
+        function drawBroadcastVisualization() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Title
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 16px Arial';
+            ctx.fillText('Broadcasting Visualization: Scalar → Vector → Matrix', 200, 30);
+            
+            // Draw scalar (single value)
+            ctx.fillStyle = '#667eea';
+            ctx.fillRect(50, 80, 40, 40);
+            ctx.fillStyle = 'white';
+            ctx.font = '16px Arial';
+            ctx.fillText('5', 65, 105);
+            ctx.fillStyle = '#333';
+            ctx.font = '12px Arial';
+            ctx.fillText('Scalar', 45, 140);
+            
+            // Arrow 1
+            ctx.strokeStyle = '#666';
+            ctx.beginPath();
+            ctx.moveTo(100, 100);
+            ctx.lineTo(140, 100);
+            ctx.stroke();
+            ctx.fillStyle = '#666';
+            ctx.beginPath();
+            ctx.moveTo(140, 100);
+            ctx.lineTo(135, 95);
+            ctx.lineTo(135, 105);
+            ctx.fill();
+            
+            // Draw 1D array (vector)
+            for(let i = 0; i < 5; i++) {
+                let alpha = (i <= wavePosition) ? 1 : 0.3;
+                ctx.fillStyle = `rgba(102, 126, 234, ${alpha})`;
+                ctx.fillRect(150 + i*35, 80, 30, 40);
+                ctx.fillStyle = 'white';
+                ctx.font = '14px Arial';
+                ctx.fillText('5', 160 + i*35, 105);
+            }
+            ctx.fillStyle = '#333';
+            ctx.font = '12px Arial';
+            ctx.fillText('1D Array (broadcast)', 180, 140);
+            
+            // Arrow 2
+            ctx.strokeStyle = '#666';
+            ctx.beginPath();
+            ctx.moveTo(340, 100);
+            ctx.lineTo(380, 100);
+            ctx.stroke();
+            ctx.fillStyle = '#666';
+            ctx.beginPath();
+            ctx.moveTo(380, 100);
+            ctx.lineTo(375, 95);
+            ctx.lineTo(375, 105);
+            ctx.fill();
+            
+            // Draw 2D array (matrix)
+            for(let row = 0; row < 3; row++) {
+                for(let col = 0; col < 5; col++) {
+                    let alpha = (row * 5 + col <= wavePosition) ? 1 : 0.3;
+                    ctx.fillStyle = `rgba(102, 126, 234, ${alpha})`;
+                    ctx.fillRect(390 + col*35, 60 + row*35, 30, 30);
+                    ctx.fillStyle = 'white';
+                    ctx.font = '12px Arial';
+                    ctx.fillText('5', 400 + col*35, 80 + row*35);
+                }
+            }
+            ctx.fillStyle = '#333';
+            ctx.font = '12px Arial';
+            ctx.fillText('2D Array (broadcast)', 450, 170);
+            
+            // Show operation being performed
+            ctx.fillStyle = '#333';
+            ctx.font = '14px Arial';
+            ctx.fillText('Operation: array + 5', 50, 220);
+            
+            // Example arrays
+            ctx.font = '12px Arial';
+            ctx.fillText('Original array:', 50, 250);
+            for(let i = 0; i < 5; i++) {
+                ctx.strokeStyle = '#999';
+                ctx.strokeRect(50 + i*30, 260, 25, 25);
+                ctx.fillStyle = '#333';
+                ctx.fillText(String(i+1), 57 + i*30, 278);
+            }
+            
+            ctx.fillText('After broadcast + 5:', 50, 310);
+            for(let i = 0; i < 5; i++) {
+                ctx.fillStyle = '#51cf66';
+                ctx.fillRect(50 + i*30, 320, 25, 25);
+                ctx.fillStyle = 'white';
+                ctx.fillText(String(i+6), 57 + i*30, 338);
+            }
+            
+            // Show shapes matching
+            ctx.fillStyle = '#4ecdc4';
+            ctx.font = '14px Arial';
+            ctx.fillText('Shape Alignment:', 400, 250);
+            ctx.font = '12px Arial';
+            ctx.fillStyle = '#333';
+            ctx.fillText('Scalar:    ( )', 400, 270);
+            ctx.fillText('1D Array:  (5,)', 400, 290);
+            ctx.fillText('2D Array:  (3, 5)', 400, 310);
+            ctx.fillText('Result:    (3, 5)', 400, 330);
+            
+            // Draw checkmark
+            ctx.strokeStyle = '#51cf66';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(520, 320);
+            ctx.lineTo(530, 330);
+            ctx.lineTo(545, 305);
+            ctx.stroke();
+            ctx.lineWidth = 1;
+            
+            // Broadcasting rules visualization
+            ctx.fillStyle = '#667eea';
+            ctx.font = 'bold 14px Arial';
+            ctx.fillText('Broadcasting Rules Applied:', 50, 380);
+            ctx.font = '11px Arial';
+            ctx.fillStyle = '#666';
+            ctx.fillText('1. Scalar automatically expands to match any shape', 250, 380);
+        }
+        
+        function animateBroadcast() {
+            animFrame++;
+            
+            if(animFrame % 10 === 0) {
+                wavePosition = (wavePosition + 1) % 16;
+            }
+            
+            drawBroadcastVisualization();
+            requestAnimationFrame(animateBroadcast);
+        }
+        
+        animateBroadcast();
+    </script>
+
+    <pre><code>import numpy as np
+
+# Broadcasting Fundamentals: The Magic Revealed! ✨
+
+def demonstrate_broadcasting_basics():
+    """
+    Understanding the core concepts of broadcasting.
+    It's simpler than you think!
+    """
+    print("📡 Broadcasting Basics")
+    print("=" * 60)
+    
+    # Example 1: Scalar with Array (simplest broadcasting)
+    arr = np.array([1, 2, 3, 4, 5])
+    scalar = 10
+    
+    print("Example 1: Scalar + Array")
+    print(f"  Array: {arr}, shape: {arr.shape}")
+    print(f"  Scalar: {scalar}, shape: ()")
+    print(f"  Result: {arr + scalar}")
+    print(f"  💡 NumPy 'broadcasts' 10 to [10, 10, 10, 10, 10]\n")
+    
+    # Example 2: 1D Array with 2D Array
+    matrix = np.array([[1, 2, 3],
+                       [4, 5, 6],
+                       [7, 8, 9]])
+    row_vector = np.array([10, 20, 30])
+    
+    print("Example 2: Row Vector + Matrix")
+    print(f"  Matrix shape: {matrix.shape}")
+    print(f"  Vector shape: {row_vector.shape}")
+    print(f"  Matrix:\n{matrix}")
+    print(f"  Vector: {row_vector}")
+    print(f"  Result:\n{matrix + row_vector}")
+    print(f"  💡 Vector broadcasts to each row of the matrix!\n")
+    
+    # Example 3: Column Vector with Matrix (needs reshaping)
+    col_vector = np.array([100, 200, 300]).reshape(-1, 1)  # Make it (3, 1)
+    
+    print("Example 3: Column Vector + Matrix")
+    print(f"  Matrix shape: {matrix.shape}")
+    print(f"  Column shape: {col_vector.shape}")
+    print(f"  Column:\n{col_vector}")
+    print(f"  Result:\n{matrix + col_vector}")
+    print(f"  💡 Column broadcasts to each column of the matrix!\n")
+    
+    # Example 4: Broadcasting in multiple dimensions
+    # This is where it gets interesting!
+    arr_3d = np.ones((2, 3, 4))  # Shape: (2, 3, 4)
+    arr_2d = np.array([[1], [2], [3]])  # Shape: (3, 1)
+    
+    print("Example 4: Complex Broadcasting (3D with 2D)")
+    print(f"  3D array shape: {arr_3d.shape}")
+    print(f"  2D array shape: {arr_2d.shape}")
+    
+    result = arr_3d + arr_2d
+    print(f"  Result shape: {result.shape}")
+    print(f"  💡 2D array broadcasts across the first and last dimensions!")
+    
+demonstrate_broadcasting_basics()</code></pre>
+
+    <h2>The Three Sacred Rules of Broadcasting 📜</h2>
+    
+    <p>NumPy follows three simple rules to determine if two arrays can be broadcast together. Master these rules, and you'll never be confused by broadcasting again!</p>
+
+    <div class="rule-card">
+        <h3>🎯 Rule 1: Dimension Alignment</h3>
+        <p>NumPy compares shapes element-wise, starting from the rightmost dimension and working left. Dimensions are aligned from the right!</p>
+        <pre style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 5px;">
+Array A:     (8, 1, 6, 1)
+Array B:         (7, 1, 5)
+Alignment:   (8, 1, 6, 1)
+                 (7, 1, 5)
+        </pre>
+    </div>
+
+    <div class="rule-card">
+        <h3>🎯 Rule 2: Compatible Dimensions</h3>
+        <p>Two dimensions are compatible when:
+        <br>• They are equal, OR
+        <br>• One of them is 1</p>
+        <pre style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 5px;">
+Dimension pairs:  (6, 1) → Compatible (one is 1)
+                  (1, 5) → Compatible (one is 1)
+                  (3, 3) → Compatible (equal)
+                  (3, 4) → NOT Compatible ❌
+        </pre>
+    </div>
+
+    <div class="rule-card">
+        <h3>🎯 Rule 3: Output Shape</h3>
+        <p>The output shape is the maximum along each dimension. Where there was a 1, it gets "stretched" to match the other dimension.</p>
+        <pre style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 5px;">
+Array A:  (8, 1, 6, 1)
+Array B:     (7, 1, 5)
+Result:   (8, 7, 6, 5)  ← Take max of each dimension
+        </pre>
+    </div>
+
+    <pre><code>import numpy as np
+
+class BroadcastingRules:
+    """
+    Master class for understanding broadcasting rules.
+    Let's demystify how NumPy decides what works and what doesn't!
+    """
+    
+    def __init__(self):
+        self.examples = []
+    
+    def check_broadcasting(self, shape1, shape2):
+        """
+        Check if two shapes can be broadcast together.
+        Returns (can_broadcast, result_shape, explanation)
+        """
+        # Convert to lists for easier manipulation
+        s1 = list(shape1)
+        s2 = list(shape2)
+        
+        # Pad the shorter shape with 1s on the left
+        while len(s1) < len(s2):
+            s1 = [1] + s1
+        while len(s2) < len(s1):
+            s2 = [1] + s2
+        
+        # Check compatibility and compute result shape
+        result_shape = []
+        compatible = True
+        incompatible_dims = []
+        
+        for i, (d1, d2) in enumerate(zip(s1, s2)):
+            if d1 == d2:
+                result_shape.append(d1)
+            elif d1 == 1:
+                result_shape.append(d2)
+            elif d2 == 1:
+                result_shape.append(d1)
+            else:
+                compatible = False
+                incompatible_dims.append((i, d1, d2))
+        
+        # Generate explanation
+        if compatible:
+            explanation = "✅ Compatible! Dimensions match or have 1s that can stretch."
+        else:
+            dim_strs = [f"dim {i}: {d1} vs {d2}" for i, d1, d2 in incompatible_dims]
+            explanation = f"❌ Incompatible! Mismatched dimensions: {', '.join(dim_strs)}"
+        
+        return compatible, tuple(result_shape) if compatible else None, explanation
+    
+    def demonstrate_rule_checking(self):
+        """Interactive demonstration of broadcasting rules"""
+        print("🔍 Broadcasting Compatibility Checker")
+        print("=" * 60)
+        
+        test_cases = [
+            ((3, 4), (4,)),          # 2D with 1D
+            ((3, 4), (3, 1)),        # 2D with column vector
+            ((3, 4), (1, 4)),        # 2D with row vector
+            ((3, 4), (3, 4)),        # Same shape
+            ((3, 4), (2, 3, 4)),     # 2D with 3D
+            ((5, 1, 3), (1, 4, 1)),  # Complex case
+            ((3, 4), (5, 4)),        # Incompatible
+            ((2, 3, 4), (3, 5)),     # Incompatible
+        ]
+        
+        for shape1, shape2 in test_cases:
+            can_broadcast, result_shape, explanation = self.check_broadcasting(shape1, shape2)
+            
+            print(f"\nShape 1: {shape1}")
+            print(f"Shape 2: {shape2}")
+            print(f"Result:  {explanation}")
+            if can_broadcast:
+                print(f"Output shape: {result_shape}")
+                
+                # Demonstrate with actual arrays
+                arr1 = np.ones(shape1)
+                arr2 = np.ones(shape2)
+                result = arr1 + arr2
+                print(f"Verified: {result.shape} ✓")
+    
+    def visualize_broadcasting_process(self):
+        """Step-by-step visualization of broadcasting"""
+        print("\n🎬 Broadcasting Process Visualization")
+        print("=" * 60)
+        
+        # Example: (3, 1) broadcasting with (1, 4)
+        a = np.array([[1], [2], [3]])  # Shape: (3, 1)
+        b = np.array([[10, 20, 30, 40]])  # Shape: (1, 4)
+        
+        print("Step-by-step broadcasting of (3,1) + (1,4):")
+        print("\nOriginal arrays:")
+        print(f"A (shape {a.shape}):\n{a}")
+        print(f"B (shape {b.shape}):\n{b}")
+        
+        print("\n📐 Step 1: Align dimensions from the right")
+        print("  A: (3, 1)")
+        print("  B: (1, 4)")
+        
+        print("\n📐 Step 2: Check compatibility")
+        print("  Dimension 0: 3 vs 1 → Compatible (1 can stretch)")
+        print("  Dimension 1: 1 vs 4 → Compatible (1 can stretch)")
+        
+        print("\n📐 Step 3: Compute output shape")
+        print("  Output: (max(3,1), max(1,4)) = (3, 4)")
+        
+        print("\n📐 Step 4: Conceptually stretch arrays")
+        print("  A stretches horizontally:")
+        a_stretched = np.tile(a, (1, 4))
+        print(f"{a_stretched}")
+        
+        print("  B stretches vertically:")
+        b_stretched = np.tile(b, (3, 1))
+        print(f"{b_stretched}")
+        
+        print("\n📐 Step 5: Perform element-wise operation")
+        result = a + b
+        print(f"Result:\n{result}")
+        
+    def common_broadcasting_patterns(self):
+        """Common patterns you'll use every day in data science"""
+        print("\n🎯 Common Broadcasting Patterns")
+        print("=" * 60)
+        
+        # Pattern 1: Normalizing data (subtract mean, divide by std)
+        print("Pattern 1: Normalize each column")
+        data = np.random.randn(100, 5) * 10 + 50
+        
+        # Calculate statistics for each column
+        col_means = data.mean(axis=0)  # Shape: (5,)
+        col_stds = data.std(axis=0)    # Shape: (5,)
+        
+        # Broadcasting happens here!
+        normalized = (data - col_means) / col_stds
+        
+        print(f"  Data shape: {data.shape}")
+        print(f"  Means shape: {col_means.shape}")
+        print(f"  Broadcasting: {data.shape} - {col_means.shape} → {normalized.shape}")
+        print(f"  Result: mean≈0, std≈1 for each column ✓")
+        
+        # Pattern 2: Adding bias to neural network layers
+        print("\nPattern 2: Neural Network Bias Addition")
+        batch_size = 32
+        features = 128
+        activations = np.random.randn(batch_size, features)
+        bias = np.random.randn(features)  # One bias per feature
+        
+        # Broadcasting adds bias to each sample in batch
+        output = activations + bias
+        
+        print(f"  Activations: {activations.shape}")
+        print(f"  Bias: {bias.shape}")
+        print(f"  Output: {output.shape}")
+        
+        # Pattern 3: Outer products
+        print("\nPattern 3: Outer Product via Broadcasting")
+        x = np.array([1, 2, 3])
+        y = np.array([4, 5, 6])
+        
+        # Create outer product using broadcasting
+        outer = x[:, np.newaxis] * y  # Reshape x to (3,1), broadcasts with (3,)
+        
+        print(f"  x shape: {x.shape} → reshaped: (3, 1)")
+        print(f"  y shape: {y.shape}")
+        print(f"  Outer product:\n{outer}")
+        
+        # Pattern 4: Pairwise distances
+        print("\nPattern 4: Pairwise Distance Matrix")
+        points = np.random.randn(5, 2)  # 5 points in 2D
+        
+        # Compute pairwise distances using broadcasting
+        # Reshape for broadcasting: (5,1,2) and (1,5,2)
+        diff = points[:, np.newaxis, :] - points[np.newaxis, :, :]
+        distances = np.sqrt((diff ** 2).sum(axis=2))
+        
+        print(f"  Points shape: {points.shape}")
+        print(f"  Distance matrix shape: {distances.shape}")
+        print(f"  Distance matrix (symmetric):\n{distances.round(2)}")
+
+# Run demonstrations
+rules = BroadcastingRules()
+rules.demonstrate_rule_checking()
+rules.visualize_broadcasting_process()
+rules.common_broadcasting_patterns()</code></pre>
+
+    <h2>Advanced Broadcasting: Real-World Magic 🎩</h2>
+    
+    <p>Let's see how broadcasting transforms complex operations into elegant one-liners. These are the patterns that make data scientists smile!</p>
+
+    <div class="mermaid">
+    graph LR
+        A[Complex Problem] --> B[Identify Patterns]
+        B --> C[Shape Analysis]
+        C --> D[Apply Broadcasting]
+        D --> E[Elegant Solution]
+        
+        F[Examples] --> G[Image Processing]
+        F --> H[Time Series]
+        F --> I[Machine Learning]
+        F --> J[Statistics]
+        
+        G --> D
+        H --> D
+        I --> D
+        J --> D
+        
+        style A fill:#ff6b6b
+        style D fill:#4ecdc4
+        style E fill:#51cf66
+    </div>
+
+    <pre><code>import numpy as np
+import time
+
+class AdvancedBroadcasting:
+    """
+    Advanced broadcasting techniques for real-world data science.
+    These patterns will save you hours of coding!
+    """
+    
+    def __init__(self):
+        np.random.seed(42)
+    
+    def image_color_adjustment(self):
+        """
+        Broadcasting in image processing: adjusting RGB channels
+        """
+        print("🖼️ Image Color Adjustment with Broadcasting")
+        print("=" * 60)
+        
+        # Simulate an RGB image (height, width, channels)
+        image = np.random.randint(0, 256, (100, 150, 3), dtype=np.uint8)
+        
+        print(f"Image shape: {image.shape} (height, width, RGB)")
+        
+        # Color adjustment factors for R, G, B
+        color_factors = np.array([1.2, 0.9, 1.1])  # Shape: (3,)
+        
+        # Broadcasting magic: multiply each pixel's RGB by factors
+        adjusted = np.clip(image * color_factors, 0, 255).astype(np.uint8)
+        
+        print(f"Color factors shape: {color_factors.shape}")
+        print(f"Broadcasting: {image.shape} * {color_factors.shape}")
+        print(f"Result shape: {adjusted.shape}")
+        print(f"✨ Each color channel adjusted independently!")
+        
+        # Advanced: Gradient overlay using broadcasting
+        height, width = 100, 150
+        
+        # Create vertical gradient (height, 1)
+        vertical_gradient = np.linspace(0, 1, height).reshape(-1, 1)
+        
+        # Create horizontal gradient (1, width)
+        horizontal_gradient = np.linspace(0, 1, width).reshape(1, -1)
+        
+        # Combine gradients using broadcasting
+        diagonal_gradient = (vertical_gradient * 0.5 + horizontal_gradient * 0.5)
+        
+        # Apply to image (broadcast gradient to all color channels)
+        gradient_overlay = image * diagonal_gradient[:, :, np.newaxis]
+        
+        print(f"\nGradient overlay:")
+        print(f"  Vertical gradient: {vertical_gradient.shape}")
+        print(f"  Horizontal gradient: {horizontal_gradient.shape}")
+        print(f"  Combined gradient: {diagonal_gradient.shape}")
+        print(f"  Applied to image: {gradient_overlay.shape}")
+    
+    def time_series_analysis(self):
+        """
+        Broadcasting for time series: seasonal decomposition
+        """
+        print("\n📈 Time Series Analysis with Broadcasting")
+        print("=" * 60)
+        
+        # Generate sample time series data
+        days = 365
+        n_stores = 10
+        n_products = 5
+        
+        # Shape: (days, stores, products)
+        sales = np.random.poisson(100, (days, n_stores, n_products))
+        
+        print(f"Sales data shape: {sales.shape}")
+        print("(days, stores, products)")
+        
+        # Calculate weekly seasonality (7-day pattern)
+        weekly_pattern = np.array([0.8, 0.9, 1.0, 1.0, 1.1, 1.3, 1.2])  # Mon-Sun
+        
+        # Broadcast weekly pattern across all days
+        day_of_week = np.arange(days) % 7
+        seasonal_factors = weekly_pattern[day_of_week]  # Shape: (365,)
+        
+        # Apply seasonal factors to all stores and products
+        # Broadcasting: (365,) with (365, 10, 5)
+        deseasonalized = sales / seasonal_factors[:, np.newaxis, np.newaxis]
+        
+        print(f"\nSeasonal adjustment:")
+        print(f"  Weekly pattern: {weekly_pattern.shape}")
+        print(f"  Seasonal factors: {seasonal_factors.shape}")
+        print(f"  Broadcasting: {sales.shape} / {seasonal_factors[:, np.newaxis, np.newaxis].shape}")
+        print(f"  Deseasonalized: {deseasonalized.shape}")
+        
+        # Calculate store-specific trends
+        store_trends = sales.mean(axis=2).mean(axis=0)  # Shape: (10,)
+        
+        # Normalize each store by its average (broadcasting)
+        normalized_sales = sales / store_trends[np.newaxis, :, np.newaxis]
+        
+        print(f"\nStore normalization:")
+        print(f"  Store trends: {store_trends.shape}")
+        print(f"  Broadcasting for normalization: {normalized_sales.shape}")
+        
+        # Moving averages with different windows
+        windows = np.array([7, 14, 30])[:, np.newaxis]  # Shape: (3, 1)
+        
+        # Create weight matrices for each window (simplified)
+        # In practice, use convolution, but this shows broadcasting
+        print(f"\nMultiple moving averages using broadcasting:")
+        print(f"  Window sizes: {windows.flatten()}")
+        print(f"  Can compute all windows simultaneously with broadcasting!")
+    
+    def machine_learning_operations(self):
+        """
+        Broadcasting in ML: batch operations, distance metrics
+        """
+        print("\n🤖 Machine Learning with Broadcasting")
+        print("=" * 60)
+        
+        # Example 1: Batch matrix multiplication with bias
+        batch_size = 32
+        input_dim = 784  # e.g., flattened 28x28 image
+        hidden_dim = 128
+        
+        # Input batch
+        X = np.random.randn(batch_size, input_dim)
+        
+        # Weight matrix and bias
+        W = np.random.randn(input_dim, hidden_dim) * 0.01
+        b = np.random.randn(hidden_dim)
+        
+        # Forward pass with broadcasting
+        # Matrix mult: (32, 784) @ (784, 128) = (32, 128)
+        # Add bias: (32, 128) + (128,) ← Broadcasting!
+        Z = X @ W + b
+        
+        print("Neural Network Layer:")
+        print(f"  Input: {X.shape}")
+        print(f"  Weights: {W.shape}")
+        print(f"  Bias: {b.shape}")
+        print(f"  Output: {Z.shape}")
+        print(f"  ✨ Bias broadcasts to all samples in batch!")
+        
+        # Example 2: Euclidean distance matrix
+        n_samples = 100
+        n_features = 10
+        data = np.random.randn(n_samples, n_features)
+        
+        # Compute all pairwise distances using broadcasting
+        # ||x - y||² = ||x||² - 2x·y + ||y||²
+        
+        # Squared norms
+        sq_norms = (data ** 2).sum(axis=1)  # Shape: (100,)
+        
+        # Dot products
+        dot_products = data @ data.T  # Shape: (100, 100)
+        
+        # Combine using broadcasting
+        # sq_norms[:, np.newaxis] broadcasts to (100, 1)
+        # sq_norms[np.newaxis, :] broadcasts to (1, 100)
+        distances_sq = sq_norms[:, np.newaxis] - 2 * dot_products + sq_norms[np.newaxis, :]
+        distances = np.sqrt(np.maximum(distances_sq, 0))  # Avoid numerical errors
+        
+        print(f"\nEuclidean Distance Matrix:")
+        print(f"  Data: {data.shape}")
+        print(f"  Distance matrix: {distances.shape}")
+        print(f"  Using broadcasting to compute {n_samples*n_samples} distances efficiently!")
+        
+        # Example 3: Softmax with numerical stability
+        logits = np.random.randn(batch_size, 10)  # 10 classes
+        
+        # Numerical stability: subtract max
+        logits_max = logits.max(axis=1, keepdims=True)  # Shape: (32, 1)
+        logits_stable = logits - logits_max  # Broadcasting!
+        
+        # Compute softmax
+        exp_logits = np.exp(logits_stable)
+        sum_exp = exp_logits.sum(axis=1, keepdims=True)  # Shape: (32, 1)
+        softmax = exp_logits / sum_exp  # Broadcasting!
+        
+        print(f"\nSoftmax Computation:")
+        print(f"  Logits: {logits.shape}")
+        print(f"  Max (for stability): {logits_max.shape}")
+        print(f"  Exp sum: {sum_exp.shape}")
+        print(f"  Softmax: {softmax.shape}")
+        print(f"  ✨ Broadcasting handles batch dimension automatically!")
+    
+    def statistical_analysis(self):
+        """
+        Broadcasting in statistics: correlation, covariance, z-scores
+        """
+        print("\n📊 Statistical Analysis with Broadcasting")
+        print("=" * 60)
+        
+        # Generate multivariate data
+        n_samples = 1000
+        n_variables = 5
+        data = np.random.randn(n_samples, n_variables)
+        
+        # Add some correlation
+        data[:, 1] = data[:, 0] * 0.7 + np.random.randn(n_samples) * 0.3
+        data[:, 2] = data[:, 0] * 0.5 + data[:, 1] * 0.3 + np.random.randn(n_samples) * 0.2
+        
+        print(f"Data shape: {data.shape}")
+        
+        # Standardization (z-scores) using broadcasting
+        means = data.mean(axis=0)  # Shape: (5,)
+        stds = data.std(axis=0)    # Shape: (5,)
+        
+        z_scores = (data - means) / stds  # Broadcasting on both operations!
+        
+        print(f"\nZ-score standardization:")
+        print(f"  Means: {means.shape}")
+        print(f"  Stds: {stds.shape}")
+        print(f"  Broadcasting: ({n_samples}, {n_variables}) - ({n_variables},)")
+        print(f"  Z-scores: {z_scores.shape}")
+        print(f"  Verification: mean≈0, std≈1")
+        print(f"    Actual means: {z_scores.mean(axis=0).round(3)}")
+        print(f"    Actual stds: {z_scores.std(axis=0).round(3)}")
+        
+        # Correlation matrix using broadcasting
+        # Center the data
+        centered = data - means  # Broadcasting!
+        
+        # Normalize
+        normalized = centered / stds  # Broadcasting!
+        
+        # Correlation matrix
+        corr_matrix = (normalized.T @ normalized) / n_samples
+        
+        print(f"\nCorrelation Matrix:")
+        print(f"  Shape: {corr_matrix.shape}")
+        print(f"  Sample correlations:")
+        print(f"    Var0-Var1: {corr_matrix[0, 1]:.3f} (strong)")
+        print(f"    Var0-Var2: {corr_matrix[0, 2]:.3f} (moderate)")
+        print(f"    Var3-Var4: {corr_matrix[3, 4]:.3f} (weak)")
+        
+        # Mahalanobis distance using broadcasting
+        # Distance that accounts for correlation structure
+        cov_matrix = np.cov(data.T)
+        cov_inv = np.linalg.inv(cov_matrix)
+        
+        # Compute Mahalanobis distance for each point from mean
+        diff = data - means  # Broadcasting!
+        
+        # Efficient computation using einsum (or manual broadcasting)
+        # d² = (x-μ)ᵀ Σ⁻¹ (x-μ)
+        mahal_dist_sq = np.sum((diff @ cov_inv) * diff, axis=1)
+        mahal_dist = np.sqrt(mahal_dist_sq)
+        
+        print(f"\nMahalanobis Distance:")
+        print(f"  Using broadcasting to compute distances")
+        print(f"  Distance shape: {mahal_dist.shape}")
+        print(f"  Outliers (distance > 3): {(mahal_dist > 3).sum()} samples")
+
+# Run advanced examples
+advanced = AdvancedBroadcasting()
+advanced.image_color_adjustment()
+advanced.time_series_analysis()
+advanced.machine_learning_operations()
+advanced.statistical_analysis()</code></pre>
+
+    <h2>Broadcasting Performance: Speed Meets Elegance 🏎️</h2>
+    
+    <p>Broadcasting isn't just about cleaner code - it's about massive performance gains. Let's benchmark broadcasting against alternative approaches.</p>
+
+    <pre><code>import numpy as np
+import time
+
+class BroadcastingPerformance:
+    """
+    Performance analysis of broadcasting vs alternatives.
+    See why broadcasting is the secret weapon of fast code!
+    """
+    
+    def __init__(self):
+        self.sizes = [100, 1000, 10000]
+    
+    def benchmark_normalization(self):
+        """Compare broadcasting vs loops for data normalization"""
+        print("⚡ Performance: Data Normalization")
+        print("=" * 60)
+        
+        for size in self.sizes:
+            data = np.random.randn(size, 50)  # size samples, 50 features
+            
+            # Method 1: Loop (slow)
+            start = time.perf_counter()
+            result_loop = np.zeros_like(data)
+            for i in range(data.shape[0]):
+                for j in range(data.shape[1]):
+                    col_mean = data[:, j].mean()
+                    col_std = data[:, j].std()
+                    result_loop[i, j] = (data[i, j] - col_mean) / col_std
+            loop_time = time.perf_counter() - start
+            
+            # Method 2: Column-wise loop (medium)
+            start = time.perf_counter()
+            result_col = np.zeros_like(data)
+            for j in range(data.shape[1]):
+                col_mean = data[:, j].mean()
+                col_std = data[:, j].std()
+                result_col[:, j] = (data[:, j] - col_mean) / col_std
+            col_time = time.perf_counter() - start
+            
+            # Method 3: Broadcasting (fast!)
+            start = time.perf_counter()
+            means = data.mean(axis=0)
+            stds = data.std(axis=0)
+            result_broadcast = (data - means) / stds
+            broadcast_time = time.perf_counter() - start
+            
+            print(f"\nSize: {size} × 50")
+            print(f"  Nested loops:    {loop_time*1000:8.3f} ms")
+            print(f"  Column loop:     {col_time*1000:8.3f} ms (Speedup: {loop_time/col_time:.1f}x)")
+            print(f"  Broadcasting:    {broadcast_time*1000:8.3f} ms (Speedup: {loop_time/broadcast_time:.1f}x)")
+    
+    def benchmark_distance_computation(self):
+        """Compare broadcasting vs loops for distance matrices"""
+        print("\n⚡ Performance: Pairwise Distances")
+        print("=" * 60)
+        
+        for n_points in [50, 200, 500]:
+            points = np.random.randn(n_points, 3)  # 3D points
+            
+            # Method 1: Nested loops (very slow)
+            start = time.perf_counter()
+            dist_loop = np.zeros((n_points, n_points))
+            for i in range(n_points):
+                for j in range(n_points):
+                    diff = points[i] - points[j]
+                    dist_loop[i, j] = np.sqrt(np.sum(diff ** 2))
+            loop_time = time.perf_counter() - start
+            
+            # Method 2: Broadcasting (fast!)
+            start = time.perf_counter()
+            diff = points[:, np.newaxis, :] - points[np.newaxis, :, :]
+            dist_broadcast = np.sqrt((diff ** 2).sum(axis=2))
+            broadcast_time = time.perf_counter() - start
+            
+            # Method 3: Optimized broadcasting (fastest!)
+            start = time.perf_counter()
+            # Using the formula: ||x-y||² = ||x||² + ||y||² - 2x·y
+            sq_norms = (points ** 2).sum(axis=1)
+            dot_product = points @ points.T
+            dist_sq = sq_norms[:, np.newaxis] + sq_norms[np.newaxis, :] - 2 * dot_product
+            dist_optimized = np.sqrt(np.maximum(dist_sq, 0))
+            optimized_time = time.perf_counter() - start
+            
+            print(f"\n{n_points} points in 3D:")
+            print(f"  Nested loops:          {loop_time*1000:8.3f} ms")
+            print(f"  Broadcasting:          {broadcast_time*1000:8.3f} ms (Speedup: {loop_time/broadcast_time:.1f}x)")
+            print(f"  Optimized broadcast:   {optimized_time*1000:8.3f} ms (Speedup: {loop_time/optimized_time:.1f}x)")
+    
+    def memory_efficiency(self):
+        """Demonstrate memory efficiency of broadcasting"""
+        print("\n💾 Memory Efficiency of Broadcasting")
+        print("=" * 60)
+        
+        # Large array scenario
+        rows, cols = 10000, 1000
+        
+        print(f"Scenario: Add row vector to {rows}×{cols} matrix")
+        
+        # Without broadcasting (explicit tiling)
+        row_vector = np.random.randn(cols)
+        
+        # Method 1: Tile the vector (uses extra memory)
+        print(f"\nMethod 1: Explicit tiling")
+        print(f"  Original vector: {row_vector.nbytes / 1024:.2f} KB")
+        tiled_vector = np.tile(row_vector, (rows, 1))
+        print(f"  Tiled vector: {tiled_vector.nbytes / 1024 / 1024:.2f} MB")
+        print(f"  Memory multiplier: {tiled_vector.nbytes / row_vector.nbytes:.0f}x")
+        
+        # Method 2: Broadcasting (no extra memory!)
+        print(f"\nMethod 2: Broadcasting")
+        print(f"  Original vector: {row_vector.nbytes / 1024:.2f} KB")
+        print(f"  Memory used: {row_vector.nbytes / 1024:.2f} KB (no copying!)")
+        print(f"  ✨ Broadcasting uses views, not copies!")
+        
+        # Demonstrate with actual operation
+        matrix = np.random.randn(rows, cols)
+        
+        # Time both approaches
+        start = time.perf_counter()
+        result_tiled = matrix + tiled_vector
+        tiled_time = time.perf_counter() - start
+        
+        start = time.perf_counter()
+        result_broadcast = matrix + row_vector
+        broadcast_time = time.perf_counter() - start
+        
+        print(f"\nPerformance comparison:")
+        print(f"  Tiled approach:     {tiled_time*1000:.3f} ms")
+        print(f"  Broadcasting:       {broadcast_time*1000:.3f} ms")
+        print(f"  Results identical:  {np.allclose(result_tiled, result_broadcast)}")
+
+# Run performance benchmarks
+perf = BroadcastingPerformance()
+perf.benchmark_normalization()
+perf.benchmark_distance_computation()
+perf.memory_efficiency()</code></pre>
+
+    <h2>Common Broadcasting Pitfalls and Solutions 🕳️</h2>
+    
+    <p>Even experienced NumPy users stumble on these broadcasting gotchas. Let's learn from common mistakes!</p>
+
+    <pre><code>import numpy as np
+
+print("⚠️ Broadcasting Pitfalls and Solutions")
+print("=" * 60)
+
+# Pitfall 1: Unexpected Broadcasting
+print("\n❌ Pitfall 1: Unexpected Shape Matching")
+print("-" * 40)
+
+# What you might expect vs what happens
+a = np.array([[1, 2, 3]])  # Shape: (1, 3)
+b = np.array([[4], [5], [6]])  # Shape: (3, 1)
+
+# This broadcasts to (3, 3), not element-wise multiplication!
+result = a * b
+print(f"a shape: {a.shape}, b shape: {b.shape}")
+print(f"Result shape: {result.shape} (unexpected?)")
+print(f"Result:\n{result}")
+
+print("\n✅ Solution: Be explicit about desired behavior")
+# If you wanted element-wise on the overlapping dimension:
+a_flat = a.flatten()  # Shape: (3,)
+b_flat = b.flatten()  # Shape: (3,)
+correct = a_flat * b_flat
+print(f"Element-wise result: {correct}")
+
+# Pitfall 2: Broadcasting with assignment
+print("\n❌ Pitfall 2: Assignment Broadcasting Confusion")
+print("-" * 40)
+
+matrix = np.ones((3, 4))
+row = np.array([10, 20, 30, 40])
+
+# This works - broadcasts row to all rows of matrix
+matrix[:] = row
+print(f"Broadcasting assignment successful:")
+print(matrix)
+
+# But this is a common mistake:
+matrix = np.ones((3, 4))
+column = np.array([10, 20, 30])
+# matrix[:] = column  # This would fail! Shape mismatch
+
+print("\n✅ Solution: Reshape for column assignment")
+matrix[:] = column[:, np.newaxis]  # or column.reshape(-1, 1)
+print(f"Column broadcast assignment (reshaped):")
+print(matrix)
+
+# Pitfall 3: Lost dimensions with aggregations
+print("\n❌ Pitfall 3: Dimension Loss in Aggregations")
+print("-" * 40)
+
+data = np.random.randn(10, 5)
+row_means = data.mean(axis=1)  # Shape: (10,) - lost dimension!
+
+# This will fail:
+# normalized = data - row_means  # Shape mismatch!
+
+print(f"Data shape: {data.shape}")
+print(f"Row means shape: {row_means.shape}")
+print("Cannot broadcast (10, 5) with (10,)")
+
+print("\n✅ Solution: Use keepdims=True")
+row_means_kept = data.mean(axis=1, keepdims=True)  # Shape: (10, 1)
+normalized = data - row_means_kept  # Now it works!
+print(f"Row means with keepdims: {row_means_kept.shape}")
+print(f"Broadcasting works: {data.shape} - {row_means_kept.shape}")
+
+# Pitfall 4: Integer division broadcasting
+print("\n❌ Pitfall 4: Type Coercion in Broadcasting")
+print("-" * 40)
+
+int_array = np.array([1, 2, 3, 4, 5])
+float_scalar = 2.5
+
+result = int_array * float_scalar
+print(f"Int array: {int_array.dtype}")
+print(f"Float scalar: {type(float_scalar)}")
+print(f"Result dtype: {result.dtype} (automatically upcasted!)")
+
+# Be careful with integer division
+int_array = np.array([1, 2, 3, 4, 5])
+divisor = 2
+result_int = int_array // divisor  # Integer division
+result_float = int_array / divisor  # Float division
+print(f"\nInteger division: {result_int} (dtype: {result_int.dtype})")
+print(f"Float division: {result_float} (dtype: {result_float.dtype})")
+
+# Pitfall 5: Broadcasting with views vs copies
+print("\n❌ Pitfall 5: Views and Broadcasting Side Effects")
+print("-" * 40)
+
+original = np.array([1, 2, 3, 4, 5])
+view = original[1:4]  # This is a view
+
+# Broadcasting operation on view
+view[:] = view * 10  # Modifies original!
+
+print(f"Original array after modifying view: {original}")
+print("The view modified the original array!")
+
+print("\n✅ Solution: Use .copy() when needed")
+original = np.array([1, 2, 3, 4, 5])
+safe_copy = original[1:4].copy()
+safe_copy[:] = safe_copy * 10
+print(f"Original array is safe: {original}")
+
+# Best Practices Summary
+print("\n📚 Broadcasting Best Practices:")
+print("-" * 40)
+practices = [
+    "1. Always check shapes before operations: print(a.shape, b.shape)",
+    "2. Use keepdims=True for aggregations that will be broadcast",
+    "3. Explicitly reshape with newaxis when needed: arr[:, np.newaxis]",
+    "4. Test with small examples first",
+    "5. Use assertions to verify expected shapes in functions",
+    "6. Remember: broadcasting creates views, not copies",
+    "7. Visualize the operation mentally before coding"
+]
+
+for practice in practices:
+    print(f"  {practice}")</code></pre>
+
+    <h2>Summary: Your Broadcasting Mastery Checklist ✅</h2>
+    
+    <div class="comment-block">
+        <p><strong>🎯 Key Takeaways:</strong></p>
+        <ul>
+            <li><strong>Automatic Expansion:</strong> Broadcasting virtually "stretches" smaller arrays to match larger ones without copying data.</li>
+            <li><strong>Three Rules:</strong> Align from right, check compatibility (equal or 1), output shape is max of each dimension.</li>
+            <li><strong>Memory Efficient:</strong> Broadcasting uses views, not copies - saves memory and time.</li>
+            <li><strong>Common Patterns:</strong> Normalization, adding bias, outer products, pairwise distances.</li>
+            <li><strong>Use keepdims=True:</strong> Preserve dimensions in aggregations for easier broadcasting.</li>
+            <li><strong>Performance Gains:</strong> Often 10-100x faster than explicit loops.</li>
+        </ul>
+    </div>
+
+    <pre><code># Quick Broadcasting Reference Card
+import numpy as np
+
+# BROADCASTING RULES
+# -----------------
+# 1. Align shapes from the right
+# 2. Dimensions compatible if equal or one is 1
+# 3. Output shape = max of each dimension
+
+# COMMON PATTERNS
+# --------------
+
+# Scalar broadcasting
+arr = np.array([1, 2, 3])
+result = arr + 10  # 10 broadcasts to all elements
+
+# Row/Column broadcasting
+matrix = np.ones((3, 4))
+row = np.array([1, 2, 3, 4])      # Shape: (4,)
+col = np.array([1, 2, 3])[:, np.newaxis]  # Shape: (3, 1)
+
+matrix + row  # Adds to each row
+matrix + col  # Adds to each column
+
+# Normalization pattern
+data = np.random.randn(100, 5)
+normalized = (data - data.mean(axis=0)) / data.std(axis=0)
+
+# Outer product pattern
+x = np.array([1, 2, 3])
+y = np.array([4, 5, 6])
+outer = x[:, np.newaxis] * y  # Shape: (3, 1) × (6,) = (3, 6)
+
+# Distance matrix pattern
+points = np.random.randn(10, 3)
+diff = points[:, np.newaxis, :] - points[np.newaxis, :, :]
+distances = np.sqrt((diff ** 2).sum(axis=2))
+
+# TIPS
+# ----
+# • Use keepdims=True in aggregations
+# • Reshape with np.newaxis for clarity
+# • Test shapes before operations
+# • Remember: broadcasting is a view operation
+
+print("📡 You're now a broadcasting expert!")</code></pre>
+
+    <footer>
+        <div class="navigation-links">
+            <a class="nav-prev" href="numpy_vectorized_operations.html">← Previous: Vectorized Operations</a>
+            <a class="nav-home" href="index.html">🏠 Course Home</a>
+            <a class="nav-next" href="numpy_random_generation.html">Next: Random Number Generation →</a>
+        </div>
+    </footer>
+</body>
+</html>

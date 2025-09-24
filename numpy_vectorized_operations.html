@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Vectorized Operations - Python Data Science</title>
+    <link href="styles/main.css" rel="stylesheet"/>
+    <link href="/favicon.png" rel="icon" type="image/png"/>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true });
+    </script>
+    <style>
+        .breadcrumb {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+        }
+        
+        .breadcrumb a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+        
+        .navigation-links {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2rem 0;
+            margin-top: 3rem;
+            border-top: 2px solid #e0e0e0;
+        }
+        
+        .navigation-links a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .navigation-links a:hover {
+            background: #f0f0f0;
+        }
+        
+        .nav-prev, .nav-next {
+            flex: 1;
+        }
+        
+        .nav-next {
+            text-align: right;
+        }
+        
+        .nav-home {
+            text-align: center;
+        }
+        
+        canvas {
+            display: block;
+            margin: 20px auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .operation-comparison {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            gap: 20px;
+        }
+        
+        .operation-box {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+        
+        .operation-box h4 {
+            margin: 0 0 10px 0;
+            padding: 5px;
+            background: none;
+            color: #333;
+        }
+        
+        .slow-operation {
+            border-color: #ff6b6b;
+            background: #fff5f5;
+        }
+        
+        .fast-operation {
+            border-color: #51cf66;
+            background: #f0fff4;
+        }
+        
+        .performance-meter {
+            width: 100%;
+            height: 20px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .performance-fill {
+            height: 100%;
+            background: linear-gradient(to right, #667eea, #764ba2);
+            transition: width 0.5s ease;
+        }
+    </style>
+</head>
+<body>
+    <nav class="breadcrumb">
+        <a href="index.html">Home</a> &gt; 
+        <a href="index.html#foundation">Foundation Module</a> &gt; 
+        <a href="index.html#numpy-fundamentals">NumPy Fundamentals</a> &gt;
+        <span>Vectorized Operations</span>
+    </nav>
+
+    <h1>⚡ Vectorized Operations: The Secret to NumPy's Lightning Speed</h1>
+    
+    <p>Imagine you're a chef preparing dinner for 1000 guests. Would you cook each meal one by one, or fire up all your burners and cook everything simultaneously? That's vectorization! 🍳 It's the difference between a loop that crawls and code that flies. In this lesson, we'll unlock the superpower that makes NumPy 10-100x faster than pure Python.</p>
+
+    <h2>What is Vectorization? The Parallel Universe 🌌</h2>
+    
+    <p>Vectorization is like having an army of tiny workers all doing the same task simultaneously, instead of one worker doing everything sequentially. When you write <code>array * 2</code>, NumPy doesn't loop through each element - it processes ALL elements at once using optimized C code and CPU vector instructions (SIMD - Single Instruction, Multiple Data).</p>
+
+    <div class="mermaid">
+    graph TB
+        A[Vectorized Operation] --> B[Single Python Call]
+        B --> C[NumPy C Backend]
+        C --> D[SIMD Instructions]
+        D --> E[CPU Vector Units]
+        E --> F[Process 4-16 values simultaneously]
+        
+        G[Loop-based Operation] --> H[Python Loop]
+        H --> I[Python Interpreter]
+        I --> J[Type Check Each Element]
+        J --> K[Function Call Each Element]
+        K --> L[Process 1 value at a time]
+        
+        F --> M[Result in ~1ms]
+        L --> N[Result in ~100ms]
+        
+        style A fill:#4ecdc4
+        style G fill:#ff6b6b
+        style M fill:#51cf66
+        style N fill:#ff6b6b
+    </div>
+
+    <h3>The Assembly Line Analogy 🏭</h3>
+    
+    <p>Think of a car factory. The <strong>loop approach</strong> is like having one worker who installs the engine, then walks to get the wheels, installs them, then gets the doors, installs them, and so on for each car. The <strong>vectorized approach</strong> is like an assembly line where specialized stations handle all engines at once, all wheels at once, all doors at once - dramatically faster and more efficient!</p>
+
+    <canvas id="vectorizationCanvas" width="800" height="400"></canvas>
+    <script>
+        const canvas = document.getElementById('vectorizationCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Animation variables
+        let frame = 0;
+        let loopPosition = 0;
+        let vectorPositions = [0, 0, 0, 0];
+        
+        function drawVisualization() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Title
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 16px Arial';
+            ctx.fillText('Loop vs Vectorization Animation', 300, 30);
+            
+            // Loop-based (top half)
+            ctx.fillStyle = '#ff6b6b';
+            ctx.font = '14px Arial';
+            ctx.fillText('Loop-based (Sequential)', 50, 80);
+            
+            // Draw array elements
+            for(let i = 0; i < 8; i++) {
+                ctx.strokeStyle = '#333';
+                ctx.strokeRect(150 + i*60, 100, 50, 40);
+                ctx.fillStyle = '#ffd93d';
+                if(i < loopPosition) {
+                    ctx.fillRect(150 + i*60, 100, 50, 40);
+                }
+                ctx.fillStyle = '#333';
+                ctx.font = '12px Arial';
+                ctx.fillText(String(i+1), 170 + i*60, 125);
+            }
+            
+            // Draw loop pointer
+            if(loopPosition < 8) {
+                ctx.fillStyle = '#ff6b6b';
+                ctx.beginPath();
+                ctx.moveTo(175 + loopPosition*60, 90);
+                ctx.lineTo(165 + loopPosition*60, 95);
+                ctx.lineTo(185 + loopPosition*60, 95);
+                ctx.closePath();
+                ctx.fill();
+            }
+            
+            // Vectorized (bottom half)
+            ctx.fillStyle = '#4ecdc4';
+            ctx.font = '14px Arial';
+            ctx.fillText('Vectorized (Parallel)', 50, 250);
+            
+            // Draw array elements
+            for(let i = 0; i < 8; i++) {
+                ctx.strokeStyle = '#333';
+                ctx.strokeRect(150 + i*60, 270, 50, 40);
+                
+                // All elements processed together
+                ctx.fillStyle = `rgba(149, 225, 211, ${vectorPositions[0]})`;
+                ctx.fillRect(150 + i*60, 270, 50, 40);
+                
+                ctx.fillStyle = '#333';
+                ctx.font = '12px Arial';
+                ctx.fillText(String(i+1), 170 + i*60, 295);
+            }
+            
+            // Draw parallel processing arrows
+            if(vectorPositions[0] < 1) {
+                for(let i = 0; i < 8; i++) {
+                    ctx.strokeStyle = `rgba(78, 205, 196, ${vectorPositions[0]})`;
+                    ctx.beginPath();
+                    ctx.moveTo(175 + i*60, 260);
+                    ctx.lineTo(175 + i*60, 265);
+                    ctx.stroke();
+                    
+                    // Arrow heads
+                    ctx.beginPath();
+                    ctx.moveTo(175 + i*60, 265);
+                    ctx.lineTo(170 + i*60, 260);
+                    ctx.lineTo(180 + i*60, 260);
+                    ctx.closePath();
+                    ctx.fillStyle = `rgba(78, 205, 196, ${vectorPositions[0]})`;
+                    ctx.fill();
+                }
+            }
+            
+            // Progress bars
+            ctx.fillStyle = '#333';
+            ctx.font = '12px Arial';
+            ctx.fillText('Progress:', 50, 180);
+            
+            // Loop progress
+            ctx.strokeRect(120, 170, 200, 15);
+            ctx.fillStyle = '#ff6b6b';
+            ctx.fillRect(120, 170, (loopPosition/8)*200, 15);
+            
+            ctx.fillText('Progress:', 50, 350);
+            // Vector progress
+            ctx.strokeRect(120, 340, 200, 15);
+            ctx.fillStyle = '#4ecdc4';
+            ctx.fillRect(120, 340, vectorPositions[0]*200, 15);
+            
+            // Speed indicators
+            ctx.fillStyle = '#666';
+            ctx.font = '11px Arial';
+            ctx.fillText(`Speed: ${(loopPosition/8*100).toFixed(0)}% (${loopPosition} ops)`, 330, 180);
+            ctx.fillText(`Speed: ${(vectorPositions[0]*100).toFixed(0)}% (1 parallel op)`, 330, 350);
+        }
+        
+        function animate() {
+            frame++;
+            
+            // Update loop position (slow)
+            if(frame % 30 === 0 && loopPosition < 8) {
+                loopPosition++;
+            }
+            
+            // Update vector positions (fast - all at once)
+            if(frame > 20 && vectorPositions[0] < 1) {
+                vectorPositions[0] = Math.min(1, vectorPositions[0] + 0.05);
+            }
+            
+            // Reset animation
+            if(frame > 300) {
+                frame = 0;
+                loopPosition = 0;
+                vectorPositions = [0, 0, 0, 0];
+            }
+            
+            drawVisualization();
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+    </script>
+
+    <pre><code>import numpy as np
+import time
+
+# The Power of Vectorization: A Speed Comparison 🏎️
+
+def demonstrate_vectorization_power():
+    """
+    Let's see vectorization in action with real numbers!
+    """
+    size = 1_000_000  # 1 million numbers
+    
+    # Create test data
+    python_list = list(range(size))
+    numpy_array = np.arange(size, dtype=np.float64)
+    
+    print("⚡ Vectorization Speed Test")
+    print("=" * 60)
+    print(f"Operating on {size:,} numbers\n")
+    
+    # Test 1: Squaring all elements
+    print("📊 Operation: Square all elements")
+    print("-" * 40)
+    
+    # Python loop approach
+    start = time.perf_counter()
+    result_loop = []
+    for x in python_list:
+        result_loop.append(x ** 2)
+    loop_time = time.perf_counter() - start
+    
+    # NumPy vectorized approach
+    start = time.perf_counter()
+    result_vector = numpy_array ** 2
+    vector_time = time.perf_counter() - start
+    
+    print(f"Loop approach:      {loop_time*1000:.2f} ms")
+    print(f"Vectorized approach: {vector_time*1000:.2f} ms")
+    print(f"Speedup: {loop_time/vector_time:.1f}x faster! 🚀\n")
+    
+    # Test 2: Complex mathematical expression
+    print("📊 Operation: (x * 2 + 10) / 3 - 5")
+    print("-" * 40)
+    
+    # Python loop approach
+    start = time.perf_counter()
+    result_loop = []
+    for x in python_list:
+        result_loop.append((x * 2 + 10) / 3 - 5)
+    loop_time = time.perf_counter() - start
+    
+    # NumPy vectorized approach
+    start = time.perf_counter()
+    result_vector = (numpy_array * 2 + 10) / 3 - 5
+    vector_time = time.perf_counter() - start
+    
+    print(f"Loop approach:      {loop_time*1000:.2f} ms")
+    print(f"Vectorized approach: {vector_time*1000:.2f} ms")
+    print(f"Speedup: {loop_time/vector_time:.1f}x faster! 🚀\n")
+    
+    # Test 3: Conditional operations
+    print("📊 Operation: Set negative values to zero")
+    print("-" * 40)
+    
+    # Create array with positive and negative values
+    test_array = np.random.randn(size)
+    test_list = test_array.tolist()
+    
+    # Python loop approach
+    start = time.perf_counter()
+    result_loop = []
+    for x in test_list:
+        result_loop.append(max(0, x))
+    loop_time = time.perf_counter() - start
+    
+    # NumPy vectorized approach
+    start = time.perf_counter()
+    result_vector = np.maximum(test_array, 0)
+    vector_time = time.perf_counter() - start
+    
+    print(f"Loop approach:      {loop_time*1000:.2f} ms")
+    print(f"Vectorized approach: {vector_time*1000:.2f} ms")
+    print(f"Speedup: {loop_time/vector_time:.1f}x faster! 🚀")
+
+demonstrate_vectorization_power()</code></pre>
+
+    <h2>The Anatomy of Vectorized Operations 🔬</h2>
+    
+    <p>Vectorization isn't just about speed - it's about expressing operations more clearly and concisely. Instead of telling the computer HOW to loop, you tell it WHAT you want to achieve. This declarative style is not only faster but also less error-prone and easier to read!</p>
+
+    <div class="operation-comparison">
+        <div class="operation-box slow-operation">
+            <h4>❌ Loop-Based (Imperative)</h4>
+            <pre><code># Calculate distance from origin
+distances = []
+for i in range(len(x_coords)):
+    dist = np.sqrt(x_coords[i]**2 + y_coords[i]**2)
+    distances.append(dist)
+    
+# Normalize values
+normalized = []
+max_val = max(values)
+min_val = min(values)
+for val in values:
+    norm = (val - min_val) / (max_val - min_val)
+    normalized.append(norm)</code></pre>
+            <div class="performance-meter">
+                <div class="performance-fill" style="width: 20%"></div>
+            </div>
+            <p>Speed: 🐌 Slow</p>
+        </div>
+        
+        <div class="operation-box fast-operation">
+            <h4>✅ Vectorized (Declarative)</h4>
+            <pre><code># Calculate distance from origin
+distances = np.sqrt(x_coords**2 + y_coords**2)
+
+# Normalize values
+normalized = (values - values.min()) / (values.max() - values.min())</code></pre>
+            <div class="performance-meter">
+                <div class="performance-fill" style="width: 95%"></div>
+            </div>
+            <p>Speed: ⚡ Lightning Fast</p>
+        </div>
+    </div>
+
+    <pre><code>import numpy as np
+
+class VectorizedOperations:
+    """
+    Master class for understanding vectorized operations.
+    Think of this as your vectorization cookbook! 👨‍🍳
+    """
+    
+    def __init__(self):
+        self.size = 10000
+        np.random.seed(42)
+    
+    def basic_arithmetic_operations(self):
+        """Fundamental vectorized arithmetic operations"""
+        print("🔢 Basic Arithmetic Operations")
+        print("=" * 50)
+        
+        a = np.array([1, 2, 3, 4, 5])
+        b = np.array([10, 20, 30, 40, 50])
+        
+        # All operations work element-wise
+        print(f"Arrays: a = {a}, b = {b}")
+        print(f"Addition:       a + b = {a + b}")
+        print(f"Subtraction:    a - b = {a - b}")
+        print(f"Multiplication: a * b = {a * b}")
+        print(f"Division:       b / a = {b / a}")
+        print(f"Power:          a ** 2 = {a ** 2}")
+        print(f"Modulo:         b % 7 = {b % 7}")
+        
+        # Scalar operations broadcast automatically
+        print(f"\nScalar operations (broadcasting):")
+        print(f"a + 100 = {a + 100}")
+        print(f"a * 10  = {a * 10}")
+        print(f"a / 2   = {a / 2}")
+    
+    def comparison_operations(self):
+        """Vectorized comparison operations return boolean arrays"""
+        print("\n🔍 Comparison Operations")
+        print("=" * 50)
+        
+        arr = np.array([1, 5, 3, 8, 2, 7, 4, 6])
+        
+        print(f"Array: {arr}")
+        print(f"arr > 4:   {arr > 4}")
+        print(f"arr == 5:  {arr == 5}")
+        print(f"arr <= 3:  {arr <= 3}")
+        
+        # Boolean arrays can be used for filtering
+        mask = arr > 4
+        print(f"\nFiltering with boolean mask:")
+        print(f"Values > 4: {arr[mask]}")
+        
+        # Compound conditions
+        mask = (arr > 2) & (arr < 7)  # Note: use & not 'and'
+        print(f"Values between 2 and 7: {arr[mask]}")
+    
+    def universal_functions_ufuncs(self):
+        """NumPy's universal functions - vectorized mathematical operations"""
+        print("\n🌟 Universal Functions (ufuncs)")
+        print("=" * 50)
+        
+        angles = np.array([0, np.pi/6, np.pi/4, np.pi/3, np.pi/2])
+        
+        print("Trigonometric functions:")
+        print(f"Angles (radians): {angles/np.pi} * π")
+        print(f"sin(angles): {np.sin(angles).round(3)}")
+        print(f"cos(angles): {np.cos(angles).round(3)}")
+        print(f"tan(angles): {np.tan(angles).round(3)}")
+        
+        values = np.array([1, 4, 9, 16, 25])
+        print(f"\nMathematical functions:")
+        print(f"Values: {values}")
+        print(f"sqrt: {np.sqrt(values)}")
+        print(f"log: {np.log(values).round(3)}")
+        print(f"exp: {np.exp(values/10).round(3)}")
+        print(f"abs: {np.abs([-5, -3, 0, 3, 5])}")
+    
+    def aggregation_operations(self):
+        """Vectorized aggregation operations"""
+        print("\n📊 Aggregation Operations")
+        print("=" * 50)
+        
+        # 1D aggregations
+        arr = np.random.randn(1000) * 10 + 50
+        
+        print("1D Array Statistics:")
+        print(f"  Shape: {arr.shape}")
+        print(f"  Mean: {arr.mean():.2f}")
+        print(f"  Std Dev: {arr.std():.2f}")
+        print(f"  Min: {arr.min():.2f}")
+        print(f"  Max: {arr.max():.2f}")
+        print(f"  Sum: {arr.sum():.2f}")
+        print(f"  Median: {np.median(arr):.2f}")
+        print(f"  95th percentile: {np.percentile(arr, 95):.2f}")
+        
+        # 2D aggregations with axis
+        matrix = np.random.randint(1, 10, size=(3, 4))
+        print(f"\n2D Matrix:\n{matrix}")
+        print(f"Sum along rows (axis=1): {matrix.sum(axis=1)}")
+        print(f"Sum along columns (axis=0): {matrix.sum(axis=0)}")
+        print(f"Mean of entire matrix: {matrix.mean():.2f}")
+    
+    def advanced_vectorization_patterns(self):
+        """Advanced patterns for complex operations"""
+        print("\n🎯 Advanced Vectorization Patterns")
+        print("=" * 50)
+        
+        # Pattern 1: Outer operations
+        x = np.array([1, 2, 3])
+        y = np.array([4, 5, 6])
+        
+        print("Outer product (all pairs multiplication):")
+        outer_product = x[:, np.newaxis] * y
+        print(f"x = {x}, y = {y}")
+        print(f"Outer product:\n{outer_product}")
+        
+        # Pattern 2: Moving window operations
+        data = np.array([1, 3, 5, 7, 9, 11, 13])
+        window_size = 3
+        
+        # Create sliding windows using stride tricks (advanced!)
+        print(f"\nMoving average (window size={window_size}):")
+        print(f"Data: {data}")
+        
+        # Simple approach using convolution
+        weights = np.ones(window_size) / window_size
+        moving_avg = np.convolve(data, weights, mode='valid')
+        print(f"Moving averages: {moving_avg.round(2)}")
+        
+        # Pattern 3: Vectorized string operations (structured arrays)
+        names = np.array(['Alice', 'Bob', 'Charlie', 'David'])
+        scores = np.array([85, 92, 78, 95])
+        
+        print(f"\nVectorized filtering:")
+        print(f"Names: {names}")
+        print(f"Scores: {scores}")
+        
+        # Find high scorers
+        high_scorers = names[scores > 80]
+        print(f"High scorers (>80): {high_scorers}")
+
+# Example usage
+ops = VectorizedOperations()
+ops.basic_arithmetic_operations()
+ops.comparison_operations()
+ops.universal_functions_ufuncs()
+ops.aggregation_operations()
+ops.advanced_vectorization_patterns()</code></pre>
+
+    <h2>Real-World Vectorization: From Theory to Practice 🌍</h2>
+    
+    <p>Let's apply vectorization to real data science problems. These examples show how vectorization transforms complex computations into elegant, fast solutions.</p>
+
+    <div class="mermaid">
+    graph LR
+        A[Raw Data] --> B[Vectorized Operations]
+        B --> C[Element-wise Ops]
+        B --> D[Aggregations]
+        B --> E[Broadcasting]
+        B --> F[Boolean Indexing]
+        
+        C --> G[Transform]
+        D --> H[Summarize]
+        E --> I[Combine]
+        F --> J[Filter]
+        
+        G --> K[Results]
+        H --> K
+        I --> K
+        J --> K
+        
+        style B fill:#4ecdc4
+        style K fill:#51cf66
+    </div>
+
+    <pre><code>import numpy as np
+import time
+
+class RealWorldVectorization:
+    """
+    Real-world applications of vectorization in data science.
+    These are patterns you'll use every day! 🎯
+    """
+    
+    def __init__(self):
+        np.random.seed(42)
+    
+    def financial_portfolio_analysis(self):
+        """
+        Vectorized portfolio analysis - calculate returns, risk, Sharpe ratio
+        """
+        print("💰 Financial Portfolio Analysis")
+        print("=" * 60)
+        
+        # Simulate daily stock prices for 5 stocks over 252 trading days
+        n_days = 252
+        n_stocks = 5
+        stock_names = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA']
+        
+        # Generate random returns (vectorized)
+        daily_returns = np.random.randn(n_days, n_stocks) * 0.02 + 0.001
+        
+        # Calculate cumulative prices (vectorized)
+        initial_prices = np.array([150, 2800, 300, 3300, 800])
+        prices = initial_prices * np.cumprod(1 + daily_returns, axis=0)
+        
+        # Portfolio calculations (all vectorized!)
+        portfolio_weights = np.array([0.2, 0.2, 0.2, 0.2, 0.2])
+        
+        # Daily portfolio value
+        portfolio_values = prices @ portfolio_weights
+        
+        # Portfolio metrics
+        portfolio_returns = np.diff(portfolio_values) / portfolio_values[:-1]
+        
+        print(f"Portfolio Performance Metrics:")
+        print(f"  Initial value: ${portfolio_values[0]:,.2f}")
+        print(f"  Final value: ${portfolio_values[-1]:,.2f}")
+        print(f"  Total return: {((portfolio_values[-1]/portfolio_values[0]) - 1)*100:.2f}%")
+        print(f"  Daily volatility: {portfolio_returns.std()*100:.3f}%")
+        print(f"  Annualized volatility: {portfolio_returns.std()*np.sqrt(252)*100:.2f}%")
+        print(f"  Sharpe ratio: {(portfolio_returns.mean()/portfolio_returns.std())*np.sqrt(252):.2f}")
+        
+        # Value at Risk (VaR) - 95% confidence
+        var_95 = np.percentile(portfolio_returns, 5) * portfolio_values[-1]
+        print(f"  Value at Risk (95%): ${-var_95:,.2f}")
+        
+        # Find best and worst days (vectorized)
+        best_day_idx = np.argmax(portfolio_returns)
+        worst_day_idx = np.argmin(portfolio_returns)
+        
+        print(f"\nExtreme days:")
+        print(f"  Best day: Day {best_day_idx+1}, Return: {portfolio_returns[best_day_idx]*100:.2f}%")
+        print(f"  Worst day: Day {worst_day_idx+1}, Return: {portfolio_returns[worst_day_idx]*100:.2f}%")
+    
+    def image_processing_filters(self):
+        """
+        Vectorized image processing operations
+        """
+        print("\n🖼️ Image Processing with Vectorization")
+        print("=" * 60)
+        
+        # Create a sample "image" (2D array)
+        image_size = 100
+        image = np.random.randint(0, 256, (image_size, image_size), dtype=np.uint8)
+        
+        # Vectorized image operations
+        print("Image operations (all vectorized):")
+        
+        # 1. Brightness adjustment
+        start = time.perf_counter()
+        brightened = np.clip(image + 50, 0, 255)
+        bright_time = time.perf_counter() - start
+        print(f"  ✓ Brightness adjustment: {bright_time*1000:.3f} ms")
+        
+        # 2. Contrast adjustment
+        start = time.perf_counter()
+        mean = image.mean()
+        contrasted = np.clip((image - mean) * 1.5 + mean, 0, 255)
+        contrast_time = time.perf_counter() - start
+        print(f"  ✓ Contrast adjustment: {contrast_time*1000:.3f} ms")
+        
+        # 3. Thresholding
+        start = time.perf_counter()
+        threshold = 128
+        binary = (image > threshold).astype(np.uint8) * 255
+        thresh_time = time.perf_counter() - start
+        print(f"  ✓ Thresholding: {thresh_time*1000:.3f} ms")
+        
+        # 4. Edge detection (simple gradient)
+        start = time.perf_counter()
+        grad_x = np.abs(np.diff(image, axis=1))
+        grad_y = np.abs(np.diff(image, axis=0))
+        edge_time = time.perf_counter() - start
+        print(f"  ✓ Edge detection: {edge_time*1000:.3f} ms")
+        
+        # 5. Histogram equalization (advanced vectorization)
+        start = time.perf_counter()
+        hist, bins = np.histogram(image.flatten(), 256, [0, 256])
+        cdf = hist.cumsum()
+        cdf_normalized = cdf * 255 / cdf[-1]
+        equalized = cdf_normalized[image].astype(np.uint8)
+        hist_time = time.perf_counter() - start
+        print(f"  ✓ Histogram equalization: {hist_time*1000:.3f} ms")
+        
+        total_time = bright_time + contrast_time + thresh_time + edge_time + hist_time
+        print(f"\nTotal time for all operations: {total_time*1000:.2f} ms")
+        print(f"Processing rate: {5*image_size*image_size/total_time/1e6:.1f} Megapixels/second")
+    
+    def sensor_data_analysis(self):
+        """
+        Analyze time-series sensor data using vectorization
+        """
+        print("\n📡 IoT Sensor Data Analysis")
+        print("=" * 60)
+        
+        # Simulate sensor data: temperature readings every minute for 24 hours
+        n_sensors = 10
+        n_readings = 24 * 60  # 1440 readings
+        
+        # Generate realistic temperature data with daily pattern
+        time = np.linspace(0, 24, n_readings)
+        base_temp = 20  # Base temperature
+        
+        # Vectorized data generation
+        daily_pattern = 5 * np.sin(2 * np.pi * (time - 6) / 24)  # Peak at noon
+        noise = np.random.randn(n_readings, n_sensors) * 0.5
+        sensor_data = base_temp + daily_pattern[:, np.newaxis] + noise
+        
+        print(f"Analyzing {n_sensors} sensors with {n_readings} readings each")
+        
+        # Vectorized analysis
+        # 1. Statistics per sensor
+        sensor_stats = {
+            'mean': sensor_data.mean(axis=0),
+            'std': sensor_data.std(axis=0),
+            'min': sensor_data.min(axis=0),
+            'max': sensor_data.max(axis=0),
+            'range': sensor_data.max(axis=0) - sensor_data.min(axis=0)
+        }
+        
+        print(f"\nSensor Statistics:")
+        print(f"  Mean temperatures: {sensor_stats['mean'].round(1)}")
+        print(f"  Std deviations: {sensor_stats['std'].round(2)}")
+        print(f"  Temperature ranges: {sensor_stats['range'].round(1)}")
+        
+        # 2. Anomaly detection (vectorized)
+        threshold = 3  # Standard deviations
+        mean = sensor_data.mean(axis=0)
+        std = sensor_data.std(axis=0)
+        
+        # Broadcasting to create z-scores
+        z_scores = np.abs((sensor_data - mean) / std)
+        anomalies = z_scores > threshold
+        
+        n_anomalies = anomalies.sum(axis=0)
+        print(f"\nAnomaly Detection:")
+        print(f"  Anomalies per sensor: {n_anomalies}")
+        print(f"  Total anomalies: {anomalies.sum()}")
+        
+        # 3. Cross-correlation between sensors (fully vectorized)
+        # Normalize data
+        normalized = (sensor_data - sensor_data.mean(axis=0)) / sensor_data.std(axis=0)
+        
+        # Compute correlation matrix
+        correlation_matrix = (normalized.T @ normalized) / n_readings
+        
+        print(f"\nSensor Correlations:")
+        print(f"  Highest correlation: {correlation_matrix[correlation_matrix < 1].max():.3f}")
+        print(f"  Lowest correlation: {correlation_matrix.min():.3f}")
+        
+        # 4. Moving statistics (vectorized with convolution)
+        window_size = 60  # 1-hour window
+        kernel = np.ones(window_size) / window_size
+        
+        # Moving average for first sensor
+        moving_avg = np.convolve(sensor_data[:, 0], kernel, mode='valid')
+        
+        print(f"\nMoving Statistics (1-hour window):")
+        print(f"  Original variance: {sensor_data[:, 0].var():.3f}")
+        print(f"  Smoothed variance: {moving_avg.var():.3f}")
+        print(f"  Noise reduction: {(1 - moving_avg.var()/sensor_data[:, 0].var())*100:.1f}%")
+    
+    def machine_learning_preprocessing(self):
+        """
+        Vectorized data preprocessing for machine learning
+        """
+        print("\n🤖 Machine Learning Data Preprocessing")
+        print("=" * 60)
+        
+        # Generate sample dataset
+        n_samples = 10000
+        n_features = 20
+        
+        # Create features with different scales
+        X = np.random.randn(n_samples, n_features)
+        X[:, 0] *= 1000  # Large scale
+        X[:, 1] *= 0.001  # Small scale
+        X[:, 5:10] = np.random.randint(0, 5, (n_samples, 5))  # Categorical-like
+        
+        print(f"Dataset shape: {X.shape}")
+        print(f"Feature ranges: [{X.min():.1f}, {X.max():.1f}]")
+        
+        # 1. Standardization (Z-score normalization)
+        start = time.perf_counter()
+        mean = X.mean(axis=0)
+        std = X.std(axis=0)
+        X_standardized = (X - mean) / (std + 1e-8)  # Avoid division by zero
+        standard_time = time.perf_counter() - start
+        
+        print(f"\n1. Standardization: {standard_time*1000:.3f} ms")
+        print(f"   New range: [{X_standardized.min():.2f}, {X_standardized.max():.2f}]")
+        
+        # 2. Min-Max Normalization
+        start = time.perf_counter()
+        X_min = X.min(axis=0)
+        X_max = X.max(axis=0)
+        X_normalized = (X - X_min) / (X_max - X_min + 1e-8)
+        norm_time = time.perf_counter() - start
+        
+        print(f"2. Min-Max Normalization: {norm_time*1000:.3f} ms")
+        print(f"   New range: [{X_normalized.min():.2f}, {X_normalized.max():.2f}]")
+        
+        # 3. One-hot encoding simulation
+        categorical_feature = X[:, 5].astype(int) % 5  # 5 categories
+        n_categories = 5
+        
+        start = time.perf_counter()
+        one_hot = np.eye(n_categories)[categorical_feature]
+        onehot_time = time.perf_counter() - start
+        
+        print(f"3. One-hot encoding: {onehot_time*1000:.3f} ms")
+        print(f"   Shape: {categorical_feature.shape} → {one_hot.shape}")
+        
+        # 4. Polynomial features (vectorized)
+        start = time.perf_counter()
+        X_subset = X[:, :3]  # Use first 3 features
+        X_poly = np.column_stack([
+            X_subset,
+            X_subset**2,  # Squared terms
+            X_subset[:, 0:1] * X_subset[:, 1:2],  # x1*x2
+            X_subset[:, 0:1] * X_subset[:, 2:3],  # x1*x3
+            X_subset[:, 1:2] * X_subset[:, 2:3]   # x2*x3
+        ])
+        poly_time = time.perf_counter() - start
+        
+        print(f"4. Polynomial features: {poly_time*1000:.3f} ms")
+        print(f"   Shape: {X_subset.shape} → {X_poly.shape}")
+        
+        # 5. Outlier removal (vectorized)
+        start = time.perf_counter()
+        z_scores = np.abs((X - X.mean(axis=0)) / X.std(axis=0))
+        outlier_mask = (z_scores < 3).all(axis=1)
+        X_clean = X[outlier_mask]
+        outlier_time = time.perf_counter() - start
+        
+        print(f"5. Outlier removal: {outlier_time*1000:.3f} ms")
+        print(f"   Samples removed: {n_samples - X_clean.shape[0]}")
+        
+        total_time = standard_time + norm_time + onehot_time + poly_time + outlier_time
+        print(f"\nTotal preprocessing time: {total_time*1000:.2f} ms")
+        print(f"Processing rate: {n_samples/total_time:.0f} samples/second")
+
+# Run real-world examples
+real_world = RealWorldVectorization()
+real_world.financial_portfolio_analysis()
+real_world.image_processing_filters()
+real_world.sensor_data_analysis()
+real_world.machine_learning_preprocessing()</code></pre>
+
+    <h2>Vectorization Best Practices and Patterns 📚</h2>
+    
+    <p>Mastering vectorization requires recognizing patterns and knowing when to apply them. Here are the essential patterns every data scientist should know.</p>
+
+    <pre><code>import numpy as np
+
+class VectorizationPatterns:
+    """
+    Essential vectorization patterns and best practices.
+    Your toolbox for writing blazing-fast NumPy code! 🛠️
+    """
+    
+    def pattern_1_avoid_loops(self):
+        """Pattern 1: Replace loops with vectorized operations"""
+        print("📌 Pattern 1: Eliminate Loops")
+        print("=" * 50)
+        
+        n = 100000
+        arr = np.random.randn(n)
+        
+        # ❌ BAD: Loop-based approach
+        def loop_cumsum(arr):
+            result = np.zeros_like(arr)
+            result[0] = arr[0]
+            for i in range(1, len(arr)):
+                result[i] = result[i-1] + arr[i]
+            return result
+        
+        # ✅ GOOD: Vectorized approach
+        def vector_cumsum(arr):
+            return np.cumsum(arr)
+        
+        # Compare
+        import time
+        start = time.perf_counter()
+        loop_result = loop_cumsum(arr)
+        loop_time = time.perf_counter() - start
+        
+        start = time.perf_counter()
+        vector_result = vector_cumsum(arr)
+        vector_time = time.perf_counter() - start
+        
+        print(f"Loop time: {loop_time*1000:.2f} ms")
+        print(f"Vectorized time: {vector_time*1000:.2f} ms")
+        print(f"Speedup: {loop_time/vector_time:.1f}x")
+        print(f"Results match: {np.allclose(loop_result, vector_result)}")
+    
+    def pattern_2_use_broadcasting(self):
+        """Pattern 2: Leverage broadcasting for dimension mismatches"""
+        print("\n📌 Pattern 2: Smart Broadcasting")
+        print("=" * 50)
+        
+        # Example: Normalize each row of a matrix
+        matrix = np.random.randn(100, 50) * 10 + 50
+        
+        # ❌ BAD: Loop through rows
+        def loop_normalize(matrix):
+            result = np.zeros_like(matrix)
+            for i in range(matrix.shape[0]):
+                row = matrix[i]
+                result[i] = (row - row.mean()) / row.std()
+            return result
+        
+        # ✅ GOOD: Use broadcasting
+        def broadcast_normalize(matrix):
+            row_means = matrix.mean(axis=1, keepdims=True)
+            row_stds = matrix.std(axis=1, keepdims=True)
+            return (matrix - row_means) / row_stds
+        
+        # Time comparison
+        import time
+        start = time.perf_counter()
+        loop_norm = loop_normalize(matrix)
+        loop_time = time.perf_counter() - start
+        
+        start = time.perf_counter()
+        broadcast_norm = broadcast_normalize(matrix)
+        broadcast_time = time.perf_counter() - start
+        
+        print(f"Loop normalization: {loop_time*1000:.2f} ms")
+        print(f"Broadcast normalization: {broadcast_time*1000:.2f} ms")
+        print(f"Speedup: {loop_time/broadcast_time:.1f}x")
+        
+        # Show broadcasting shapes
+        print(f"\nBroadcasting shapes:")
+        print(f"  Matrix shape: {matrix.shape}")
+        print(f"  Row means shape: {matrix.mean(axis=1, keepdims=True).shape}")
+        print(f"  Broadcasting: {matrix.shape} - {matrix.mean(axis=1, keepdims=True).shape} → Works!")
+    
+    def pattern_3_boolean_indexing(self):
+        """Pattern 3: Use boolean masks instead of if statements"""
+        print("\n📌 Pattern 3: Boolean Indexing")
+        print("=" * 50)
+        
+        # Example: Apply different operations based on conditions
+        data = np.random.randn(100000) * 10
+        
+        # ❌ BAD: Loop with if statements
+        def loop_conditional(data):
+            result = np.zeros_like(data)
+            for i in range(len(data)):
+                if data[i] > 0:
+                    result[i] = np.sqrt(data[i])
+                else:
+                    result[i] = -np.sqrt(-data[i])
+            return result
+        
+        # ✅ GOOD: Vectorized with boolean indexing
+        def vector_conditional(data):
+            result = np.zeros_like(data)
+            positive_mask = data > 0
+            negative_mask = ~positive_mask
+            
+            result[positive_mask] = np.sqrt(data[positive_mask])
+            result[negative_mask] = -np.sqrt(-data[negative_mask])
+            return result
+        
+        # Even better: Using np.where
+        def where_conditional(data):
+            return np.where(data > 0, np.sqrt(np.abs(data)), -np.sqrt(np.abs(data)))
+        
+        # Time all three
+        import time
+        times = {}
+        
+        start = time.perf_counter()
+        loop_result = loop_conditional(data)
+        times['loop'] = time.perf_counter() - start
+        
+        start = time.perf_counter()
+        vector_result = vector_conditional(data)
+        times['boolean'] = time.perf_counter() - start
+        
+        start = time.perf_counter()
+        where_result = where_conditional(data)
+        times['where'] = time.perf_counter() - start
+        
+        print("Execution times:")
+        for method, t in times.items():
+            print(f"  {method:10s}: {t*1000:.2f} ms")
+        
+        print(f"\nSpeedup vs loop:")
+        print(f"  Boolean indexing: {times['loop']/times['boolean']:.1f}x")
+        print(f"  np.where: {times['loop']/times['where']:.1f}x")
+    
+    def pattern_4_axis_operations(self):
+        """Pattern 4: Use axis parameter for multi-dimensional operations"""
+        print("\n📌 Pattern 4: Axis-wise Operations")
+        print("=" * 50)
+        
+        # 3D array: think of it as (batch, height, width)
+        data_3d = np.random.randn(10, 100, 100)
+        
+        print(f"3D array shape: {data_3d.shape}")
+        print("(batch_size, height, width)")
+        
+        # Operations along different axes
+        print("\nAxis operations:")
+        print(f"  Mean over batch (axis=0): shape {data_3d.mean(axis=0).shape}")
+        print(f"  Mean over height (axis=1): shape {data_3d.mean(axis=1).shape}")
+        print(f"  Mean over width (axis=2): shape {data_3d.mean(axis=2).shape}")
+        print(f"  Mean over spatial (axis=(1,2)): shape {data_3d.mean(axis=(1,2)).shape}")
+        
+        # Practical example: Batch normalization
+        def batch_normalize(data):
+            """Normalize each image in the batch"""
+            # Compute statistics per image (over spatial dimensions)
+            means = data.mean(axis=(1, 2), keepdims=True)
+            stds = data.std(axis=(1, 2), keepdims=True)
+            return (data - means) / (stds + 1e-8)
+        
+        normalized = batch_normalize(data_3d)
+        print(f"\nBatch normalization:")
+        print(f"  Input range: [{data_3d.min():.2f}, {data_3d.max():.2f}]")
+        print(f"  Output range: [{normalized.min():.2f}, {normalized.max():.2f}]")
+        print(f"  Mean per image: {normalized.mean(axis=(1,2)).round(3)}")  # Should be ~0
+        print(f"  Std per image: {normalized.std(axis=(1,2)).round(3)}")   # Should be ~1
+    
+    def pattern_5_einsum_power(self):
+        """Pattern 5: Use einsum for complex tensor operations"""
+        print("\n📌 Pattern 5: Einstein Summation (einsum)")
+        print("=" * 50)
+        
+        # Einsum is incredibly powerful for complex operations
+        A = np.random.randn(3, 4)
+        B = np.random.randn(4, 5)
+        C = np.random.randn(5, 3)
+        
+        print("Einsum examples:")
+        
+        # Matrix multiplication
+        result1 = np.einsum('ij,jk->ik', A, B)
+        check1 = A @ B
+        print(f"  Matrix multiply: {np.allclose(result1, check1)}")
+        
+        # Transpose
+        result2 = np.einsum('ij->ji', A)
+        check2 = A.T
+        print(f"  Transpose: {np.allclose(result2, check2)}")
+        
+        # Trace
+        square_matrix = np.random.randn(4, 4)
+        result3 = np.einsum('ii->', square_matrix)
+        check3 = np.trace(square_matrix)
+        print(f"  Trace: {np.allclose(result3, check3)}")
+        
+        # Batch matrix multiplication
+        batch_A = np.random.randn(10, 3, 4)
+        batch_B = np.random.randn(10, 4, 5)
+        result4 = np.einsum('bij,bjk->bik', batch_A, batch_B)
+        print(f"  Batch matmul shape: {batch_A.shape} × {batch_B.shape} → {result4.shape}")
+        
+        # Complex chain multiplication (A @ B @ C.T)
+        result5 = np.einsum('ij,jk,lk->il', A, B, C)
+        check5 = A @ B @ C.T
+        print(f"  Chain multiplication: {np.allclose(result5, check5)}")
+    
+    def optimization_tips(self):
+        """General optimization tips for vectorization"""
+        print("\n💡 Vectorization Optimization Tips")
+        print("=" * 50)
+        
+        tips = [
+            "1. **Preallocate arrays**: Use np.empty() instead of growing arrays",
+            "2. **Use views, not copies**: Slicing creates views, fancy indexing creates copies",
+            "3. **Choose right dtype**: float32 vs float64 can be 2x speed difference",
+            "4. **Avoid repeated calculations**: Store intermediate results",
+            "5. **Use numexpr for complex expressions**: Can be faster than NumPy",
+            "6. **Profile your code**: Use %timeit to find bottlenecks",
+            "7. **Consider memory layout**: C-order vs Fortran-order matters",
+            "8. **Batch operations**: Process multiple items at once",
+            "9. **Use specialized functions**: np.dot() faster than np.sum(a*b)",
+            "10. **Avoid Python scalars in loops**: Keep everything in NumPy"
+        ]
+        
+        for tip in tips:
+            print(f"  {tip}")
+        
+        # Practical example: dtype optimization
+        print("\n📊 Example: Data type optimization")
+        n = 1_000_000
+        
+        # Float64 (default)
+        arr_64 = np.random.randn(n)
+        start = time.perf_counter()
+        result_64 = np.sqrt(np.abs(arr_64)) * 2 + arr_64**2
+        time_64 = time.perf_counter() - start
+        
+        # Float32
+        arr_32 = arr_64.astype(np.float32)
+        start = time.perf_counter()
+        result_32 = np.sqrt(np.abs(arr_32)) * 2 + arr_32**2
+        time_32 = time.perf_counter() - start
+        
+        print(f"  Float64 time: {time_64*1000:.2f} ms")
+        print(f"  Float32 time: {time_32*1000:.2f} ms")
+        print(f"  Speedup: {time_64/time_32:.2f}x")
+        print(f"  Memory saved: {(arr_64.nbytes - arr_32.nbytes) / 1024**2:.1f} MB")
+
+# Execute all patterns
+patterns = VectorizationPatterns()
+patterns.pattern_1_avoid_loops()
+patterns.pattern_2_use_broadcasting()
+patterns.pattern_3_boolean_indexing()
+patterns.pattern_4_axis_operations()
+patterns.pattern_5_einsum_power()
+patterns.optimization_tips()</code></pre>
+
+    <h2>Common Vectorization Pitfalls and Solutions 🚧</h2>
+    
+    <p>Even experienced developers fall into these traps. Let's learn how to avoid them!</p>
+
+    <pre><code>import numpy as np
+
+print("⚠️ Common Vectorization Pitfalls")
+print("=" * 60)
+
+# Pitfall 1: Unnecessary Loops
+print("\n❌ Pitfall 1: Hidden Loops in List Comprehensions")
+print("-" * 40)
+
+# Bad: List comprehension that could be vectorized
+data = np.random.randn(10000)
+# result = np.array([x**2 if x > 0 else 0 for x in data])  # SLOW!
+
+# Good: Vectorized solution
+result = np.where(data > 0, data**2, 0)  # FAST!
+print("✅ Solution: Use np.where() or boolean indexing")
+
+# Pitfall 2: Growing Arrays
+print("\n❌ Pitfall 2: Growing Arrays in Loops")
+print("-" * 40)
+
+# Bad: Appending to arrays
+# result = np.array([])
+# for i in range(1000):
+#     result = np.append(result, i**2)  # Creates new array each time!
+
+# Good: Preallocate
+result = np.empty(1000)
+for i in range(1000):
+    result[i] = i**2
+
+# Better: Fully vectorized
+result = np.arange(1000)**2
+print("✅ Solution: Preallocate or vectorize completely")
+
+# Pitfall 3: Row-by-row Processing
+print("\n❌ Pitfall 3: Processing 2D Arrays Row by Row")
+print("-" * 40)
+
+matrix = np.random.randn(100, 100)
+
+# Bad: Loop over rows
+# for i in range(len(matrix)):
+#     matrix[i] = matrix[i] - matrix[i].mean()
+
+# Good: Vectorized with broadcasting
+matrix = matrix - matrix.mean(axis=1, keepdims=True)
+print("✅ Solution: Use axis operations with keepdims=True")
+
+# Pitfall 4: Not Using In-place Operations
+print("\n❌ Pitfall 4: Creating Unnecessary Copies")
+print("-" * 40)
+
+large_array = np.random.randn(1000000)
+
+# Bad: Creates new array
+# large_array = large_array * 2
+
+# Good: In-place operation
+large_array *= 2  # Modifies in place, saves memory
+print("✅ Solution: Use in-place operations when possible")
+
+# Pitfall 5: Chain of Operations
+print("\n❌ Pitfall 5: Inefficient Operation Chains")
+print("-" * 40)
+
+data = np.random.randn(1000000)
+
+# Bad: Multiple passes through data
+# result = np.sqrt(np.abs(data))
+# result = result * 2
+# result = result + 1
+
+# Good: Single expression (NumPy optimizes better)
+result = np.sqrt(np.abs(data)) * 2 + 1
+
+# Better: Use numexpr for complex expressions
+# import numexpr as ne
+# result = ne.evaluate('sqrt(abs(data)) * 2 + 1')
+print("✅ Solution: Combine operations into single expressions")
+
+# Pitfall 6: Wrong Axis Selection
+print("\n❌ Pitfall 6: Confusion with Axis Parameter")
+print("-" * 40)
+
+data_3d = np.random.randn(10, 20, 30)
+print(f"3D array shape: {data_3d.shape}")
+
+# Remember: axis=0 operates ALONG first dimension
+# It "collapses" that dimension
+print(f"sum(axis=0) shape: {data_3d.sum(axis=0).shape}")  # (20, 30)
+print(f"sum(axis=1) shape: {data_3d.sum(axis=1).shape}")  # (10, 30)
+print(f"sum(axis=2) shape: {data_3d.sum(axis=2).shape}")  # (10, 20)
+
+print("✅ Tip: axis=n collapses the n-th dimension")
+
+# Performance comparison summary
+print("\n📊 Vectorization Performance Summary")
+print("=" * 60)
+print("Operation               | Loop Time | Vectorized | Speedup")
+print("-" * 60)
+print("Element-wise math       | 100ms     | 1ms        | 100x")
+print("Conditional logic       | 80ms      | 3ms        | 27x")
+print("Matrix operations       | 500ms     | 5ms        | 100x")
+print("Aggregations           | 50ms      | 0.5ms      | 100x")
+print("Broadcasting           | 200ms     | 2ms        | 100x")</code></pre>
+
+    <h2>Summary: Your Vectorization Mastery Checklist ✅</h2>
+    
+    <div class="comment-block">
+        <p><strong>🎯 Key Takeaways:</strong></p>
+        <ul>
+            <li><strong>Think in Arrays:</strong> Stop thinking about individual elements, think about entire arrays as single entities.</li>
+            <li><strong>Eliminate Loops:</strong> If you're writing a for loop over array elements, there's probably a vectorized alternative.</li>
+            <li><strong>Use Broadcasting:</strong> Let NumPy handle dimension mismatches automatically instead of writing loops.</li>
+            <li><strong>Boolean Indexing:</strong> Replace if-statements with boolean masks for conditional operations.</li>
+            <li><strong>Axis Operations:</strong> Master the axis parameter for multi-dimensional operations.</li>
+            <li><strong>Profile First:</strong> Measure before optimizing - vectorization isn't always the bottleneck.</li>
+        </ul>
+    </div>
+
+    <pre><code># Quick Vectorization Reference Card
+import numpy as np
+
+# COMMON VECTORIZATION PATTERNS
+# ------------------------------
+
+# Instead of loops, use:
+arr = np.arange(1000)
+
+# Element-wise operations
+result = arr * 2 + 10           # Instead of: [x*2+10 for x in arr]
+
+# Conditional operations  
+result = np.where(arr > 500, arr*2, arr/2)  # Instead of if/else in loop
+
+# Aggregations
+total = arr.sum()                # Instead of: sum(arr)
+running_sum = arr.cumsum()       # Instead of: manual accumulation
+
+# Broadcasting (automatic)
+matrix = np.random.randn(10, 5)
+row_means = matrix.mean(axis=1, keepdims=True)
+centered = matrix - row_means    # Subtracts from each row
+
+# Boolean indexing
+positive_values = arr[arr > 0]   # Instead of: filter with if
+
+# Multiple conditions
+mask = (arr > 100) & (arr < 500)
+filtered = arr[mask]
+
+# In-place operations (save memory)
+arr *= 2                         # Instead of: arr = arr * 2
+arr += 10                        # Instead of: arr = arr + 10
+
+# Axis operations
+matrix.sum(axis=0)   # Sum each column
+matrix.sum(axis=1)   # Sum each row
+matrix.sum()          # Sum everything
+
+# PERFORMANCE TIPS
+# ----------------
+# 1. Vectorize everything possible
+# 2. Use appropriate dtype (float32 vs float64)
+# 3. Preallocate arrays with np.empty()
+# 4. Use views (slicing) not copies when possible
+# 5. Combine operations into single expressions
+# 6. Profile with %timeit to find bottlenecks
+
+print("🚀 You're now a vectorization expert!")</code></pre>
+
+    <footer>
+        <div class="navigation-links">
+            <a class="nav-prev" href="numpy_arrays_vs_lists.html">← Previous: Arrays vs Lists</a>
+            <a class="nav-home" href="index.html">🏠 Course Home</a>
+            <a class="nav-next" href="numpy_broadcasting.html">Next: Broadcasting →</a>
+        </div>
+    </footer>
+</body>
+</html>
