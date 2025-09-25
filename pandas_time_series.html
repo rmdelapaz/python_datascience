@@ -1,0 +1,810 @@
+metric-value">12.89</div>
+                    <div class="metric-label">RMSE</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">2.8%</div>
+                    <div class="metric-label">MAPE</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">0.92</div>
+                    <div class="metric-label">R²</div>
+                </div>
+            </div>
+            
+            <canvas id="forecastChart" class="interactive-canvas"></canvas>
+        </div>
+
+        <!-- Complete Forecasting Code -->
+        <div class="code-section">
+            <div class="code-header">
+                <span class="code-title">Time Series Forecasting Methods</span>
+                <button class="copy-button" onclick="copyCode(this)">Copy</button>
+            </div>
+            <pre><code class="language-python">
+import pandas as pd
+import numpy as np
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
+from statsmodels.tsa.arima.model import ARIMA
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+import matplotlib.pyplot as plt
+import warnings
+warnings.filterwarnings('ignore')
+
+# Create sample time series
+np.random.seed(42)
+dates = pd.date_range('2020-01-01', '2023-12-31', freq='D')
+trend = np.linspace(100, 400, len(dates))
+seasonal = 50 * np.sin(2 * np.pi * np.arange(len(dates)) / 365.25)
+noise = np.random.randn(len(dates)) * 10
+ts = pd.Series(trend + seasonal + noise, index=dates)
+
+# Split into train and test
+train_size = int(len(ts) * 0.8)
+train, test = ts[:train_size], ts[train_size:]
+
+print(f"Train set: {len(train)} observations")
+print(f"Test set: {len(test)} observations")
+
+# Forecasting Methods
+#####################
+
+# 1. Naive Methods
+##################
+
+# Last value (Naive)
+naive_forecast = pd.Series([train.iloc[-1]] * len(test), index=test.index)
+
+# Seasonal Naive
+seasonal_period = 365
+seasonal_naive = train.iloc[-seasonal_period:].values
+seasonal_naive_forecast = pd.Series(
+    np.tile(seasonal_naive, len(test) // seasonal_period + 1)[:len(test)],
+    index=test.index
+)
+
+# Average method
+average_forecast = pd.Series([train.mean()] * len(test), index=test.index)
+
+# 2. Moving Average Forecast
+#############################
+
+def moving_average_forecast(train, test, window=30):
+    """Simple moving average forecast"""
+    forecast = []
+    history = list(train)
+    
+    for _ in range(len(test)):
+        ma = np.mean(history[-window:])
+        forecast.append(ma)
+        # In practice, would add actual observation
+        history.append(ma)
+    
+    return pd.Series(forecast, index=test.index)
+
+ma_forecast = moving_average_forecast(train, test)
+
+# 3. Exponential Smoothing
+##########################
+
+# Simple Exponential Smoothing
+from statsmodels.tsa.holtwinters import SimpleExpSmoothing
+
+ses_model = SimpleExpSmoothing(train)
+ses_fit = ses_model.fit(smoothing_level=0.2, optimized=False)
+ses_forecast = ses_fit.forecast(len(test))
+
+# Double Exponential Smoothing (Holt's method)
+from statsmodels.tsa.holtwinters import Holt
+
+holt_model = Holt(train)
+holt_fit = holt_model.fit()
+holt_forecast = holt_fit.forecast(len(test))
+
+# Triple Exponential Smoothing (Holt-Winters)
+hw_model = ExponentialSmoothing(
+    train,
+    seasonal_periods=365,
+    trend='add',
+    seasonal='add',
+    damped_trend=True
+)
+hw_fit = hw_model.fit()
+hw_forecast = hw_fit.forecast(len(test))
+
+# 4. ARIMA Models
+#################
+
+# Auto ARIMA (find best parameters)
+from statsmodels.tsa.stattools import adfuller
+from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+
+# Check stationarity and difference if needed
+adf_result = adfuller(train)
+if adf_result[1] > 0.05:
+    train_diff = train.diff().dropna()
+    d = 1
+else:
+    train_diff = train
+    d = 0
+
+# Fit ARIMA model
+arima_model = ARIMA(train, order=(2, d, 2))  # (p, d, q)
+arima_fit = arima_model.fit()
+arima_forecast = arima_fit.forecast(steps=len(test))
+
+# SARIMA (Seasonal ARIMA)
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+
+sarima_model = SARIMAX(
+    train,
+    order=(1, 1, 1),
+    seasonal_order=(1, 1, 1, 365),
+    enforce_stationarity=False,
+    enforce_invertibility=False
+)
+sarima_fit = sarima_model.fit(disp=False)
+sarima_forecast = sarima_fit.forecast(steps=len(test))
+
+# 5. Prophet (Facebook's forecasting tool)
+###########################################
+
+from prophet import Prophet
+
+# Prepare data for Prophet
+prophet_train = pd.DataFrame({
+    'ds': train.index,
+    'y': train.values
+})
+
+# Fit Prophet model
+prophet_model = Prophet(
+    yearly_seasonality=True,
+    weekly_seasonality=False,
+    daily_seasonality=False,
+    changepoint_prior_scale=0.05
+)
+prophet_model.fit(prophet_train)
+
+# Make future dataframe
+future = prophet_model.make_future_dataframe(periods=len(test), freq='D')
+prophet_pred = prophet_model.predict(future)
+prophet_forecast = prophet_pred.loc[prophet_pred['ds'].isin(test.index), 'yhat'].values
+
+# Model Evaluation
+##################
+
+def evaluate_forecast(actual, forecast, model_name):
+    """Calculate forecast metrics"""
+    mae = mean_absolute_error(actual, forecast)
+    rmse = np.sqrt(mean_squared_error(actual, forecast))
+    mape = np.mean(np.abs((actual - forecast) / actual)) * 100
+    r2 = r2_score(actual, forecast)
+    
+    return {
+        'Model': model_name,
+        'MAE': mae,
+        'RMSE': rmse,
+        'MAPE': mape,
+        'R2': r2
+    }
+
+# Evaluate all models
+results = []
+models = {
+    'Naive': naive_forecast,
+    'Seasonal Naive': seasonal_naive_forecast[:len(test)],
+    'Moving Average': ma_forecast,
+    'Simple Exp Smoothing': ses_forecast,
+    'Holt': holt_forecast,
+    'Holt-Winters': hw_forecast,
+    'ARIMA': arima_forecast
+}
+
+for name, forecast in models.items():
+    if len(forecast) == len(test):
+        results.append(evaluate_forecast(test.values, forecast.values, name))
+
+results_df = pd.DataFrame(results)
+results_df = results_df.sort_values('RMSE')
+print("\nModel Performance Comparison:")
+print(results_df.to_string(index=False))
+
+# Visualization
+###############
+
+fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+
+# Plot 1: All forecasts comparison
+ax1 = axes[0, 0]
+train.plot(ax=ax1, label='Training Data', color='blue', alpha=0.7)
+test.plot(ax=ax1, label='Actual', color='black', linewidth=2)
+ma_forecast.plot(ax=ax1, label='Moving Average', alpha=0.7)
+holt_forecast.plot(ax=ax1, label='Holt', alpha=0.7)
+hw_forecast.plot(ax=ax1, label='Holt-Winters', alpha=0.7)
+ax1.set_title('Forecast Comparison')
+ax1.legend(loc='upper left')
+ax1.grid(True, alpha=0.3)
+
+# Plot 2: Best model forecast with confidence intervals
+ax2 = axes[0, 1]
+best_model_name = results_df.iloc[0]['Model']
+best_forecast = models[best_model_name]
+
+train.plot(ax=ax2, label='Training Data', color='blue', alpha=0.7)
+test.plot(ax=ax2, label='Actual', color='black', linewidth=2)
+best_forecast.plot(ax=ax2, label=f'Best: {best_model_name}', color='red', linewidth=2)
+
+# Add confidence intervals (example for ARIMA)
+if best_model_name == 'ARIMA':
+    forecast_result = arima_fit.get_forecast(steps=len(test))
+    conf_int = forecast_result.conf_int()
+    ax2.fill_between(test.index, 
+                     conf_int.iloc[:, 0], 
+                     conf_int.iloc[:, 1], 
+                     alpha=0.2, color='red')
+
+ax2.set_title(f'Best Model: {best_model_name}')
+ax2.legend()
+ax2.grid(True, alpha=0.3)
+
+# Plot 3: Residuals analysis
+ax3 = axes[1, 0]
+residuals = test - best_forecast
+residuals.plot(ax=ax3, label='Residuals', color='green')
+ax3.axhline(y=0, color='red', linestyle='--', alpha=0.5)
+ax3.set_title('Forecast Residuals')
+ax3.set_ylabel('Residual')
+ax3.legend()
+ax3.grid(True, alpha=0.3)
+
+# Plot 4: Residuals distribution
+ax4 = axes[1, 1]
+residuals.hist(ax=ax4, bins=30, edgecolor='black', alpha=0.7)
+ax4.axvline(x=0, color='red', linestyle='--', linewidth=2)
+ax4.set_title('Residuals Distribution')
+ax4.set_xlabel('Residual')
+ax4.set_ylabel('Frequency')
+
+# Add normal distribution overlay
+from scipy import stats
+mu, std = residuals.mean(), residuals.std()
+xmin, xmax = ax4.get_xlim()
+x = np.linspace(xmin, xmax, 100)
+p = stats.norm.pdf(x, mu, std) * len(residuals) * (xmax - xmin) / 30
+ax4.plot(x, p, 'k-', linewidth=2, label='Normal')
+ax4.legend()
+
+plt.tight_layout()
+plt.show()
+
+# Cross-Validation for Time Series
+##################################
+
+from sklearn.model_selection import TimeSeriesSplit
+
+def time_series_cv(ts, model_func, n_splits=5):
+    """
+    Perform time series cross-validation
+    """
+    tscv = TimeSeriesSplit(n_splits=n_splits)
+    scores = []
+    
+    for train_idx, test_idx in tscv.split(ts):
+        train_cv = ts.iloc[train_idx]
+        test_cv = ts.iloc[test_idx]
+        
+        # Apply model function
+        forecast_cv = model_func(train_cv, len(test_cv))
+        
+        # Calculate RMSE
+        rmse = np.sqrt(mean_squared_error(test_cv, forecast_cv))
+        scores.append(rmse)
+    
+    return np.mean(scores), np.std(scores)
+
+# Example: Cross-validate moving average
+def ma_model(train, horizon):
+    return pd.Series([train.rolling(30).mean().iloc[-1]] * horizon)
+
+cv_mean, cv_std = time_series_cv(train, ma_model)
+print(f"\nCross-validation RMSE: {cv_mean:.2f} ± {cv_std:.2f}")
+</code></pre>
+        </div>
+
+        <!-- Best Practices -->
+        <div class="best-practices">
+            <h2>✅ Time Series Best Practices</h2>
+            <ul>
+                <li><strong>Always visualize first:</strong> Plot your data to identify patterns, trends, and anomalies</li>
+                <li><strong>Check for stationarity:</strong> Many models require stationary data</li>
+                <li><strong>Handle missing values:</strong> Use appropriate interpolation methods</li>
+                <li><strong>Consider seasonality:</strong> Account for regular patterns in your data</li>
+                <li><strong>Use proper train-test split:</strong> Respect temporal order, never shuffle</li>
+                <li><strong>Validate on future data:</strong> Use walk-forward validation for realistic assessment</li>
+                <li><strong>Monitor for regime changes:</strong> Time series properties can change over time</li>
+                <li><strong>Combine multiple models:</strong> Ensemble methods often perform better</li>
+                <li><strong>Document preprocessing:</strong> Keep track of all transformations applied</li>
+                <li><strong>Consider external factors:</strong> Include relevant exogenous variables when available</li>
+            </ul>
+        </div>
+
+        <!-- Quick Reference -->
+        <div class="quick-reference">
+            <h2>📋 Quick Reference</h2>
+            
+            <h3>Essential Functions:</h3>
+            <ul>
+                <li><code>pd.date_range()</code> - Create date ranges</li>
+                <li><code>pd.to_datetime()</code> - Convert to datetime</li>
+                <li><code>df.resample()</code> - Change frequency</li>
+                <li><code>df.rolling()</code> - Rolling window operations</li>
+                <li><code>df.shift()</code> - Lag operations</li>
+                <li><code>df.diff()</code> - Differencing</li>
+                <li><code>df.expanding()</code> - Expanding window</li>
+                <li><code>df.ewm()</code> - Exponential weighted functions</li>
+                <li><code>df.asfreq()</code> - Convert to specified frequency</li>
+                <li><code>df.interpolate()</code> - Fill missing values</li>
+            </ul>
+            
+            <h3>Frequency Strings:</h3>
+            <ul>
+                <li><code>'D'</code> - Daily</li>
+                <li><code>'B'</code> - Business day</li>
+                <li><code>'W'</code> - Weekly</li>
+                <li><code>'M'</code> - Month end</li>
+                <li><code>'MS'</code> - Month start</li>
+                <li><code>'Q'</code> - Quarter end</li>
+                <li><code>'Y'</code> - Year end</li>
+                <li><code>'H'</code> - Hourly</li>
+                <li><code>'T' or 'min'</code> - Minutely</li>
+                <li><code>'S'</code> - Secondly</li>
+            </ul>
+        </div>
+
+        <!-- Navigation -->
+        <div class="navigation-buttons">
+            <a href="statistics_ab_testing.html" class="nav-button">← Previous: A/B Testing</a>
+            <a href="pandas_pivot_tables.html" class="nav-button">Next: Pivot Tables →</a>
+        </div>
+    </div>
+
+    <script src="scripts/clipboard.js"></script>
+    <script>
+        // Time Series Chart Data
+        let timeSeriesData = [];
+        let currentFrequency = 'D';
+        
+        // Generate sample time series data
+        function generateTimeSeriesData(startDate, endDate, frequency) {
+            const data = [];
+            let currentDate = new Date(startDate);
+            const end = new Date(endDate);
+            
+            while (currentDate <= end) {
+                const trend = 100 + (data.length * 0.5);
+                const seasonal = 20 * Math.sin(2 * Math.PI * data.length / 365);
+                const noise = (Math.random() - 0.5) * 10;
+                
+                data.push({
+                    date: new Date(currentDate),
+                    value: trend + seasonal + noise
+                });
+                
+                // Increment based on frequency
+                switch(frequency) {
+                    case 'D':
+                        currentDate.setDate(currentDate.getDate() + 1);
+                        break;
+                    case 'W':
+                        currentDate.setDate(currentDate.getDate() + 7);
+                        break;
+                    case 'M':
+                        currentDate.setMonth(currentDate.getMonth() + 1);
+                        break;
+                    case 'Q':
+                        currentDate.setMonth(currentDate.getMonth() + 3);
+                        break;
+                    case 'Y':
+                        currentDate.setFullYear(currentDate.getFullYear() + 1);
+                        break;
+                }
+            }
+            
+            return data;
+        }
+        
+        // Draw time series chart
+        function drawTimeSeriesChart() {
+            const canvas = document.getElementById('timeSeriesChart');
+            const ctx = canvas.getContext('2d');
+            
+            // Set canvas size
+            canvas.width = canvas.offsetWidth;
+            canvas.height = 400;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (timeSeriesData.length === 0) return;
+            
+            // Calculate scales
+            const padding = 40;
+            const chartWidth = canvas.width - 2 * padding;
+            const chartHeight = canvas.height - 2 * padding;
+            
+            const minValue = Math.min(...timeSeriesData.map(d => d.value));
+            const maxValue = Math.max(...timeSeriesData.map(d => d.value));
+            const valueRange = maxValue - minValue;
+            
+            // Draw axes
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(padding, padding);
+            ctx.lineTo(padding, canvas.height - padding);
+            ctx.lineTo(canvas.width - padding, canvas.height - padding);
+            ctx.stroke();
+            
+            // Draw data
+            ctx.strokeStyle = '#667eea';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            timeSeriesData.forEach((point, i) => {
+                const x = padding + (i / (timeSeriesData.length - 1)) * chartWidth;
+                const y = canvas.height - padding - ((point.value - minValue) / valueRange) * chartHeight;
+                
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            });
+            
+            ctx.stroke();
+            
+            // Draw labels
+            ctx.fillStyle = '#333';
+            ctx.font = '12px Arial';
+            
+            // Y-axis labels
+            for (let i = 0; i <= 5; i++) {
+                const value = minValue + (valueRange * i / 5);
+                const y = canvas.height - padding - (i / 5) * chartHeight;
+                ctx.fillText(value.toFixed(0), 5, y);
+            }
+        }
+        
+        // Change frequency
+        function changeFrequency(freq) {
+            currentFrequency = freq;
+            
+            // Update button states
+            document.querySelectorAll('.freq-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Regenerate data
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            timeSeriesData = generateTimeSeriesData(startDate, endDate, freq);
+            
+            // Redraw chart
+            drawTimeSeriesChart();
+        }
+        
+        // Update time range
+        function updateTimeRange() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            timeSeriesData = generateTimeSeriesData(startDate, endDate, currentFrequency);
+            drawTimeSeriesChart();
+        }
+        
+        // Draw decomposition charts
+        function drawDecompositionCharts() {
+            const charts = ['trendChart', 'seasonalChart', 'residualChart'];
+            
+            charts.forEach(chartId => {
+                const canvas = document.getElementById(chartId);
+                const ctx = canvas.getContext('2d');
+                
+                canvas.width = canvas.offsetWidth;
+                canvas.height = 150;
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Generate sample decomposition data
+                ctx.strokeStyle = chartId === 'trendChart' ? '#667eea' : 
+                                 chartId === 'seasonalChart' ? '#f093fb' : '#fa709a';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                
+                for (let x = 0; x < canvas.width; x++) {
+                    let y;
+                    if (chartId === 'trendChart') {
+                        y = canvas.height / 2 - (x / canvas.width) * 30;
+                    } else if (chartId === 'seasonalChart') {
+                        y = canvas.height / 2 + Math.sin(x * 0.05) * 30;
+                    } else {
+                        y = canvas.height / 2 + (Math.random() - 0.5) * 20;
+                    }
+                    
+                    if (x === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                
+                ctx.stroke();
+            });
+        }
+        
+        // Rolling window visualization
+        function updateRollingWindow() {
+            const slider = document.getElementById('windowSize');
+            const display = document.getElementById('windowDisplay');
+            display.textContent = slider.value + ' days';
+            
+            drawRollingChart(parseInt(slider.value));
+        }
+        
+        function drawRollingChart(windowSize) {
+            const canvas = document.getElementById('rollingChart');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = canvas.offsetWidth;
+            canvas.height = 400;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Generate sample data
+            const data = [];
+            const rollingAvg = [];
+            
+            for (let i = 0; i < 365; i++) {
+                const value = 100 + Math.sin(i * 0.05) * 20 + (Math.random() - 0.5) * 10;
+                data.push(value);
+                
+                if (i >= windowSize - 1) {
+                    const windowData = data.slice(i - windowSize + 1, i + 1);
+                    const avg = windowData.reduce((a, b) => a + b, 0) / windowData.length;
+                    rollingAvg.push(avg);
+                } else {
+                    rollingAvg.push(null);
+                }
+            }
+            
+            // Draw original data
+            ctx.strokeStyle = '#ddd';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            
+            data.forEach((value, i) => {
+                const x = (i / data.length) * canvas.width;
+                const y = canvas.height - (value - 50) * 3;
+                
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            });
+            ctx.stroke();
+            
+            // Draw rolling average
+            ctx.strokeStyle = '#667eea';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            
+            let firstPoint = true;
+            rollingAvg.forEach((value, i) => {
+                if (value !== null) {
+                    const x = (i / rollingAvg.length) * canvas.width;
+                    const y = canvas.height - (value - 50) * 3;
+                    
+                    if (firstPoint) {
+                        ctx.moveTo(x, y);
+                        firstPoint = false;
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+            });
+            ctx.stroke();
+        }
+        
+        // Anomaly visualization
+        function drawAnomalyChart() {
+            const canvas = document.getElementById('anomalyChart');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = canvas.offsetWidth;
+            canvas.height = 350;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Generate data with anomalies
+            const data = [];
+            const anomalies = [50, 150, 250];
+            
+            for (let i = 0; i < 365; i++) {
+                let value = 100 + Math.sin(i * 0.05) * 20 + (Math.random() - 0.5) * 5;
+                if (anomalies.includes(i)) {
+                    value += (Math.random() > 0.5 ? 1 : -1) * 50;
+                }
+                data.push({x: i, y: value, isAnomaly: anomalies.includes(i)});
+            }
+            
+            // Draw normal data
+            ctx.strokeStyle = '#667eea';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            data.forEach(point => {
+                const x = (point.x / 365) * canvas.width;
+                const y = canvas.height - (point.y - 30) * 2;
+                
+                if (point.x === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            });
+            ctx.stroke();
+            
+            // Draw anomalies
+            ctx.fillStyle = '#ff4444';
+            data.forEach(point => {
+                if (point.isAnomaly) {
+                    const x = (point.x / 365) * canvas.width;
+                    const y = canvas.height - (point.y - 30) * 2;
+                    
+                    ctx.beginPath();
+                    ctx.arc(x, y, 5, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            });
+        }
+        
+        // Forecast visualization
+        function drawForecastChart() {
+            const canvas = document.getElementById('forecastChart');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = canvas.offsetWidth;
+            canvas.height = 400;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Historical data
+            const historical = [];
+            for (let i = 0; i < 300; i++) {
+                historical.push(100 + i * 0.3 + Math.sin(i * 0.05) * 20 + (Math.random() - 0.5) * 5);
+            }
+            
+            // Forecast
+            const forecast = [];
+            const lastValue = historical[historical.length - 1];
+            for (let i = 0; i < 65; i++) {
+                forecast.push(lastValue + i * 0.3 + Math.sin((300 + i) * 0.05) * 20);
+            }
+            
+            // Draw historical
+            ctx.strokeStyle = '#667eea';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            historical.forEach((value, i) => {
+                const x = (i / 365) * canvas.width;
+                const y = canvas.height - (value - 50) * 2;
+                
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            });
+            ctx.stroke();
+            
+            // Draw forecast
+            ctx.strokeStyle = '#f093fb';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            
+            const startX = (300 / 365) * canvas.width;
+            const startY = canvas.height - (historical[historical.length - 1] - 50) * 2;
+            ctx.moveTo(startX, startY);
+            
+            forecast.forEach((value, i) => {
+                const x = ((300 + i) / 365) * canvas.width;
+                const y = canvas.height - (value - 50) * 2;
+                ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Draw confidence interval
+            ctx.fillStyle = 'rgba(240, 147, 251, 0.2)';
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            
+            forecast.forEach((value, i) => {
+                const x = ((300 + i) / 365) * canvas.width;
+                const yUpper = canvas.height - (value + 10 - 50) * 2;
+                ctx.lineTo(x, yUpper);
+            });
+            
+            for (let i = forecast.length - 1; i >= 0; i--) {
+                const x = ((300 + i) / 365) * canvas.width;
+                const yLower = canvas.height - (forecast[i] - 10 - 50) * 2;
+                ctx.lineTo(x, yLower);
+            }
+            
+            ctx.closePath();
+            ctx.fill();
+        }
+        
+        // Resample data visualization
+        function resampleData(frequency) {
+            // Update UI
+            event.target.classList.add('active');
+            setTimeout(() => {
+                event.target.classList.remove('active');
+            }, 300);
+        }
+        
+        // Forecast method selection
+        function selectForecastMethod(method) {
+            // Update UI
+            document.querySelectorAll('.forecast-method').forEach(m => {
+                m.classList.remove('active');
+            });
+            event.target.closest('.forecast-method').classList.add('active');
+            
+            // Redraw forecast with different method
+            drawForecastChart();
+        }
+        
+        // Copy code function
+        function copyCode(button) {
+            const codeBlock = button.parentElement.nextElementSibling.querySelector('code');
+            const text = codeBlock.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                button.textContent = 'Copied!';
+                setTimeout(() => {
+                    button.textContent = 'Copy';
+                }, 2000);
+            });
+        }
+        
+        // Initialize on load
+        window.addEventListener('load', function() {
+            // Initialize time series data
+            timeSeriesData = generateTimeSeriesData('2023-01-01', '2023-12-31', 'D');
+            drawTimeSeriesChart();
+            
+            // Draw other charts
+            drawDecompositionCharts();
+            drawRollingChart(20);
+            drawAnomalyChart();
+            drawForecastChart();
+            
+            // Set up event listeners
+            document.getElementById('windowSize').addEventListener('input', updateRollingWindow);
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            drawTimeSeriesChart();
+            drawDecompositionCharts();
+            updateRollingWindow();
+            drawAnomalyChart();
+            drawForecastChart();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Master SQL window functions for advanced analytics. Learn ranking, aggregation, and analytical functions for data science.">
+    <title>Window Functions - Python Data Science Path</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/enhanced.css">
+    <link rel="icon" href="/favicon.png" type="image/png">
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+      mermaid.initialize({ startOnLoad: true });
+    </script>
+    <script src="js/course-enhancements.js" defer></script>
+</head>
+<body>
+    <!-- Skip to main content for accessibility -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+    
+    <!-- Progress indicator -->
+    <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
+        <div class="progress-bar"></div>
+    </div>
+    
+    <main id="main-content">
+    <header role="banner">
+        <h1>Window Functions</h1>
+        <div class="reading-time" aria-label="Estimated reading time"></div>
+    </header>
+    
+    <!-- Breadcrumb Navigation -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="index.html">Home</a>
+        <span class="separator">›</span>
+        <a href="#">Intermediate Module</a>
+        <span class="separator">›</span>
+        <a href="#">SQL for Data Scientists</a>
+        <span class="separator">›</span>
+        <span class="current">Window Functions</span>
+    </nav>
+
+    <h2>Unlock the Power of SQL Analytics! 📊</h2>
+    
+    <blockquote>
+        <p>Window functions are SQL's secret weapon for advanced analytics. They allow you to perform calculations across sets of rows while keeping the detail of individual records - something impossible with regular GROUP BY. Master window functions to perform running totals, rankings, moving averages, and complex analytical calculations with ease!</p>
+    </blockquote>
+
+    <h2>Understanding Window Functions</h2>
+    
+    <div class="mermaid">
+    graph TD
+        A[Window Functions] --> B[Ranking Functions]
+        A --> C[Aggregate Functions]
+        A --> D[Analytic Functions]
+        A --> E[Value Functions]
+        
+        B --> F[ROW_NUMBER]
+        B --> G[RANK/DENSE_RANK]
+        B --> H[NTILE/PERCENT_RANK]
+        
+        C --> I[SUM/AVG/COUNT]
+        C --> J[MIN/MAX]
+        
+        D --> K[LAG/LEAD]
+        D --> L[FIRST_VALUE/LAST_VALUE]
+        
+        E --> M[CUME_DIST]
+        E --> N[PERCENTILE_CONT]
+    </div>
+
+    <h2>Setting Up Our Analytics Database</h2>
+    <pre class="language-python"><code>import sqlite3
+import pandas as pd
+import numpy as np
+from datetime import datetime, timedelta
+import random
+
+# Create connection (SQLite 3.25+ supports window functions)
+conn = sqlite3.connect('analytics.db')
+cursor = conn.cursor()
+
+# Check SQLite version
+cursor.execute("SELECT sqlite_version()")
+version = cursor.fetchone()[0]
+print(f"SQLite version: {version}")
+
+# Create comprehensive analytics tables
+cursor.executescript('''
+    -- Sales transactions table
+    CREATE TABLE IF NOT EXISTS sales (
+        sale_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        sale_date DATE,
+        product_id INTEGER,
+        category TEXT,
+        region TEXT,
+        salesperson_id INTEGER,
+        quantity INTEGER,
+        unit_price DECIMAL(10,2),
+        total_amount DECIMAL(10,2),
+        profit DECIMAL(10,2)
+    );
+    
+    -- Employee performance table
+    CREATE TABLE IF NOT EXISTS employee_performance (
+        employee_id INTEGER PRIMARY KEY,
+        employee_name TEXT,
+        department TEXT,
+        hire_date DATE,
+        salary DECIMAL(10,2),
+        commission_rate DECIMAL(3,2),
+        manager_id INTEGER,
+        performance_score INTEGER
+    );
+    
+    -- Stock prices table
+    CREATE TABLE IF NOT EXISTS stock_prices (
+        symbol TEXT,
+        trade_date DATE,
+        open_price DECIMAL(10,2),
+        high_price DECIMAL(10,2),
+        low_price DECIMAL(10,2),
+        close_price DECIMAL(10,2),
+        volume BIGINT,
+        PRIMARY KEY (symbol, trade_date)
+    );
+    
+    -- Customer transactions table
+    CREATE TABLE IF NOT EXISTS customer_transactions (
+        transaction_id INTEGER PRIMARY KEY,
+        customer_id INTEGER,
+        transaction_date DATETIME,
+        amount DECIMAL(10,2),
+        transaction_type TEXT,
+        balance_after DECIMAL(10,2)
+    );
+    
+    -- Website analytics table
+    CREATE TABLE IF NOT EXISTS page_views (
+        view_id INTEGER PRIMARY KEY,
+        user_id INTEGER,
+        page_url TEXT,
+        view_timestamp DATETIME,
+        session_id TEXT,
+        time_on_page INTEGER,
+        bounce BOOLEAN
+    );
+''')
+
+# Generate sample data
+def generate_sample_data():
+    # Generate sales data
+    np.random.seed(42)
+    sales_data = []
+    categories = ['Electronics', 'Clothing', 'Food', 'Books', 'Sports']
+    regions = ['North', 'South', 'East', 'West', 'Central']
+    
+    for i in range(1000):
+        sale_date = datetime.now() - timedelta(days=random.randint(0, 365))
+        category = random.choice(categories)
+        quantity = random.randint(1, 20)
+        unit_price = round(random.uniform(10, 500), 2)
+        total = quantity * unit_price
+        profit = total * random.uniform(0.1, 0.3)
+        
+        sales_data.append((
+            sale_date.date(),
+            random.randint(1, 100),  # product_id
+            category,
+            random.choice(regions),
+            random.randint(1, 20),  # salesperson_id
+            quantity,
+            unit_price,
+            total,
+            profit
+        ))
+    
+    cursor.executemany('''
+        INSERT INTO sales (sale_date, product_id, category, region, 
+                          salesperson_id, quantity, unit_price, total_amount, profit)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', sales_data)
+    
+    conn.commit()
+    print("Sample data generated successfully!")
+
+generate_sample_data()</code></pre>
+
+    <h2>Window Function Syntax</h2>
+    
+    <pre class="language-python"><code># Basic window function syntax
+"""
+function_name() OVER (
+    [PARTITION BY column1, column2, ...]
+    [ORDER BY column3, column4, ...]
+    [ROWS/RANGE BETWEEN ... AND ...]
+)
+"""
+
+# Components explained:
+# - function_name(): The window function (ROW_NUMBER, SUM, LAG, etc.)
+# - PARTITION BY: Divides rows into partitions (like GROUP BY but keeps all rows)
+# - ORDER BY: Defines the order within each partition
+# - ROWS/RANGE: Defines the window frame (which rows to include)</code></pre>
+
+    <h2>Ranking Functions</h2>
+    
+    <h3>ROW_NUMBER() - Sequential Numbers</h3>
+    <pre class="language-python"><code># Basic ROW_NUMBER
+query = """
+SELECT 
+    sale_date,
+    category,
+    total_amount,
+    ROW_NUMBER() OVER (ORDER BY total_amount DESC) AS overall_rank,
+    ROW_NUMBER() OVER (PARTITION BY category ORDER BY total_amount DESC) AS category_rank
+FROM sales
+WHERE sale_date >= DATE('now', '-30 days')
+LIMIT 20;
+"""
+
+df = pd.read_sql_query(query, conn)
+print(df)
+
+# Finding top N per group
+query = """
+WITH ranked_sales AS (
+    SELECT 
+        sale_date,
+        category,
+        region,
+        total_amount,
+        ROW_NUMBER() OVER (
+            PARTITION BY category 
+            ORDER BY total_amount DESC
+        ) AS rank_in_category
+    FROM sales
+    WHERE sale_date >= DATE('now', '-90 days')
+)
+SELECT *
+FROM ranked_sales
+WHERE rank_in_category <= 3
+ORDER BY category, rank_in_category;
+"""
+
+df = pd.read_sql_query(query, conn)
+print(df)</code></pre>
+
+    <h3>RANK() vs DENSE_RANK() - Handling Ties</h3>
+    <pre class="language-python"><code># Difference between RANK and DENSE_RANK
+query = """
+SELECT 
+    salesperson_id,
+    DATE(sale_date, 'start of month') AS sale_month,
+    SUM(total_amount) AS monthly_sales,
+    RANK() OVER (
+        PARTITION BY DATE(sale_date, 'start of month') 
+        ORDER BY SUM(total_amount) DESC
+    ) AS rank_with_gaps,
+    DENSE_RANK() OVER (
+        PARTITION BY DATE(sale_date, 'start of month') 
+        ORDER BY SUM(total_amount) DESC
+    ) AS dense_rank_no_gaps,
+    ROW_NUMBER() OVER (
+        PARTITION BY DATE(sale_date, 'start of month') 
+        ORDER BY SUM(total_amount) DESC
+    ) AS row_num_unique
+FROM sales
+WHERE sale_date >= DATE('now', '-90 days')
+GROUP BY salesperson_id, DATE(sale_date, 'start of month')
+ORDER BY sale_month DESC, monthly_sales DESC
+LIMIT 20;
+"""
+
+df = pd.read_sql_query(query, conn)
+print(df)
+
+# Show the difference with duplicate values
+query = """
+WITH sales_summary AS (
+    SELECT 
+        category,
+        ROUND(total_amount, 0) AS amount
+    FROM sales
+    WHERE sale_date >= DATE('now', '-7 days')
+)
+SELECT 
+    category,
+    amount,
+    RANK() OVER (ORDER BY amount DESC) AS rank_gaps,
+    DENSE_RANK() OVER (ORDER BY amount DESC) AS dense_rank,
+    ROW_NUMBER() OVER (ORDER BY amount DESC) AS row_number
+FROM sales_summary
+ORDER BY amount DESC
+LIMIT 15;
+"""
+
+df = pd.read_sql_query(query, conn)
+print(df)</code></pre>
+
+    <h3>NTILE() - Dividing into Buckets</h3>
+    <pre class="language-python"><code># Quartile analysis
+query = """
+SELECT 
+    customer_id,
+    COUNT(*) AS transaction_count,
+    SUM(amount) AS total_spent,
+    AVG(amount) AS avg_transaction,
+    NTILE(4) OVER (ORDER BY SUM(amount) DESC) AS spending_quartile,
+    NTILE(10) OVER (ORDER BY SUM(amount) DESC) AS spending_decile,
+    NTILE(100) OVER (ORDER BY SUM(amount) DESC) AS spending_percentile
+FROM customer_transactions
+GROUP BY customer_id
+HAVING COUNT(*) >= 3
+ORDER BY total_spent DESC
+LIMIT 20;
+"""
+
+# Product performance tiers
+query = """
+WITH product_sales AS (
+    SELECT 
+        product_id,
+        category,
+        COUNT(*) AS times_sold,
+        SUM(quantity) AS total_quantity,
+        SUM(total_amount) AS total_revenue,
+        AVG(profit) AS avg_profit
+    FROM sales
+    GROUP BY product_id, category
+)
+SELECT 
+    product_id,
+    category,
+    total_revenue,
+    NTILE(3) OVER (ORDER BY total_revenue DESC) AS tier,
+    CASE NTILE(3) OVER (ORDER BY total_revenue DESC)
+        WHEN 1 THEN 'Top Performer'
+        WHEN 2 THEN 'Average Performer'
+        WHEN 3 THEN 'Low Performer'
+    END AS performance_label
+FROM product_sales
+ORDER BY total_revenue DESC;
+"""
+
+df = pd.read_sql_query(query, conn)
+print(df.head(20))</code></pre>
+
+    <h3>PERCENT_RANK() and CUME_DIST()</h3>
+    <pre class="language-python"><code># Percentile ranking
+query = """
+SELECT 
+    salesperson_id,
+    SUM(total_amount) AS total_sales,
+    SUM(profit) AS total_profit,
+    PERCENT_RANK() OVER (ORDER BY SUM(total_amount)) AS sales_percent_rank,
+    CUME_DIST() OVER (ORDER BY SUM(total_amount)) AS sales_cumulative_dist,
+    ROUND(PERCENT_RANK() OVER (ORDER BY SUM(total_amount)) * 100, 2) AS percentile
+FROM sales
+WHERE sale_date >= DATE('now', '-30 days')
+GROUP BY salesperson_id
+ORDER BY total_sales DESC;
+"""
+
+df = pd.read_sql_query(query, conn)
+print(df)
+
+# Find employees in top 20%
+query = """
+WITH employee_ranks AS (
+    SELECT 
+        salesperson_id,
+        SUM(total_amount) AS total_sales,
+        PERCENT_RANK() OVER (ORDER BY SUM(total_amount) DESC) AS pct_rank
+    FROM sales
+    WHERE sale_date >= DATE('now', '-90 days')
+    GROUP BY salesperson_id
+)
+SELECT 
+    salesperson_id,
+    total_sales,
+    ROUND((1 - pct_rank) * 100, 2) AS top_percent
+FROM employee_ranks
+WHERE pct_rank <= 0.2
+ORDER BY total_sales DESC;
+"""
+
+df = pd.read_sql_query(query, conn)
+print(df)</code></pre>
+
+    <h2>Aggregate Window Functions</h2>
+    
+    <h3>Running Totals and Moving Averages</h3>
+    <pre class="language-python"><code># Running total and moving average
+query = """
+SELECT 
+    sale_date,
+    total_amount,
+    -- Running total
+    SUM(total_amount) OVER (
+        ORDER BY sale_date
+        ROWS UNBOUNDED PRECEDING
+    ) AS running_total,
+    
+    -- 7-day moving average
+    AVG(total_amount) OVER (
+        ORDER BY sale_date
+        ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
+    ) AS moving_avg_7_day,
+    
+    -- Month-to-date total
+    SUM(total_amount) OVER (
+        PARTITION BY DATE(sale_date, 'start of month')
+        ORDER BY sale_date
+        ROWS UNBOUNDED PRECEDING
+    ) AS month_to_date,
+    
+    -- Daily rank within month
+    RANK() OVER (
+        PARTITION BY DATE(sale_date, 'start of month')
+        ORDER BY total_amount DESC
+    ) AS daily_rank_in_month
+FROM sales
+WHERE sale_date >= DATE('now', '-30 days')
+ORDER BY sale_date DESC
+LIMIT 30;
+"""
+
+df = pd.read_sql_query(query, conn)
+print(df)
+
+# Cumulative distribution
+query = """
+WITH daily_sales AS (
+    SELECT 
+        sale_date,
+        SUM(total_amount) AS daily_total,
+        SUM(profit) AS daily_profit
+    FROM sales
+    WHERE sale_date >= DATE('now', '-30 days')
+    GROUP BY sale_date
+)
+SELECT 
+    sale_date,
+    daily_total,
+    daily_profit,
+    SUM(daily_total) OVER (ORDER BY sale_date) AS cumulative_sales,
+    SUM(daily_profit) OVER (ORDER BY sale_date) AS cumulative_profit,
+    AVG(daily_total) OVER (
+        ORDER BY sale_date
+        ROWS BETWEEN 2 PRECEDING AND 2 FOLLOWING
+    ) AS smoothed_avg_5_day
+FROM daily_sales
+ORDER BY sale_date DESC;
+"""
+
+df = pd.read_sql_query(query, conn)
+print(df)</code></pre>
+
+    <h3>Partition Aggregates</h3>
+    <pre class="language-python"><code># Compare to partition aggregates
+query = """
+SELECT 
+    sale_date,
+    category,
+    region,
+    total_amount,
+    
+    -- Category statistics
+    AVG(total_amount) OVER (PARTITION BY category) AS category_avg,
+    MAX(total_amount) OVER (PARTITION BY category) AS category_max,
+    MIN(total_amount) OVER (PARTITION BY category) AS category_min,
+    
+    -- Region statistics
+    AVG(total_amount) OVER (PARTITION BY region) AS region_avg,
+    
+    -- Comparisons
+    total_amount - AVG(total_amount) OVER (PARTITION BY category) AS diff_from_category_avg,
+    total_amount / AVG(total_amount) OVER (PARTITION BY category) AS pct_of_category_avg,
+    
+    -- Percentage of category total
+    total_amount / SUM(total_amount) OVER (PARTITION BY category) * 100 AS pct_of_category_total
+FROM sales
+WHERE sale_date >= DATE('now', '-7 days')
+ORDER BY category, total_amount DESC;
+"""
+
+df = pd.read_sql_query(query, conn)
+print(df.head(20))</code></pre>
+
+    <h2>Analytic Functions</h2>
+    
+    <h3>LAG() and LEAD() - Accessing Other Rows</h3>
+    <pre class="language-python"><code># Year-over-year comparison
+query = """
+WITH monthly_sales AS (
+    SELECT 
+        DATE(sale_date, 'start of month') AS month,
+        SUM(total_amount) AS monthly_total
+    FROM sales
+    GROUP BY DATE(sale_date, 'start of month')
+)
+SELECT 
+    month,
+    monthly_total,
+    LAG(monthly_total, 1) OVER (ORDER BY month) AS prev_month,
+    LAG(monthly_total, 12) OVER (ORDER BY month) AS same_month_last_year,
+    LEAD(monthly_total, 1) OVER (ORDER BY month) AS next_month,
+    
+    -- Month-over-month growth
+    ROUND((monthly_total - LAG(monthly_total, 1) OVER (ORDER BY month)) / 
+          LAG(monthly_total, 1) OVER (ORDER BY month) * 100, 2) AS mom_growth,
+    
+    -- Year-over-year growth
+    ROUND((monthly_total - LAG(monthly_total, 12) OVER (ORDER BY month)) / 
+          LAG(monthly_total, 12) OVER (ORDER BY month) * 100, 2) AS yoy_growth
+FROM monthly_sales
+ORDER BY month DESC
+LIMIT 24;
+"""
+
+df = pd.read_sql_query(query, conn)
+print(df)
+
+# Customer behavior analysis
+query = """
+SELECT 
+    customer_id,
+    transaction_date,
+    amount,
+    LAG(transaction_date, 1) OVER (
+        PARTITION BY customer_id 
+        ORDER BY transaction_date
+    ) AS prev_transaction_date,
+    
+    JULIANDAY(transaction_date) - 
+    JULIANDAY(LAG(transaction_date, 1) OVER (
+        PARTITION BY customer_id 
+        ORDER BY transaction_date
+    )) AS days_since_last_transaction,
+    
+    LAG(amount, 1) OVER (
+        PARTITION BY customer_id 
+        ORDER BY transaction_date
+    ) AS prev_amount,
+    
+    amount - LAG(amount, 1) OVER (
+        PARTITION BY customer_id 
+        ORDER BY transaction_date
+    ) AS amount_change
+FROM customer_transactions
+WHERE customer_id <= 10
+ORDER BY customer_id, transaction_date;
+"""
+
+df = pd.read_sql_query(query, conn)
+print(df.head(20))</code></pre>
+
+    <h3>FIRST_VALUE() and LAST_VALUE()</h3>
+    <pre class="language-python"><code># First and last values in partition
+query = """
+SELECT 
+    category,
+    sale_date,
+    total_amount,
+    
+    FIRST_VALUE(total_amount) OVER (
+        PARTITION BY category 
+        ORDER BY sale_date
+        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+    ) AS first_sale_in_category,
+    
+    LAST_VALUE(total_amount) OVER (
+        PARTITION BY category 
+        ORDER BY sale_date
+        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+    ) AS last_sale_in_category,
+    
+    FIRST_VALUE(sale_date) OVER (
+        PARTITION BY category 
+        ORDER BY total_amount DESC
+    ) AS date_of_highest_sale,
+    
+    -- Percentage of range
+    (total_amount - MIN(total_amount) OVER (PARTITION BY category)) /
+    (MAX(total_amount) OVER (PARTITION BY category) - 
+     MIN(total_amount) OVER (PARTITION BY category)) * 100 AS pct_of_range
+FROM sales
+WHERE sale_date >= DATE('now', '-30 days')
+ORDER BY category, sale_date;
+"""
+
+df = pd.read_sql_query(query, conn)
+print(df.head(20))</code></pre>
+
+    <h2>Window Frame Specifications</h2>
+    
+    <h3>ROWS vs RANGE</h3>
+    <pre class="language-python"><code># Understanding ROWS vs RANGE
+query = """
+WITH sample_data AS (
+    SELECT 
+        sale_date,
+        SUM(total_amount) AS daily_total
+    FROM sales
+    WHERE sale_date >= DATE('now', '-30 days')
+    GROUP BY sale_date
+)
+SELECT 
+    sale_date,
+    daily_total,
+    
+    -- ROWS: Physical rows
+    AVG(daily_total) OVER (
+        ORDER BY sale_date
+        ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
+    ) AS avg_last_3_rows,
+    
+    -- RANGE: Logical range (all rows with same ORDER BY value)
+    AVG(daily_total) OVER (
+        ORDER BY sale_date
+        RANGE BETWEEN INTERVAL '2 days' PRECEDING AND CURRENT ROW
+    ) AS avg_last_3_days,
+    
+    -- Different frame specifications
+    SUM(daily_total) OVER (
+        ORDER BY sale_date
+        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) AS cumulative_sum,
+    
+    SUM(daily_total) OVER (
+        ORDER BY sale_date
+        ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING
+    ) AS reverse_cumulative,
+    
+    AVG(daily_total) OVER (
+        ORDER BY sale_date
+        ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING
+    ) AS centered_moving_avg
+FROM sample_data
+ORDER BY sale_date DESC;
+"""
+
+df = pd.read_sql_query(query, conn)
+print(df)</code></pre>
+
+    <h2>Complex Analytical Queries</h2>
+    
+    <h3>Sales Funnel Analysis</h3>
+    <pre class="language-python"><code># Conversion funnel with window functions
+query = """
+WITH user_events AS (
+    SELECT 
+        user_id,
+        page_url,
+        view_timestamp,
+        CASE 
+            WHEN page_url LIKE '%home%' THEN 1
+            WHEN page_url LIKE '%product%' THEN 2
+            WHEN page_url LIKE '%cart%' THEN 3
+            WHEN page_url LIKE '%checkout%' THEN 4
+            WHEN page_url LIKE '%confirm%' THEN 5
+            ELSE 0
+        END AS funnel_step,
+        ROW_NUMBER() OVER (
+            PARTITION BY user_id 
+            ORDER BY view_timestamp
+        ) AS event_sequence
+    FROM page_views
+    WHERE view_timestamp >= DATE('now', '-7 days')
+)
+SELECT 
+    funnel_step,
+    COUNT(DISTINCT user_id) AS users_at_step,
+    LAG(COUNT(DISTINCT user_id), 1) OVER (ORDER BY funnel_step) AS prev_step_users,
+    ROUND(
+        COUNT(DISTINCT user_id) * 100.0 / 
+        FIRST_VALUE(COUNT(DISTINCT user_id)) OVER (ORDER BY funnel_step),
+        2
+    ) AS pct_of_total,
+    ROUND(
+        COUNT(DISTINCT user_id) * 100.0 / 
+        LAG(COUNT(DISTINCT user_id), 1) OVER (ORDER BY funnel_step),
+        2
+    ) AS conversion_rate
+FROM user_events
+WHERE funnel_step > 0
+GROUP BY funnel_step
+ORDER BY funnel_step;
+"""
+
+df = pd.read_sql_query(query, conn)
+print(df)</code></pre>
+
+    <h3>Cohort Analysis</h3>
+    <pre class="language-python"><code># Customer cohort retention analysis
+query = """
+WITH customer_cohorts AS (
+    SELECT 
+        customer_id,
+        DATE(MIN(transaction_date), 'start of month') AS cohort_month,
+        DATE(transaction_date, 'start of month') AS transaction_month
+    FROM customer_transactions
+    GROUP BY customer_id, DATE(transaction_date, 'start of month')
+),
+cohort_data AS (
+    SELECT 
+        cohort_month,
+        transaction_month,
+        COUNT(DISTINCT customer_id) AS customers,
+        (JULIANDAY(transaction_month) - JULIANDAY(cohort_month)) / 30 AS months_since_join
+    FROM customer_cohorts
+    GROUP BY cohort_month, transaction_month
+)
+SELECT 
+    cohort_month,
+    months_since_join,
+    customers,
+    FIRST_VALUE(customers) OVER (
+        PARTITION BY cohort_month 
+        ORDER BY months_since_join
+    ) AS initial_customers,
+    ROUND(
+        customers * 100.0 / 
+        FIRST_VALUE(customers) OVER (
+            PARTITION BY cohort_month 
+            ORDER BY months_since_join
+        ),
+        2
+    ) AS retention_rate
+FROM cohort_data
+WHERE months_since_join <= 12
+ORDER BY cohort_month, months_since_join;
+"""
+
+df = pd.read_sql_query(query, conn)
+print(df)</code></pre>
+
+    <h3>Time Series Analysis</h3>
+    <pre class="language-python"><code># Advanced time series analysis
+query = """
+WITH daily_metrics AS (
+    SELECT 
+        sale_date,
+        SUM(total_amount) AS daily_sales,
+        COUNT(*) AS transaction_count,
+        AVG(total_amount) AS avg_transaction_value
+    FROM sales
+    WHERE sale_date >= DATE('now', '-180 days')
+    GROUP BY sale_date
+),
+time_series_analysis AS (
+    SELECT 
+        sale_date,
+        daily_sales,
+        
+        -- Trend analysis
+        AVG(daily_sales) OVER (
+            ORDER BY sale_date
+            ROWS BETWEEN 29 PRECEDING AND CURRENT ROW
+        ) AS ma_30_day,
+        
+        AVG(daily_sales) OVER (
+            ORDER BY sale_date
+            ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
+        ) AS ma_7_day,
+        
+        -- Volatility
+        STDDEV(daily_sales) OVER (
+            ORDER BY sale_date
+            ROWS BETWEEN 29 PRECEDING AND CURRENT ROW
+        ) AS volatility_30_day,
+        
+        -- Momentum
+        daily_sales - LAG(daily_sales, 7) OVER (ORDER BY sale_date) AS weekly_change,
+        daily_sales - LAG(daily_sales, 30) OVER (ORDER BY sale_date) AS monthly_change,
+        
+        -- Relative strength
+        CASE 
+            WHEN daily_sales > AVG(daily_sales) OVER (
+                ORDER BY sale_date
+                ROWS BETWEEN 29 PRECEDING AND CURRENT ROW
+            ) THEN 1 
+            ELSE 0 
+        END AS above_ma_30,
+        
+        -- Z-score
+        (daily_sales - AVG(daily_sales) OVER (
+            ORDER BY sale_date
+            ROWS BETWEEN 29 PRECEDING AND CURRENT ROW
+        )) / NULLIF(STDDEV(daily_sales) OVER (
+            ORDER BY sale_date
+            ROWS BETWEEN 29 PRECEDING AND CURRENT ROW
+        ), 0) AS z_score
+    FROM daily_metrics
+)
+SELECT 
+    sale_date,
+    ROUND(daily_sales, 2) AS daily_sales,
+    ROUND(ma_7_day, 2) AS ma_7_day,
+    ROUND(ma_30_day, 2) AS ma_30_day,
+    ROUND(volatility_30_day, 2) AS volatility,
+    ROUND(weekly_change, 2) AS weekly_change,
+    above_ma_30,
+    ROUND(z_score, 2) AS z_score,
+    CASE 
+        WHEN z_score > 2 THEN 'Exceptional High'
+        WHEN z_score > 1 THEN 'Above Normal'
+        WHEN z_score < -2 THEN 'Exceptional Low'
+        WHEN z_score < -1 THEN 'Below Normal'
+        ELSE 'Normal'
+    END AS performance_label
+FROM time_series_analysis
+WHERE sale_date >= DATE('now', '-90 days')
+ORDER BY sale_date DESC
+LIMIT 30;
+"""
+
+df = pd.read_sql_query(query, conn)
+print(df)</code></pre>
+
+    <h3>Pareto Analysis (80/20 Rule)</h3>
+    <pre class="language-python"><code># Pareto analysis with window functions
+query = """
+WITH customer_revenue AS (
+    SELECT 
+        customer_id,
+        SUM(amount) AS total_revenue
+    FROM customer_transactions
+    WHERE transaction_date >= DATE('now', '-90 days')
+    GROUP BY customer_id
+),
+pareto_analysis AS (
+    SELECT 
+        customer_id,
+        total_revenue,
+        SUM(total_revenue) OVER (ORDER BY total_revenue DESC) AS cumulative_revenue,
+        SUM(total_revenue) OVER () AS grand_total,
+        COUNT(*) OVER () AS total_customers,
+        ROW_NUMBER() OVER (ORDER BY total_revenue DESC) AS customer_rank
+    FROM customer_revenue
+)
+SELECT 
+    customer_rank,
+    customer_id,
+    ROUND(total_revenue, 2) AS revenue,
+    ROUND(cumulative_revenue, 2) AS cumulative,
+    ROUND(cumulative_revenue * 100.0 / grand_total, 2) AS cumulative_pct,
+    ROUND(customer_rank * 100.0 / total_customers, 2) AS customer_pct,
+    CASE 
+        WHEN customer_rank * 100.0 / total_customers <= 20 THEN 'Top 20%'
+        WHEN customer_rank * 100.0 / total_customers <= 50 THEN 'Middle 30%'
+        ELSE 'Bottom 50%'
+    END AS customer_segment
+FROM pareto_analysis
+WHERE customer_rank <= 50
+ORDER BY customer_rank;
+"""
+
+df = pd.read_sql_query(query, conn)
+print(df)</code></pre>
+
+    <h2>Performance Optimization</h2>
+    
+    <h3>Efficient Window Function Usage</h3>
+    <pre class="language-python"><code># Inefficient: Multiple window functions with different partitions
+inefficient_query = """
+SELECT 
+    sale_date,
+    category,
+    region,
+    total_amount,
+    AVG(total_amount) OVER (PARTITION BY category) AS cat_avg,
+    AVG(total_amount) OVER (PARTITION BY region) AS reg_avg,
+    MAX(total_amount) OVER (PARTITION BY category) AS cat_max,
+    MAX(total_amount) OVER (PARTITION BY region) AS reg_max
+FROM sales;
+"""
+
+# Efficient: Using CTE to reduce scans
+efficient_query = """
+WITH aggregates AS (
+    SELECT 
+        category,
+        region,
+        AVG(total_amount) AS avg_amount,
+        MAX(total_amount) AS max_amount
+    FROM sales
+    GROUP BY category, region
+)
+SELECT 
+    s.*,
+    ac.avg_amount AS cat_avg,
+    ac.max_amount AS cat_max,
+    ar.avg_amount AS reg_avg,
+    ar.max_amount AS reg_max
+FROM sales s
+JOIN aggregates ac ON s.category = ac.category
+JOIN aggregates ar ON s.region = ar.region;
+"""
+
+# Index strategy for window functions
+cursor.executescript('''
+    -- Indexes for common window function patterns
+    CREATE INDEX IF NOT EXISTS idx_sales_date_amount 
+    ON sales(sale_date, total_amount);
+    
+    CREATE INDEX IF NOT EXISTS idx_sales_category_amount 
+    ON sales(category, total_amount);
+    
+    CREATE INDEX IF NOT EXISTS idx_sales_salesperson_date 
+    ON sales(salesperson_id, sale_date, total_amount);
+''')</code></pre>
+
+    <h2>Common Window Function Patterns</h2>
+    
+    <h3>Gap and Island Problem</h3>
+    <pre class="language-python"><code># Find consecutive sequences (islands) in data
+query = """
+WITH numbered_sales AS (
+    SELECT 
+        sale_date,
+        salesperson_id,
+        ROW_NUMBER() OVER (ORDER BY sale_date) AS rn,
+        ROW_NUMBER() OVER (PARTITION BY salesperson_id ORDER BY sale_date) AS rn_by_person
+    FROM sales
+    WHERE sale_date >= DATE('now', '-30 days')
+),
+islands AS (
+    SELECT 
+        salesperson_id,
+        sale_date,
+        rn - rn_by_person AS island_id
+    FROM numbered_sales
+)
+SELECT 
+    salesperson_id,
+    MIN(sale_date) AS start_date,
+    MAX(sale_date) AS end_date,
+    COUNT(*) AS consecutive_days
+FROM islands
+GROUP BY salesperson_id, island_id
+HAVING COUNT(*) >= 3
+ORDER BY consecutive_days DESC;
+"""
+
+df = pd.read_sql_query(query, conn)
+print(df)</code></pre>
+
+    <h3>Deduplication with Window Functions</h3>
+    <pre class="language-python"><code># Remove duplicates keeping the most recent
+query = """
+WITH ranked_records AS (
+    SELECT 
+        *,
+        ROW_NUMBER() OVER (
+            PARTITION BY customer_id, DATE(transaction_date)
+            ORDER BY transaction_date DESC
+        ) AS rn
+    FROM customer_transactions
+)
+SELECT 
+    customer_id,
+    transaction_date,
+    amount,
+    transaction_type
+FROM ranked_records
+WHERE rn = 1
+ORDER BY customer_id, transaction_date DESC
+LIMIT 20;
+"""
+
+df = pd.read_sql_query(query, conn)
+print(df)</code></pre>
+
+    <h2>Practice Exercises</h2>
+    
+    <h3>Exercise 1: Customer Segmentation</h3>
+    <p>Create a query that:</p>
+    <ol>
+        <li>Calculates RFM (Recency, Frequency, Monetary) scores using NTILE</li>
+        <li>Assigns customer segments based on scores</li>
+        <li>Shows movement between segments over time</li>
+        <li>Identifies at-risk customers using LAG/LEAD</li>
+    </ol>
+
+    <h3>Exercise 2: Product Performance Dashboard</h3>
+    <p>Build a comprehensive product analysis:</p>
+    <ol>
+        <li>Calculate market share within categories</li>
+        <li>Show trend (up/down) using moving averages</li>
+        <li>Rank products by multiple metrics</li>
+        <li>Identify cross-selling opportunities</li>
+    </ol>
+
+    <h3>Exercise 3: Time-based Metrics</h3>
+    <p>Develop time-series analytics:</p>
+    <ol>
+        <li>Calculate year-to-date, quarter-to-date metrics</li>
+        <li>Compare to previous period (YoY, QoQ, MoM)</li>
+        <li>Identify seasonality patterns</li>
+        <li>Forecast using historical averages</li>
+    </ol>
+
+    <h2>Key Takeaways</h2>
+    <ul>
+        <li>🪟 Window functions perform calculations across rows without grouping</li>
+        <li>📊 Essential for rankings, running totals, and moving averages</li>
+        <li>🔄 LAG/LEAD access data from other rows in the result set</li>
+        <li>📈 PARTITION BY creates independent windows for calculations</li>
+        <li>⚡ Proper indexing crucial for window function performance</li>
+        <li>🎯 Frame clauses (ROWS/RANGE) control which rows are included</li>
+        <li>💡 Combine multiple window functions for complex analytics</li>
+    </ul>
+
+    <h2>Further Resources</h2>
+    <ul>
+        <li><a href="https://www.postgresql.org/docs/current/tutorial-window.html">PostgreSQL Window Functions Tutorial</a></li>
+        <li><a href="https://learnsql.com/blog/sql-window-functions-cheat-sheet/">Window Functions Cheat Sheet</a></li>
+        <li><a href="https://mode.com/sql-tutorial/sql-window-functions/">Mode Analytics Window Functions Guide</a></li>
+        <li><a href="https://www.windowfunctions.com/">Window Functions Explained</a></li>
+        <li><a href="https://www.sqlitetutorial.net/sqlite-window-functions/">SQLite Window Functions</a></li>
+    </ul>
+
+    <!-- Navigation at the bottom -->
+    <nav class="lesson-nav" aria-label="Lesson navigation">
+        <a href="sql_complex_queries.html" class="prev-lesson" aria-label="Previous lesson">Previous: Complex Queries and Joins</a>
+        <a href="index.html" class="home-link" aria-label="Course home">Course Home</a>
+        <a href="sql_query_optimization.html" class="next-lesson" aria-label="Next lesson">Next: Query Optimization</a>
+    </nav>
+    
+    </main>
+</body>
+</html>

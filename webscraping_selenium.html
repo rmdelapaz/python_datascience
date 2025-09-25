@@ -1,0 +1,1647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Master Selenium WebDriver for scraping dynamic JavaScript content. Learn browser automation, waiting strategies, and handling modern web applications.">
+    <title>Selenium for Dynamic Content - Python Data Science Path</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/enhanced.css">
+    <link rel="icon" href="/favicon.png" type="image/png">
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+      mermaid.initialize({ startOnLoad: true });
+    </script>
+    <script src="js/course-enhancements.js" defer></script>
+</head>
+<body>
+    <!-- Skip to main content for accessibility -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+    
+    <!-- Progress indicator -->
+    <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
+        <div class="progress-bar"></div>
+    </div>
+    
+    <main id="main-content">
+    <header role="banner">
+        <h1>Selenium for Dynamic Content</h1>
+        <div class="reading-time" aria-label="Estimated reading time"></div>
+    </header>
+    
+    <!-- Breadcrumb Navigation -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="index.html">Home</a>
+        <span class="separator">›</span>
+        <a href="#">Intermediate Module</a>
+        <span class="separator">›</span>
+        <a href="#">Web Scraping & APIs</a>
+        <span class="separator">›</span>
+        <span class="current">Selenium for Dynamic Content</span>
+    </nav>
+
+    <h2>Scrape the Modern Web! 🌐</h2>
+    
+    <blockquote>
+        <p>Modern websites are dynamic, JavaScript-driven applications that traditional scraping tools can't handle. Selenium WebDriver gives you the power to control real browsers, interact with dynamic content, handle user authentication, and scrape even the most complex single-page applications. Master browser automation to access any data on the web!</p>
+    </blockquote>
+
+    <h2>Understanding Dynamic Content</h2>
+    
+    <div class="mermaid">
+    graph LR
+        A[Static HTML] --> B[Initial Page Load]
+        B --> C[JavaScript Execution]
+        C --> D[AJAX Requests]
+        D --> E[DOM Manipulation]
+        E --> F[Dynamic Content]
+        
+        G[Traditional Scraping] --> B
+        G -.->|Can't Access| F
+        
+        H[Selenium] --> B
+        H --> C
+        H --> D
+        H --> E
+        H --> F
+        
+        F --> I[React/Vue/Angular]
+        F --> J[Lazy Loading]
+        F --> K[Infinite Scroll]
+        F --> L[Client-Side Rendering]
+    </div>
+
+    <h2>Installation and Setup</h2>
+    
+    <h3>Installing Selenium and Drivers</h3>
+    <pre class="language-python"><code># Installation
+"""
+pip install selenium
+pip install webdriver-manager  # Automatic driver management
+pip install undetected-chromedriver  # For anti-bot detection
+"""
+
+# Basic imports
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from selenium.common.exceptions import *
+from webdriver_manager.chrome import ChromeDriverManager
+import time
+import json
+
+# Check versions
+import selenium
+print(f"Selenium version: {selenium.__version__}")
+
+# Setup Chrome driver with automatic management
+def setup_chrome_driver():
+    """Setup Chrome driver with webdriver-manager"""
+    
+    # Chrome options
+    chrome_options = Options()
+    
+    # Common options
+    chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+    chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    chrome_options.add_experimental_option('useAutomationExtension', False)
+    
+    # Optional: Headless mode
+    # chrome_options.add_argument('--headless')
+    
+    # Optional: Disable images for faster loading
+    # prefs = {"profile.managed_default_content_settings.images": 2}
+    # chrome_options.add_experimental_option("prefs", prefs)
+    
+    # Create driver with automatic driver management
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=chrome_options)
+    
+    # Execute script to remove webdriver property
+    driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+    
+    return driver
+
+# Basic usage example
+driver = setup_chrome_driver()
+driver.get("https://www.google.com")
+print(f"Page title: {driver.title}")
+driver.quit()
+
+# Setup for different browsers
+def setup_firefox_driver():
+    """Setup Firefox driver"""
+    from selenium.webdriver.firefox.options import Options
+    from selenium.webdriver.firefox.service import Service
+    from webdriver_manager.firefox import GeckoDriverManager
+    
+    firefox_options = Options()
+    # firefox_options.add_argument('--headless')
+    
+    service = Service(GeckoDriverManager().install())
+    driver = webdriver.Firefox(service=service, options=firefox_options)
+    return driver
+
+def setup_edge_driver():
+    """Setup Edge driver"""
+    from selenium.webdriver.edge.options import Options
+    from selenium.webdriver.edge.service import Service
+    from webdriver_manager.microsoft import EdgeChromiumDriverManager
+    
+    edge_options = Options()
+    # edge_options.add_argument('--headless')
+    
+    service = Service(EdgeChromiumDriverManager().install())
+    driver = webdriver.Edge(service=service, options=edge_options)
+    return driver</code></pre>
+
+    <h2>Finding Elements</h2>
+    
+    <h3>Element Locator Strategies</h3>
+    <pre class="language-python"><code># Different ways to find elements
+
+driver = setup_chrome_driver()
+driver.get("https://example.com")
+
+# 1. By ID (fastest, most reliable)
+element = driver.find_element(By.ID, "submit-button")
+
+# 2. By Name
+element = driver.find_element(By.NAME, "username")
+
+# 3. By Class Name
+element = driver.find_element(By.CLASS_NAME, "btn-primary")
+elements = driver.find_elements(By.CLASS_NAME, "product-card")  # Multiple
+
+# 4. By Tag Name
+element = driver.find_element(By.TAG_NAME, "h1")
+links = driver.find_elements(By.TAG_NAME, "a")
+
+# 5. By Link Text
+element = driver.find_element(By.LINK_TEXT, "Click Here")
+
+# 6. By Partial Link Text
+element = driver.find_element(By.PARTIAL_LINK_TEXT, "Click")
+
+# 7. By CSS Selector (powerful and flexible)
+element = driver.find_element(By.CSS_SELECTOR, "#main > div.content > p:nth-child(2)")
+element = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
+element = driver.find_element(By.CSS_SELECTOR, "div.class1.class2")
+
+# 8. By XPath (most flexible, can traverse up/down)
+element = driver.find_element(By.XPATH, "//button[@id='submit']")
+element = driver.find_element(By.XPATH, "//div[@class='content']//p[2]")
+element = driver.find_element(By.XPATH, "//button[contains(text(), 'Submit')]")
+
+# Advanced XPath examples
+class XPathHelper:
+    """Helper class for complex XPath expressions"""
+    
+    @staticmethod
+    def contains_text(tag, text):
+        """Find element containing text"""
+        return f"//{tag}[contains(text(), '{text}')]"
+    
+    @staticmethod
+    def with_attribute(tag, attr, value):
+        """Find element with specific attribute"""
+        return f"//{tag}[@{attr}='{value}']"
+    
+    @staticmethod
+    def following_sibling(xpath, sibling_tag):
+        """Find following sibling"""
+        return f"{xpath}/following-sibling::{sibling_tag}[1]"
+    
+    @staticmethod
+    def parent(xpath):
+        """Find parent element"""
+        return f"{xpath}/.."
+    
+    @staticmethod
+    def ancestor(xpath, ancestor_tag):
+        """Find ancestor element"""
+        return f"{xpath}/ancestor::{ancestor_tag}[1]"
+
+# Usage
+xpath_helper = XPathHelper()
+xpath = xpath_helper.contains_text("button", "Submit")
+element = driver.find_element(By.XPATH, xpath)
+
+# Chaining element searches
+parent = driver.find_element(By.ID, "container")
+child = parent.find_element(By.CLASS_NAME, "item")
+
+# Find multiple elements
+all_links = driver.find_elements(By.TAG_NAME, "a")
+for link in all_links:
+    print(link.get_attribute("href"))
+
+driver.quit()</code></pre>
+
+    <h2>Waiting Strategies</h2>
+    
+    <h3>Explicit, Implicit, and Fluent Waits</h3>
+    <pre class="language-python"><code>from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
+import time
+
+class WaitStrategies:
+    """Different waiting strategies for dynamic content"""
+    
+    def __init__(self, driver, default_timeout=10):
+        self.driver = driver
+        self.default_timeout = default_timeout
+        self.wait = WebDriverWait(driver, default_timeout)
+    
+    # 1. Implicit Wait (applies to all elements)
+    def set_implicit_wait(self, seconds=10):
+        """Set implicit wait for all element searches"""
+        self.driver.implicitly_wait(seconds)
+    
+    # 2. Explicit Wait (wait for specific conditions)
+    def wait_for_element_visible(self, locator, timeout=None):
+        """Wait for element to be visible"""
+        timeout = timeout or self.default_timeout
+        try:
+            element = WebDriverWait(self.driver, timeout).until(
+                EC.visibility_of_element_located(locator)
+            )
+            return element
+        except TimeoutException:
+            print(f"Element {locator} not visible after {timeout} seconds")
+            return None
+    
+    def wait_for_element_clickable(self, locator, timeout=None):
+        """Wait for element to be clickable"""
+        timeout = timeout or self.default_timeout
+        try:
+            element = WebDriverWait(self.driver, timeout).until(
+                EC.element_to_be_clickable(locator)
+            )
+            return element
+        except TimeoutException:
+            print(f"Element {locator} not clickable after {timeout} seconds")
+            return None
+    
+    def wait_for_text_in_element(self, locator, text, timeout=None):
+        """Wait for specific text in element"""
+        timeout = timeout or self.default_timeout
+        try:
+            WebDriverWait(self.driver, timeout).until(
+                EC.text_to_be_present_in_element(locator, text)
+            )
+            return True
+        except TimeoutException:
+            return False
+    
+    def wait_for_element_count(self, locator, count, timeout=None):
+        """Wait for specific number of elements"""
+        timeout = timeout or self.default_timeout
+        try:
+            WebDriverWait(self.driver, timeout).until(
+                lambda driver: len(driver.find_elements(*locator)) >= count
+            )
+            return True
+        except TimeoutException:
+            return False
+    
+    # 3. Fluent Wait (polling with ignore exceptions)
+    def fluent_wait(self, condition, timeout=30, poll_frequency=0.5, ignored_exceptions=None):
+        """Fluent wait with custom polling and ignored exceptions"""
+        if ignored_exceptions is None:
+            ignored_exceptions = [NoSuchElementException, ElementNotVisibleException]
+        
+        wait = WebDriverWait(
+            self.driver,
+            timeout,
+            poll_frequency=poll_frequency,
+            ignored_exceptions=ignored_exceptions
+        )
+        
+        return wait.until(condition)
+    
+    # 4. Custom wait conditions
+    def wait_for_ajax_complete(self, timeout=None):
+        """Wait for AJAX calls to complete (jQuery)"""
+        timeout = timeout or self.default_timeout
+        try:
+            WebDriverWait(self.driver, timeout).until(
+                lambda driver: driver.execute_script("return jQuery.active == 0")
+            )
+            return True
+        except:
+            return False
+    
+    def wait_for_angular_complete(self, timeout=None):
+        """Wait for Angular to complete"""
+        timeout = timeout or self.default_timeout
+        try:
+            WebDriverWait(self.driver, timeout).until(
+                lambda driver: driver.execute_script(
+                    "return window.getAllAngularTestabilities().every(t => t.isStable())"
+                )
+            )
+            return True
+        except:
+            return False
+    
+    def wait_for_page_load(self, timeout=None):
+        """Wait for page to fully load"""
+        timeout = timeout or self.default_timeout
+        try:
+            WebDriverWait(self.driver, timeout).until(
+                lambda driver: driver.execute_script("return document.readyState") == "complete"
+            )
+            return True
+        except:
+            return False
+
+# All available expected conditions
+class ExpectedConditionsExamples:
+    """Examples of all expected conditions"""
+    
+    @staticmethod
+    def demonstrate_conditions(driver):
+        wait = WebDriverWait(driver, 10)
+        locator = (By.ID, "element-id")
+        
+        # Element presence/visibility
+        wait.until(EC.presence_of_element_located(locator))
+        wait.until(EC.visibility_of_element_located(locator))
+        wait.until(EC.visibility_of(driver.find_element(*locator)))
+        wait.until(EC.invisibility_of_element_located(locator))
+        
+        # Element interaction
+        wait.until(EC.element_to_be_clickable(locator))
+        wait.until(EC.element_to_be_selected(driver.find_element(*locator)))
+        
+        # Text conditions
+        wait.until(EC.text_to_be_present_in_element(locator, "Expected Text"))
+        wait.until(EC.text_to_be_present_in_element_value(locator, "Input Value"))
+        wait.until(EC.title_contains("Page Title"))
+        wait.until(EC.title_is("Exact Page Title"))
+        
+        # Frame/Window conditions
+        wait.until(EC.frame_to_be_available_and_switch_to_it(locator))
+        wait.until(EC.number_of_windows_to_be(2))
+        wait.until(EC.new_window_is_opened(driver.window_handles))
+        
+        # Alert conditions
+        wait.until(EC.alert_is_present())
+        
+        # URL conditions
+        wait.until(EC.url_contains("example.com"))
+        wait.until(EC.url_to_be("https://example.com/page"))
+        wait.until(EC.url_changes("https://old-url.com"))
+        
+        # Element selection state
+        wait.until(EC.element_selection_state_to_be(locator, True))
+        wait.until(EC.element_located_selection_state_to_be(locator, False))
+        
+        # Staleness (element no longer attached to DOM)
+        element = driver.find_element(*locator)
+        wait.until(EC.staleness_of(element))</code></pre>
+
+    <h2>Interacting with Elements</h2>
+    
+    <h3>User Actions and JavaScript Execution</h3>
+    <pre class="language-python"><code>from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import Select
+import time
+
+class ElementInteractions:
+    """Methods for interacting with web elements"""
+    
+    def __init__(self, driver):
+        self.driver = driver
+        self.actions = ActionChains(driver)
+    
+    # Basic interactions
+    def click_element(self, element):
+        """Click an element with retry"""
+        try:
+            element.click()
+        except:
+            # Try JavaScript click if regular click fails
+            self.driver.execute_script("arguments[0].click();", element)
+    
+    def send_keys_slowly(self, element, text, delay=0.1):
+        """Type text with delay between characters"""
+        element.clear()
+        for char in text:
+            element.send_keys(char)
+            time.sleep(delay)
+    
+    def clear_and_send_keys(self, element, text):
+        """Clear field and send keys"""
+        element.clear()
+        element.send_keys(Keys.CONTROL + "a")
+        element.send_keys(Keys.DELETE)
+        element.send_keys(text)
+    
+    # Dropdown/Select handling
+    def handle_dropdown(self, element, value=None, text=None, index=None):
+        """Handle dropdown selection"""
+        select = Select(element)
+        
+        if value:
+            select.select_by_value(value)
+        elif text:
+            select.select_by_visible_text(text)
+        elif index is not None:
+            select.select_by_index(index)
+        
+        # Get all options
+        options = select.options
+        selected = select.first_selected_option
+        
+        return selected
+    
+    # Mouse actions
+    def hover_over_element(self, element):
+        """Hover over element"""
+        self.actions.move_to_element(element).perform()
+    
+    def drag_and_drop(self, source, target):
+        """Drag and drop element"""
+        self.actions.drag_and_drop(source, target).perform()
+    
+    def double_click(self, element):
+        """Double click element"""
+        self.actions.double_click(element).perform()
+    
+    def right_click(self, element):
+        """Right click (context click) element"""
+        self.actions.context_click(element).perform()
+    
+    # Keyboard actions
+    def send_keys_with_modifier(self, element, key_combination):
+        """Send keys with modifiers (Ctrl, Alt, Shift)"""
+        # Example: Ctrl+A to select all
+        element.send_keys(Keys.CONTROL, 'a')
+        
+        # Example: Copy
+        element.send_keys(Keys.CONTROL, 'c')
+        
+        # Example: Paste
+        element.send_keys(Keys.CONTROL, 'v')
+    
+    # Scroll actions
+    def scroll_to_element(self, element):
+        """Scroll element into view"""
+        self.driver.execute_script("arguments[0].scrollIntoView(true);", element)
+        time.sleep(0.5)  # Wait for scroll to complete
+    
+    def scroll_page(self, pixels=None, to_bottom=False):
+        """Scroll page by pixels or to bottom"""
+        if to_bottom:
+            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        elif pixels:
+            self.driver.execute_script(f"window.scrollBy(0, {pixels});")
+    
+    # JavaScript execution
+    def execute_javascript(self, script, *args):
+        """Execute JavaScript with arguments"""
+        return self.driver.execute_script(script, *args)
+    
+    def get_element_attribute_js(self, element, attribute):
+        """Get attribute using JavaScript"""
+        return self.driver.execute_script(
+            f"return arguments[0].getAttribute('{attribute}');", element
+        )
+    
+    def set_element_attribute_js(self, element, attribute, value):
+        """Set attribute using JavaScript"""
+        self.driver.execute_script(
+            f"arguments[0].setAttribute('{attribute}', '{value}');", element
+        )
+    
+    def remove_element(self, element):
+        """Remove element from DOM"""
+        self.driver.execute_script("arguments[0].remove();", element)
+    
+    def highlight_element(self, element, color="red", border=2):
+        """Highlight element for debugging"""
+        self.driver.execute_script(
+            f"arguments[0].style.border='{border}px solid {color}';", element
+        )
+
+# Advanced interactions example
+def interact_with_complex_form(driver):
+    """Example of complex form interaction"""
+    
+    interactions = ElementInteractions(driver)
+    wait = WebDriverWait(driver, 10)
+    
+    # Navigate to form
+    driver.get("https://example.com/form")
+    
+    # Text input
+    name_field = wait.until(EC.presence_of_element_located((By.ID, "name")))
+    interactions.send_keys_slowly(name_field, "John Doe", delay=0.05)
+    
+    # Dropdown
+    country_dropdown = driver.find_element(By.ID, "country")
+    interactions.handle_dropdown(country_dropdown, text="United States")
+    
+    # Checkbox
+    checkbox = driver.find_element(By.ID, "agree")
+    if not checkbox.is_selected():
+        checkbox.click()
+    
+    # Radio button
+    radio = driver.find_element(By.CSS_SELECTOR, "input[type='radio'][value='yes']")
+    interactions.click_element(radio)
+    
+    # File upload
+    file_input = driver.find_element(By.CSS_SELECTOR, "input[type='file']")
+    file_input.send_keys("/path/to/file.pdf")
+    
+    # Date picker (if not native HTML5)
+    date_field = driver.find_element(By.ID, "date")
+    interactions.execute_javascript(
+        "arguments[0].value = '2024-01-01';", date_field
+    )
+    
+    # Submit form
+    submit_button = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
+    interactions.scroll_to_element(submit_button)
+    interactions.click_element(submit_button)</code></pre>
+
+    <h2>Handling Dynamic Content</h2>
+    
+    <h3>Single Page Applications (SPA)</h3>
+    <pre class="language-python"><code>class SPAScraper:
+    """Scraper for Single Page Applications"""
+    
+    def __init__(self, driver):
+        self.driver = driver
+        self.wait = WebDriverWait(driver, 20)
+    
+    def wait_for_spa_navigation(self, expected_url_fragment):
+        """Wait for SPA navigation without page reload"""
+        self.wait.until(EC.url_contains(expected_url_fragment))
+    
+    def scrape_infinite_scroll(self, container_selector, item_selector, max_items=None):
+        """Scrape infinite scroll content"""
+        items = []
+        last_height = 0
+        no_change_count = 0
+        
+        while True:
+            # Scroll to bottom
+            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            time.sleep(2)  # Wait for content to load
+            
+            # Get current items
+            current_items = self.driver.find_elements(By.CSS_SELECTOR, item_selector)
+            
+            # Check if new items loaded
+            current_height = self.driver.execute_script("return document.body.scrollHeight")
+            
+            if current_height == last_height:
+                no_change_count += 1
+                if no_change_count >= 3:  # No new content after 3 attempts
+                    break
+            else:
+                no_change_count = 0
+                last_height = current_height
+            
+            # Check max items limit
+            if max_items and len(current_items) >= max_items:
+                break
+        
+        # Extract data from items
+        for item in current_items[:max_items] if max_items else current_items:
+            items.append(self.extract_item_data(item))
+        
+        return items
+    
+    def extract_item_data(self, item):
+        """Extract data from a single item"""
+        data = {}
+        
+        try:
+            # Example extraction - adjust based on actual structure
+            data['title'] = item.find_element(By.CSS_SELECTOR, ".title").text
+            data['price'] = item.find_element(By.CSS_SELECTOR, ".price").text
+            data['link'] = item.find_element(By.CSS_SELECTOR, "a").get_attribute("href")
+        except:
+            pass
+        
+        return data
+    
+    def scrape_lazy_loaded_images(self):
+        """Scrape images that load on scroll"""
+        images = []
+        
+        # Get initial viewport height
+        viewport_height = self.driver.execute_script("return window.innerHeight")
+        total_height = self.driver.execute_script("return document.body.scrollHeight")
+        
+        # Scroll in steps
+        current_position = 0
+        while current_position < total_height:
+            # Scroll down
+            self.driver.execute_script(f"window.scrollTo(0, {current_position});")
+            time.sleep(1)  # Wait for images to load
+            
+            # Get all images in current viewport
+            img_elements = self.driver.find_elements(By.TAG_NAME, "img")
+            
+            for img in img_elements:
+                src = img.get_attribute("src") or img.get_attribute("data-src")
+                if src and src not in images:
+                    images.append(src)
+            
+            current_position += viewport_height
+        
+        return images
+    
+    def handle_ajax_pagination(self, next_button_selector, content_selector):
+        """Handle AJAX-based pagination"""
+        all_content = []
+        page = 1
+        
+        while True:
+            print(f"Scraping page {page}")
+            
+            # Wait for content to load
+            content = self.wait.until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, content_selector))
+            )
+            
+            # Extract content
+            items = content.find_elements(By.CSS_SELECTOR, ".item")
+            for item in items:
+                all_content.append(item.text)
+            
+            # Try to click next button
+            try:
+                next_button = self.driver.find_element(By.CSS_SELECTOR, next_button_selector)
+                
+                if next_button.is_enabled() and "disabled" not in next_button.get_attribute("class"):
+                    self.driver.execute_script("arguments[0].click();", next_button)
+                    
+                    # Wait for content to update
+                    self.wait.until(EC.staleness_of(content))
+                    page += 1
+                else:
+                    break
+            except:
+                break
+        
+        return all_content
+
+# React/Vue/Angular specific handling
+class ModernFrameworkScraper:
+    """Handle modern JavaScript frameworks"""
+    
+    def __init__(self, driver):
+        self.driver = driver
+        self.wait = WebDriverWait(driver, 20)
+    
+    def wait_for_react(self):
+        """Wait for React to finish rendering"""
+        script = """
+        const checkReact = () => {
+            if (window.React && window.React.version) {
+                const allComponents = document.querySelectorAll('[data-reactroot], [data-reactid]');
+                return allComponents.length > 0;
+            }
+            return false;
+        };
+        return checkReact();
+        """
+        self.wait.until(lambda driver: driver.execute_script(script))
+    
+    def wait_for_vue(self):
+        """Wait for Vue to finish rendering"""
+        script = """
+        if (window.Vue || window.app) {
+            return document.querySelectorAll('[data-v-]').length > 0;
+        }
+        return false;
+        """
+        self.wait.until(lambda driver: driver.execute_script(script))
+    
+    def extract_react_props(self, element):
+        """Extract React props from element"""
+        script = """
+        const getReactProps = (element) => {
+            const keys = Object.keys(element);
+            const reactKey = keys.find(key => key.startsWith('__react'));
+            if (reactKey) {
+                return element[reactKey].memoizedProps || element[reactKey].pendingProps;
+            }
+            return null;
+        };
+        return getReactProps(arguments[0]);
+        """
+        return self.driver.execute_script(script, element)
+    
+    def extract_vue_data(self, element):
+        """Extract Vue component data"""
+        script = """
+        const getVueData = (element) => {
+            if (element.__vue__) {
+                return element.__vue__.$data;
+            }
+            return null;
+        };
+        return getVueData(arguments[0]);
+        """
+        return self.driver.execute_script(script, element)</code></pre>
+
+    <h2>Handling Popups and Frames</h2>
+    
+    <pre class="language-python"><code>class PopupAndFrameHandler:
+    """Handle popups, alerts, frames, and windows"""
+    
+    def __init__(self, driver):
+        self.driver = driver
+        self.wait = WebDriverWait(driver, 10)
+        self.main_window = driver.current_window_handle
+    
+    # Alert handling
+    def handle_alert(self, accept=True, text=None):
+        """Handle JavaScript alerts"""
+        try:
+            alert = self.wait.until(EC.alert_is_present())
+            
+            alert_text = alert.text
+            print(f"Alert text: {alert_text}")
+            
+            if text:
+                alert.send_keys(text)
+            
+            if accept:
+                alert.accept()
+            else:
+                alert.dismiss()
+            
+            return alert_text
+        except TimeoutException:
+            print("No alert present")
+            return None
+    
+    # Window/Tab handling
+    def switch_to_new_window(self):
+        """Switch to newly opened window"""
+        self.wait.until(EC.number_of_windows_to_be(2))
+        
+        for window_handle in self.driver.window_handles:
+            if window_handle != self.main_window:
+                self.driver.switch_to.window(window_handle)
+                break
+    
+    def close_and_switch_back(self):
+        """Close current window and switch back to main"""
+        self.driver.close()
+        self.driver.switch_to.window(self.main_window)
+    
+    def handle_popup_window(self, link_element):
+        """Handle popup window opened by link"""
+        # Store original window
+        original_window = self.driver.current_window_handle
+        
+        # Click link that opens popup
+        link_element.click()
+        
+        # Wait for new window
+        self.wait.until(EC.number_of_windows_to_be(2))
+        
+        # Switch to popup
+        for window_handle in self.driver.window_handles:
+            if window_handle != original_window:
+                self.driver.switch_to.window(window_handle)
+                break
+        
+        # Do work in popup
+        popup_content = self.driver.find_element(By.TAG_NAME, "body").text
+        
+        # Close popup and return to original window
+        self.driver.close()
+        self.driver.switch_to.window(original_window)
+        
+        return popup_content
+    
+    # Frame/iFrame handling
+    def switch_to_frame(self, frame_locator):
+        """Switch to frame or iframe"""
+        # Wait for frame and switch
+        self.wait.until(EC.frame_to_be_available_and_switch_to_it(frame_locator))
+    
+    def switch_to_nested_frame(self, frame_locators):
+        """Switch through nested frames"""
+        for locator in frame_locators:
+            self.switch_to_frame(locator)
+    
+    def switch_back_from_frame(self):
+        """Switch back to main content"""
+        self.driver.switch_to.default_content()
+    
+    def scrape_frame_content(self, frame_locator):
+        """Scrape content from frame"""
+        # Switch to frame
+        self.switch_to_frame(frame_locator)
+        
+        # Scrape content
+        content = self.driver.find_element(By.TAG_NAME, "body").text
+        
+        # Switch back
+        self.switch_back_from_frame()
+        
+        return content
+    
+    # Modal/Dialog handling
+    def handle_modal(self, modal_selector, close_button_selector=None):
+        """Handle modal dialogs"""
+        try:
+            # Wait for modal to appear
+            modal = self.wait.until(
+                EC.visibility_of_element_located((By.CSS_SELECTOR, modal_selector))
+            )
+            
+            # Extract modal content
+            modal_content = modal.text
+            
+            # Close modal if close button provided
+            if close_button_selector:
+                close_button = modal.find_element(By.CSS_SELECTOR, close_button_selector)
+                close_button.click()
+                
+                # Wait for modal to disappear
+                self.wait.until(
+                    EC.invisibility_of_element_located((By.CSS_SELECTOR, modal_selector))
+                )
+            
+            return modal_content
+        except:
+            return None
+    
+    def dismiss_cookie_banner(self):
+        """Dismiss common cookie consent banners"""
+        cookie_selectors = [
+            "button[id*='accept']",
+            "button[class*='accept']",
+            "button[class*='consent']",
+            "button[class*='agree']",
+            "button[class*='cookie']",
+            "a[id*='accept']",
+            ".cookie-banner button",
+            "#cookie-consent button"
+        ]
+        
+        for selector in cookie_selectors:
+            try:
+                button = self.driver.find_element(By.CSS_SELECTOR, selector)
+                if button.is_displayed():
+                    button.click()
+                    time.sleep(1)
+                    return True
+            except:
+                continue
+        
+        return False</code></pre>
+
+    <h2>Anti-Detection Techniques</h2>
+    
+    <pre class="language-python"><code>import undetected_chromedriver as uc
+from selenium_stealth import stealth
+import random
+
+class StealthScraper:
+    """Scraper with anti-detection measures"""
+    
+    def __init__(self):
+        self.driver = None
+    
+    def setup_stealth_driver(self):
+        """Setup driver with stealth mode"""
+        
+        # Option 1: Undetected ChromeDriver
+        options = uc.ChromeOptions()
+        
+        # Randomize window size
+        width = random.randint(1024, 1920)
+        height = random.randint(768, 1080)
+        options.add_argument(f'--window-size={width},{height}')
+        
+        # Randomize user agent
+        user_agents = [
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36'
+        ]
+        options.add_argument(f'user-agent={random.choice(user_agents)}')
+        
+        # Other stealth options
+        options.add_argument('--disable-blink-features=AutomationControlled')
+        options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        options.add_experimental_option('useAutomationExtension', False)
+        
+        # Create undetected driver
+        driver = uc.Chrome(options=options)
+        
+        # Option 2: Selenium Stealth
+        stealth(driver,
+            languages=["en-US", "en"],
+            vendor="Google Inc.",
+            platform="Win32",
+            webgl_vendor="Intel Inc.",
+            renderer="Intel Iris OpenGL Engine",
+            fix_hairline=True,
+        )
+        
+        return driver
+    
+    def setup_authenticated_proxy(self, proxy_host, proxy_port, proxy_user, proxy_pass):
+        """Setup Chrome with authenticated proxy"""
+        
+        manifest_json = """
+        {
+            "version": "1.0.0",
+            "manifest_version": 2,
+            "name": "Chrome Proxy",
+            "permissions": [
+                "proxy",
+                "tabs",
+                "unlimitedStorage",
+                "storage",
+                "<all_urls>",
+                "webRequest",
+                "webRequestBlocking"
+            ],
+            "background": {
+                "scripts": ["background.js"]
+            },
+            "minimum_chrome_version":"22.0.0"
+        }
+        """
+        
+        background_js = """
+        var config = {
+                mode: "fixed_servers",
+                rules: {
+                singleProxy: {
+                    scheme: "http",
+                    host: "%s",
+                    port: parseInt(%s)
+                },
+                bypassList: ["localhost"]
+                }
+            };
+        
+        chrome.proxy.settings.set({value: config, scope: "regular"}, function() {});
+        
+        function callbackFn(details) {
+            return {
+                authCredentials: {
+                    username: "%s",
+                    password: "%s"
+                }
+            };
+        }
+        
+        chrome.webRequest.onAuthRequired.addListener(
+                    callbackFn,
+                    {urls: ["<all_urls>"]},
+                    ['blocking']
+        );
+        """ % (proxy_host, proxy_port, proxy_user, proxy_pass)
+        
+        # Create proxy extension
+        import zipfile
+        import os
+        
+        plugin_file = 'proxy_auth_plugin.zip'
+        
+        with zipfile.ZipFile(plugin_file, 'w') as zp:
+            zp.writestr("manifest.json", manifest_json)
+            zp.writestr("background.js", background_js)
+        
+        options = webdriver.ChromeOptions()
+        options.add_extension(plugin_file)
+        
+        driver = webdriver.Chrome(options=options)
+        
+        # Clean up
+        os.remove(plugin_file)
+        
+        return driver
+    
+    def human_like_behavior(self, driver):
+        """Simulate human-like behavior"""
+        
+        # Random mouse movements
+        action = ActionChains(driver)
+        
+        for _ in range(random.randint(2, 5)):
+            x_offset = random.randint(-100, 100)
+            y_offset = random.randint(-100, 100)
+            action.move_by_offset(x_offset, y_offset)
+            action.perform()
+            time.sleep(random.uniform(0.1, 0.3))
+        
+        # Random scrolling
+        for _ in range(random.randint(1, 3)):
+            scroll_amount = random.randint(100, 500)
+            driver.execute_script(f"window.scrollBy(0, {scroll_amount});")
+            time.sleep(random.uniform(0.5, 1.5))
+        
+        # Random delays
+        time.sleep(random.uniform(1, 3))
+    
+    def detect_bot_detection(self, driver):
+        """Check for common bot detection mechanisms"""
+        
+        # Check for Cloudflare
+        if "Cloudflare" in driver.title or "cf-browser-verification" in driver.page_source:
+            print("Cloudflare detection found")
+            return "cloudflare"
+        
+        # Check for reCAPTCHA
+        if "recaptcha" in driver.page_source.lower():
+            print("reCAPTCHA detected")
+            return "recaptcha"
+        
+        # Check for DataDome
+        if "datadome" in driver.page_source.lower():
+            print("DataDome detected")
+            return "datadome"
+        
+        # Check for PerimeterX
+        if "_px" in driver.page_source or "perimeterx" in driver.page_source.lower():
+            print("PerimeterX detected")
+            return "perimeterx"
+        
+        return None
+    
+    def bypass_cloudflare(self, driver, max_attempts=30):
+        """Attempt to bypass Cloudflare (basic)"""
+        
+        for attempt in range(max_attempts):
+            time.sleep(1)
+            
+            # Check if we passed Cloudflare
+            if "Cloudflare" not in driver.title:
+                print("Cloudflare bypass successful")
+                return True
+            
+            # Check for challenge
+            try:
+                # Look for Cloudflare challenge
+                challenge = driver.find_element(By.ID, "cf-content")
+                print(f"Cloudflare challenge detected, waiting... ({attempt+1}/{max_attempts})")
+            except:
+                pass
+        
+        print("Cloudflare bypass failed")
+        return False</code></pre>
+
+    <h2>Real-World Examples</h2>
+    
+    <h3>E-commerce Scraper</h3>
+    <pre class="language-python"><code>class AmazonScraper:
+    """Scraper for Amazon products"""
+    
+    def __init__(self):
+        self.driver = self.setup_driver()
+        self.wait = WebDriverWait(self.driver, 20)
+    
+    def setup_driver(self):
+        """Setup Chrome driver with options"""
+        options = webdriver.ChromeOptions()
+        options.add_argument('--disable-gpu')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-dev-shm-usage')
+        options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        options.add_experimental_option('useAutomationExtension', False)
+        
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=options)
+        
+        return driver
+    
+    def search_products(self, query):
+        """Search for products on Amazon"""
+        self.driver.get("https://www.amazon.com")
+        
+        # Handle cookie banner if present
+        try:
+            accept_cookies = self.driver.find_element(By.ID, "sp-cc-accept")
+            accept_cookies.click()
+        except:
+            pass
+        
+        # Search for products
+        search_box = self.wait.until(
+            EC.presence_of_element_located((By.ID, "twotabsearchtextbox"))
+        )
+        search_box.clear()
+        search_box.send_keys(query)
+        search_box.send_keys(Keys.RETURN)
+        
+        # Wait for results
+        self.wait.until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "[data-component-type='s-search-result']"))
+        )
+    
+    def scrape_product_listings(self, max_pages=3):
+        """Scrape product listings from search results"""
+        all_products = []
+        
+        for page in range(max_pages):
+            print(f"Scraping page {page + 1}")
+            
+            # Wait for products to load
+            products = self.wait.until(
+                EC.presence_of_all_elements_located(
+                    (By.CSS_SELECTOR, "[data-component-type='s-search-result']")
+                )
+            )
+            
+            for product in products:
+                try:
+                    data = self.extract_product_data(product)
+                    if data:
+                        all_products.append(data)
+                except Exception as e:
+                    print(f"Error extracting product: {e}")
+            
+            # Go to next page
+            try:
+                next_button = self.driver.find_element(By.CSS_SELECTOR, ".s-pagination-next")
+                if "disabled" not in next_button.get_attribute("class"):
+                    self.driver.execute_script("arguments[0].click();", next_button)
+                    time.sleep(2)
+                else:
+                    break
+            except:
+                break
+        
+        return all_products
+    
+    def extract_product_data(self, product_element):
+        """Extract data from product element"""
+        data = {}
+        
+        try:
+            # Title
+            title_element = product_element.find_element(By.CSS_SELECTOR, "h2 a span")
+            data['title'] = title_element.text
+            
+            # Price
+            try:
+                price_element = product_element.find_element(By.CSS_SELECTOR, ".a-price-whole")
+                data['price'] = price_element.text
+            except:
+                data['price'] = "N/A"
+            
+            # Rating
+            try:
+                rating_element = product_element.find_element(By.CSS_SELECTOR, ".a-icon-alt")
+                data['rating'] = rating_element.get_attribute("textContent")
+            except:
+                data['rating'] = "No rating"
+            
+            # Link
+            link_element = product_element.find_element(By.CSS_SELECTOR, "h2 a")
+            data['link'] = link_element.get_attribute("href")
+            
+            # Image
+            try:
+                img_element = product_element.find_element(By.CSS_SELECTOR, "img.s-image")
+                data['image'] = img_element.get_attribute("src")
+            except:
+                data['image'] = "N/A"
+            
+            return data
+        except:
+            return None
+    
+    def scrape_product_details(self, product_url):
+        """Scrape detailed product information"""
+        self.driver.get(product_url)
+        
+        details = {}
+        
+        try:
+            # Product title
+            title = self.wait.until(
+                EC.presence_of_element_located((By.ID, "productTitle"))
+            )
+            details['title'] = title.text
+            
+            # Price
+            try:
+                price = self.driver.find_element(By.CSS_SELECTOR, ".a-price-whole")
+                details['price'] = price.text
+            except:
+                details['price'] = "N/A"
+            
+            # Features
+            try:
+                features = self.driver.find_elements(By.CSS_SELECTOR, "#feature-bullets ul li")
+                details['features'] = [f.text for f in features if f.text]
+            except:
+                details['features'] = []
+            
+            # Images
+            try:
+                images = self.driver.find_elements(By.CSS_SELECTOR, "#altImages img")
+                details['images'] = [img.get_attribute("src") for img in images]
+            except:
+                details['images'] = []
+            
+            # Reviews
+            try:
+                review_count = self.driver.find_element(By.CSS_SELECTOR, "#acrCustomerReviewText")
+                details['review_count'] = review_count.text
+            except:
+                details['review_count'] = "0"
+            
+            return details
+        except Exception as e:
+            print(f"Error scraping product details: {e}")
+            return None
+    
+    def close(self):
+        """Close the driver"""
+        self.driver.quit()
+
+# Usage example
+def scrape_amazon_products():
+    scraper = AmazonScraper()
+    
+    try:
+        # Search for products
+        scraper.search_products("laptop")
+        
+        # Scrape listings
+        products = scraper.scrape_product_listings(max_pages=2)
+        
+        # Save to CSV
+        import pandas as pd
+        df = pd.DataFrame(products)
+        df.to_csv("amazon_products.csv", index=False)
+        
+        print(f"Scraped {len(products)} products")
+        
+        # Scrape details for first product
+        if products:
+            details = scraper.scrape_product_details(products[0]['link'])
+            print(f"Product details: {details}")
+    
+    finally:
+        scraper.close()</code></pre>
+
+    <h3>Social Media Automation</h3>
+    <pre class="language-python"><code>class LinkedInScraper:
+    """LinkedIn profile scraper (educational purposes only)"""
+    
+    def __init__(self, email, password):
+        self.email = email
+        self.password = password
+        self.driver = self.setup_driver()
+        self.wait = WebDriverWait(self.driver, 20)
+    
+    def setup_driver(self):
+        """Setup driver for LinkedIn"""
+        options = webdriver.ChromeOptions()
+        options.add_argument('--disable-blink-features=AutomationControlled')
+        options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        options.add_experimental_option('useAutomationExtension', False)
+        
+        # Use profiles to maintain login
+        options.add_argument("user-data-dir=selenium_profile")
+        
+        service = Service(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=options)
+        
+        return driver
+    
+    def login(self):
+        """Login to LinkedIn"""
+        self.driver.get("https://www.linkedin.com/login")
+        
+        # Enter credentials
+        email_field = self.wait.until(
+            EC.presence_of_element_located((By.ID, "username"))
+        )
+        email_field.send_keys(self.email)
+        
+        password_field = self.driver.find_element(By.ID, "password")
+        password_field.send_keys(self.password)
+        
+        # Click sign in
+        sign_in_button = self.driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
+        sign_in_button.click()
+        
+        # Wait for login to complete
+        self.wait.until(EC.url_contains("feed"))
+    
+    def search_profiles(self, query):
+        """Search for profiles"""
+        # Navigate to people search
+        search_url = f"https://www.linkedin.com/search/results/people/?keywords={query}"
+        self.driver.get(search_url)
+        
+        # Wait for results
+        self.wait.until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, ".search-results"))
+        )
+    
+    def scrape_profile_list(self):
+        """Scrape list of profiles from search results"""
+        profiles = []
+        
+        # Scroll to load all results
+        last_height = self.driver.execute_script("return document.body.scrollHeight")
+        
+        while True:
+            # Scroll down
+            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            time.sleep(2)
+            
+            # Check if new content loaded
+            new_height = self.driver.execute_script("return document.body.scrollHeight")
+            if new_height == last_height:
+                break
+            last_height = new_height
+        
+        # Extract profile information
+        profile_cards = self.driver.find_elements(
+            By.CSS_SELECTOR, ".search-result__wrapper"
+        )
+        
+        for card in profile_cards:
+            try:
+                profile = {}
+                
+                # Name
+                name_element = card.find_element(By.CSS_SELECTOR, ".entity-result__title-text a")
+                profile['name'] = name_element.text
+                profile['url'] = name_element.get_attribute("href")
+                
+                # Title
+                try:
+                    title_element = card.find_element(By.CSS_SELECTOR, ".entity-result__primary-subtitle")
+                    profile['title'] = title_element.text
+                except:
+                    profile['title'] = "N/A"
+                
+                # Location
+                try:
+                    location_element = card.find_element(By.CSS_SELECTOR, ".entity-result__secondary-subtitle")
+                    profile['location'] = location_element.text
+                except:
+                    profile['location'] = "N/A"
+                
+                profiles.append(profile)
+            except:
+                continue
+        
+        return profiles
+
+# Note: Always respect robots.txt and terms of service
+# This is for educational purposes only</code></pre>
+
+    <h2>Best Practices</h2>
+    
+    <pre class="language-python"><code># Selenium best practices
+
+class SeleniumBestPractices:
+    """Best practices for Selenium automation"""
+    
+    def __init__(self):
+        self.driver = None
+    
+    # 1. Use Page Object Model (POM)
+    class LoginPage:
+        """Page Object for login page"""
+        
+        def __init__(self, driver):
+            self.driver = driver
+            self.wait = WebDriverWait(driver, 10)
+        
+        # Locators
+        USERNAME_FIELD = (By.ID, "username")
+        PASSWORD_FIELD = (By.ID, "password")
+        LOGIN_BUTTON = (By.CSS_SELECTOR, "button[type='submit']")
+        ERROR_MESSAGE = (By.CLASS_NAME, "error-message")
+        
+        def enter_username(self, username):
+            element = self.wait.until(EC.presence_of_element_located(self.USERNAME_FIELD))
+            element.clear()
+            element.send_keys(username)
+        
+        def enter_password(self, password):
+            element = self.driver.find_element(*self.PASSWORD_FIELD)
+            element.clear()
+            element.send_keys(password)
+        
+        def click_login(self):
+            element = self.driver.find_element(*self.LOGIN_BUTTON)
+            element.click()
+        
+        def login(self, username, password):
+            self.enter_username(username)
+            self.enter_password(password)
+            self.click_login()
+        
+        def get_error_message(self):
+            try:
+                element = self.driver.find_element(*self.ERROR_MESSAGE)
+                return element.text
+            except:
+                return None
+    
+    # 2. Use explicit waits over implicit waits
+    def good_wait_example(self):
+        """Use explicit waits for specific conditions"""
+        wait = WebDriverWait(self.driver, 10)
+        
+        # Good - explicit wait for specific condition
+        element = wait.until(EC.element_to_be_clickable((By.ID, "submit")))
+        
+        # Avoid - implicit wait affects all elements
+        # self.driver.implicitly_wait(10)
+    
+    # 3. Handle StaleElementReferenceException
+    def retry_on_stale_element(self, locator, max_retries=3):
+        """Retry on stale element exception"""
+        for _ in range(max_retries):
+            try:
+                element = self.driver.find_element(*locator)
+                return element
+            except StaleElementReferenceException:
+                time.sleep(0.5)
+        raise Exception(f"Element {locator} is stale after {max_retries} retries")
+    
+    # 4. Clean up resources
+    def cleanup(self):
+        """Always clean up driver resources"""
+        try:
+            # Take screenshot on failure
+            self.driver.save_screenshot("failure_screenshot.png")
+            
+            # Close all windows
+            for handle in self.driver.window_handles:
+                self.driver.switch_to.window(handle)
+                self.driver.close()
+        finally:
+            # Quit driver
+            if self.driver:
+                self.driver.quit()
+    
+    # 5. Use context managers
+    class WebDriverContext:
+        """Context manager for WebDriver"""
+        
+        def __init__(self, driver_class=webdriver.Chrome, **kwargs):
+            self.driver_class = driver_class
+            self.driver_kwargs = kwargs
+            self.driver = None
+        
+        def __enter__(self):
+            self.driver = self.driver_class(**self.driver_kwargs)
+            return self.driver
+        
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            if self.driver:
+                self.driver.quit()
+    
+    # 6. Logging and debugging
+    def setup_logging(self):
+        """Setup logging for debugging"""
+        import logging
+        
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler('selenium.log'),
+                logging.StreamHandler()
+            ]
+        )
+        
+        # Enable browser logs
+        caps = webdriver.DesiredCapabilities.CHROME
+        caps['goog:loggingPrefs'] = {'browser': 'ALL'}
+        
+        options = webdriver.ChromeOptions()
+        options.add_experimental_option('w3c', False)
+        
+        driver = webdriver.Chrome(options=options, desired_capabilities=caps)
+        
+        # Get browser logs
+        logs = driver.get_log('browser')
+        for log in logs:
+            logging.info(f"Browser log: {log}")
+        
+        return driver
+
+# Performance optimization
+class PerformanceOptimization:
+    """Optimize Selenium performance"""
+    
+    @staticmethod
+    def fast_driver_setup():
+        """Setup optimized driver for speed"""
+        options = webdriver.ChromeOptions()
+        
+        # Disable images
+        prefs = {"profile.managed_default_content_settings.images": 2}
+        options.add_experimental_option("prefs", prefs)
+        
+        # Disable CSS
+        options.add_argument('--disable-dev-shm-usage')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-gpu')
+        
+        # Headless mode
+        options.add_argument('--headless')
+        
+        # Disable JavaScript (if not needed)
+        # options.add_experimental_option("prefs", {'profile.managed_default_content_settings.javascript': 2})
+        
+        driver = webdriver.Chrome(options=options)
+        
+        # Set page load strategy
+        driver.set_page_load_timeout(30)
+        
+        return driver</code></pre>
+
+    <h2>Practice Exercises</h2>
+    
+    <h3>Exercise 1: Build a Job Scraper</h3>
+    <p>Create a job listing scraper that:</p>
+    <ol>
+        <li>Navigates to job sites (Indeed, LinkedIn, etc.)</li>
+        <li>Searches for specific job titles</li>
+        <li>Handles pagination and infinite scroll</li>
+        <li>Extracts job details from dynamic content</li>
+        <li>Exports data to CSV/Database</li>
+    </ol>
+
+    <h3>Exercise 2: Social Media Monitor</h3>
+    <p>Build a social media monitoring tool that:</p>
+    <ol>
+        <li>Logs into social platforms</li>
+        <li>Searches for specific hashtags/keywords</li>
+        <li>Scrolls through dynamic feeds</li>
+        <li>Extracts post content and metrics</li>
+        <li>Handles rate limiting and detection</li>
+    </ol>
+
+    <h3>Exercise 3: E-commerce Price Tracker</h3>
+    <p>Create a price tracking system that:</p>
+    <ol>
+        <li>Monitors multiple e-commerce sites</li>
+        <li>Handles product variations (size, color)</li>
+        <li>Captures JavaScript-rendered prices</li>
+        <li>Takes screenshots of products</li>
+        <li>Sends alerts on price changes</li>
+    </ol>
+
+    <h2>Key Takeaways</h2>
+    <ul>
+        <li>🌐 Selenium controls real browsers to handle JavaScript-heavy sites</li>
+        <li>⏱️ Use explicit waits for reliable element interaction</li>
+        <li>🔍 Multiple strategies for finding elements (ID, XPath, CSS)</li>
+        <li>📱 Handle popups, frames, and multiple windows</li>
+        <li>🤖 Implement anti-detection measures for bot protection</li>
+        <li>📊 Page Object Model for maintainable code</li>
+        <li>⚡ Optimize performance with headless mode and disabled features</li>
+        <li>🛡️ Always handle exceptions and clean up resources</li>
+    </ul>
+
+    <h2>Further Resources</h2>
+    <ul>
+        <li><a href="https://selenium-python.readthedocs.io/">Selenium Python Documentation</a></li>
+        <li><a href="https://www.selenium.dev/documentation/">Official Selenium Documentation</a></li>
+        <li><a href="https://github.com/SeleniumHQ/selenium">Selenium GitHub Repository</a></li>
+        <li><a href="https://pypi.org/project/undetected-chromedriver/">Undetected ChromeDriver</a></li>
+        <li><a href="https://github.com/ultrafunkamsterdam/nodriver">NoDriver - Next Gen Automation</a></li>
+        <li><a href="https://playwright.dev/python/">Playwright (Alternative to Selenium)</a></li>
+    </ul>
+
+    <!-- Navigation at the bottom -->
+    <nav class="lesson-nav" aria-label="Lesson navigation">
+        <a href="webscraping_rate_limiting.html" class="prev-lesson" aria-label="Previous lesson">Previous: Rate Limiting and Ethics</a>
+        <a href="index.html" class="home-link" aria-label="Course home">Course Home</a>
+        <a href="timeseries_basics.html" class="next-lesson" aria-label="Next lesson">Next: Time Series Fundamentals</a>
+    </nav>
+    
+    </main>
+</body>
+</html>

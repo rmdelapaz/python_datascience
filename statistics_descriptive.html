@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Descriptive Statistics - Python Data Science</title>
+    <link href="styles/main.css" rel="stylesheet"/>
+    <link href="/favicon.png" rel="icon" type="image/png"/>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true });
+    </script>
+    <style>
+        .breadcrumb {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+        }
+        
+        .breadcrumb a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+        
+        .navigation-links {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2rem 0;
+            margin-top: 3rem;
+            border-top: 2px solid #e0e0e0;
+        }
+        
+        .navigation-links a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .navigation-links a:hover {
+            background: #f0f0f0;
+        }
+        
+        .nav-prev, .nav-next {
+            flex: 1;
+        }
+        
+        .nav-next {
+            text-align: right;
+        }
+        
+        .nav-home {
+            text-align: center;
+        }
+        
+        canvas {
+            display: block;
+            margin: 20px auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+        }
+        
+        .statistics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 12px rgba(0,0,0,0.15);
+        }
+        
+        .stat-card h4 {
+            margin: 0 0 10px 0;
+            background: none;
+            color: white;
+            padding: 0;
+        }
+        
+        .stat-card p {
+            margin: 5px 0;
+        }
+        
+        .formula-box {
+            background: #f0f9ff;
+            border: 2px solid #0284c7;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .visual-explanation {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 10px 10px 0;
+        }
+        
+        .code-example {
+            background: #f8f9fa;
+            border-left: 3px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <nav class="breadcrumb">
+        <a href="index.html">Home</a> &gt; 
+        <a href="index.html#statistics">Statistical Analysis</a> &gt; 
+        <span>Descriptive Statistics</span>
+    </nav>
+
+    <h1>📊 Descriptive Statistics: Understanding Your Data's Story</h1>
+    
+    <p>Imagine you're a detective 🕵️ investigating a crime scene. Before making any conclusions, you need to gather evidence, examine patterns, and understand what happened. That's exactly what descriptive statistics does for data! It's your first tool in the data science toolkit - helping you summarize, visualize, and understand the fundamental characteristics of your dataset before diving into complex analyses.</p>
+
+    <h2>The Big Picture: What Are Descriptive Statistics? 🎯</h2>
+    
+    <p>Descriptive statistics are like a data's passport - they tell you the essential information about your dataset at a glance. Instead of looking at thousands of individual data points, you get a concise summary that captures the essence of your data's behavior.</p>
+
+    <div class="mermaid">
+    graph TB
+        A[Raw Data] --> B[Descriptive Statistics]
+        B --> C[Central Tendency]
+        B --> D[Variability/Spread]
+        B --> E[Distribution Shape]
+        B --> F[Relationships]
+        
+        C --> G[Mean]
+        C --> H[Median]
+        C --> I[Mode]
+        
+        D --> J[Range]
+        D --> K[Variance]
+        D --> L[Standard Deviation]
+        D --> M[IQR]
+        
+        E --> N[Skewness]
+        E --> O[Kurtosis]
+        
+        F --> P[Correlation]
+        F --> Q[Covariance]
+        
+        style B fill:#667eea
+        style C fill:#4ecdc4
+        style D fill:#fbbf24
+        style E fill:#10b981
+        style F fill:#f472b6
+    </div>
+
+    <h3>The Restaurant Review Analogy 🍕</h3>
+    
+    <p>Think of descriptive statistics like restaurant reviews. Instead of reading 1,000 individual reviews, you want to know: What's the average rating (mean)? What rating appears most often (mode)? What's the typical rating if we ignore extremes (median)? How consistent are the ratings (standard deviation)? Are there many terrible or amazing outliers (skewness)? This summary gives you the restaurant's "statistical story" instantly!</p>
+
+    <canvas id="distributionCanvas" width="800" height="400"></canvas>
+    <script>
+        const canvas = document.getElementById('distributionCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Generate sample data for visualization
+        function generateNormalData(mean, std, count) {
+            const data = [];
+            for(let i = 0; i < count; i++) {
+                // Box-Muller transform for normal distribution
+                const u1 = Math.random();
+                const u2 = Math.random();
+                const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+                data.push(mean + z * std);
+            }
+            return data;
+        }
+        
+        // Animation variables
+        let animationFrame = 0;
+        let dataPoints = generateNormalData(400, 60, 200);
+        
+        function drawVisualization() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Title
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 16px Arial';
+            ctx.fillText('Interactive Distribution Visualization', 250, 30);
+            
+            // Draw histogram
+            const bins = 20;
+            const minVal = Math.min(...dataPoints);
+            const maxVal = Math.max(...dataPoints);
+            const binWidth = (maxVal - minVal) / bins;
+            const histogram = new Array(bins).fill(0);
+            
+            // Calculate histogram
+            dataPoints.forEach(val => {
+                const binIndex = Math.min(Math.floor((val - minVal) / binWidth), bins - 1);
+                histogram[binIndex]++;
+            });
+            
+            // Find max count for scaling
+            const maxCount = Math.max(...histogram);
+            
+            // Draw bins
+            const chartWidth = 600;
+            const chartHeight = 200;
+            const chartX = 100;
+            const chartY = 80;
+            const barWidth = chartWidth / bins;
+            
+            histogram.forEach((count, i) => {
+                const barHeight = (count / maxCount) * chartHeight;
+                const x = chartX + i * barWidth;
+                const y = chartY + chartHeight - barHeight;
+                
+                // Gradient fill
+                const gradient = ctx.createLinearGradient(0, y, 0, y + barHeight);
+                gradient.addColorStop(0, '#667eea');
+                gradient.addColorStop(1, '#764ba2');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(x, y, barWidth - 2, barHeight);
+            });
+            
+            // Draw axes
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(chartX, chartY);
+            ctx.lineTo(chartX, chartY + chartHeight);
+            ctx.lineTo(chartX + chartWidth, chartY + chartHeight);
+            ctx.stroke();
+            
+            // Calculate and display statistics
+            const mean = dataPoints.reduce((a, b) => a + b, 0) / dataPoints.length;
+            const sortedData = [...dataPoints].sort((a, b) => a - b);
+            const median = sortedData[Math.floor(dataPoints.length / 2)];
+            const variance = dataPoints.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / dataPoints.length;
+            const stdDev = Math.sqrt(variance);
+            
+            // Draw mean line
+            const meanX = chartX + ((mean - minVal) / (maxVal - minVal)) * chartWidth;
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(meanX, chartY);
+            ctx.lineTo(meanX, chartY + chartHeight);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Draw median line
+            const medianX = chartX + ((median - minVal) / (maxVal - minVal)) * chartWidth;
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(medianX, chartY);
+            ctx.lineTo(medianX, chartY + chartHeight);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Legend
+            ctx.font = '12px Arial';
+            ctx.fillStyle = '#ef4444';
+            ctx.fillText('Mean: ' + mean.toFixed(1), chartX + 20, chartY + chartHeight + 40);
+            ctx.fillStyle = '#10b981';
+            ctx.fillText('Median: ' + median.toFixed(1), chartX + 120, chartY + chartHeight + 40);
+            ctx.fillStyle = '#667eea';
+            ctx.fillText('Std Dev: ' + stdDev.toFixed(1), chartX + 230, chartY + chartHeight + 40);
+            
+            // Add new data point periodically
+            if(animationFrame % 60 === 0) {
+                dataPoints.shift();
+                dataPoints.push(generateNormalData(400, 60, 1)[0]);
+            }
+            
+            // Draw insight box
+            ctx.fillStyle = '#fef3c7';
+            ctx.fillRect(50, 320, 700, 60);
+            ctx.fillStyle = '#92400e';
+            ctx.font = '14px Arial';
+            ctx.fillText('💡 Insight: The red line (mean) and green line (median) are close together,', 70, 345);
+            ctx.fillText('   indicating a symmetric distribution with no significant skew.', 70, 365);
+            
+            animationFrame++;
+        }
+        
+        function animate() {
+            drawVisualization();
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+    </script>
+
+    <h2>Common Pitfalls and How to Avoid Them 🚧</h2>
+    
+    <p>Even experienced data scientists make these mistakes. Let's learn how to avoid them!</p>
+
+    <div class="code-example">
+        <pre><code>import numpy as np
+import pandas as pd
+
+print("⚠️ Common Pitfalls in Descriptive Statistics")
+print("=" * 60)
+
+# Pitfall 1: Mean vs Median Confusion
+print("\n❌ Pitfall 1: Using Mean for Skewed Data")
+print("-" * 40)
+
+# Income data (highly skewed)
+incomes = np.concatenate([
+    np.random.normal(50000, 10000, 900),  # Most people
+    np.random.normal(500000, 100000, 100)  # High earners
+])
+
+mean_income = np.mean(incomes)
+median_income = np.median(incomes)
+
+print(f"Mean income: ${mean_income:,.2f}")
+print(f"Median income: ${median_income:,.2f}")
+print(f"Difference: ${mean_income - median_income:,.2f}")
+print("\n✅ Solution: Use median for skewed distributions!")
+
+# Pitfall 2: Ignoring Missing Data
+print("\n❌ Pitfall 2: Silent Missing Data")
+print("-" * 40)
+
+data_with_nulls = pd.Series([1, 2, 3, np.nan, 5, np.nan, 7, 8, 9, 10])
+
+print(f"Mean (with NaN): {data_with_nulls.mean():.2f}")
+print(f"Count without checking: {len(data_with_nulls)}")
+print(f"Count of valid values: {data_with_nulls.count()}")
+print(f"Percentage missing: {data_with_nulls.isnull().sum()/len(data_with_nulls)*100:.1f}%")
+print("\n✅ Solution: Always check for and handle missing values!")
+
+# Pitfall 3: Simpson's Paradox
+print("\n❌ Pitfall 3: Simpson's Paradox")
+print("-" * 40)
+
+# Example: Treatment success rates
+hospital_data = pd.DataFrame({
+    'hospital': ['A'] * 1000 + ['B'] * 1000,
+    'severity': ['mild'] * 800 + ['severe'] * 200 + ['mild'] * 200 + ['severe'] * 800,
+    'success': np.concatenate([
+        np.random.binomial(1, 0.9, 800),   # Hospital A, mild cases
+        np.random.binomial(1, 0.3, 200),   # Hospital A, severe cases
+        np.random.binomial(1, 0.85, 200),  # Hospital B, mild cases
+        np.random.binomial(1, 0.25, 800)   # Hospital B, severe cases
+    ])
+})
+
+# Overall success rates
+overall = hospital_data.groupby('hospital')['success'].mean()
+print("Overall success rates:")
+print(overall)
+print("\n⚠️ Hospital A looks better overall!")
+
+# But when we control for severity...
+by_severity = hospital_data.groupby(['hospital', 'severity'])['success'].mean().unstack()
+print("\nSuccess rates by severity:")
+print(by_severity)
+print("\n✅ Hospital B is actually better for both mild AND severe cases!")
+print("   This reversal is Simpson's Paradox!")</code></pre>
+    </div>
+
+    <h2>Quick Reference Guide 📚</h2>
+    
+    <div class="statistics-grid">
+        <div class="stat-card">
+            <h4>📍 Central Tendency</h4>
+            <p><strong>Mean:</strong> Average value</p>
+            <p><strong>Median:</strong> Middle value</p>
+            <p><strong>Mode:</strong> Most frequent</p>
+            <p>Use median for skewed data!</p>
+        </div>
+        
+        <div class="stat-card">
+            <h4>📏 Spread</h4>
+            <p><strong>Range:</strong> Max - Min</p>
+            <p><strong>IQR:</strong> Q3 - Q1</p>
+            <p><strong>Std Dev:</strong> Average deviation</p>
+            <p>IQR is robust to outliers!</p>
+        </div>
+        
+        <div class="stat-card">
+            <h4>📐 Shape</h4>
+            <p><strong>Skewness:</strong> Asymmetry</p>
+            <p><strong>Kurtosis:</strong> Tail heaviness</p>
+            <p>Skew > 0 = Right tail</p>
+            <p>Kurt > 0 = Heavy tails</p>
+        </div>
+        
+        <div class="stat-card">
+            <h4>🔗 Relationships</h4>
+            <p><strong>Correlation:</strong> Linear relationship</p>
+            <p><strong>Covariance:</strong> Joint variability</p>
+            <p>-1 ≤ correlation ≤ 1</p>
+            <p>Correlation ≠ Causation!</p>
+        </div>
+    </div>
+
+    <h2>Summary: Your Statistical Toolkit ✅</h2>
+    
+    <div class="visual-explanation">
+        <h3>🎯 Key Takeaways:</h3>
+        <ul>
+            <li><strong>Always Start Here:</strong> Descriptive statistics are your first step in any analysis</li>
+            <li><strong>Know Your Measures:</strong> Different statistics tell different stories - use the right one</li>
+            <li><strong>Check Distribution:</strong> Skewness and outliers affect which statistics to use</li>
+            <li><strong>Visualize Everything:</strong> Graphs reveal patterns numbers can't show</li>
+            <li><strong>Group Analysis:</strong> Statistics by groups reveal hidden insights</li>
+            <li><strong>Be Robust:</strong> Use median and IQR when dealing with outliers</li>
+            <li><strong>Document Everything:</strong> Keep track of your statistical decisions and why</li>
+        </ul>
+    </div>
+
+    <div class="code-example">
+        <pre><code># Quick Reference Card for Descriptive Statistics
+import pandas as pd
+import numpy as np
+from scipy import stats
+
+# ESSENTIAL FUNCTIONS
+# ------------------
+
+# For a DataFrame
+df.describe()                # Basic statistics
+df.info()                    # Data types and missing values
+df.shape                     # Dimensions
+df.dtypes                    # Column types
+
+# Central Tendency
+df['col'].mean()            # Average
+df['col'].median()          # Middle value
+df['col'].mode()            # Most frequent
+
+# Spread
+df['col'].std()             # Standard deviation
+df['col'].var()             # Variance
+df['col'].quantile([0.25, 0.75])  # Quartiles
+
+# Distribution Shape
+df['col'].skew()            # Skewness
+df['col'].kurtosis()        # Kurtosis
+
+# Relationships
+df.corr()                   # Correlation matrix
+df.cov()                    # Covariance matrix
+
+# Grouped Statistics
+df.groupby('category')['value'].agg(['mean', 'std', 'count'])
+
+# Missing Data
+df.isnull().sum()           # Count missing
+df.dropna()                 # Remove missing
+df.fillna(method='mean')    # Fill missing
+
+print("📊 You're now equipped with descriptive statistics mastery!")</code></pre>
+    </div>
+
+    <footer>
+        <div class="navigation-links">
+            <a class="nav-prev" href="matplotlib_saving_figures.html">← Previous: Saving Publication Figures</a>
+            <a class="nav-home" href="index.html">🏠 Course Home</a>
+            <a class="nav-next" href="statistics_probability_distributions.html">Next: Probability Distributions →</a>
+        </div>
+    </footer>
+    
+    <!-- Copy to Clipboard functionality -->
+    <script src="scripts/clipboard.js"></script>
+</body>
+</html>

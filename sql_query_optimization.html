@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Master SQL query optimization techniques. Learn indexing strategies, execution plans, and performance tuning for data science workloads.">
+    <title>Query Optimization - Python Data Science Path</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/enhanced.css">
+    <link rel="icon" href="/favicon.png" type="image/png">
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+      mermaid.initialize({ startOnLoad: true });
+    </script>
+    <script src="js/course-enhancements.js" defer></script>
+</head>
+<body>
+    <!-- Skip to main content for accessibility -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+    
+    <!-- Progress indicator -->
+    <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
+        <div class="progress-bar"></div>
+    </div>
+    
+    <main id="main-content">
+    <header role="banner">
+        <h1>Query Optimization</h1>
+        <div class="reading-time" aria-label="Estimated reading time"></div>
+    </header>
+    
+    <!-- Breadcrumb Navigation -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="index.html">Home</a>
+        <span class="separator">›</span>
+        <a href="#">Intermediate Module</a>
+        <span class="separator">›</span>
+        <a href="#">SQL for Data Scientists</a>
+        <span class="separator">›</span>
+        <span class="current">Query Optimization</span>
+    </nav>
+
+    <h2>Make Your Queries Lightning Fast! ⚡</h2>
+    
+    <blockquote>
+        <p>The difference between a query that takes seconds and one that takes hours often comes down to optimization. Understanding how databases execute queries, how to read execution plans, and when to use indexes can dramatically improve performance. Master these techniques to handle big data efficiently!</p>
+    </blockquote>
+
+    <h2>Understanding Query Execution</h2>
+    
+    <div class="mermaid">
+    graph TD
+        A[SQL Query] --> B[Parser]
+        B --> C[Query Optimizer]
+        C --> D[Execution Plan]
+        D --> E[Execute]
+        E --> F[Results]
+        
+        C --> G[Statistics]
+        C --> H[Indexes]
+        C --> I[Cost Model]
+        
+        D --> J[Table Scan]
+        D --> K[Index Scan]
+        D --> L[Join Strategy]
+        D --> M[Sort/Group]
+    </div>
+
+    <h2>Setting Up Performance Testing Environment</h2>
+    <pre class="language-python"><code>import sqlite3
+import pandas as pd
+import numpy as np
+from datetime import datetime, timedelta
+import time
+import random
+import string
+
+# Create connection with optimizations
+conn = sqlite3.connect('performance.db')
+conn.execute("PRAGMA journal_mode = WAL")  # Write-Ahead Logging
+conn.execute("PRAGMA synchronous = NORMAL")  # Faster writes
+conn.execute("PRAGMA cache_size = -64000")  # 64MB cache
+conn.execute("PRAGMA temp_store = MEMORY")  # Use memory for temp tables
+
+cursor = conn.cursor()
+
+# Create large test tables
+cursor.executescript('''
+    -- Large orders table (1M+ rows)
+    CREATE TABLE IF NOT EXISTS large_orders (
+        order_id INTEGER PRIMARY KEY,
+        customer_id INTEGER,
+        product_id INTEGER,
+        order_date DATE,
+        quantity INTEGER,
+        unit_price DECIMAL(10,2),
+        total_amount DECIMAL(10,2),
+        status TEXT,
+        region TEXT,
+        category TEXT
+    );
+    
+    -- Large customers table (100K+ rows)
+    CREATE TABLE IF NOT EXISTS large_customers (
+        customer_id INTEGER PRIMARY KEY,
+        first_name TEXT,
+        last_name TEXT,
+        email TEXT,
+        country TEXT,
+        city TEXT,
+        registration_date DATE,
+        customer_type TEXT,
+        lifetime_value DECIMAL(10,2)
+    );
+    
+    -- Large products table (10K+ rows)
+    CREATE TABLE IF NOT EXISTS large_products (
+        product_id INTEGER PRIMARY KEY,
+        product_name TEXT,
+        category TEXT,
+        subcategory TEXT,
+        brand TEXT,
+        price DECIMAL(10,2),
+        cost DECIMAL(10,2),
+        weight DECIMAL(10,2),
+        supplier_id INTEGER
+    );
+''')
+
+# Function to generate large dataset
+def generate_large_dataset(num_orders=100000, num_customers=10000, num_products=1000):
+    print(f"Generating {num_orders} orders, {num_customers} customers, {num_products} products...")
+    
+    # Disable autocommit for bulk insert
+    conn.execute("BEGIN TRANSACTION")
+    
+    # Generate customers
+    customers = []
+    for i in range(num_customers):
+        customers.append((
+            i + 1,
+            f"First_{i}",
+            f"Last_{i}",
+            f"user{i}@example.com",
+            random.choice(['USA', 'UK', 'Canada', 'Germany', 'France']),
+            f"City_{random.randint(1, 100)}",
+            (datetime.now() - timedelta(days=random.randint(0, 1000))).date(),
+            random.choice(['Regular', 'Premium', 'VIP']),
+            random.uniform(100, 10000)
+        ))
+    
+    cursor.executemany('''
+        INSERT OR REPLACE INTO large_customers VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', customers)
+    
+    # Generate products
+    products = []
+    categories = ['Electronics', 'Clothing', 'Books', 'Home', 'Sports']
+    for i in range(num_products):
+        category = random.choice(categories)
+        products.append((
+            i + 1,
+            f"Product_{i}",
+            category,
+            f"{category}_Sub_{random.randint(1, 5)}",
+            f"Brand_{random.randint(1, 50)}",
+            random.uniform(10, 1000),
+            random.uniform(5, 500),
+            random.uniform(0.1, 50),
+            random.randint(1, 100)
+        ))
+    
+    cursor.executemany('''
+        INSERT OR REPLACE INTO large_products VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', products)
+    
+    # Generate orders in batches
+    batch_size = 10000
+    for batch_start in range(0, num_orders, batch_size):
+        orders = []
+        for i in range(batch_start, min(batch_start + batch_size, num_orders)):
+            order_date = (datetime.now() - timedelta(days=random.randint(0, 365))).date()
+            quantity = random.randint(1, 10)
+            unit_price = random.uniform(10, 500)
+            orders.append((
+                i + 1,
+                random.randint(1, num_customers),
+                random.randint(1, num_products),
+                order_date,
+                quantity,
+                unit_price,
+                quantity * unit_price,
+                random.choice(['Pending', 'Shipped', 'Delivered', 'Cancelled']),
+                random.choice(['North', 'South', 'East', 'West']),
+                random.choice(categories)
+            ))
+        
+        cursor.executemany('''
+            INSERT OR REPLACE INTO large_orders VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', orders)
+    
+    conn.commit()
+    print("Dataset generated successfully!")
+
+# Generate data if tables are empty
+cursor.execute("SELECT COUNT(*) FROM large_orders")
+if cursor.fetchone()[0] == 0:
+    generate_large_dataset()
+
+# Performance measurement decorator
+def measure_performance(func):
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        print(f"Execution time: {end_time - start_time:.4f} seconds")
+        return result
+    return wrapper
+
+@measure_performance
+def execute_query(query):
+    return pd.read_sql_query(query, conn)</code></pre>
+
+    <h2>Understanding Execution Plans</h2>
+    
+    <h3>Reading EXPLAIN Output</h3>
+    <pre class="language-python"><code># Basic EXPLAIN
+def explain_query(query, analyze=False):
+    """Show query execution plan"""
+    if analyze:
+        explain_query = f"EXPLAIN QUERY PLAN {query}"
+    else:
+        explain_query = f"EXPLAIN {query}"
+    
+    df = pd.read_sql_query(explain_query, conn)
+    print("Execution Plan:")
+    print(df.to_string())
+    return df
+
+# Example: Table scan vs Index scan
+query_no_index = """
+SELECT * FROM large_orders 
+WHERE customer_id = 5000 AND status = 'Delivered'
+"""
+
+query_with_index = """
+SELECT * FROM large_orders 
+WHERE order_id = 5000
+"""
+
+print("Query without index on customer_id:")
+explain_query(query_no_index)
+
+print("\nQuery with PRIMARY KEY index:")
+explain_query(query_with_index)
+
+# Analyze join strategies
+join_query = """
+SELECT o.*, c.first_name, c.last_name
+FROM large_orders o
+JOIN large_customers c ON o.customer_id = c.customer_id
+WHERE o.order_date >= DATE('now', '-30 days')
+"""
+
+print("\nJoin execution plan:")
+explain_query(join_query)</code></pre>
+
+    <h3>PostgreSQL EXPLAIN ANALYZE</h3>
+    <pre class="language-python"><code># For PostgreSQL (more detailed than SQLite)
+import psycopg2
+
+def pg_explain_analyze(query, conn_params):
+    """PostgreSQL EXPLAIN ANALYZE for detailed metrics"""
+    conn = psycopg2.connect(**conn_params)
+    cursor = conn.cursor()
+    
+    explain_query = f"EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) {query}"
+    cursor.execute(explain_query)
+    
+    result = cursor.fetchone()[0][0]
+    
+    print(f"Total execution time: {result['Execution Time']}ms")
+    print(f"Planning time: {result['Planning Time']}ms")
+    print(f"Rows returned: {result['Plan']['Actual Rows']}")
+    
+    # Parse plan tree
+    def print_plan(node, indent=0):
+        print("  " * indent + f"-> {node['Node Type']}")
+        print("  " * indent + f"   Cost: {node.get('Total Cost', 'N/A')}")
+        print("  " * indent + f"   Rows: {node.get('Actual Rows', 'N/A')}")
+        print("  " * indent + f"   Time: {node.get('Actual Total Time', 'N/A')}ms")
+        
+        if 'Plans' in node:
+            for child in node['Plans']:
+                print_plan(child, indent + 1)
+    
+    print_plan(result['Plan'])
+    
+    cursor.close()
+    conn.close()</code></pre>
+
+    <h2>Indexing Strategies</h2>
+    
+    <h3>Types of Indexes</h3>
+    <pre class="language-python"><code># Different index types and their use cases
+cursor.executescript('''
+    -- Single column index (most common)
+    CREATE INDEX IF NOT EXISTS idx_orders_customer 
+    ON large_orders(customer_id);
+    
+    -- Composite index (multiple columns)
+    CREATE INDEX IF NOT EXISTS idx_orders_customer_date 
+    ON large_orders(customer_id, order_date);
+    
+    -- Covering index (includes all needed columns)
+    CREATE INDEX IF NOT EXISTS idx_orders_covering 
+    ON large_orders(customer_id, order_date, total_amount);
+    
+    -- Partial index (filtered)
+    CREATE INDEX IF NOT EXISTS idx_orders_delivered 
+    ON large_orders(customer_id, order_date) 
+    WHERE status = 'Delivered';
+    
+    -- Unique index (enforces uniqueness)
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_email 
+    ON large_customers(email);
+    
+    -- Expression index (computed values)
+    CREATE INDEX IF NOT EXISTS idx_customers_full_name 
+    ON large_customers(first_name || ' ' || last_name);
+''')
+
+# Compare performance with and without indexes
+print("Testing index performance...")
+
+# Without index
+cursor.execute("DROP INDEX IF EXISTS idx_test_customer")
+conn.commit()
+
+start = time.time()
+cursor.execute("""
+    SELECT COUNT(*) FROM large_orders 
+    WHERE customer_id = 5000
+""")
+without_index_time = time.time() - start
+print(f"Without index: {without_index_time:.4f} seconds")
+
+# With index
+cursor.execute("""
+    CREATE INDEX idx_test_customer ON large_orders(customer_id)
+""")
+conn.commit()
+
+start = time.time()
+cursor.execute("""
+    SELECT COUNT(*) FROM large_orders 
+    WHERE customer_id = 5000
+""")
+with_index_time = time.time() - start
+print(f"With index: {with_index_time:.4f} seconds")
+print(f"Speedup: {without_index_time/with_index_time:.2f}x")</code></pre>
+
+    <h3>Index Selection Guidelines</h3>
+    <pre class="language-python"><code># Analyze index usage
+def analyze_index_usage():
+    """Identify which indexes are being used"""
+    
+    # Find unused indexes (PostgreSQL)
+    unused_indexes_query = """
+    SELECT 
+        schemaname,
+        tablename,
+        indexname,
+        idx_scan,
+        idx_tup_read,
+        idx_tup_fetch,
+        pg_size_pretty(pg_relation_size(indexrelid)) as index_size
+    FROM pg_stat_user_indexes
+    WHERE idx_scan = 0
+    AND indexrelid NOT IN (
+        SELECT conindid FROM pg_constraint WHERE contype = 'p'
+    )
+    ORDER BY pg_relation_size(indexrelid) DESC;
+    """
+    
+    # Find missing indexes (based on query patterns)
+    missing_indexes_query = """
+    WITH frequent_scans AS (
+        SELECT 
+            tablename,
+            attname,
+            n_distinct,
+            correlation
+        FROM pg_stats
+        WHERE schemaname = 'public'
+        AND n_distinct > 100
+        AND correlation < 0.1
+    )
+    SELECT 
+        tablename,
+        attname AS column_name,
+        n_distinct AS distinct_values,
+        CASE 
+            WHEN n_distinct > 10000 THEN 'High Selectivity - Good Index Candidate'
+            WHEN n_distinct > 1000 THEN 'Medium Selectivity - Consider Index'
+            ELSE 'Low Selectivity - Probably Not Worth Indexing'
+        END AS recommendation
+    FROM frequent_scans
+    ORDER BY n_distinct DESC;
+    """
+    
+    print("Index usage analysis complete")
+
+# Index maintenance
+def maintain_indexes():
+    """Rebuild fragmented indexes"""
+    
+    # SQLite: VACUUM and REINDEX
+    cursor.execute("VACUUM")
+    cursor.execute("REINDEX")
+    
+    # Analyze tables to update statistics
+    cursor.execute("ANALYZE")
+    
+    print("Index maintenance complete")
+
+maintain_indexes()</code></pre>
+
+    <h2>Query Rewriting Techniques</h2>
+    
+    <h3>Subquery vs JOIN Optimization</h3>
+    <pre class="language-python"><code># Inefficient: Correlated subquery
+inefficient_query = """
+SELECT 
+    c.customer_id,
+    c.first_name,
+    c.last_name,
+    (SELECT COUNT(*) 
+     FROM large_orders o 
+     WHERE o.customer_id = c.customer_id) AS order_count,
+    (SELECT SUM(total_amount) 
+     FROM large_orders o 
+     WHERE o.customer_id = c.customer_id) AS total_spent
+FROM large_customers c
+WHERE c.customer_type = 'VIP'
+"""
+
+# Efficient: JOIN with aggregation
+efficient_query = """
+SELECT 
+    c.customer_id,
+    c.first_name,
+    c.last_name,
+    COUNT(o.order_id) AS order_count,
+    COALESCE(SUM(o.total_amount), 0) AS total_spent
+FROM large_customers c
+LEFT JOIN large_orders o ON c.customer_id = o.customer_id
+WHERE c.customer_type = 'VIP'
+GROUP BY c.customer_id, c.first_name, c.last_name
+"""
+
+print("Inefficient query (correlated subquery):")
+start = time.time()
+df1 = pd.read_sql_query(inefficient_query, conn)
+inefficient_time = time.time() - start
+print(f"Time: {inefficient_time:.4f} seconds")
+
+print("\nEfficient query (JOIN):")
+start = time.time()
+df2 = pd.read_sql_query(efficient_query, conn)
+efficient_time = time.time() - start
+print(f"Time: {efficient_time:.4f} seconds")
+
+print(f"\nSpeedup: {inefficient_time/efficient_time:.2f}x")</code></pre>
+
+    <h3>EXISTS vs IN Optimization</h3>
+    <pre class="language-python"><code># IN clause (can be slow with large lists)
+in_query = """
+SELECT * FROM large_customers
+WHERE customer_id IN (
+    SELECT customer_id FROM large_orders
+    WHERE total_amount > 1000
+)
+"""
+
+# EXISTS (often faster)
+exists_query = """
+SELECT * FROM large_customers c
+WHERE EXISTS (
+    SELECT 1 FROM large_orders o
+    WHERE o.customer_id = c.customer_id
+    AND o.total_amount > 1000
+)
+"""
+
+# JOIN (alternative approach)
+join_alternative = """
+SELECT DISTINCT c.*
+FROM large_customers c
+INNER JOIN large_orders o ON c.customer_id = o.customer_id
+WHERE o.total_amount > 1000
+"""
+
+# Compare performance
+queries = {
+    'IN clause': in_query,
+    'EXISTS': exists_query,
+    'JOIN': join_alternative
+}
+
+for name, query in queries.items():
+    start = time.time()
+    df = pd.read_sql_query(query, conn)
+    elapsed = time.time() - start
+    print(f"{name}: {elapsed:.4f} seconds ({len(df)} rows)")</code></pre>
+
+    <h3>UNION vs UNION ALL</h3>
+    <pre class="language-python"><code># UNION (removes duplicates - slower)
+union_query = """
+SELECT customer_id, 'High Value' AS segment
+FROM large_orders
+WHERE total_amount > 1000
+
+UNION
+
+SELECT customer_id, 'Frequent' AS segment
+FROM large_orders
+GROUP BY customer_id
+HAVING COUNT(*) > 10
+"""
+
+# UNION ALL (keeps duplicates - faster)
+union_all_query = """
+SELECT customer_id, 'High Value' AS segment
+FROM large_orders
+WHERE total_amount > 1000
+
+UNION ALL
+
+SELECT customer_id, 'Frequent' AS segment
+FROM large_orders
+GROUP BY customer_id
+HAVING COUNT(*) > 10
+"""
+
+print("UNION (distinct):")
+start = time.time()
+df1 = pd.read_sql_query(union_query, conn)
+union_time = time.time() - start
+print(f"Time: {union_time:.4f} seconds, Rows: {len(df1)}")
+
+print("\nUNION ALL (with duplicates):")
+start = time.time()
+df2 = pd.read_sql_query(union_all_query, conn)
+union_all_time = time.time() - start
+print(f"Time: {union_all_time:.4f} seconds, Rows: {len(df2)}")
+
+print(f"\nSpeedup: {union_time/union_all_time:.2f}x")</code></pre>
+
+    <h2>Advanced Optimization Techniques</h2>
+    
+    <h3>Partitioning Large Tables</h3>
+    <pre class="language-python"><code># Table partitioning simulation (manual in SQLite)
+cursor.executescript('''
+    -- Create partitioned tables by date
+    CREATE TABLE IF NOT EXISTS orders_2024_q1 (
+        CHECK (order_date >= '2024-01-01' AND order_date < '2024-04-01')
+    ) INHERITS (large_orders);
+    
+    CREATE TABLE IF NOT EXISTS orders_2024_q2 (
+        CHECK (order_date >= '2024-04-01' AND order_date < '2024-07-01')
+    ) INHERITS (large_orders);
+    
+    CREATE TABLE IF NOT EXISTS orders_2024_q3 (
+        CHECK (order_date >= '2024-07-01' AND order_date < '2024-10-01')
+    ) INHERITS (large_orders);
+    
+    CREATE TABLE IF NOT EXISTS orders_2024_q4 (
+        CHECK (order_date >= '2024-10-01' AND order_date < '2025-01-01')
+    ) INHERITS (large_orders);
+''')
+
+# Create a view to union partitions
+partition_view = """
+CREATE VIEW IF NOT EXISTS orders_partitioned AS
+SELECT * FROM orders_2024_q1
+UNION ALL
+SELECT * FROM orders_2024_q2
+UNION ALL
+SELECT * FROM orders_2024_q3
+UNION ALL
+SELECT * FROM orders_2024_q4
+"""
+
+# Query specific partition (fast)
+partition_query = """
+SELECT * FROM orders_2024_q2
+WHERE customer_id = 1000
+"""
+
+# Query all partitions (slower)
+all_partitions_query = """
+SELECT * FROM orders_partitioned
+WHERE customer_id = 1000
+"""</code></pre>
+
+    <h3>Materialized Views</h3>
+    <pre class="language-python"><code># Create materialized view for expensive aggregations
+cursor.executescript('''
+    -- Drop if exists
+    DROP TABLE IF EXISTS customer_summary_mv;
+    
+    -- Create materialized view (as table in SQLite)
+    CREATE TABLE customer_summary_mv AS
+    SELECT 
+        c.customer_id,
+        c.first_name,
+        c.last_name,
+        c.customer_type,
+        COUNT(DISTINCT o.order_id) AS total_orders,
+        SUM(o.total_amount) AS lifetime_value,
+        AVG(o.total_amount) AS avg_order_value,
+        MAX(o.order_date) AS last_order_date,
+        MIN(o.order_date) AS first_order_date
+    FROM large_customers c
+    LEFT JOIN large_orders o ON c.customer_id = o.customer_id
+    GROUP BY c.customer_id, c.first_name, c.last_name, c.customer_type;
+    
+    -- Create indexes on materialized view
+    CREATE INDEX idx_mv_customer_id ON customer_summary_mv(customer_id);
+    CREATE INDEX idx_mv_lifetime_value ON customer_summary_mv(lifetime_value DESC);
+''')
+
+# Compare query performance
+# Without materialized view
+start = time.time()
+query_direct = """
+SELECT 
+    c.customer_id,
+    c.first_name,
+    c.last_name,
+    COUNT(DISTINCT o.order_id) AS total_orders,
+    SUM(o.total_amount) AS lifetime_value
+FROM large_customers c
+LEFT JOIN large_orders o ON c.customer_id = o.customer_id
+GROUP BY c.customer_id, c.first_name, c.last_name
+ORDER BY lifetime_value DESC
+LIMIT 100
+"""
+df1 = pd.read_sql_query(query_direct, conn)
+direct_time = time.time() - start
+
+# With materialized view
+start = time.time()
+query_mv = """
+SELECT * FROM customer_summary_mv
+ORDER BY lifetime_value DESC
+LIMIT 100
+"""
+df2 = pd.read_sql_query(query_mv, conn)
+mv_time = time.time() - start
+
+print(f"Direct query: {direct_time:.4f} seconds")
+print(f"Materialized view: {mv_time:.4f} seconds")
+print(f"Speedup: {direct_time/mv_time:.2f}x")
+
+# Refresh materialized view
+def refresh_materialized_view():
+    """Refresh materialized view with latest data"""
+    cursor.execute("DELETE FROM customer_summary_mv")
+    cursor.execute("""
+        INSERT INTO customer_summary_mv
+        SELECT ... -- same as original query
+    """)
+    conn.commit()</code></pre>
+
+    <h3>Query Result Caching</h3>
+    <pre class="language-python"><code>import hashlib
+import pickle
+from datetime import datetime, timedelta
+
+class QueryCache:
+    def __init__(self, ttl_minutes=60):
+        self.cache = {}
+        self.ttl = timedelta(minutes=ttl_minutes)
+    
+    def _get_cache_key(self, query, params=None):
+        """Generate cache key from query and parameters"""
+        key_string = query + str(params) if params else query
+        return hashlib.md5(key_string.encode()).hexdigest()
+    
+    def get(self, query, params=None):
+        """Get cached result if available and not expired"""
+        cache_key = self._get_cache_key(query, params)
+        
+        if cache_key in self.cache:
+            result, timestamp = self.cache[cache_key]
+            if datetime.now() - timestamp < self.ttl:
+                print(f"Cache hit for query: {query[:50]}...")
+                return result
+        
+        return None
+    
+    def set(self, query, result, params=None):
+        """Cache query result"""
+        cache_key = self._get_cache_key(query, params)
+        self.cache[cache_key] = (result, datetime.now())
+        print(f"Cached result for query: {query[:50]}...")
+    
+    def invalidate(self, pattern=None):
+        """Invalidate cache entries"""
+        if pattern:
+            # Invalidate matching patterns
+            keys_to_delete = [k for k in self.cache.keys() if pattern in k]
+            for key in keys_to_delete:
+                del self.cache[key]
+        else:
+            # Clear entire cache
+            self.cache.clear()
+
+# Use cache
+cache = QueryCache(ttl_minutes=30)
+
+def cached_query(query, params=None):
+    """Execute query with caching"""
+    # Check cache
+    result = cache.get(query, params)
+    
+    if result is None:
+        # Execute query
+        start = time.time()
+        result = pd.read_sql_query(query, conn)
+        elapsed = time.time() - start
+        print(f"Query executed in {elapsed:.4f} seconds")
+        
+        # Cache result
+        cache.set(query, result, params)
+    
+    return result
+
+# Test caching
+test_query = "SELECT * FROM customer_summary_mv WHERE lifetime_value > 5000"
+
+print("First execution:")
+df1 = cached_query(test_query)
+
+print("\nSecond execution (cached):")
+df2 = cached_query(test_query)</code></pre>
+
+    <h2>Common Performance Pitfalls</h2>
+    
+    <h3>Avoiding Common Mistakes</h3>
+    <pre class="language-python"><code># Pitfall 1: SELECT * instead of specific columns
+bad_query = """
+SELECT * FROM large_orders o
+JOIN large_customers c ON o.customer_id = c.customer_id
+"""
+
+good_query = """
+SELECT 
+    o.order_id, 
+    o.order_date, 
+    o.total_amount,
+    c.first_name,
+    c.last_name
+FROM large_orders o
+JOIN large_customers c ON o.customer_id = c.customer_id
+"""
+
+# Pitfall 2: Functions in WHERE clause
+bad_where = """
+SELECT * FROM large_orders
+WHERE DATE(order_date) = '2024-01-01'
+"""
+
+good_where = """
+SELECT * FROM large_orders
+WHERE order_date >= '2024-01-01' 
+  AND order_date < '2024-01-02'
+"""
+
+# Pitfall 3: OR in WHERE clause (can prevent index usage)
+bad_or = """
+SELECT * FROM large_customers
+WHERE country = 'USA' OR city = 'London'
+"""
+
+good_union = """
+SELECT * FROM large_customers WHERE country = 'USA'
+UNION
+SELECT * FROM large_customers WHERE city = 'London'
+"""
+
+# Pitfall 4: Implicit type conversion
+bad_type = """
+SELECT * FROM large_orders
+WHERE customer_id = '1000'  -- String instead of integer
+"""
+
+good_type = """
+SELECT * FROM large_orders
+WHERE customer_id = 1000  -- Correct type
+"""
+
+# Pitfall 5: NOT IN with NULL values
+bad_not_in = """
+SELECT * FROM large_customers
+WHERE customer_id NOT IN (
+    SELECT customer_id FROM large_orders
+    WHERE customer_id IS NULL OR total_amount > 1000
+)
+"""
+
+good_not_exists = """
+SELECT * FROM large_customers c
+WHERE NOT EXISTS (
+    SELECT 1 FROM large_orders o
+    WHERE o.customer_id = c.customer_id
+    AND o.total_amount > 1000
+)
+"""</code></pre>
+
+    <h2>Database-Specific Optimizations</h2>
+    
+    <h3>PostgreSQL Specific</h3>
+    <pre class="language-python"><code># PostgreSQL optimization settings
+pg_optimizations = """
+-- Connection level settings
+SET work_mem = '256MB';  -- Memory for sorts/hashes
+SET effective_cache_size = '4GB';  -- OS cache estimate
+SET random_page_cost = 1.1;  -- SSD optimization
+SET effective_io_concurrency = 200;  -- SSD parallel I/O
+
+-- Table statistics
+ALTER TABLE large_orders SET (autovacuum_vacuum_scale_factor = 0.01);
+ALTER TABLE large_orders SET (autovacuum_analyze_scale_factor = 0.005);
+
+-- Parallel query execution
+SET max_parallel_workers_per_gather = 4;
+SET min_parallel_table_scan_size = '8MB';
+
+-- Create partial indexes
+CREATE INDEX idx_recent_orders ON large_orders(order_date)
+WHERE order_date >= CURRENT_DATE - INTERVAL '90 days';
+
+-- Create covering indexes with INCLUDE
+CREATE INDEX idx_customer_covering ON large_orders(customer_id)
+INCLUDE (order_date, total_amount, status);
+
+-- Use BRIN indexes for large sequential data
+CREATE INDEX idx_orders_date_brin ON large_orders USING BRIN(order_date);
+
+-- GIN indexes for full-text search
+CREATE INDEX idx_product_search ON large_products USING GIN(to_tsvector('english', product_name));
+"""</code></pre>
+
+    <h3>MySQL Specific</h3>
+    <pre class="language-python"><code># MySQL optimization settings
+mysql_optimizations = """
+-- Query cache (deprecated in MySQL 8.0)
+SET GLOBAL query_cache_size = 67108864;
+SET GLOBAL query_cache_type = 1;
+
+-- Buffer pool (InnoDB)
+SET GLOBAL innodb_buffer_pool_size = 2147483648;  -- 2GB
+SET GLOBAL innodb_buffer_pool_instances = 4;
+
+-- Use index hints
+SELECT * FROM large_orders USE INDEX (idx_orders_customer)
+WHERE customer_id = 1000;
+
+-- Force index
+SELECT * FROM large_orders FORCE INDEX (idx_orders_date)
+WHERE order_date >= '2024-01-01';
+
+-- Analyze tables
+ANALYZE TABLE large_orders;
+OPTIMIZE TABLE large_orders;
+
+-- Partitioning
+ALTER TABLE large_orders
+PARTITION BY RANGE (YEAR(order_date)) (
+    PARTITION p2022 VALUES LESS THAN (2023),
+    PARTITION p2023 VALUES LESS THAN (2024),
+    PARTITION p2024 VALUES LESS THAN (2025),
+    PARTITION p_future VALUES LESS THAN MAXVALUE
+);
+"""</code></pre>
+
+    <h3>SQLite Specific</h3>
+    <pre class="language-python"><code># SQLite optimization
+def optimize_sqlite():
+    """SQLite specific optimizations"""
+    
+    # PRAGMA settings
+    optimizations = [
+        "PRAGMA cache_size = -64000",  # 64MB cache
+        "PRAGMA temp_store = MEMORY",  # Use memory for temp operations
+        "PRAGMA journal_mode = WAL",   # Write-ahead logging
+        "PRAGMA synchronous = NORMAL", # Balance safety/speed
+        "PRAGMA page_size = 4096",     # Optimal page size
+        "PRAGMA mmap_size = 268435456", # Memory-mapped I/O (256MB)
+        "PRAGMA optimize",              # Run optimizer
+    ]
+    
+    for pragma in optimizations:
+        cursor.execute(pragma)
+    
+    # Analyze tables
+    cursor.execute("ANALYZE")
+    
+    # Vacuum database
+    cursor.execute("VACUUM")
+    
+    print("SQLite optimizations applied")
+
+optimize_sqlite()
+
+# SQLite query planner configuration
+cursor.execute("PRAGMA query_only = 0")  # Allow writes
+cursor.execute("PRAGMA automatic_index = 1")  # Auto-create temp indexes</code></pre>
+
+    <h2>Monitoring and Profiling</h2>
+    
+    <h3>Query Performance Monitoring</h3>
+    <pre class="language-python"><code>import logging
+from contextlib import contextmanager
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+class QueryProfiler:
+    def __init__(self, conn, slow_query_threshold=1.0):
+        self.conn = conn
+        self.slow_query_threshold = slow_query_threshold
+        self.query_stats = []
+    
+    @contextmanager
+    def profile(self, query_name="Unknown"):
+        """Profile query execution"""
+        start_time = time.time()
+        start_memory = self._get_memory_usage()
+        
+        try:
+            yield
+        finally:
+            end_time = time.time()
+            end_memory = self._get_memory_usage()
+            
+            execution_time = end_time - start_time
+            memory_used = end_memory - start_memory
+            
+            # Log slow queries
+            if execution_time > self.slow_query_threshold:
+                logger.warning(f"Slow query detected: {query_name} took {execution_time:.4f}s")
+            
+            # Store statistics
+            self.query_stats.append({
+                'query_name': query_name,
+                'execution_time': execution_time,
+                'memory_used': memory_used,
+                'timestamp': datetime.now()
+            })
+    
+    def _get_memory_usage(self):
+        """Get current memory usage"""
+        import psutil
+        process = psutil.Process()
+        return process.memory_info().rss / 1024 / 1024  # MB
+    
+    def report(self):
+        """Generate performance report"""
+        df = pd.DataFrame(self.query_stats)
+        
+        print("\n=== Query Performance Report ===")
+        print(f"Total queries: {len(df)}")
+        print(f"Average execution time: {df['execution_time'].mean():.4f}s")
+        print(f"Slowest query: {df['execution_time'].max():.4f}s")
+        print(f"Total execution time: {df['execution_time'].sum():.4f}s")
+        
+        print("\nTop 5 slowest queries:")
+        print(df.nlargest(5, 'execution_time')[['query_name', 'execution_time']])
+        
+        return df
+
+# Usage
+profiler = QueryProfiler(conn)
+
+with profiler.profile("Customer Summary"):
+    df = pd.read_sql_query("""
+        SELECT customer_id, COUNT(*) as order_count
+        FROM large_orders
+        GROUP BY customer_id
+    """, conn)
+
+with profiler.profile("Product Analysis"):
+    df = pd.read_sql_query("""
+        SELECT category, AVG(total_amount) as avg_amount
+        FROM large_orders
+        GROUP BY category
+    """, conn)
+
+# Generate report
+report = profiler.report()</code></pre>
+
+    <h2>Real-world Optimization Case Study</h2>
+    
+    <h3>Optimizing a Complex Dashboard Query</h3>
+    <pre class="language-python"><code># Original slow query (multiple scans, no indexes)
+original_query = """
+SELECT 
+    c.customer_id,
+    c.first_name || ' ' || c.last_name as customer_name,
+    c.customer_type,
+    (SELECT COUNT(*) FROM large_orders o WHERE o.customer_id = c.customer_id) as order_count,
+    (SELECT SUM(total_amount) FROM large_orders o WHERE o.customer_id = c.customer_id) as total_spent,
+    (SELECT MAX(order_date) FROM large_orders o WHERE o.customer_id = c.customer_id) as last_order,
+    (SELECT COUNT(*) FROM large_orders o WHERE o.customer_id = c.customer_id 
+     AND o.order_date >= DATE('now', '-30 days')) as recent_orders,
+    (SELECT AVG(total_amount) FROM large_orders o WHERE o.customer_id = c.customer_id) as avg_order_value
+FROM large_customers c
+WHERE c.customer_type IN ('Premium', 'VIP')
+ORDER BY total_spent DESC
+LIMIT 100
+"""
+
+# Step 1: Create necessary indexes
+optimization_steps = []
+
+cursor.execute("CREATE INDEX IF NOT EXISTS idx_orders_customer_date_amount ON large_orders(customer_id, order_date, total_amount)")
+optimization_steps.append("Created composite index")
+
+# Step 2: Rewrite using CTEs and joins
+optimized_query = """
+WITH customer_stats AS (
+    SELECT 
+        customer_id,
+        COUNT(*) as order_count,
+        SUM(total_amount) as total_spent,
+        MAX(order_date) as last_order,
+        AVG(total_amount) as avg_order_value,
+        COUNT(CASE WHEN order_date >= DATE('now', '-30 days') THEN 1 END) as recent_orders
+    FROM large_orders
+    GROUP BY customer_id
+)
+SELECT 
+    c.customer_id,
+    c.first_name || ' ' || c.last_name as customer_name,
+    c.customer_type,
+    COALESCE(cs.order_count, 0) as order_count,
+    COALESCE(cs.total_spent, 0) as total_spent,
+    cs.last_order,
+    COALESCE(cs.recent_orders, 0) as recent_orders,
+    COALESCE(cs.avg_order_value, 0) as avg_order_value
+FROM large_customers c
+LEFT JOIN customer_stats cs ON c.customer_id = cs.customer_id
+WHERE c.customer_type IN ('Premium', 'VIP')
+ORDER BY total_spent DESC
+LIMIT 100
+"""
+
+# Step 3: Create materialized view for frequently accessed data
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS dashboard_summary AS
+    WITH customer_stats AS (
+        SELECT 
+            customer_id,
+            COUNT(*) as order_count,
+            SUM(total_amount) as total_spent,
+            MAX(order_date) as last_order,
+            AVG(total_amount) as avg_order_value
+        FROM large_orders
+        GROUP BY customer_id
+    )
+    SELECT 
+        c.*,
+        cs.order_count,
+        cs.total_spent,
+        cs.last_order,
+        cs.avg_order_value
+    FROM large_customers c
+    LEFT JOIN customer_stats cs ON c.customer_id = cs.customer_id
+""")
+optimization_steps.append("Created materialized view")
+
+# Compare performance
+print("Performance Comparison:")
+print("-" * 50)
+
+start = time.time()
+df_original = pd.read_sql_query(original_query, conn)
+original_time = time.time() - start
+print(f"Original query: {original_time:.4f} seconds")
+
+start = time.time()
+df_optimized = pd.read_sql_query(optimized_query, conn)
+optimized_time = time.time() - start
+print(f"Optimized query: {optimized_time:.4f} seconds")
+
+start = time.time()
+df_materialized = pd.read_sql_query("SELECT * FROM dashboard_summary WHERE customer_type IN ('Premium', 'VIP') ORDER BY total_spent DESC LIMIT 100", conn)
+materialized_time = time.time() - start
+print(f"Materialized view: {materialized_time:.4f} seconds")
+
+print(f"\nOptimization results:")
+print(f"Query optimization speedup: {original_time/optimized_time:.2f}x")
+print(f"Materialized view speedup: {original_time/materialized_time:.2f}x")</code></pre>
+
+    <h2>Best Practices Checklist</h2>
+    
+    <pre class="language-python"><code># Query optimization best practices
+optimization_checklist = """
+✅ INDEXING
+   □ Create indexes on columns used in WHERE, JOIN, ORDER BY
+   □ Use composite indexes for multi-column conditions
+   □ Consider covering indexes for read-heavy queries
+   □ Remove unused indexes to improve write performance
+   □ Use partial indexes for filtered queries
+   
+✅ QUERY STRUCTURE
+   □ Select only needed columns, avoid SELECT *
+   □ Use JOINs instead of correlated subqueries
+   □ Prefer EXISTS over IN for large datasets
+   □ Use UNION ALL instead of UNION when possible
+   □ Push filters down to reduce data early
+   
+✅ DATABASE DESIGN
+   □ Normalize tables appropriately
+   □ Consider denormalization for read-heavy workloads
+   □ Partition large tables by date or other criteria
+   □ Use appropriate data types (smallest that fits)
+   □ Add NOT NULL constraints where applicable
+   
+✅ PERFORMANCE MONITORING
+   □ Use EXPLAIN to understand query plans
+   □ Monitor slow query logs
+   □ Track index usage statistics
+   □ Set up query result caching
+   □ Profile queries in production environment
+   
+✅ MAINTENANCE
+   □ Update table statistics regularly (ANALYZE)
+   □ Rebuild fragmented indexes
+   □ VACUUM to reclaim space (PostgreSQL/SQLite)
+   □ Archive old data to separate tables
+   □ Monitor and optimize connection pools
+"""
+
+print(optimization_checklist)</code></pre>
+
+    <h2>Practice Exercises</h2>
+    
+    <h3>Exercise 1: Index Strategy Design</h3>
+    <p>Given a query workload, design optimal indexes:</p>
+    <ol>
+        <li>Analyze query patterns in slow query log</li>
+        <li>Identify columns used in WHERE, JOIN, ORDER BY</li>
+        <li>Create composite indexes for common patterns</li>
+        <li>Test performance improvements</li>
+        <li>Monitor index usage and remove unused ones</li>
+    </ol>
+
+    <h3>Exercise 2: Query Rewriting Challenge</h3>
+    <p>Optimize a complex reporting query:</p>
+    <ol>
+        <li>Take a slow multi-table join with subqueries</li>
+        <li>Rewrite using CTEs</li>
+        <li>Eliminate correlated subqueries</li>
+        <li>Add appropriate indexes</li>
+        <li>Measure performance improvement</li>
+    </ol>
+
+    <h3>Exercise 3: Database Tuning</h3>
+    <p>Tune database for specific workload:</p>
+    <ol>
+        <li>Identify workload characteristics (OLTP vs OLAP)</li>
+        <li>Adjust memory settings</li>
+        <li>Configure connection pooling</li>
+        <li>Set up query caching</li>
+        <li>Implement monitoring and alerting</li>
+    </ol>
+
+    <h2>Key Takeaways</h2>
+    <ul>
+        <li>⚡ Proper indexing can improve query performance by 10-1000x</li>
+        <li>📊 Always use EXPLAIN to understand query execution plans</li>
+        <li>🔄 Rewrite queries to eliminate inefficient patterns</li>
+        <li>💾 Materialized views cache expensive aggregations</li>
+        <li>🎯 Monitor and profile queries to identify bottlenecks</li>
+        <li>🔧 Database-specific optimizations matter</li>
+        <li>📈 Regular maintenance keeps performance optimal</li>
+    </ul>
+
+    <h2>Further Resources</h2>
+    <ul>
+        <li><a href="https://use-the-index-luke.com/">Use The Index, Luke! - SQL Indexing Guide</a></li>
+        <li><a href="https://www.postgresql.org/docs/current/performance-tips.html">PostgreSQL Performance Tips</a></li>
+        <li><a href="https://dev.mysql.com/doc/refman/8.0/en/optimization.html">MySQL Query Optimization</a></li>
+        <li><a href="https://www.sqlite.org/queryplanner.html">SQLite Query Planner</a></li>
+        <li><a href="https://github.com/ankane/pghero">PgHero - PostgreSQL Performance Dashboard</a></li>
+        <li><a href="https://explain.depesz.com/">PostgreSQL EXPLAIN Visualizer</a></li>
+    </ul>
+
+    <!-- Navigation at the bottom -->
+    <nav class="lesson-nav" aria-label="Lesson navigation">
+        <a href="sql_window_functions.html" class="prev-lesson" aria-label="Previous lesson">Previous: Window Functions</a>
+        <a href="index.html" class="home-link" aria-label="Course home">Course Home</a>
+        <a href="sql_nosql_mongodb.html" class="next-lesson" aria-label="Next lesson">Next: NoSQL Basics (MongoDB)</a>
+    </nav>
+    
+    </main>
+</body>
+</html>

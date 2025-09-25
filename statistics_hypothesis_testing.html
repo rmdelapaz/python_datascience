@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Hypothesis Testing - Python Data Science</title>
+    <link href="styles/main.css" rel="stylesheet"/>
+    <link href="/favicon.png" rel="icon" type="image/png"/>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true });
+    </script>
+    <style>
+        .breadcrumb {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+        }
+        
+        .breadcrumb a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+        
+        .navigation-links {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2rem 0;
+            margin-top: 3rem;
+            border-top: 2px solid #e0e0e0;
+        }
+        
+        .navigation-links a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .navigation-links a:hover {
+            background: #f0f0f0;
+        }
+        
+        .nav-prev, .nav-next {
+            flex: 1;
+        }
+        
+        .nav-next {
+            text-align: right;
+        }
+        
+        .nav-home {
+            text-align: center;
+        }
+        
+        canvas {
+            display: block;
+            margin: 20px auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+        }
+        
+        .hypothesis-card {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .hypothesis-card:hover {
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .null-hypothesis {
+            border-left: 4px solid #ef4444;
+            background: linear-gradient(to right, #fee2e2, white);
+        }
+        
+        .alternative-hypothesis {
+            border-left: 4px solid #10b981;
+            background: linear-gradient(to right, #d1fae5, white);
+        }
+        
+        .error-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .error-card {
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        
+        .type-i-error {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border: 2px solid #ef4444;
+        }
+        
+        .type-ii-error {
+            background: linear-gradient(135deg, #fed7aa 0%, #fb923c 20%, #fed7aa 100%);
+            border: 2px solid #f97316;
+        }
+        
+        .error-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .test-selector {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .test-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .test-option {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .test-option:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: white;
+            transform: translateY(-2px);
+        }
+        
+        .test-option.selected {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: white;
+        }
+        
+        .p-value-scale {
+            position: relative;
+            height: 60px;
+            background: linear-gradient(to right, 
+                #10b981 0%, 
+                #10b981 1%, 
+                #fbbf24 1%,
+                #fbbf24 5%,
+                #ef4444 5%,
+                #ef4444 100%);
+            border-radius: 30px;
+            margin: 20px 0;
+        }
+        
+        .p-value-marker {
+            position: absolute;
+            top: -10px;
+            width: 4px;
+            height: 80px;
+            background: #1f2937;
+            transform: translateX(-50%);
+        }
+        
+        .p-value-label {
+            position: absolute;
+            top: 70px;
+            transform: translateX(-50%);
+            font-weight: bold;
+            color: #1f2937;
+        }
+        
+        .significance-levels {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            font-size: 12px;
+            color: #6b7280;
+        }
+        
+        .code-example {
+            background: #f8f9fa;
+            border-left: 3px solid #667eea;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+            position: relative;
+        }
+        
+        .decision-box {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 2px solid #f59e0b;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .decision-box h3 {
+            color: #92400e;
+            margin: 0 0 10px 0;
+        }
+        
+        .power-analysis {
+            background: #f0f9ff;
+            border: 2px solid #0284c7;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .confidence-interval {
+            background: #f0fdf4;
+            border: 2px solid #10b981;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .test-comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        .test-comparison-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        .test-comparison-table td {
+            padding: 10px;
+            border-bottom: 1px solid #e5e7eb;
+            background: white;
+        }
+        
+        .test-comparison-table tr:hover td {
+            background: #f9fafb;
+        }
+        
+        .interactive-demo {
+            background: white;
+            border: 2px solid #4ecdc4;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .control-panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .control-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #374151;
+        }
+        
+        .control-group input,
+        .control-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+        }
+        
+        .result-display {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .analogy-box {
+            background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+            border: 2px solid #6366f1;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <nav class="breadcrumb">
+        <a href="index.html">Home</a> &gt; 
+        <a href="index.html#statistics">Statistical Analysis</a> &gt; 
+        <span>Hypothesis Testing</span>
+    </nav>
+
+    <h1>🔬 Hypothesis Testing: Making Data-Driven Decisions</h1>
+    
+    <p>Imagine you're a judge in a courtroom ⚖️. The defendant is "innocent until proven guilty" - that's your null hypothesis. You need strong evidence to convict (reject the null). This is hypothesis testing! It's the scientific method for data, helping us make decisions when we can't be 100% certain. From medicine to marketing, hypothesis testing separates gut feelings from statistical facts.</p>
+
+    <h2>The Foundation: Understanding Hypotheses 🎯</h2>
+    
+    <div class="analogy-box">
+        <strong>The Cookie Factory Analogy 🍪</strong><br>
+        A cookie factory claims their cookies weigh 50g on average. You're the quality inspector. Your <em>null hypothesis (H₀)</em> is "the cookies DO weigh 50g." Your <em>alternative hypothesis (H₁)</em> is "the cookies DON'T weigh 50g." You take a sample of cookies and weigh them. If they're way off 50g, you reject the factory's claim. But how far is "way off"? That's what hypothesis testing tells us!
+    </div>
+
+    <div class="mermaid">
+    graph TB
+        A[Research Question] --> B[Formulate Hypotheses]
+        B --> C[Null Hypothesis H₀]
+        B --> D[Alternative Hypothesis H₁]
+        
+        C --> E[Collect Data]
+        D --> E
+        
+        E --> F[Calculate Test Statistic]
+        F --> G[Find P-value]
+        
+        G --> H{P-value < α?}
+        H -->|Yes| I[Reject H₀]
+        H -->|No| J[Fail to Reject H₀]
+        
+        I --> K[Evidence supports H₁]
+        J --> L[Insufficient evidence]
+        
+        style A fill:#667eea
+        style I fill:#10b981
+        style J fill:#fbbf24
+    </div>
+
+    <div class="hypothesis-card null-hypothesis">
+        <h3>H₀: Null Hypothesis</h3>
+        <p>The "status quo" or "no effect" assumption. Examples:</p>
+        <ul>
+            <li>The new drug has <strong>no effect</strong></li>
+            <li>There is <strong>no difference</strong> between groups</li>
+            <li>The correlation is <strong>zero</strong></li>
+            <li>The mean <strong>equals</strong> a specific value</li>
+        </ul>
+    </div>
+
+    <div class="hypothesis-card alternative-hypothesis">
+        <h3>H₁: Alternative Hypothesis</h3>
+        <p>What you're trying to prove. Can be:</p>
+        <ul>
+            <li><strong>Two-tailed:</strong> μ ≠ μ₀ (different from)</li>
+            <li><strong>Left-tailed:</strong> μ < μ₀ (less than)</li>
+            <li><strong>Right-tailed:</strong> μ > μ₀ (greater than)</li>
+        </ul>
+    </div>
+
+    <canvas id="hypothesisVisual" width="800" height="400"></canvas>
+    <script>
+        const canvas = document.getElementById('hypothesisVisual');
+        const ctx = canvas.getContext('2d');
+        
+        let animationFrame = 0;
+        let currentTest = 0; // 0: two-tailed, 1: left-tailed, 2: right-tailed
+        
+        function normalPDF(x, mean, std) {
+            const coefficient = 1 / (std * Math.sqrt(2 * Math.PI));
+            const exponent = -0.5 * Math.pow((x - mean) / std, 2);
+            return coefficient * Math.exp(exponent);
+        }
+        
+        function drawHypothesisVisualization() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Title
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 16px Arial';
+            const titles = ['Two-Tailed Test', 'Left-Tailed Test', 'Right-Tailed Test'];
+            ctx.fillText(titles[currentTest] + ' Visualization', 280, 30);
+            
+            // Draw normal distribution
+            const mean = 0;
+            const std = 1;
+            const xMin = -4;
+            const xMax = 4;
+            const steps = 200;
+            
+            // Draw axes
+            ctx.strokeStyle = '#666';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(100, 320);
+            ctx.lineTo(700, 320);
+            ctx.stroke();
+            
+            // Draw distribution curve
+            ctx.strokeStyle = '#667eea';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            
+            let maxY = 0.4;
+            
+            for(let i = 0; i <= steps; i++) {
+                const x = xMin + (xMax - xMin) * i / steps;
+                const y = normalPDF(x, mean, std);
+                const screenX = 100 + (i / steps) * 600;
+                const screenY = 320 - (y / maxY) * 250;
+                
+                if(i === 0) {
+                    ctx.moveTo(screenX, screenY);
+                } else {
+                    ctx.lineTo(screenX, screenY);
+                }
+            }
+            ctx.stroke();
+            
+            // Draw critical regions
+            const alpha = 0.05;
+            const zCritical = 1.96; // for two-tailed at 0.05
+            
+            ctx.fillStyle = 'rgba(239, 68, 68, 0.3)';
+            
+            if(currentTest === 0) { // Two-tailed
+                // Left tail
+                ctx.beginPath();
+                ctx.moveTo(100, 320);
+                for(let i = 0; i <= steps; i++) {
+                    const x = xMin + (xMax - xMin) * i / steps;
+                    if(x > -zCritical) break;
+                    const y = normalPDF(x, mean, std);
+                    const screenX = 100 + (i / steps) * 600;
+                    const screenY = 320 - (y / maxY) * 250;
+                    ctx.lineTo(screenX, screenY);
+                }
+                ctx.lineTo(100 + ((-zCritical - xMin) / (xMax - xMin)) * 600, 320);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Right tail
+                ctx.beginPath();
+                const rightStartX = 100 + ((zCritical - xMin) / (xMax - xMin)) * 600;
+                ctx.moveTo(rightStartX, 320);
+                for(let i = 0; i <= steps; i++) {
+                    const x = xMin + (xMax - xMin) * i / steps;
+                    if(x < zCritical) continue;
+                    const y = normalPDF(x, mean, std);
+                    const screenX = 100 + (i / steps) * 600;
+                    const screenY = 320 - (y / maxY) * 250;
+                    ctx.lineTo(screenX, screenY);
+                }
+                ctx.lineTo(700, 320);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Labels
+                ctx.fillStyle = '#ef4444';
+                ctx.font = '12px Arial';
+                ctx.fillText('α/2 = 0.025', 120, 340);
+                ctx.fillText('α/2 = 0.025', 620, 340);
+                
+            } else if(currentTest === 1) { // Left-tailed
+                ctx.beginPath();
+                ctx.moveTo(100, 320);
+                for(let i = 0; i <= steps; i++) {
+                    const x = xMin + (xMax - xMin) * i / steps;
+                    if(x > -1.645) break;
+                    const y = normalPDF(x, mean, std);
+                    const screenX = 100 + (i / steps) * 600;
+                    const screenY = 320 - (y / maxY) * 250;
+                    ctx.lineTo(screenX, screenY);
+                }
+                ctx.lineTo(100 + ((-1.645 - xMin) / (xMax - xMin)) * 600, 320);
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.fillStyle = '#ef4444';
+                ctx.font = '12px Arial';
+                ctx.fillText('α = 0.05', 150, 340);
+                
+            } else { // Right-tailed
+                ctx.beginPath();
+                const rightStartX = 100 + ((1.645 - xMin) / (xMax - xMin)) * 600;
+                ctx.moveTo(rightStartX, 320);
+                for(let i = 0; i <= steps; i++) {
+                    const x = xMin + (xMax - xMin) * i / steps;
+                    if(x < 1.645) continue;
+                    const y = normalPDF(x, mean, std);
+                    const screenX = 100 + (i / steps) * 600;
+                    const screenY = 320 - (y / maxY) * 250;
+                    ctx.lineTo(screenX, screenY);
+                }
+                ctx.lineTo(700, 320);
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.fillStyle = '#ef4444';
+                ctx.font = '12px Arial';
+                ctx.fillText('α = 0.05', 600, 340);
+            }
+            
+            // Draw critical values
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            
+            if(currentTest === 0) {
+                // Left critical
+                const leftX = 100 + ((-zCritical - xMin) / (xMax - xMin)) * 600;
+                ctx.beginPath();
+                ctx.moveTo(leftX, 70);
+                ctx.lineTo(leftX, 320);
+                ctx.stroke();
+                
+                // Right critical
+                const rightX = 100 + ((zCritical - xMin) / (xMax - xMin)) * 600;
+                ctx.beginPath();
+                ctx.moveTo(rightX, 70);
+                ctx.lineTo(rightX, 320);
+                ctx.stroke();
+                
+                ctx.fillStyle = '#ef4444';
+                ctx.font = '11px Arial';
+                ctx.fillText('z = -1.96', leftX - 25, 60);
+                ctx.fillText('z = 1.96', rightX - 20, 60);
+                
+            } else if(currentTest === 1) {
+                const critX = 100 + ((-1.645 - xMin) / (xMax - xMin)) * 600;
+                ctx.beginPath();
+                ctx.moveTo(critX, 70);
+                ctx.lineTo(critX, 320);
+                ctx.stroke();
+                
+                ctx.fillStyle = '#ef4444';
+                ctx.font = '11px Arial';
+                ctx.fillText('z = -1.645', critX - 30, 60);
+                
+            } else {
+                const critX = 100 + ((1.645 - xMin) / (xMax - xMin)) * 600;
+                ctx.beginPath();
+                ctx.moveTo(critX, 70);
+                ctx.lineTo(critX, 320);
+                ctx.stroke();
+                
+                ctx.fillStyle = '#ef4444';
+                ctx.font = '11px Arial';
+                ctx.fillText('z = 1.645', critX - 25, 60);
+            }
+            
+            ctx.setLineDash([]);
+            
+            // Center line
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(400, 70);
+            ctx.lineTo(400, 320);
+            ctx.stroke();
+            
+            // Hypothesis labels
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 14px Arial';
+            ctx.fillText('H₀: μ = μ₀', 370, 100);
+            
+            if(currentTest === 0) {
+                ctx.fillStyle = '#10b981';
+                ctx.fillText('H₁: μ ≠ μ₀', 370, 120);
+            } else if(currentTest === 1) {
+                ctx.fillStyle = '#10b981';
+                ctx.fillText('H₁: μ < μ₀', 370, 120);
+            } else {
+                ctx.fillStyle = '#10b981';
+                ctx.fillText('H₁: μ > μ₀', 370, 120);
+            }
+            
+            // Legend
+            ctx.fillStyle = '#666';
+            ctx.font = '12px Arial';
+            ctx.fillText('Rejection Region', 100, 380);
+            ctx.fillStyle = 'rgba(239, 68, 68, 0.3)';
+            ctx.fillRect(200, 372, 20, 12);
+            
+            ctx.fillStyle = '#666';
+            ctx.fillText('Fail to Reject Region', 250, 380);
+            ctx.fillStyle = 'rgba(102, 126, 234, 0.2)';
+            ctx.fillRect(380, 372, 20, 12);
+            
+            // Cycle through test types
+            if(animationFrame % 150 === 0) {
+                currentTest = (currentTest + 1) % 3;
+            }
+            
+            animationFrame++;
+        }
+        
+        function animate() {
+            drawHypothesisVisualization();
+            requestAnimationFrame(animate);
+        }
+        
+        animate();
+    </script>
+
+    <h2>Types of Errors: The Risk Trade-off ⚠️</h2>
+    
+    <p>In hypothesis testing, we can make two types of mistakes. Think of it like a smoke detector: it can fail by alarming when there's no fire (Type I) or by staying silent when there IS a fire (Type II).</p>
+
+    <div class="error-grid">
+        <div class="error-card type-i-error">
+            <h3>Type I Error (α)</h3>
+            <p><strong>False Positive</strong></p>
+            <p>🚨 Rejecting H₀ when it's actually TRUE</p>
+            <p>Example: Convicting an innocent person</p>
+            <p>Probability: α (significance level)</p>
+            <p>Typically set at 0.05 (5%)</p>
+        </div>
+        
+        <div class="error-card type-ii-error">
+            <h3>Type II Error (β)</h3>
+            <p><strong>False Negative</strong></p>
+            <p>😴 Failing to reject H₀ when it's actually FALSE</p>
+            <p>Example: Acquitting a guilty person</p>
+            <p>Probability: β</p>
+            <p>Related to Power: 1 - β</p>
+        </div>
+    </div>
+
+    <div class="code-example">
+        <pre><code>import numpy as np
+import pandas as pd
+from scipy import stats
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Set style for visualizations
+sns.set_style("whitegrid")
+np.random.seed(42)
+
+class HypothesisTestingFramework:
+    """
+    Your complete guide to hypothesis testing!
+    Master the art of statistical inference 🔬
+    """
+    
+    def __init__(self):
+        self.alpha = 0.05  # Standard significance level
+        
+    def understand_p_values(self):
+        """
+        Demystifying p-values: What they really mean
+        """
+        print("🎯 UNDERSTANDING P-VALUES")
+        print("=" * 60)
+        
+        print("📊 What is a p-value?")
+        print("The probability of observing data at least as extreme as what we got,")
+        print("assuming the null hypothesis is TRUE.")
+        print("\n⚠️ Common Misconceptions:")
+        print("❌ P-value is NOT the probability that H₀ is true")
+        print("❌ P-value is NOT the probability of making an error")
+        print("❌ 1-p is NOT the probability that H₁ is true")
+        
+        print("\n📏 P-value Interpretation Scale:")
+        print("-" * 40)
+        
+        p_values = [0.001, 0.01, 0.05, 0.10, 0.50]
+        interpretations = [
+            "Very strong evidence against H₀",
+            "Strong evidence against H₀",
+            "Moderate evidence against H₀",
+            "Weak evidence against H₀",
+            "No evidence against H₀"
+        ]
+        
+        for p, interp in zip(p_values, interpretations):
+            symbol = "⭐⭐⭐" if p <= 0.001 else "⭐⭐" if p <= 0.01 else "⭐" if p <= 0.05 else "○"
+            print(f"p = {p:.3f}: {interp} {symbol}")
+        
+        # Simulation example
+        print("\n🔬 Simulation: Coin Fairness Test")
+        print("-" * 40)
+        
+        # Test if a coin is fair (H₀: p = 0.5)
+        n_flips = 100
+        observed_heads = 60  # We observed 60 heads
+        
+        # Exact test using binomial
+        p_value = stats.binom_test(observed_heads, n_flips, p=0.5, alternative='two-sided')
+        
+        print(f"Flips: {n_flips}, Heads: {observed_heads}")
+        print(f"H₀: Coin is fair (p = 0.5)")
+        print(f"H₁: Coin is not fair (p ≠ 0.5)")
+        print(f"P-value: {p_value:.4f}")
+        
+        if p_value < self.alpha:
+            print(f"✅ Reject H₀: Evidence suggests coin is unfair")
+        else:
+            print(f"❌ Fail to reject H₀: Insufficient evidence of unfairness")
+    
+    def one_sample_t_test(self):
+        """
+        One-sample t-test: Testing a population mean
+        """
+        print("\n📈 ONE-SAMPLE T-TEST")
+        print("=" * 60)
+        
+        # Scenario: Coffee shop claims average wait time is 3 minutes
+        claimed_mean = 3.0
+        
+        # Sample data (actual wait times in minutes)
+        wait_times = np.array([2.5, 3.2, 4.1, 2.8, 3.5, 3.9, 2.7, 3.3, 4.2, 3.6,
+                               2.9, 3.4, 3.8, 2.6, 3.7, 4.0, 3.1, 2.8, 3.5, 3.2])
+        
+        print("☕ Coffee Shop Wait Time Analysis")
+        print(f"Claimed average: {claimed_mean} minutes")
+        print(f"Sample size: {len(wait_times)}")
+        print(f"Sample mean: {wait_times.mean():.2f} minutes")
+        print(f"Sample std: {wait_times.std(ddof=1):.2f} minutes")
+        
+        # Perform t-test
+        t_stat, p_value = stats.ttest_1samp(wait_times, claimed_mean)
+        
+        print(f"\nTest Results:")
+        print(f"t-statistic: {t_stat:.4f}")
+        print(f"p-value: {p_value:.4f}")
+        
+        # Calculate confidence interval
+        confidence = 0.95
+        ci = stats.t.interval(confidence, len(wait_times)-1, 
+                             loc=wait_times.mean(), 
+                             scale=wait_times.std(ddof=1)/np.sqrt(len(wait_times)))
+        
+        print(f"\n{confidence*100:.0f}% Confidence Interval: [{ci[0]:.2f}, {ci[1]:.2f}]")
+        
+        # Decision
+        print(f"\n🎯 Decision (α = {self.alpha}):")
+        if p_value < self.alpha:
+            print(f"✅ Reject H₀: Wait time is significantly different from {claimed_mean} min")
+            print(f"   The coffee shop's claim appears to be false!")
+        else:
+            print(f"❌ Fail to reject H₀: No significant difference from {claimed_mean} min")
+            print(f"   The coffee shop's claim is supported by the data.")
+        
+        # Effect size (Cohen's d)
+        cohens_d = (wait_times.mean() - claimed_mean) / wait_times.std(ddof=1)
+        print(f"\n📊 Effect Size (Cohen's d): {cohens_d:.3f}")
+        if abs(cohens_d) < 0.2:
+            print("   Negligible effect")
+        elif abs(cohens_d) < 0.5:
+            print("   Small effect")
+        elif abs(cohens_d) < 0.8:
+            print("   Medium effect")
+        else:
+            print("   Large effect")
+    
+    def two_sample_t_test(self):
+        """
+        Two-sample t-test: Comparing two groups
+        """
+        print("\n📊 TWO-SAMPLE T-TEST")
+        print("=" * 60)
+        
+        # Scenario: Comparing effectiveness of two teaching methods
+        np.random.seed(42)
+        
+        # Test scores for two groups
+        method_a = np.random.normal(75, 10, 30)  # Traditional method
+        method_b = np.random.normal(80, 12, 35)  # New method
+        
+        print("🎓 Teaching Methods Comparison")
+        print(f"Method A (Traditional): n={len(method_a)}, mean={method_a.mean():.1f}, std={method_a.std():.1f}")
+        print(f"Method B (New):         n={len(method_b)}, mean={method_b.mean():.1f}, std={method_b.std():.1f}")
+        
+        # Test for equal variances (Levene's test)
+        levene_stat, levene_p = stats.levene(method_a, method_b)
+        print(f"\n📐 Levene's Test for Equal Variances:")
+        print(f"   p-value: {levene_p:.4f}")
+        
+        equal_var = levene_p > 0.05
+        print(f"   Variances are {'equal' if equal_var else 'unequal'} (use equal_var={equal_var})")
+        
+        # Perform t-test
+        t_stat, p_value = stats.ttest_ind(method_a, method_b, equal_var=equal_var)
+        
+        print(f"\n📊 Two-Sample T-Test Results:")
+        print(f"   t-statistic: {t_stat:.4f}")
+        print(f"   p-value: {p_value:.4f}")
+        
+        # Effect size (Cohen's d)
+        pooled_std = np.sqrt(((len(method_a)-1)*method_a.var() + (len(method_b)-1)*method_b.var()) / 
+                             (len(method_a) + len(method_b) - 2))
+        cohens_d = (method_b.mean() - method_a.mean()) / pooled_std
+        
+        print(f"   Cohen's d: {cohens_d:.3f}")
+        
+        # Decision
+        print(f"\n🎯 Decision (α = {self.alpha}):")
+        if p_value < self.alpha:
+            print("✅ Reject H₀: Significant difference between methods")
+            if method_b.mean() > method_a.mean():
+                print("   The new method appears to be better!")
+            else:
+                print("   The traditional method appears to be better!")
+        else:
+            print("❌ Fail to reject H₀: No significant difference between methods")
+    
+    def paired_t_test(self):
+        """
+        Paired t-test: Before and after comparisons
+        """
+        print("\n🔄 PAIRED T-TEST")
+        print("=" * 60)
+        
+        # Scenario: Weight loss program (before and after)
+        np.random.seed(42)
+        
+        n_participants = 20
+        before_weight = np.random.normal(180, 20, n_participants)
+        # After weight (most lose weight, but with variation)
+        weight_loss = np.random.normal(8, 5, n_participants)
+        after_weight = before_weight - weight_loss
+        
+        print("🏃 Weight Loss Program Analysis")
+        print(f"Participants: {n_participants}")
+        print(f"Before: mean={before_weight.mean():.1f} lbs, std={before_weight.std():.1f}")
+        print(f"After:  mean={after_weight.mean():.1f} lbs, std={after_weight.std():.1f}")
+        print(f"Average loss: {(before_weight - after_weight).mean():.1f} lbs")
+        
+        # Perform paired t-test
+        t_stat, p_value = stats.ttest_rel(before_weight, after_weight)
+        
+        print(f"\n📊 Paired T-Test Results:")
+        print(f"   t-statistic: {t_stat:.4f}")
+        print(f"   p-value: {p_value:.4f}")
+        
+        # Calculate confidence interval for the difference
+        differences = before_weight - after_weight
+        ci = stats.t.interval(0.95, len(differences)-1,
+                             loc=differences.mean(),
+                             scale=differences.std(ddof=1)/np.sqrt(len(differences)))
+        
+        print(f"\n95% CI for weight loss: [{ci[0]:.1f}, {ci[1]:.1f}] lbs")
+        
+        # Decision
+        print(f"\n🎯 Decision (α = {self.alpha}):")
+        if p_value < self.alpha:
+            print("✅ Reject H₀: Significant weight loss detected")
+            print(f"   The program is effective! Average loss: {differences.mean():.1f} lbs")
+        else:
+            print("❌ Fail to reject H₀: No significant weight loss")
+    
+    def chi_square_test(self):
+        """
+        Chi-square test: Testing categorical relationships
+        """
+        print("\n🎲 CHI-SQUARE TEST")
+        print("=" * 60)
+        
+        # Scenario: Is customer satisfaction related to age group?
+        # Creating contingency table
+        data = pd.DataFrame({
+            'Age_Group': ['18-30'] * 50 + ['31-50'] * 60 + ['51+'] * 40,
+            'Satisfaction': np.random.choice(['Low', 'Medium', 'High'], 150, 
+                                           p=[0.2, 0.5, 0.3])
+        })
+        
+        # Add some relationship (older = more satisfied)
+        data.loc[(data['Age_Group'] == '51+') & (data['Satisfaction'] == 'Low'), 'Satisfaction'] = 'High'
+        
+        # Create contingency table
+        cont_table = pd.crosstab(data['Age_Group'], data['Satisfaction'])
+        
+        print("📊 Customer Satisfaction by Age Group")
+        print(cont_table)
+        
+        # Perform chi-square test
+        chi2, p_value, dof, expected = stats.chi2_contingency(cont_table)
+        
+        print(f"\n📈 Chi-Square Test Results:")
+        print(f"   χ² statistic: {chi2:.4f}")
+        print(f"   p-value: {p_value:.4f}")
+        print(f"   Degrees of freedom: {dof}")
+        
+        # Calculate Cramér's V (effect size)
+        n = cont_table.sum().sum()
+        min_dim = min(cont_table.shape[0] - 1, cont_table.shape[1] - 1)
+        cramers_v = np.sqrt(chi2 / (n * min_dim))
+        
+        print(f"   Cramér's V: {cramers_v:.3f}")
+        
+        # Decision
+        print(f"\n🎯 Decision (α = {self.alpha}):")
+        if p_value < self.alpha:
+            print("✅ Reject H₀: Satisfaction and age are related")
+            print("   There's a significant association between age and satisfaction!")
+        else:
+            print("❌ Fail to reject H₀: No significant relationship")
+
+# Run demonstrations
+testing = HypothesisTestingFramework()
+testing.understand_p_values()
+testing.one_sample_t_test()
+testing.two_sample_t_test()
+testing.paired_t_test()
+testing.chi_square_test()</code></pre>
+    </div>
+
+    <h2>The P-Value Scale: Making Decisions 📊</h2>
+    
+    <div class="p-value-scale">
+        <div class="p-value-marker" id="pValueMarker" style="left: 10%;"></div>
+        <div class="p-value-label" id="pValueLabel" style="left: 10%;">p = 0.02</div>
+    </div>
+    <div class="significance-levels">
+        <span>p < 0.01<br>Very Strong</span>
+        <span>p < 0.05<br>Strong</span>
+        <span>p < 0.10<br>Moderate</span>
+        <span>p ≥ 0.10<br>Weak/None</span>
+    </div>
+
+    <script>
+        // Animate p-value marker
+        let pValuePosition = 0;
+        let pValueDirection = 1;
+        
+        function animatePValue() {
+            const marker = document.getElementById('pValueMarker');
+            const label = document.getElementById('pValueLabel');
+            
+            pValuePosition += pValueDirection * 0.5;
+            
+            if(pValuePosition >= 100 || pValuePosition <= 0) {
+                pValueDirection *= -1;
+            }
+            
+            marker.style.left = pValuePosition + '%';
+            label.style.left = pValuePosition + '%';
+            
+            // Calculate p-value from position
+            const pValue = pValuePosition / 100 * 0.15;
+            label.textContent = 'p = ' + pValue.toFixed(3);
+            
+            requestAnimationFrame(animatePValue);
+        }
+        
+        animatePValue();
+    </script>
+
+    <h2>Choosing the Right Test 🎯</h2>
+    
+    <table class="test-comparison-table">
+        <thead>
+            <tr>
+                <th>Test Type</th>
+                <th>Use Case</th>
+                <th>Data Type</th>
+                <th>Assumptions</th>
+                <th>Example</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>One-Sample t-test</strong></td>
+                <td>Compare sample mean to known value</td>
+                <td>Continuous</td>
+                <td>Normal distribution</td>
+                <td>Is average height 170cm?</td>
+            </tr>
+            <tr>
+                <td><strong>Two-Sample t-test</strong></td>
+                <td>Compare means of two groups</td>
+                <td>Continuous</td>
+                <td>Normal, equal variances</td>
+                <td>Drug A vs Drug B</td>
+            </tr>
+            <tr>
+                <td><strong>Paired t-test</strong></td>
+                <td>Before/after comparisons</td>
+                <td>Continuous</td>
+                <td>Normal differences</td>
+                <td>Weight before/after diet</td>
+            </tr>
+            <tr>
+                <td><strong>Chi-Square</strong></td>
+                <td>Test independence</td>
+                <td>Categorical</td>
+                <td>Expected freq ≥ 5</td>
+                <td>Gender vs Product preference</td>
+            </tr>
+            <tr>
+                <td><strong>ANOVA</strong></td>
+                <td>Compare 3+ groups</td>
+                <td>Continuous</td>
+                <td>Normal, equal variances</td>
+                <td>Compare 3 teaching methods</td>
+            </tr>
+            <tr>
+                <td><strong>Mann-Whitney U</strong></td>
+                <td>Non-parametric alternative</td>
+                <td>Ordinal/Continuous</td>
+                <td>No normality required</td>
+                <td>Compare ratings</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="code-example">
+        <pre><code>import numpy as np
+from scipy import stats
+import pandas as pd
+
+class TestSelection:
+    """
+    Smart test selection based on your data
+    """
+    
+    def select_test(self, data_type, n_groups, paired=False, normal=True):
+        """
+        Decision tree for test selection
+        """
+        if data_type == 'categorical':
+            if n_groups == 2:
+                return "Chi-square test or Fisher's exact test"
+            else:
+                return "Chi-square test"
+        
+        elif data_type == 'continuous':
+            if n_groups == 1:
+                if normal:
+                    return "One-sample t-test"
+                else:
+                    return "Wilcoxon signed-rank test"
+            
+            elif n_groups == 2:
+                if paired:
+                    if normal:
+                        return "Paired t-test"
+                    else:
+                        return "Wilcoxon signed-rank test"
+                else:
+                    if normal:
+                        return "Two-sample t-test"
+                    else:
+                        return "Mann-Whitney U test"
+            
+            else:  # n_groups > 2
+                if normal:
+                    return "One-way ANOVA"
+                else:
+                    return "Kruskal-Wallis test"
+        
+        return "Consult a statistician!"
+    
+    def normality_tests(self, data):
+        """
+        Test if data follows normal distribution
+        """
+        print("🔍 NORMALITY TESTS")
+        print("=" * 40)
+        
+        # Shapiro-Wilk test (best for small samples)
+        if len(data) <= 5000:
+            stat, p_value = stats.shapiro(data)
+            print(f"Shapiro-Wilk Test:")
+            print(f"  Statistic: {stat:.4f}")
+            print(f"  P-value: {p_value:.4f}")
+            
+            if p_value > 0.05:
+                print("  ✅ Data appears to be normal")
+            else:
+                print("  ❌ Data is not normally distributed")
+        
+        # Kolmogorov-Smirnov test
+        stat, p_value = stats.kstest(data, 'norm', 
+                                     args=(data.mean(), data.std()))
+        print(f"\nKolmogorov-Smirnov Test:")
+        print(f"  Statistic: {stat:.4f}")
+        print(f"  P-value: {p_value:.4f}")
+        
+        # Anderson-Darling test
+        result = stats.anderson(data)
+        print(f"\nAnderson-Darling Test:")
+        print(f"  Statistic: {result.statistic:.4f}")
+        print(f"  Critical values: {result.critical_values}")
+        
+        return p_value > 0.05
+
+# Example usage
+selector = TestSelection()
+
+# Test selection examples
+print("📋 TEST SELECTION GUIDE")
+print("=" * 40)
+
+scenarios = [
+    ("Continuous", 1, False, True),
+    ("Continuous", 2, False, True),
+    ("Continuous", 2, True, True),
+    ("Continuous", 3, False, True),
+    ("Continuous", 2, False, False),
+    ("Categorical", 2, False, None)
+]
+
+for data_type, n_groups, paired, normal in scenarios:
+    test = selector.select_test(data_type, n_groups, paired, normal)
+    print(f"\nData: {data_type}, Groups: {n_groups}, Paired: {paired}, Normal: {normal}")
+    print(f"→ Use: {test}")
+
+# Check normality of sample data
+print("\n" + "=" * 40)
+sample_data = np.random.normal(100, 15, 100)
+selector.normality_tests(sample_data)</code></pre>
+    </div>
+
+    <h2>Power Analysis: Planning Your Study 💪</h2>
+    
+    <div class="power-analysis">
+        <h3>Statistical Power = 1 - β</h3>
+        <p>The probability of correctly rejecting a false null hypothesis.</p>
+        
+        <div class="mermaid">
+        graph LR
+            A[Power Analysis] --> B[Sample Size]
+            A --> C[Effect Size]
+            A --> D[Significance Level α]
+            A --> E[Power 1-β]
+            
+            B --> F[How many subjects?]
+            C --> G[How big is the difference?]
+            D --> H[Type I error rate]
+            E --> I[Type II error rate]
+            
+            style A fill:#0284c7
+            style E fill:#10b981
+        </div>
+    </div>
+
+    <div class="code-example">
+        <pre><code>import numpy as np
+from statsmodels.stats.power import TTestPower
+import matplotlib.pyplot as plt
+
+class PowerAnalysis:
+    """
+    Plan your study with proper power analysis
+    """
+    
+    def sample_size_calculation(self):
+        """
+        Calculate required sample size
+        """
+        print("📊 SAMPLE SIZE CALCULATION")
+        print("=" * 40)
+        
+        # Parameters
+        effect_size = 0.5  # Medium effect
+        alpha = 0.05
+        power = 0.8
+        
+        # Calculate sample size
+        analysis = TTestPower()
+        
+        # For two-sample t-test
+        n = analysis.solve_power(effect_size=effect_size,
+                               alpha=alpha,
+                               power=power,
+                               ratio=1,  # Equal group sizes
+                               alternative='two-sided')
+        
+        print(f"Parameters:")
+        print(f"  Effect size (Cohen's d): {effect_size}")
+        print(f"  Significance level (α): {alpha}")
+        print(f"  Desired power (1-β): {power}")
+        
+        print(f"\n✅ Required sample size per group: {np.ceil(n):.0f}")
+        print(f"   Total sample size: {np.ceil(n*2):.0f}")
+        
+        # Show how power changes with sample size
+        print("\n📈 Power vs Sample Size:")
+        sample_sizes = [10, 20, 30, 50, 100, 200]
+        
+        for n in sample_sizes:
+            power = analysis.solve_power(effect_size=effect_size,
+                                       alpha=alpha,
+                                       nobs1=n,
+                                       ratio=1,
+                                       alternative='two-sided')
+            print(f"  n={n:3d}: Power = {power:.3f}")
+        
+        # Effect size guidelines
+        print("\n📏 Cohen's d Effect Size Guidelines:")
+        print("  Small:  d = 0.2")
+        print("  Medium: d = 0.5")
+        print("  Large:  d = 0.8")
+    
+    def minimum_detectable_effect(self):
+        """
+        What effect size can we detect with our sample?
+        """
+        print("\n🔍 MINIMUM DETECTABLE EFFECT")
+        print("=" * 40)
+        
+        # Given constraints
+        n_available = 50
+        alpha = 0.05
+        power = 0.8
+        
+        analysis = TTestPower()
+        effect_size = analysis.solve_power(nobs1=n_available,
+                                          alpha=alpha,
+                                          power=power,
+                                          ratio=1,
+                                          alternative='two-sided')
+        
+        print(f"Given:")
+        print(f"  Available sample size: {n_available} per group")
+        print(f"  Significance level: {alpha}")
+        print(f"  Desired power: {power}")
+        
+        print(f"\n✅ Minimum detectable effect size: {effect_size:.3f}")
+        
+        if effect_size < 0.2:
+            print("   Can detect even small effects!")
+        elif effect_size < 0.5:
+            print("   Can detect medium and large effects")
+        elif effect_size < 0.8:
+            print("   Can only detect large effects")
+        else:
+            print("   ⚠️ Sample too small for reasonable power")
+
+# Run power analysis
+power_analysis = PowerAnalysis()
+power_analysis.sample_size_calculation()
+power_analysis.minimum_detectable_effect()</code></pre>
+    </div>
+
+    <h2>Multiple Testing Correction 🔄</h2>
+    
+    <div class="decision-box">
+        <h3>The Multiple Comparisons Problem</h3>
+        <p>If you run 20 tests at α = 0.05, you expect 1 false positive by chance!</p>
+        <p>Solutions: Bonferroni, Holm, FDR corrections</p>
+    </div>
+
+    <div class="code-example">
+        <pre><code>import numpy as np
+from statsmodels.stats.multitest import multipletests
+
+class MultipleTestingCorrection:
+    """
+    Handle multiple comparisons properly
+    """
+    
+    def demonstrate_problem(self):
+        """
+        Show why we need correction
+        """
+        print("🔄 MULTIPLE TESTING PROBLEM")
+        print("=" * 40)
+        
+        # Simulate 20 tests with no real effect (all null true)
+        np.random.seed(42)
+        n_tests = 20
+        p_values = np.random.uniform(0, 1, n_tests)
+        
+        # Sort for display
+        p_values = np.sort(p_values)
+        
+        print(f"Running {n_tests} tests at α = 0.05")
+        print("\nUncorrected results:")
+        
+        significant = p_values < 0.05
+        print(f"  Significant tests: {significant.sum()}")
+        print(f"  False positive rate: {significant.sum()/n_tests*100:.1f}%")
+        
+        if significant.any():
+            print(f"  Smallest p-value: {p_values[0]:.4f}")
+        
+        # Apply corrections
+        print("\n📊 With Multiple Testing Corrections:")
+        
+        methods = ['bonferroni', 'holm', 'fdr_bh']
+        method_names = ['Bonferroni', 'Holm-Bonferroni', 'Benjamini-Hochberg FDR']
+        
+        for method, name in zip(methods, method_names):
+            reject, p_adj, _, _ = multipletests(p_values, alpha=0.05, method=method)
+            
+            print(f"\n{name}:")
+            print(f"  Significant after correction: {reject.sum()}")
+            print(f"  Adjusted α: {0.05/n_tests if method=='bonferroni' else 'varies'}")
+        
+        print("\n💡 Insights:")
+        print("  • Bonferroni: Most conservative (α/n)")
+        print("  • Holm: Slightly less conservative")
+        print("  • FDR: Controls false discovery rate")
+        print("  • Use FDR for exploratory analyses")
+
+# Demonstrate
+mtc = MultipleTestingCorrection()
+mtc.demonstrate_problem()</code></pre>
+    </div>
+
+    <h2>Practical Decision Framework 🎯</h2>
+    
+    <div class="decision-box">
+        <h3>Your Hypothesis Testing Checklist</h3>
+        <ol>
+            <li>✅ Define H₀ and H₁ clearly</li>
+            <li>✅ Choose significance level α (usually 0.05)</li>
+            <li>✅ Check test assumptions (normality, independence)</li>
+            <li>✅ Select appropriate test</li>
+            <li>✅ Calculate test statistic and p-value</li>
+            <li>✅ Make decision (reject or fail to reject)</li>
+            <li>✅ Report effect size and confidence interval</li>
+            <li>✅ Consider practical significance</li>
+        </ol>
+    </div>
+
+    <h2>Common Pitfalls and Best Practices 🚧</h2>
+    
+    <div class="code-example">
+        <pre><code>print("⚠️ COMMON PITFALLS TO AVOID")
+print("=" * 40)
+
+# Pitfall 1: P-hacking
+print("\n❌ P-hacking (Data Dredging)")
+print("Testing multiple hypotheses until you find p < 0.05")
+print("✅ Solution: Pre-register hypotheses, use corrections")
+
+# Pitfall 2: Ignoring effect size
+print("\n❌ Focusing only on p-values")
+print("Statistical significance ≠ Practical significance")
+print("✅ Solution: Always report effect sizes and CIs")
+
+# Pitfall 3: Violating assumptions
+print("\n❌ Using parametric tests on non-normal data")
+print("✅ Solution: Check assumptions, use non-parametric alternatives")
+
+# Pitfall 4: Misinterpreting p-values
+print("\n❌ 'p = 0.04 means 4% chance H₀ is true'")
+print("✅ Correct: 'If H₀ is true, 4% chance of this extreme data'")
+
+# Pitfall 5: Publication bias
+print("\n❌ Only publishing significant results")
+print("✅ Solution: Report all results, including non-significant")
+
+# Best Practices
+print("\n✨ BEST PRACTICES")
+print("=" * 40)
+print("1. Plan sample size with power analysis")
+print("2. State hypotheses before collecting data")
+print("3. Report exact p-values (not just p < 0.05)")
+print("4. Include confidence intervals")
+print("5. Consider multiple testing corrections")
+print("6. Replicate important findings")
+print("7. Share data and code for transparency")</code></pre>
+    </div>
+
+    <h2>Summary: Your Hypothesis Testing Toolkit ✅</h2>
+    
+    <div class="confidence-interval">
+        <h3>🎯 Key Takeaways:</h3>
+        <ul>
+            <li><strong>Null Hypothesis (H₀):</strong> The default assumption of no effect</li>
+            <li><strong>P-value:</strong> Probability of data given H₀ is true</li>
+            <li><strong>Type I Error:</strong> False positive (α)</li>
+            <li><strong>Type II Error:</strong> False negative (β)</li>
+            <li><strong>Power:</strong> Probability of detecting true effect (1-β)</li>
+            <li><strong>Effect Size:</strong> Magnitude of the difference</li>
+            <li><strong>Always report:</strong> Test used, p-value, effect size, CI</li>
+        </ul>
+    </div>
+
+    <div class="code-example">
+        <pre><code># Quick Reference Card - Hypothesis Testing
+from scipy import stats
+import numpy as np
+
+# ONE-SAMPLE T-TEST
+# Test if population mean equals a value
+data = np.array([...])
+null_mean = 100
+t_stat, p_value = stats.ttest_1samp(data, null_mean)
+
+# TWO-SAMPLE T-TEST
+# Compare means of two independent groups
+group1 = np.array([...])
+group2 = np.array([...])
+t_stat, p_value = stats.ttest_ind(group1, group2)
+
+# PAIRED T-TEST
+# Compare paired observations (before/after)
+before = np.array([...])
+after = np.array([...])
+t_stat, p_value = stats.ttest_rel(before, after)
+
+# CHI-SQUARE TEST
+# Test independence of categorical variables
+contingency_table = [[10, 20], [30, 40]]
+chi2, p_value, dof, expected = stats.chi2_contingency(contingency_table)
+
+# ANOVA
+# Compare means of 3+ groups
+group1, group2, group3 = [...], [...], [...]
+f_stat, p_value = stats.f_oneway(group1, group2, group3)
+
+# NON-PARAMETRIC ALTERNATIVES
+# Mann-Whitney U (alternative to two-sample t)
+u_stat, p_value = stats.mannwhitneyu(group1, group2)
+
+# Wilcoxon signed-rank (alternative to paired t)
+w_stat, p_value = stats.wilcoxon(before, after)
+
+# EFFECT SIZE CALCULATIONS
+# Cohen's d
+cohens_d = (mean1 - mean2) / pooled_std
+
+# CONFIDENCE INTERVALS
+# 95% CI for mean
+from scipy import stats
+ci = stats.t.interval(0.95, len(data)-1, 
+                      loc=np.mean(data), 
+                      scale=stats.sem(data))
+
+print("🔬 Master hypothesis testing for confident decisions!")</code></pre>
+    </div>
+
+    <footer>
+        <div class="navigation-links">
+            <a class="nav-prev" href="statistics_probability_distributions.html">← Previous: Probability Distributions</a>
+            <a class="nav-home" href="index.html">🏠 Course Home</a>
+            <a class="nav-next" href="statistics_correlation_analysis.html">Next: Correlation Analysis →</a>
+        </div>
+    </footer>
+    
+    <!-- Copy to Clipboard functionality -->
+    <script src="scripts/clipboard.js"></script>
+</body>
+</html>

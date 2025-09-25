@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Learn web scraping with BeautifulSoup in Python. Master HTML parsing, CSS selectors, and data extraction from websites.">
+    <title>BeautifulSoup for HTML Parsing - Python Data Science Path</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/enhanced.css">
+    <link rel="icon" href="/favicon.png" type="image/png">
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+      mermaid.initialize({ startOnLoad: true });
+    </script>
+    <script src="js/course-enhancements.js" defer></script>
+</head>
+<body>
+    <!-- Skip to main content for accessibility -->
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+    
+    <!-- Progress indicator -->
+    <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
+        <div class="progress-bar"></div>
+    </div>
+    
+    <main id="main-content">
+    <header role="banner">
+        <h1>BeautifulSoup for HTML Parsing</h1>
+        <div class="reading-time" aria-label="Estimated reading time"></div>
+    </header>
+    
+    <!-- Breadcrumb Navigation -->
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="index.html">Home</a>
+        <span class="separator">›</span>
+        <a href="#">Intermediate Module</a>
+        <span class="separator">›</span>
+        <a href="#">Web Scraping & APIs</a>
+        <span class="separator">›</span>
+        <span class="current">BeautifulSoup for HTML Parsing</span>
+    </nav>
+
+    <h2>Extract Data from Any Website! 🕷️</h2>
+    
+    <blockquote>
+        <p>Web scraping opens up a world of data that isn't available through traditional APIs or datasets. BeautifulSoup makes it easy to parse HTML and XML documents, navigate parse trees, and extract the data you need. From e-commerce prices to news articles, master the art of web scraping to gather data from across the internet!</p>
+    </blockquote>
+
+    <h2>Understanding Web Scraping</h2>
+    
+    <div class="mermaid">
+    graph TD
+        A[Web Page] --> B[HTTP Request]
+        B --> C[HTML Response]
+        C --> D[Parse HTML]
+        D --> E[BeautifulSoup]
+        E --> F[Navigate DOM]
+        F --> G[Extract Data]
+        G --> H[Clean & Store]
+        
+        E --> I[find/find_all]
+        E --> J[CSS Selectors]
+        E --> K[Navigation]
+        
+        I --> L[By Tag]
+        I --> M[By Class]
+        I --> N[By ID]
+        I --> O[By Attributes]
+    </div>
+
+    <h2>Installation and Setup</h2>
+    
+    <pre class="language-python"><code># Install required libraries
+"""
+pip install beautifulsoup4
+pip install requests
+pip install lxml  # Faster parser
+pip install html5lib  # More lenient parser
+pip install pandas  # For data storage
+"""
+
+# Import libraries
+from bs4 import BeautifulSoup
+import requests
+import pandas as pd
+import re
+from urllib.parse import urljoin, urlparse
+import time
+import json
+
+# Check versions
+import bs4
+print(f"BeautifulSoup version: {bs4.__version__}")
+
+# Basic setup - create your first soup
+html_doc = """
+&lt;html&gt;
+&lt;head&gt;&lt;title&gt;Sample Page&lt;/title&gt;&lt;/head&gt;
+&lt;body&gt;
+    &lt;h1&gt;Welcome to Web Scraping&lt;/h1&gt;
+    &lt;p class="intro"&gt;This is a sample paragraph.&lt;/p&gt;
+    &lt;div id="content"&gt;
+        &lt;ul&gt;
+            &lt;li&gt;Item 1&lt;/li&gt;
+            &lt;li&gt;Item 2&lt;/li&gt;
+            &lt;li&gt;Item 3&lt;/li&gt;
+        &lt;/ul&gt;
+    &lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"""
+
+# Create BeautifulSoup object
+soup = BeautifulSoup(html_doc, 'html.parser')
+
+# Pretty print
+print(soup.prettify())</code></pre>
+
+    <h2>BeautifulSoup Basics</h2>
+    
+    <h3>Parsers Comparison</h3>
+    <pre class="language-python"><code># Different parsers and their characteristics
+
+# 1. html.parser (built-in)
+soup = BeautifulSoup(html_doc, 'html.parser')
+# Pros: No extra dependencies, decent speed
+# Cons: Less lenient with broken HTML
+
+# 2. lxml's HTML parser (recommended)
+soup = BeautifulSoup(html_doc, 'lxml')
+# Pros: Very fast, lenient
+# Cons: Requires C dependency
+
+# 3. lxml's XML parser
+soup = BeautifulSoup(html_doc, 'xml')
+# Pros: Only currently supported XML parser
+# Cons: XML only
+
+# 4. html5lib
+soup = BeautifulSoup(html_doc, 'html5lib')
+# Pros: Most lenient, creates valid HTML5
+# Cons: Slowest
+
+# Performance comparison
+import time
+
+parsers = ['html.parser', 'lxml', 'html5lib']
+html_large = html_doc * 1000  # Large HTML for testing
+
+for parser in parsers:
+    try:
+        start = time.time()
+        soup = BeautifulSoup(html_large, parser)
+        end = time.time()
+        print(f"{parser}: {end - start:.4f} seconds")
+    except:
+        print(f"{parser}: Not available")</code></pre>
+
+    <h3>Navigating the Parse Tree</h3>
+    <pre class="language-python"><code># Sample HTML for demonstration
+html = """
+&lt;div class="container"&gt;
+    &lt;header&gt;
+        &lt;h1&gt;Product Store&lt;/h1&gt;
+        &lt;nav&gt;
+            &lt;a href="/home"&gt;Home&lt;/a&gt;
+            &lt;a href="/products"&gt;Products&lt;/a&gt;
+            &lt;a href="/about"&gt;About&lt;/a&gt;
+        &lt;/nav&gt;
+    &lt;/header&gt;
+    &lt;main&gt;
+        &lt;div class="product" data-id="1"&gt;
+            &lt;h2&gt;Laptop&lt;/h2&gt;
+            &lt;p class="price"&gt;$999.99&lt;/p&gt;
+            &lt;p class="description"&gt;High-performance laptop&lt;/p&gt;
+            &lt;span class="rating"&gt;4.5&lt;/span&gt;
+        &lt;/div&gt;
+        &lt;div class="product" data-id="2"&gt;
+            &lt;h2&gt;Phone&lt;/h2&gt;
+            &lt;p class="price"&gt;$699.99&lt;/p&gt;
+            &lt;p class="description"&gt;Latest smartphone&lt;/p&gt;
+            &lt;span class="rating"&gt;4.8&lt;/span&gt;
+        &lt;/div&gt;
+    &lt;/main&gt;
+&lt;/div&gt;
+"""
+
+soup = BeautifulSoup(html, 'html.parser')
+
+# Accessing tags directly
+print(soup.title)  # None (no title in this HTML)
+print(soup.h1)  # First h1 tag
+print(soup.h1.string)  # Text content
+
+# Navigating using tag names
+print(soup.div)  # First div
+print(soup.div.h2)  # First h2 inside first div
+
+# Access tag attributes
+product = soup.find('div', class_='product')
+print(product['data-id'])  # Access attribute
+print(product.get('data-id'))  # Safe access
+print(product.attrs)  # All attributes
+
+# Navigate children
+container = soup.find('div', class_='container')
+for child in container.children:
+    if child.name:  # Skip text nodes
+        print(f"Child tag: {child.name}")
+
+# Navigate descendants (all levels)
+for desc in container.descendants:
+    if desc.name:
+        print(f"Descendant: {desc.name}")
+
+# Navigate parents
+price = soup.find('p', class_='price')
+print(price.parent.name)  # div
+print(price.find_parent('main').name)  # main
+
+# Navigate siblings
+first_product = soup.find('div', class_='product')
+print(first_product.find_next_sibling('div')['data-id'])  # 2
+print(first_product.find_previous_sibling())  # None</code></pre>
+
+    <h2>Finding Elements</h2>
+    
+    <h3>find() and find_all()</h3>
+    <pre class="language-python"><code># find() - returns first match
+# find_all() - returns list of all matches
+
+# Find by tag
+soup.find('h2')  # First h2
+soup.find_all('p')  # All p tags
+
+# Find by class
+soup.find('div', class_='product')  # Note: class_ with underscore
+soup.find_all('p', class_='price')
+
+# Find by ID
+soup.find('div', id='content')
+
+# Find by attributes
+soup.find('div', attrs={'data-id': '1'})
+soup.find_all('div', attrs={'class': 'product'})
+
+# Find by multiple criteria
+soup.find('p', class_='price', string=re.compile(r'\$\d+'))
+
+# Find with custom function
+def has_data_attribute(tag):
+    return tag.has_attr('data-id')
+
+soup.find_all(has_data_attribute)
+
+# Limit results
+soup.find_all('div', limit=2)
+
+# Find by text content
+soup.find_all(string="Laptop")  # Exact match
+soup.find_all(string=re.compile("laptop", re.IGNORECASE))  # Regex
+
+# Find parent/children with specific criteria
+product = soup.find('div', class_='product')
+product.find_all('p')  # Search within element
+
+# Practical examples
+def extract_products(soup):
+    products = []
+    for product in soup.find_all('div', class_='product'):
+        data = {
+            'id': product.get('data-id'),
+            'name': product.find('h2').text.strip(),
+            'price': product.find('p', class_='price').text.strip(),
+            'description': product.find('p', class_='description').text.strip(),
+            'rating': float(product.find('span', class_='rating').text.strip())
+        }
+        products.append(data)
+    return products
+
+products_data = extract_products(soup)
+df = pd.DataFrame(products_data)
+print(df)</code></pre>
+
+    <h3>CSS Selectors</h3>
+    <pre class="language-python"><code># CSS selectors provide powerful and familiar syntax
+
+# Basic selectors
+soup.select('p')  # All p tags
+soup.select('.price')  # Class selector
+soup.select('#content')  # ID selector
+soup.select('div.product')  # Tag with class
+
+# Descendant selectors
+soup.select('div p')  # p inside div (any level)
+soup.select('div > p')  # Direct children only
+soup.select('main .product')  # class product inside main
+
+# Multiple selectors
+soup.select('p.price, p.description')  # Either selector
+
+# Attribute selectors
+soup.select('[data-id]')  # Has attribute
+soup.select('[data-id="1"]')  # Specific value
+soup.select('[class*="pro"]')  # Contains string
+soup.select('[href^="http"]')  # Starts with
+soup.select('[href$=".pdf"]')  # Ends with
+
+# Pseudo-selectors
+soup.select('div:first-child')
+soup.select('p:nth-of-type(2)')
+soup.select('li:last-child')
+
+# Complex example
+# Find all prices in products with rating > 4.5
+products = soup.select('.product')
+high_rated = []
+for product in products:
+    rating = float(product.select_one('.rating').text)
+    if rating > 4.5:
+        price = product.select_one('.price').text
+        high_rated.append(price)
+
+print(f"Prices of high-rated products: {high_rated}")
+
+# One-liner using list comprehension
+high_rated_prices = [
+    p.select_one('.price').text 
+    for p in soup.select('.product') 
+    if float(p.select_one('.rating').text) > 4.5
+]</code></pre>
+
+    <h2>Real Website Scraping</h2>
+    
+    <h3>Scraping a News Website</h3>
+    <pre class="language-python"><code># Example: Scraping news articles (use responsibly!)
+
+def scrape_news_site(url):
+    """Scrape news articles from a website"""
+    
+    # Set headers to appear as a regular browser
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    }
+    
+    try:
+        # Make request
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()  # Raise exception for bad status codes
+        
+        # Parse HTML
+        soup = BeautifulSoup(response.content, 'lxml')
+        
+        # Remove script and style elements
+        for script in soup(['script', 'style']):
+            script.decompose()
+        
+        articles = []
+        
+        # Example: Find article containers (adjust selectors for specific site)
+        article_containers = soup.find_all('article') or soup.find_all('div', class_='article')
+        
+        for article in article_containers:
+            try:
+                # Extract data (adjust based on site structure)
+                data = {
+                    'title': article.find(['h1', 'h2', 'h3']).text.strip(),
+                    'summary': article.find('p').text.strip() if article.find('p') else '',
+                    'link': article.find('a')['href'] if article.find('a') else '',
+                    'date': article.find('time')['datetime'] if article.find('time') else '',
+                    'author': article.find(class_='author').text.strip() if article.find(class_='author') else ''
+                }
+                
+                # Clean data
+                data = {k: v.replace('\n', ' ').strip() for k, v in data.items()}
+                articles.append(data)
+                
+            except AttributeError:
+                continue  # Skip if structure doesn't match
+        
+        return articles
+        
+    except requests.RequestException as e:
+        print(f"Error fetching {url}: {e}")
+        return []
+
+# Example usage (respect robots.txt!)
+# articles = scrape_news_site('https://example-news.com')
+# df = pd.DataFrame(articles)
+# df.to_csv('news_articles.csv', index=False)</code></pre>
+
+    <h3>E-commerce Product Scraping</h3>
+    <pre class="language-python"><code># Scraping product information
+
+def scrape_products(url, max_pages=5):
+    """Scrape products from e-commerce site"""
+    
+    all_products = []
+    session = requests.Session()
+    session.headers.update({
+        'User-Agent': 'Mozilla/5.0 (compatible; DataScienceBot/1.0)'
+    })
+    
+    for page in range(1, max_pages + 1):
+        # Add pagination parameter
+        params = {'page': page}
+        
+        try:
+            response = session.get(url, params=params)
+            if response.status_code != 200:
+                break
+                
+            soup = BeautifulSoup(response.content, 'lxml')
+            
+            # Find product containers (example selectors)
+            products = soup.select('.product-item, .product-card, [data-testid="product"]')
+            
+            if not products:
+                print(f"No products found on page {page}")
+                break
+            
+            for product in products:
+                try:
+                    # Extract product details
+                    name = product.select_one('.product-name, .title, h3, h4')
+                    price = product.select_one('.price, .product-price, [data-testid="price"]')
+                    rating = product.select_one('.rating, .stars, [aria-label*="rating"]')
+                    image = product.select_one('img')
+                    link = product.select_one('a')
+                    
+                    # Extract and clean data
+                    product_data = {
+                        'name': name.text.strip() if name else 'N/A',
+                        'price': extract_price(price.text) if price else None,
+                        'rating': extract_rating(rating) if rating else None,
+                        'image_url': image.get('src', '') if image else '',
+                        'product_url': urljoin(url, link.get('href', '')) if link else '',
+                        'scraped_at': pd.Timestamp.now()
+                    }
+                    
+                    all_products.append(product_data)
+                    
+                except Exception as e:
+                    print(f"Error parsing product: {e}")
+                    continue
+            
+            print(f"Scraped page {page}: {len(products)} products")
+            
+            # Be respectful - add delay between requests
+            time.sleep(1)
+            
+        except Exception as e:
+            print(f"Error on page {page}: {e}")
+            break
+    
+    return all_products
+
+def extract_price(price_text):
+    """Extract numerical price from text"""
+    # Remove currency symbols and extract number
+    price = re.findall(r'[\d,]+\.?\d*', price_text.replace(',', ''))
+    return float(price[0]) if price else None
+
+def extract_rating(rating_element):
+    """Extract rating from various formats"""
+    if not rating_element:
+        return None
+    
+    # Try different extraction methods
+    # Method 1: aria-label
+    if rating_element.get('aria-label'):
+        rating = re.findall(r'[\d.]+', rating_element['aria-label'])
+        return float(rating[0]) if rating else None
+    
+    # Method 2: Text content
+    rating = re.findall(r'[\d.]+', rating_element.text)
+    return float(rating[0]) if rating else None
+
+# Usage example
+# products = scrape_products('https://example-shop.com/products')
+# df = pd.DataFrame(products)
+# print(df.head())
+# df.to_csv('products.csv', index=False)</code></pre>
+
+    <h2>Handling Dynamic Content</h2>
+    
+    <h3>JavaScript-Rendered Content</h3>
+    <pre class="language-python"><code># Sometimes content is loaded by JavaScript after page load
+# BeautifulSoup alone won't see this content
+
+# Method 1: Find API endpoints
+def find_api_data(url):
+    """Look for API calls in network tab"""
+    
+    # First, get the initial HTML
+    response = requests.get(url)
+    soup = BeautifulSoup(response.content, 'lxml')
+    
+    # Look for JavaScript variables containing data
+    scripts = soup.find_all('script')
+    for script in scripts:
+        if script.string and 'window.__INITIAL_STATE__' in script.string:
+            # Extract JSON data
+            json_text = re.search(r'window\.__INITIAL_STATE__ = ({.*?});', 
+                                 script.string, re.DOTALL)
+            if json_text:
+                data = json.loads(json_text.group(1))
+                return data
+    
+    return None
+
+# Method 2: Use requests-html (renders JavaScript)
+"""
+from requests_html import HTMLSession
+
+session = HTMLSession()
+response = session.get(url)
+response.html.render()  # This will execute JavaScript
+soup = BeautifulSoup(response.html.html, 'lxml')
+"""
+
+# Method 3: Selenium (covered in separate lesson)
+# For complex JavaScript sites, use Selenium
+
+# Method 4: Find XHR/Fetch requests
+def find_ajax_endpoints(url):
+    """
+    Use browser developer tools to find AJAX endpoints:
+    1. Open Network tab
+    2. Filter by XHR or Fetch
+    3. Look for JSON responses
+    4. Use those endpoints directly
+    """
+    pass</code></pre>
+
+    <h2>Data Extraction Patterns</h2>
+    
+    <h3>Tables to DataFrames</h3>
+    <pre class="language-python"><code># Extract HTML tables directly to pandas
+html_table = """
+&lt;table id="data-table"&gt;
+    &lt;thead&gt;
+        &lt;tr&gt;
+            &lt;th&gt;Name&lt;/th&gt;
+            &lt;th&gt;Age&lt;/th&gt;
+            &lt;th&gt;City&lt;/th&gt;
+        &lt;/tr&gt;
+    &lt;/thead&gt;
+    &lt;tbody&gt;
+        &lt;tr&gt;
+            &lt;td&gt;Alice&lt;/td&gt;
+            &lt;td&gt;30&lt;/td&gt;
+            &lt;td&gt;New York&lt;/td&gt;
+        &lt;/tr&gt;
+        &lt;tr&gt;
+            &lt;td&gt;Bob&lt;/td&gt;
+            &lt;td&gt;25&lt;/td&gt;
+            &lt;td&gt;Los Angeles&lt;/td&gt;
+        &lt;/tr&gt;
+    &lt;/tbody&gt;
+&lt;/table&gt;
+"""
+
+# Method 1: Using pandas read_html
+dfs = pd.read_html(html_table)
+df = dfs[0]  # First table
+print(df)
+
+# Method 2: Manual extraction with BeautifulSoup
+soup = BeautifulSoup(html_table, 'lxml')
+table = soup.find('table')
+
+# Extract headers
+headers = [th.text.strip() for th in table.find_all('th')]
+
+# Extract rows
+rows = []
+for tr in table.find('tbody').find_all('tr'):
+    row = [td.text.strip() for td in tr.find_all('td')]
+    rows.append(row)
+
+# Create DataFrame
+df = pd.DataFrame(rows, columns=headers)
+print(df)
+
+# Method 3: More complex table with attributes
+def extract_complex_table(soup, table_id):
+    """Extract table with additional attributes"""
+    
+    table = soup.find('table', id=table_id)
+    if not table:
+        return None
+    
+    # Extract headers (handle colspan/rowspan)
+    headers = []
+    header_rows = table.find('thead').find_all('tr') if table.find('thead') else []
+    for row in header_rows:
+        headers.extend([th.text.strip() for th in row.find_all(['th', 'td'])])
+    
+    # Extract data
+    data = []
+    body = table.find('tbody') or table
+    for row in body.find_all('tr'):
+        if row.find('th'):  # Skip header rows in tbody
+            continue
+        
+        row_data = {}
+        cells = row.find_all(['td', 'th'])
+        
+        for i, cell in enumerate(cells):
+            if i < len(headers):
+                # Handle various data types
+                value = cell.text.strip()
+                
+                # Check for links
+                if cell.find('a'):
+                    row_data[f"{headers[i]}_link"] = cell.find('a').get('href')
+                
+                # Check for images
+                if cell.find('img'):
+                    row_data[f"{headers[i]}_img"] = cell.find('img').get('src')
+                
+                row_data[headers[i]] = value
+        
+        if row_data:
+            data.append(row_data)
+    
+    return pd.DataFrame(data)</code></pre>
+
+    <h3>Pagination Handling</h3>
+    <pre class="language-python"><code># Scraping multiple pages
+
+def scrape_with_pagination(base_url, max_pages=None):
+    """Handle different pagination styles"""
+    
+    all_data = []
+    page = 1
+    session = requests.Session()
+    
+    while True:
+        # Construct URL (adjust based on site's pagination style)
+        # Style 1: Query parameter
+        url = f"{base_url}?page={page}"
+        # Style 2: Path-based
+        # url = f"{base_url}/page/{page}"
+        # Style 3: Offset-based
+        # url = f"{base_url}?offset={(page-1)*20}"
+        
+        try:
+            response = session.get(url)
+            if response.status_code != 200:
+                break
+                
+            soup = BeautifulSoup(response.content, 'lxml')
+            
+            # Extract data from current page
+            items = soup.select('.item')  # Adjust selector
+            
+            if not items:
+                print(f"No items found on page {page}")
+                break
+            
+            for item in items:
+                # Extract item data
+                data = extract_item_data(item)
+                all_data.append(data)
+            
+            print(f"Scraped page {page}: {len(items)} items")
+            
+            # Check for next page
+            next_link = soup.select_one('.pagination .next, [rel="next"], .next-page')
+            if not next_link or next_link.get('disabled') or next_link.get('aria-disabled') == 'true':
+                print("No more pages")
+                break
+            
+            # Respect rate limits
+            time.sleep(1)
+            
+            page += 1
+            if max_pages and page > max_pages:
+                break
+                
+        except Exception as e:
+            print(f"Error on page {page}: {e}")
+            break
+    
+    return all_data
+
+def extract_item_data(item_element):
+    """Extract data from individual item"""
+    return {
+        'title': item_element.select_one('.title').text.strip(),
+        'price': item_element.select_one('.price').text.strip(),
+        # Add more fields as needed
+    }</code></pre>
+
+    <h2>Advanced Techniques</h2>
+    
+    <h3>Handling Forms and Sessions</h3>
+    <pre class="language-python"><code># Login and maintain session
+
+def login_and_scrape(login_url, username, password, target_url):
+    """Login to website and scrape protected content"""
+    
+    session = requests.Session()
+    
+    # Get login page
+    login_page = session.get(login_url)
+    soup = BeautifulSoup(login_page.content, 'lxml')
+    
+    # Find CSRF token (if present)
+    csrf_token = soup.find('input', {'name': 'csrf_token'})
+    
+    # Prepare login data
+    login_data = {
+        'username': username,
+        'password': password
+    }
+    
+    if csrf_token:
+        login_data['csrf_token'] = csrf_token.get('value')
+    
+    # Submit login form
+    response = session.post(login_url, data=login_data)
+    
+    if response.status_code == 200:
+        print("Login successful")
+        
+        # Now access protected content
+        protected_page = session.get(target_url)
+        soup = BeautifulSoup(protected_page.content, 'lxml')
+        
+        # Extract protected data
+        return soup
+    else:
+        print("Login failed")
+        return None
+
+# Handle cookies
+def scrape_with_cookies():
+    """Use cookies for authentication"""
+    
+    cookies = {
+        'session_id': 'abc123',
+        'auth_token': 'xyz789'
+    }
+    
+    response = requests.get('https://example.com/protected', cookies=cookies)
+    soup = BeautifulSoup(response.content, 'lxml')
+    return soup</code></pre>
+
+    <h3>Error Handling and Robustness</h3>
+    <pre class="language-python"><code># Robust scraping with error handling
+
+import logging
+from urllib.parse import urljoin
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+class RobustScraper:
+    def __init__(self, base_url, max_retries=3):
+        self.base_url = base_url
+        self.session = self._create_session(max_retries)
+        self.scraped_urls = set()
+    
+    def _create_session(self, max_retries):
+        """Create session with retry strategy"""
+        session = requests.Session()
+        
+        retry_strategy = Retry(
+            total=max_retries,
+            status_forcelist=[429, 500, 502, 503, 504],
+            method_whitelist=["HEAD", "GET", "OPTIONS"],
+            backoff_factor=1
+        )
+        
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
+        
+        # Set headers
+        session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (compatible; PythonScraper/1.0)'
+        })
+        
+        return session
+    
+    def scrape_url(self, url):
+        """Scrape a single URL with error handling"""
+        
+        # Check if already scraped
+        if url in self.scraped_urls:
+            logger.info(f"Already scraped: {url}")
+            return None
+        
+        try:
+            response = self.session.get(url, timeout=10)
+            response.raise_for_status()
+            
+            self.scraped_urls.add(url)
+            
+            soup = BeautifulSoup(response.content, 'lxml')
+            return soup
+            
+        except requests.exceptions.Timeout:
+            logger.error(f"Timeout error for {url}")
+        except requests.exceptions.ConnectionError:
+            logger.error(f"Connection error for {url}")
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"HTTP error {e.response.status_code} for {url}")
+        except Exception as e:
+            logger.error(f"Unexpected error for {url}: {e}")
+        
+        return None
+    
+    def extract_links(self, soup, pattern=None):
+        """Extract all links from page"""
+        links = set()
+        
+        for link in soup.find_all('a', href=True):
+            url = urljoin(self.base_url, link['href'])
+            
+            # Filter links based on pattern
+            if pattern and not re.match(pattern, url):
+                continue
+                
+            links.add(url)
+        
+        return links
+    
+    def scrape_site(self, start_url, max_pages=100):
+        """Scrape entire site with crawling"""
+        
+        to_scrape = {start_url}
+        scraped_data = []
+        
+        while to_scrape and len(self.scraped_urls) < max_pages:
+            url = to_scrape.pop()
+            
+            soup = self.scrape_url(url)
+            if not soup:
+                continue
+            
+            # Extract data from page
+            data = self.extract_page_data(soup, url)
+            if data:
+                scraped_data.append(data)
+            
+            # Find more links
+            new_links = self.extract_links(soup)
+            to_scrape.update(new_links - self.scraped_urls)
+            
+            # Rate limiting
+            time.sleep(1)
+        
+        return scraped_data
+    
+    def extract_page_data(self, soup, url):
+        """Override this method for specific data extraction"""
+        return {
+            'url': url,
+            'title': soup.find('title').text if soup.find('title') else '',
+            'h1': soup.find('h1').text if soup.find('h1') else '',
+            'paragraphs': len(soup.find_all('p')),
+            'links': len(soup.find_all('a'))
+        }</code></pre>
+
+    <h2>Best Practices</h2>
+    
+    <h3>Ethical Scraping Guidelines</h3>
+    <pre class="language-python"><code># Always follow ethical scraping practices
+
+def check_robots_txt(domain):
+    """Check robots.txt before scraping"""
+    from urllib.robotparser import RobotFileParser
+    
+    rp = RobotFileParser()
+    rp.set_url(f"{domain}/robots.txt")
+    rp.read()
+    
+    # Check if URL is allowed
+    can_fetch = rp.can_fetch("*", f"{domain}/page")
+    crawl_delay = rp.crawl_delay("*")
+    
+    return can_fetch, crawl_delay
+
+# Respectful scraping class
+class EthicalScraper:
+    def __init__(self, domain, user_agent="PythonBot/1.0"):
+        self.domain = domain
+        self.user_agent = user_agent
+        self.session = requests.Session()
+        self.session.headers.update({'User-Agent': user_agent})
+        
+        # Check robots.txt
+        self.can_scrape, self.delay = check_robots_txt(domain)
+        
+        if not self.can_scrape:
+            raise Exception(f"Scraping not allowed for {domain}")
+        
+        # Default delay if not specified
+        self.delay = self.delay or 1
+    
+    def scrape(self, url):
+        """Scrape with rate limiting"""
+        
+        if not self.can_scrape:
+            return None
+        
+        response = self.session.get(url)
+        
+        # Respect rate limits
+        time.sleep(self.delay)
+        
+        return BeautifulSoup(response.content, 'lxml')
+
+# Best practices checklist
+scraping_best_practices = """
+1. ALWAYS check robots.txt
+2. Identify yourself with proper User-Agent
+3. Respect rate limits and add delays
+4. Cache responses to avoid re-scraping
+5. Handle errors gracefully
+6. Don't overload servers
+7. Check website's terms of service
+8. Use APIs when available
+9. Be prepared to stop if asked
+10. Store data responsibly
+"""
+
+print(scraping_best_practices)</code></pre>
+
+    <h2>Practice Exercises</h2>
+    
+    <h3>Exercise 1: Build a Price Monitor</h3>
+    <p>Create a price monitoring system that:</p>
+    <ol>
+        <li>Scrapes product prices from multiple e-commerce sites</li>
+        <li>Stores historical price data</li>
+        <li>Sends alerts when prices drop</li>
+        <li>Generates price trend visualizations</li>
+        <li>Handles different site structures</li>
+    </ol>
+
+    <h3>Exercise 2: News Aggregator</h3>
+    <p>Build a news aggregation system:</p>
+    <ol>
+        <li>Scrape articles from multiple news sources</li>
+        <li>Extract title, author, date, and content</li>
+        <li>Remove duplicate articles</li>
+        <li>Categorize articles by topic</li>
+        <li>Create a searchable database</li>
+    </ol>
+
+    <h3>Exercise 3: Job Market Analyzer</h3>
+    <p>Develop a job market analysis tool:</p>
+    <ol>
+        <li>Scrape job listings from job boards</li>
+        <li>Extract skills, salary, and requirements</li>
+        <li>Analyze trending skills</li>
+        <li>Geographic distribution of jobs</li>
+        <li>Generate market insights report</li>
+    </ol>
+
+    <h2>Key Takeaways</h2>
+    <ul>
+        <li>🕷️ BeautifulSoup makes HTML parsing intuitive and pythonic</li>
+        <li>🔍 Multiple ways to find elements: tags, classes, IDs, CSS selectors</li>
+        <li>🌳 Navigate HTML trees with parent, children, and sibling methods</li>
+        <li>⚡ Choose the right parser for speed vs. leniency trade-off</li>
+        <li>🔄 Handle pagination and dynamic content appropriately</li>
+        <li>⚠️ Always follow ethical scraping practices</li>
+        <li>🛡️ Implement robust error handling for production scraping</li>
+    </ul>
+
+    <h2>Further Resources</h2>
+    <ul>
+        <li><a href="https://www.crummy.com/software/BeautifulSoup/bs4/doc/">BeautifulSoup Documentation</a></li>
+        <li><a href="https://scrapy.org/">Scrapy Framework (Advanced)</a></li>
+        <li><a href="https://httpbin.org/">HTTPBin - HTTP Request Testing</a></li>
+        <li><a href="https://toscrape.com/">Scraping Sandbox for Practice</a></li>
+        <li><a href="https://www.scrapethissite.com/">Scrape This Site - Tutorial</a></li>
+        <li><a href="https://github.com/lorien/awesome-web-scraping">Awesome Web Scraping Resources</a></li>
+    </ul>
+
+    <!-- Navigation at the bottom -->
+    <nav class="lesson-nav" aria-label="Lesson navigation">
+        <a href="sql_nosql_mongodb.html" class="prev-lesson" aria-label="Previous lesson">Previous: NoSQL Basics (MongoDB)</a>
+        <a href="index.html" class="home-link" aria-label="Course home">Course Home</a>
+        <a href="webscraping_requests.html" class="next-lesson" aria-label="Next lesson">Next: Requests Library</a>
+    </nav>
+    
+    </main>
+</body>
+</html>

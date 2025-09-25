@@ -1,0 +1,443 @@
+                <li><code>.rolling()</code> - Fixed-size sliding window</li>
+                <li><code>.expanding()</code> - Cumulative window from start</li>
+                <li><code>.ewm()</code> - Exponentially weighted window</li>
+            </ul>
+            
+            <h3>Common Window Functions:</h3>
+            <ul>
+                <li><code>.mean()</code> - Average within window</li>
+                <li><code>.sum()</code> - Sum within window</li>
+                <li><code>.std()</code> - Standard deviation</li>
+                <li><code>.var()</code> - Variance</li>
+                <li><code>.min() / .max()</code> - Minimum/Maximum</li>
+                <li><code>.median()</code> - Median value</li>
+                <li><code>.quantile()</code> - Quantile calculation</li>
+                <li><code>.apply()</code> - Custom function</li>
+                <li><code>.corr()</code> - Correlation</li>
+                <li><code>.cov()</code> - Covariance</li>
+            </ul>
+            
+            <h3>Shift Operations:</h3>
+            <ul>
+                <li><code>.shift(n)</code> - Lag by n periods (positive n)</li>
+                <li><code>.shift(-n)</code> - Lead by n periods (negative n)</li>
+                <li><code>.diff()</code> - First difference</li>
+                <li><code>.pct_change()</code> - Percentage change</li>
+            </ul>
+            
+            <h3>Ranking Functions:</h3>
+            <ul>
+                <li><code>.rank()</code> - Assign ranks</li>
+                <li><code>method='average'</code> - Average rank for ties</li>
+                <li><code>method='min'</code> - Minimum rank for ties</li>
+                <li><code>method='dense'</code> - Dense ranking</li>
+                <li><code>pct=True</code> - Percentile ranks</li>
+                <li><code>ascending=False</code> - Reverse ranking</li>
+            </ul>
+            
+            <h3>Cumulative Functions:</h3>
+            <ul>
+                <li><code>.cumsum()</code> - Cumulative sum</li>
+                <li><code>.cumprod()</code> - Cumulative product</li>
+                <li><code>.cummax()</code> - Cumulative maximum</li>
+                <li><code>.cummin()</code> - Cumulative minimum</li>
+            </ul>
+        </div>
+
+        <!-- Navigation -->
+        <div class="navigation-buttons">
+            <a href="pandas_pivot_tables.html" class="nav-button">← Previous: Pivot Tables</a>
+            <a href="pandas_performance_optimization.html" class="nav-button">Next: Performance Optimization →</a>
+        </div>
+    </div>
+
+    <script src="scripts/clipboard.js"></script>
+    <script>
+        // Sample data for visualization
+        const sampleData = [10, 15, 8, 22, 18, 25, 12, 30, 28, 35];
+        let currentWindowSize = 3;
+        let currentStep = 0;
+        let currentWindowFunc = 'mean';
+        
+        // Initialize window visualization
+        function initWindowVisualization() {
+            const container = document.getElementById('dataPoints');
+            container.innerHTML = '';
+            
+            sampleData.forEach((value, index) => {
+                const point = document.createElement('div');
+                point.className = 'data-point';
+                point.textContent = value;
+                point.id = `point-${index}`;
+                container.appendChild(point);
+            });
+            
+            updateWindowFrame();
+        }
+        
+        // Update window frame position and highlighting
+        function updateWindowFrame() {
+            const frame = document.getElementById('windowFrame');
+            const points = document.querySelectorAll('.data-point');
+            
+            // Reset all points
+            points.forEach(point => {
+                point.classList.remove('in-window', 'current');
+            });
+            
+            // Calculate window bounds
+            const start = Math.max(0, currentStep);
+            const end = Math.min(currentStep + currentWindowSize, sampleData.length);
+            
+            // Highlight points in window
+            for (let i = start; i < end; i++) {
+                const point = document.getElementById(`point-${i}`);
+                if (point) {
+                    point.classList.add('in-window');
+                    if (i === currentStep + currentWindowSize - 1) {
+                        point.classList.add('current');
+                    }
+                }
+            }
+            
+            // Update frame position
+            if (start < sampleData.length) {
+                const firstPoint = document.getElementById(`point-${start}`);
+                const lastPoint = document.getElementById(`point-${Math.min(end - 1, sampleData.length - 1)}`);
+                
+                if (firstPoint && lastPoint) {
+                    const rect1 = firstPoint.getBoundingClientRect();
+                    const rect2 = lastPoint.getBoundingClientRect();
+                    const containerRect = firstPoint.parentElement.getBoundingClientRect();
+                    
+                    frame.style.left = (rect1.left - containerRect.left - 5) + 'px';
+                    frame.style.width = (rect2.right - rect1.left + 10) + 'px';
+                    frame.style.height = '50px';
+                    frame.style.top = '50%';
+                    frame.style.transform = 'translateY(-50%)';
+                }
+            }
+            
+            // Calculate and display result
+            calculateWindowResult();
+        }
+        
+        // Calculate window function result
+        function calculateWindowResult() {
+            const start = Math.max(0, currentStep);
+            const end = Math.min(currentStep + currentWindowSize, sampleData.length);
+            const windowData = sampleData.slice(start, end);
+            
+            if (windowData.length === 0) {
+                document.getElementById('windowResult').textContent = '-';
+                return;
+            }
+            
+            let result;
+            switch(currentWindowFunc) {
+                case 'mean':
+                    result = windowData.reduce((a, b) => a + b, 0) / windowData.length;
+                    break;
+                case 'sum':
+                    result = windowData.reduce((a, b) => a + b, 0);
+                    break;
+                case 'min':
+                    result = Math.min(...windowData);
+                    break;
+                case 'max':
+                    result = Math.max(...windowData);
+                    break;
+                case 'std':
+                    const mean = windowData.reduce((a, b) => a + b, 0) / windowData.length;
+                    const variance = windowData.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / windowData.length;
+                    result = Math.sqrt(variance);
+                    break;
+                case 'count':
+                    result = windowData.length;
+                    break;
+            }
+            
+            document.getElementById('windowResult').textContent = 
+                typeof result === 'number' ? result.toFixed(2) : result;
+        }
+        
+        // Window size slider
+        document.getElementById('windowSize').addEventListener('input', function(e) {
+            currentWindowSize = parseInt(e.target.value);
+            document.getElementById('windowSizeDisplay').textContent = currentWindowSize;
+            
+            // Adjust step if necessary
+            const maxStep = Math.max(0, sampleData.length - currentWindowSize);
+            if (currentStep > maxStep) {
+                currentStep = maxStep;
+                document.getElementById('stepPosition').value = currentStep;
+                document.getElementById('stepDisplay').textContent = currentStep + 1;
+            }
+            document.getElementById('stepPosition').max = maxStep;
+            
+            updateWindowFrame();
+        });
+        
+        // Step position slider
+        document.getElementById('stepPosition').addEventListener('input', function(e) {
+            currentStep = parseInt(e.target.value);
+            document.getElementById('stepDisplay').textContent = currentStep + 1;
+            updateWindowFrame();
+        });
+        
+        // Function selection
+        function selectWindowFunc(func) {
+            currentWindowFunc = func;
+            
+            // Update button states
+            document.querySelectorAll('.func-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            calculateWindowResult();
+        }
+        
+        // Draw rolling chart
+        function drawRollingChart() {
+            const canvas = document.getElementById('rollingChart');
+            const ctx = canvas.getContext('2d');
+            
+            // Set canvas size
+            canvas.width = canvas.offsetWidth;
+            canvas.height = 350;
+            
+            // Generate sample data
+            const n = 100;
+            const data = [];
+            let value = 100;
+            
+            for (let i = 0; i < n; i++) {
+                value += (Math.random() - 0.5) * 10;
+                data.push(value);
+            }
+            
+            // Calculate rolling average
+            const windowSize = 10;
+            const rollingAvg = [];
+            
+            for (let i = 0; i < data.length; i++) {
+                if (i < windowSize - 1) {
+                    rollingAvg.push(null);
+                } else {
+                    const window = data.slice(i - windowSize + 1, i + 1);
+                    const avg = window.reduce((a, b) => a + b, 0) / window.length;
+                    rollingAvg.push(avg);
+                }
+            }
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw axes
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(40, 10);
+            ctx.lineTo(40, canvas.height - 30);
+            ctx.lineTo(canvas.width - 10, canvas.height - 30);
+            ctx.stroke();
+            
+            // Scale data
+            const minVal = Math.min(...data);
+            const maxVal = Math.max(...data);
+            const range = maxVal - minVal;
+            const padding = 50;
+            
+            // Draw original data
+            ctx.strokeStyle = '#ddd';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            
+            data.forEach((value, i) => {
+                const x = 40 + (i / (data.length - 1)) * (canvas.width - 50);
+                const y = canvas.height - 30 - ((value - minVal) / range) * (canvas.height - padding);
+                
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            });
+            ctx.stroke();
+            
+            // Draw rolling average
+            ctx.strokeStyle = '#667eea';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            
+            let firstPoint = true;
+            rollingAvg.forEach((value, i) => {
+                if (value !== null) {
+                    const x = 40 + (i / (rollingAvg.length - 1)) * (canvas.width - 50);
+                    const y = canvas.height - 30 - ((value - minVal) / range) * (canvas.height - padding);
+                    
+                    if (firstPoint) {
+                        ctx.moveTo(x, y);
+                        firstPoint = false;
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+            });
+            ctx.stroke();
+            
+            // Add labels
+            ctx.fillStyle = '#333';
+            ctx.font = '12px Arial';
+            ctx.fillText('Value', 5, 20);
+            ctx.fillText('Time', canvas.width - 30, canvas.height - 10);
+            
+            // Add legend
+            ctx.fillStyle = '#ddd';
+            ctx.fillRect(canvas.width - 150, 20, 15, 3);
+            ctx.fillStyle = '#333';
+            ctx.fillText('Original', canvas.width - 130, 25);
+            
+            ctx.fillStyle = '#667eea';
+            ctx.fillRect(canvas.width - 150, 35, 15, 3);
+            ctx.fillStyle = '#333';
+            ctx.fillText('Rolling Avg', canvas.width - 130, 40);
+        }
+        
+        // Draw expanding visualization
+        function drawExpandingVisualization() {
+            const container = document.querySelector('.expanding-visualization');
+            container.innerHTML = '';
+            
+            const values = [10, 15, 20, 18, 25, 30, 28, 35];
+            const expandingMeans = [];
+            
+            // Calculate expanding means
+            for (let i = 0; i < values.length; i++) {
+                const subset = values.slice(0, i + 1);
+                const mean = subset.reduce((a, b) => a + b, 0) / subset.length;
+                expandingMeans.push(mean);
+            }
+            
+            // Create bars
+            values.forEach((value, i) => {
+                const bar = document.createElement('div');
+                bar.className = 'expanding-bar';
+                bar.style.height = (value / 40) * 150 + 'px';
+                
+                const label = document.createElement('div');
+                label.className = 'expanding-value';
+                label.textContent = expandingMeans[i].toFixed(1);
+                bar.appendChild(label);
+                
+                container.appendChild(bar);
+            });
+        }
+        
+        // Draw weight visualization for EWM
+        function drawWeightVisualization() {
+            const container = document.getElementById('weightViz');
+            container.innerHTML = '';
+            
+            const numWeights = 8;
+            const alpha = 0.3;
+            
+            for (let i = 0; i < numWeights; i++) {
+                const weightBar = document.createElement('div');
+                weightBar.className = 'weight-bar';
+                
+                const weight = alpha * Math.pow(1 - alpha, i);
+                const heightPercent = weight * 100 / alpha;
+                
+                const indicator = document.createElement('div');
+                indicator.className = 'weight-indicator';
+                indicator.style.height = heightPercent + 'px';
+                
+                const label = document.createElement('div');
+                label.className = 'weight-label';
+                label.textContent = `t-${i}`;
+                
+                weightBar.appendChild(indicator);
+                weightBar.appendChild(label);
+                container.appendChild(weightBar);
+            }
+        }
+        
+        // Populate rank table
+        function populateRankTable() {
+            const tbody = document.getElementById('rankTableBody');
+            const data = [
+                {name: 'Alice', score: 92},
+                {name: 'Bob', score: 87},
+                {name: 'Charlie', score: 92},
+                {name: 'David', score: 78},
+                {name: 'Eve', score: 95},
+                {name: 'Frank', score: 87},
+            ];
+            
+            // Sort by score
+            data.sort((a, b) => b.score - a.score);
+            
+            // Calculate ranks
+            let rank = 1;
+            let denseRank = 1;
+            data.forEach((item, i) => {
+                item.rank = rank;
+                item.denseRank = denseRank;
+                item.percentRank = ((data.length - rank) / (data.length - 1) * 100).toFixed(1);
+                item.quartile = Math.ceil((rank / data.length) * 4);
+                
+                // Update ranks for next iteration
+                if (i < data.length - 1 && data[i + 1].score < item.score) {
+                    rank = i + 2;
+                    denseRank++;
+                } else if (i < data.length - 1) {
+                    rank = i + 2;
+                }
+            });
+            
+            // Populate table
+            tbody.innerHTML = '';
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${item.name}</td>
+                    <td>${item.score}</td>
+                    <td><span class="rank-badge">${item.rank}</span></td>
+                    <td><span class="rank-badge">${item.denseRank}</span></td>
+                    <td>${item.percentRank}%</td>
+                    <td>Q${item.quartile}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        
+        // Copy code function
+        function copyCode(button) {
+            const codeBlock = button.parentElement.nextElementSibling.querySelector('code');
+            const text = codeBlock.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                button.textContent = 'Copied!';
+                setTimeout(() => {
+                    button.textContent = 'Copy';
+                }, 2000);
+            });
+        }
+        
+        // Initialize on load
+        window.addEventListener('load', function() {
+            initWindowVisualization();
+            drawRollingChart();
+            drawExpandingVisualization();
+            drawWeightVisualization();
+            populateRankTable();
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            drawRollingChart();
+        });
+    </script>
+</body>
+</html>
