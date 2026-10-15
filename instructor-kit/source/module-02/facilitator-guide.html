@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facilitator Guide: Session 2</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Instructor copy —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">contains answers &amp; timing · not for students</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Facilitator Guide</div>
+    <h1>Session 2: Vectorized Operations and Broadcasting</h1>
+    <p class="sub">How to teach the session where learners stop writing loops over numbers. In the first half they describe what they want done to a whole array: arithmetic between parallel arrays, boolean masks that count, filter and combine, <code class="inline">np.where</code>, and summaries along an axis. In the second half they learn the two short rules that let NumPy combine a table with a row, a column or a single number, and the habit, checking shapes, that catches the mistakes NumPy will not report. By the end they have compared four stores of very different sizes fairly, in one line.</p>
+    <div class="meta-row">
+      <span class="chip"><b>2</b> lessons</span>
+      <span class="chip"><b>3 hrs</b> session</span>
+      <span class="chip">Lessons <b>1.2–1.3</b></span>
+      <span class="chip">Session <b>2</b> of 21</span>
+    </div>
+  </header>
+
+  <div class="sec"><h2>How to Use This Guide</h2><span class="rule"></span></div>
+<ul class="tick">
+  <li><b>Same rhythm for both lessons:</b> frame (one mental model, the rules on the board) → live demo (you type, they type along) → guided lab (two kit labs per lesson: new questions on the same data) → start the lesson's own project. The lesson exercises, quiz and journal are homework.</li>
+  <li><b>Predict before every run.</b> Both lessons are about being able to say what will come out: how many values, what shape, error or no error. In 1.3, write the two shapes on the board, right-aligned, before every operation, and take the room's call.</li>
+  <li><b>Every code block below was run</b> to produce the output printed under it, on the course data with NumPy 2.5. Type it live; read errors from the last line.</li>
+  <li><b>The lessons are the reference.</b> Keep <code class="inline">numpy_vectorized_operations.html</code> and <code class="inline">numpy_broadcasting.html</code> open for the diagrams (the mask as punched cardboard, the axis picture, the stamp, the right-aligned shape examples). Labs live in <code class="inline">labs/module-02/</code>.</li>
+  <li>Teal blocks are hands-on, amber blocks are watch-outs. Lesson codes (1.2, 1.3) match the course site.</li>
+</ul>
+<div class="note warn"><div class="t">The #1 risk of Session 2: wrong answers that raise no error</div>
+<p>Until now a mistake produced a traceback. Today's important mistakes do not. Aggregating along the wrong axis gives numbers that answer a different question. A missing value drops silently out of both halves of a comparison. A row meeting a column builds a grid of sixteen plausible-looking numbers where four were wanted. A learner who has not built the habit of checking will leave thinking everything worked. So make checking the visible routine of the session: before a run, say the expected shape or count out loud; after it, print <code class="inline">.shape</code> or add the pieces up. Praise a learner who catches a wrong shape more than one who types fast. The second risk is pace: Lesson 1.2 is the longest in the module and it is easy to spend the whole first half on masks. Hold the 1.2 demo to 30 minutes; the lab is where masks stick.</p>
+</div>
+
+  <div class="sec"><h2>Before the Session</h2><span class="rule"></span></div>
+<ul class="tick">
+  <li>☐ <b>Run the kit check:</b> <code class="inline">python3 labs/check_labs.py module-02</code> from the <code class="inline">instructor-kit</code> folder (8 files, all PASS).</li>
+  <li>☐ <b>Files to hand out:</b> <code class="inline">labs/module-02/</code> without the <code class="inline">*_solution.py</code> files (learners already have <code class="inline">labs_paths.py</code> from Session 1). Six files: four starters and the handouts <code class="inline">debug_masks.py</code> and <code class="inline">debug_shapes.py</code>.</li>
+  <li>☐ <b>Servers to start:</b> none. No internet needed.</li>
+  <li>☐ <b>Projector machine:</b> <code class="inline">(.venv)</code> active in <code class="inline">pinecrest-analysis</code>, JupyterLab or VS Code started from that folder, two empty notebooks <code class="inline">lesson_1_2</code> and <code class="inline">lesson_1_3</code>, font 18 pt or more. Browser tabs: both lesson pages.</li>
+  <li>☐ <b>Board, before learners arrive:</b> space on the left for the three 1.2 rules; on the right, a hand-drawn 7 by 4 table (rows Mon to Sun, columns Asheville, Bend, Boise, Flagstaff) that you will point at all session.</li>
+  <li>☐ <b>Sort last session's exit tickets.</b> If more than a third missed the view question, give warm-up question 3 an extra minute and rerun the five-number window example.</li>
+  <li>☐ <b>Optional paper:</b> a half-sheet of shape pairs for the 1.3 support activity (six pairs, two right-aligned boxes each).</li>
+</ul>
+<div class="blk warn"><div class="h">Known environment traps</div>
+<table class="timing">
+<thead><tr><th>Symptom</th><th>Cause</th><th>Fix</th></tr></thead>
+<tbody>
+<tr><td>A learner's <code class="inline">revenue.mean()</code> is a number, not <code class="inline">nan</code></td><td>They are running an old notebook where <code class="inline">revenue</code> was already cleaned, or loaded a different column</td><td>Restart the kernel and run the <code class="inline">load</code> helper cell again. Column 5 is revenue.</td></tr>
+<tr><td><code class="inline">RuntimeWarning: Mean of empty slice</code> (or <code class="inline">invalid value encountered in divide</code>)</td><td>NumPy stores <code class="inline">nan</code> and carries on instead of stopping</td><td>Not a crash. Ask what was empty or missing. The project's Step 5 prints this warning on purpose.</td></tr>
+<tr><td><code class="inline">load(1)</code> returns an array of <code class="inline">nan</code> instead of store names</td><td>The default <code class="inline">dtype=float</code> cannot read text, and <code class="inline">genfromtxt</code> stores <code class="inline">nan</code> without complaining</td><td><code class="inline">load(1, dtype=str)</code>; for dates, <code class="inline">load(0, dtype="datetime64[D]")</code>.</td></tr>
+<tr><td><code class="inline">FileNotFoundError: data/daily_sales.csv not found</code></td><td>The notebook was started from another folder (Session 1's trap)</td><td><code class="inline">print(Path.cwd())</code>; start JupyterLab from <code class="inline">pinecrest-analysis</code>.</td></tr>
+<tr><td>Different output from the page for string arrays or printing</td><td>NumPy older than 2.x in a kernel that is not the course environment</td><td>Run <code class="inline">check_environment.py</code> again; choose the <code class="inline">.venv</code> kernel.</td></tr>
+</tbody>
+</table>
+</div>
+
+  <div class="sec"><h2>Session 2 Agenda (3 hours)</h2><span class="rule"></span></div>
+  <table class="timing">
+    <thead><tr><th>Clock</th><th>Minutes</th><th>Segment</th><th>What happens</th></tr></thead>
+    <tbody>
+      <tr><td class="t">0:00</td><td class="t">10</td><td>Warm-up</td><td>Five retrieval questions on Session 1 (no notes), homework check, any NOT READY machines from last time.</td></tr>
+      <tr><td class="t">0:10</td><td class="t">10</td><td><b>1.2</b> Frame and mental model</td><td>The workbench and the assembly line; parallel arrays; three rules on the board.</td></tr>
+      <tr><td class="t">0:20</td><td class="t">30</td><td><b>1.2</b> Live demo</td><td>Array-with-array arithmetic, ufuncs, masks (count, filter, combine), <code class="inline">np.where</code> and <code class="inline">np.select</code>, <code class="inline">axis=</code>, positions, the <code class="inline">nan</code> trap.</td></tr>
+      <tr><td class="t">0:50</td><td class="t">25</td><td><b>1.2</b> Guided lab</td><td><code class="inline">labs/module-02/l1_2-vectorized-operations/staffing_load_starter.py</code>, then <code class="inline">eight_weeks_axis_starter.py</code> in pairs.</td></tr>
+      <tr><td class="t">1:15</td><td class="t">10</td><td><b>1.2</b> Start the lesson project</td><td>The store scorecard, Steps 1 and 2; Steps 3 to 6 go home.</td></tr>
+      <tr><td class="t">1:25</td><td class="t">10</td><td>Break</td><td>Leave the three board rules up. Draw the 7 by 4 week table for the second half.</td></tr>
+      <tr><td class="t">1:35</td><td class="t">10</td><td><b>1.3</b> Frame and mental model</td><td>The rubber stamp; two rules; shapes written right-aligned.</td></tr>
+      <tr><td class="t">1:45</td><td class="t">25</td><td><b>1.3</b> Live demo</td><td>Table and row, table and column (<code class="inline">keepdims</code>), <code class="inline">np.broadcast_shapes</code>, a grid, z-scores, two silent mistakes.</td></tr>
+      <tr><td class="t">2:10</td><td class="t">25</td><td><b>1.3</b> Guided lab</td><td><code class="inline">labs/module-02/l1_3-broadcasting/fair_visitors_starter.py</code>, then <code class="inline">target_grid_starter.py</code> in pairs.</td></tr>
+      <tr><td class="t">2:35</td><td class="t">15</td><td><b>1.3</b> Start the lesson project</td><td>The weekday index, Steps 1 and 2; Steps 3 to 6 go home.</td></tr>
+      <tr><td class="t">2:50</td><td class="t">10</td><td>Wrap-up</td><td>Exit ticket (3 questions), homework, bring list for Session 3.</td></tr>
+      <tr><td class="t"><b>Total</b></td><td class="t"><b>180</b></td><td></td><td>Ends at 3:00.</td></tr>
+    </tbody>
+  </table>
+<p><b>In the room.</b> The lesson pages estimate 85 + 75 = 160 minutes for a solo learner, and after the warm-up, the break and the wrap-up the room has 150. The room does, for each lesson: the mental model, the live demo, two guided kit labs, and the first two steps of the lesson project.</p>
+<p><b>Goes home (2 to 3 hours).</b> The store scorecard Steps 3 to 6 and the weekday index Steps 3 to 6; each lesson's Hands-on Exercises (three, plus a stretch); both Quick Quizzes; both journal entries; each lesson's "Before the Next Lesson" list. Lesson 1.2's sections on sorting (<code class="inline">np.argsort</code>) and "From Loop to Array Expression" get only a step each in the demo: tell learners to read those two sections in full at home.</p>
+<p><b>Protect, in this order:</b> the 1.3 demo's error-then-<code class="inline">keepdims</code> pair (Steps 4 and 5) and its two silent mistakes (Steps 10 to 12); Lab A of each lesson; the <code class="inline">and</code> / parentheses errors in the 1.2 demo. <b>Cut first:</b> 1.2 demo Steps 3 and 4 (ufuncs; send learners to the lesson's table), then Lab B of 1.2 (assign it as homework: the workbook has the fill-in), then the 1.3 demo's Step 7 (three ways to add an axis: say <code class="inline">keepdims</code> and move on).</p>
+
+  <div class="sec"><h2>Warm-up</h2><span class="rule"></span></div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">0:00</span><h3>Warm-up: Retrieval from Session 1</h3><span class="dur">10 min</span></div>
+    <div class="lesson-body">
+<div class="blk"><div class="h">How to run it</div>
+<ul class="tick">
+  <li>Slide up, notes closed, three minutes of silent writing in the workbook's Warm-up box, then answers out loud: cold-call gently, one question per learner.</li>
+  <li>Question 3 (views) is the one to watch. If the room is shaky, rerun last session's five-number window example before moving on: Lesson 1.2 contrasts it with masks, which return copies.</li>
+  <li>Questions 2 and 5 lead straight into today: whole-array arithmetic, and rows, comma, columns.</li>
+</ul>
+</div>
+<div class="blk"><div class="h">Five questions (answers for you)</div>
+<ol class="steps">
+  <li>Name the three rules that are true of every NumPy array and not of a Python list. <b>Answer:</b> One type for the whole array (the dtype), a fixed size, and operations that act on every element at once.</li>
+  <li>What does <code class="inline">[1, 2, 3] * 2</code> give? What does <code class="inline">np.array([1, 2, 3]) * 2</code> give? <b>Answer:</b> <code class="inline">[1, 2, 3, 1, 2, 3]</code> (a list repeats) and <code class="inline">[2 4 6]</code> (an array does arithmetic).</li>
+  <li><code class="inline">b = a[1:4]</code>, then <code class="inline">b[0] = 0</code>. What happened to <code class="inline">a</code>, and how do you prevent it? <b>Answer:</b> <code class="inline">a[1]</code> is now 0, because a slice is a view. <code class="inline">b = a[1:4].copy()</code> makes an independent array.</li>
+  <li>The mean of the revenue array printed <code class="inline">nan</code>. Why, and what did you use instead? <b>Answer:</b> Six values are missing and arithmetic with a missing value gives <code class="inline">nan</code>. <code class="inline">np.nanmean(revenue)</code> skips them.</li>
+  <li><code class="inline">t</code> has shape <code class="inline">(7, 4)</code>: days by stores. What does <code class="inline">t[:, 2]</code> select, and what is its shape? <b>Answer:</b> Every row of column 2: one store's value on each of the seven days. Shape <code class="inline">(7,)</code>.</li>
+</ol>
+</div>
+<div class="blk"><div class="h">Homework check</div>
+<ul class="tick">
+  <li>Show of hands: who ran <code class="inline">first_look.py</code> from a terminal? Who has a benchmark report? Write three learners' speedups on the board and ask why they differ.</li>
+  <li>Ask for the prediction from 1.1's "Before the Next Lesson": <code class="inline">np.array([1, 2, 3]) + np.array([10, 20, 30])</code> (it is <code class="inline">[11 22 33]</code>: first with first, second with second). That is the first idea of Lesson 1.2.</li>
+  <li>Anyone whose environment check said NOT READY last time runs it again now. Still not ready: pair them, and fix it at the break.</li>
+  <li>Do not re-teach the homework. Two minutes for the single most common question, and the rest go on sticky notes for the break.</li>
+</ul>
+</div>
+    </div>
+  </section>
+
+  <div class="sec"><h2>Lesson Plans</h2><span class="rule"></span></div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">1.2</span><h3>Vectorized Operations</h3><span class="dur">75 min</span></div>
+    <div class="lesson-body">
+<div class="blk"><div class="h">Objectives (from the lesson page)</div>
+<ul class="tick">
+  <li>Combine arrays element by element with arithmetic and with universal functions such as <code class="inline">np.sqrt</code>, <code class="inline">np.log10</code> and <code class="inline">np.maximum</code></li>
+  <li>Build boolean masks with comparisons, combine them with <code class="inline">&amp;</code>, <code class="inline">|</code> and <code class="inline">~</code>, and use them to count, filter and assign</li>
+  <li>Choose values by condition with <code class="inline">np.where</code> and <code class="inline">np.select</code></li>
+  <li>Summarize a two-dimensional array along rows or columns with <code class="inline">axis=</code>, and predict the shape of the result</li>
+  <li>Rewrite a Python loop over numbers as an array expression and check that both give the same answer</li>
+</ul>
+</div>
+<div class="blk"><div class="h">Timing in the room</div>
+<table class="timing">
+<tbody>
+<tr><td class="t">10m</td><td>Frame: the workbench and the assembly line; parallel arrays; the three board rules</td></tr>
+<tr><td class="t">30m</td><td>Live demo: array-with-array arithmetic, ufuncs, masks (count, filter, combine), <code class="inline">np.where</code> and <code class="inline">np.select</code>, <code class="inline">axis=</code>, positions, the <code class="inline">nan</code> trap</td></tr>
+<tr><td class="t">25m</td><td>Guided lab: <code class="inline">staffing_load_starter.py</code>, then <code class="inline">eight_weeks_axis_starter.py</code></td></tr>
+<tr><td class="t">10m</td><td>Start the lesson project: the store scorecard, Steps 1 and 2</td></tr>
+</tbody>
+</table>
+</div>
+<div class="blk"><div class="h">Mental model to say</div>
+<p>Say: "A Python loop is a craftsperson at a workbench: pick up one item, inspect it, work on it, put it down, pick up the next. Careful, flexible, slow. A vectorized operation is an assembly line. You set the machine up once, 'multiply by 1.08', and the whole batch flows through. The machine can be fast because every item on the belt is the same kind of thing: that is the one-dtype rule from last session."</p>
+<p>Then the goal for today, in the lesson's words: "By the end, when someone asks 'which days beat $15,000, and what was the average on sale weekends?', your first thought is an array expression and not a <code class="inline">for</code> statement."</p>
+<p>Write three lines on the board and leave them up: <b>The sum of a mask counts; its mean is a fraction.</b> · **<code class="inline">&amp;</code>, <code class="inline">|</code>, <code class="inline">~</code>, with parentheses around every comparison.<b> · </b>The axis you name is the axis that disappears.**</p>
+</div>
+<div class="blk"><div class="h">Live demo (you type, they follow)</div>
+<p>New notebook, <code class="inline">lesson_1_2</code>. Learners who finished the Lesson 1.1 project already have <code class="inline">revenue</code> and <code class="inline">visitors</code>; everyone reloads them with the helper in Step 1 so the room is in the same place. Ask for a prediction before every run. Step 10 is two errors on purpose: read the last line of each out loud, because learners will meet both within ten minutes in the lab.</p>
+<ol class="steps">
+  <li><b>A loading helper and four parallel arrays (3m).</b> Say: "Every column of the daily sales file is useful today, so wrap last session's <code class="inline">genfromtxt</code> call in a small function."
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+
+<span class="k">def</span> load(col, dtype=float):
+    <span class="s">"""Read one column of daily_sales.csv into an array."""</span>
+    <span class="k">return</span> np.genfromtxt(<span class="s">"data/daily_sales.csv"</span>, delimiter=<span class="s">","</span>,
+                         skip_header=<span class="s">1</span>, usecols=col, dtype=dtype)
+
+visitors = load(<span class="s">2</span>)
+transactions = load(<span class="s">3</span>)
+units = load(<span class="s">4</span>)
+revenue = load(<span class="s">5</span>)
+
+print(visitors.shape, transactions.shape, revenue.shape)
+print(visitors[:<span class="s">4</span>], transactions[:<span class="s">4</span>])</pre>
+<pre class="out">(2903,) (2903,) (2903,)
+[201. 200. 333. 144.] [51. 52. 68. 33.]</pre>
+Say: "Position 0 in every array is the same store-day: Asheville on January 1, 2024. Arrays that line up like this are parallel arrays. Everything today depends on that."</li>
+  <li><b>Array with array: pair by position (2m).</b> Ask: "What does dividing one array by another do?" Then: "Two retail measures in two lines, for all 2,903 store-days."
+<pre class="code">conversion = transactions / visitors     <span class="c"># share of visitors who bought something</span>
+basket = revenue / transactions          <span class="c"># dollars per purchase</span>
+
+print(conversion[:<span class="s">4</span>].round(<span class="s">3</span>))
+print(basket[:<span class="s">4</span>].round(<span class="s">2</span>))</pre>
+<pre class="out">[0.254 0.26  0.204 0.229]
+[98.37 79.48 87.68 92.78]</pre>
+Read the first pair as a sentence: "51 of 201 visitors bought something, 25.4%, and the average purchase was $98.37."</li>
+  <li><b>Universal functions (2m).</b> Say: "Operators cover arithmetic. For everything else there are ufuncs: functions that apply themselves to every element." Boise's first week again, to keep the output small.
+<pre class="code">week = np.array([<span class="s">5962.00</span>, <span class="s">6583.13</span>, <span class="s">3866.59</span>, <span class="s">7667.88</span>, <span class="s">9570.46</span>, <span class="s">12388.57</span>, <span class="s">9361.59</span>])
+
+print(np.round(week, -<span class="s">2</span>))                      <span class="c"># nearest hundred</span>
+print(np.abs(week - week.mean()).round(<span class="s">0</span>))     <span class="c"># distance from the weekly average</span></pre>
+<pre class="out">[ 6000.  6600.  3900.  7700.  9600. 12400.  9400.]
+[1952. 1331. 4048.  246. 1656. 4474. 1447.]</pre>
+Read the last line slowly: <code class="inline">week.mean()</code> is one number; subtracting it touches every day; <code class="inline">np.abs</code> removes the signs. Three vectorized steps, no loop. Mention <code class="inline">math.sqrt(week)</code> fails with <code class="inline">TypeError: only 0-dimensional arrays can be converted to Python scalars</code>: use the <code class="inline">np.</code> function of the same name.</li>
+  <li><b>A ufunc of two inputs (1m).</b> Say: "Boise's daily target is $8,000. How far short was each day, counting days that beat it as zero?"
+<pre class="code">print(np.maximum(<span class="s">8000</span> - week, <span class="s">0</span>))</pre>
+<pre class="out">[2038.   1416.87 4133.41  332.12    0.      0.      0.  ]</pre>
+<code class="inline">np.maximum(x, y)</code> compares pair by pair and returns an array. <code class="inline">week.max()</code> collapses one array to one number. Different jobs, similar names.</li>
+  <li><b>A comparison makes a mask (2m).</b> Ask: "What do you get when you compare an array with a number?"
+<pre class="code">busy = week &gt; <span class="s">9000</span>
+print(busy)
+print(busy.dtype)</pre>
+<pre class="out">[False False False False  True  True  True]
+bool</pre>
+Say: "A sheet of cardboard with holes punched where the answer is True. It is useful three ways: count, filter, assign."</li>
+  <li><b>Count and measure (3m).</b> Point at board rule one. Ask for the two numbers before running.
+<pre class="code">print(busy.sum(), busy.mean().round(<span class="s">3</span>))
+
+big = revenue &gt; <span class="s">15000</span>
+print(big.sum(), <span class="s">"store-days above $15,000"</span>)
+print(<span class="s">f"{big.mean():.1%} of all store-days"</span>)</pre>
+<pre class="out">3 0.429
+101 store-days above $15,000
+3.5% of all store-days</pre>
+Say: "True counts as 1. The sum is how many; the mean is what fraction." This is the single most reused idea of the session.</li>
+  <li><b>Filter: the mask goes in the brackets (2m).</b> Say: "Lay the cardboard over the data and read what shows through the holes."
+<pre class="code">print(week[busy])
+print(revenue[big][:<span class="s">5</span>])
+print(revenue[big].mean().round(<span class="s">2</span>))</pre>
+<pre class="out">[ 9570.46 12388.57  9361.59]
+[16262.39 15993.3  19117.36 17442.78 22093.08]
+17683.61</pre>
+Ask: "Is <code class="inline">week[busy]</code> a view or a copy?" (A copy: the chosen elements can be scattered anywhere, so NumPy gathers them into a new array. A slice was a view; a mask is not.)</li>
+  <li><b>A mask from one column, used on another (3m).</b> Say: "The mask and the array must have the same shape. They do not have to be the same array."
+<pre class="code">stores = load(<span class="s">1</span>, dtype=str)
+promo = load(<span class="s">7</span>)
+
+is_boise = stores == <span class="s">"Boise"</span>
+print(is_boise.sum(), <span class="s">"Boise rows"</span>)
+print(np.nanmean(revenue[is_boise]).round(<span class="s">2</span>))     <span class="c"># mean revenue on Boise days</span>
+print(visitors[is_boise].mean().round(<span class="s">1</span>))         <span class="c"># mean visitors on Boise days</span></pre>
+<pre class="out">727 Boise rows
+10144.21
+485.2</pre>
+Ask: "Why <code class="inline">np.nanmean</code> for revenue and plain <code class="inline">.mean()</code> for visitors?" (Six revenues are missing; no visitor counts are.)</li>
+  <li><b>Combine masks (3m).</b> Point at board rule two. Say: "Real questions have two parts: Boise AND a sale day."
+<pre class="code">is_promo = promo == <span class="s">1</span>
+
+print((is_boise &amp; is_promo).sum())     <span class="c"># Boise sale days</span>
+print((~is_promo).sum())               <span class="c"># ordinary days, all stores</span>
+print(np.nanmean(revenue[is_promo]).round(<span class="s">2</span>))
+print(np.nanmean(revenue[~is_promo]).round(<span class="s">2</span>))</pre>
+<pre class="out">24
+2807
+13950.46
+7211.74</pre>
+There is a finding here: an average sale day brings in $13,950 against $7,212. Say: "Did the sale cause all of that? Sale weekends are also holiday weekends. Module 4 gives you tools for that question. Counting and comparing is where it starts."</li>
+  <li><b>Two errors on purpose (3m).</b> Say: "Now the two mistakes everyone makes this week. First, the word <code class="inline">and</code>." Read the last line.
+<pre class="code">both = (revenue &gt; <span class="s">10000</span>) <span class="k">and</span> (promo == <span class="s">1</span>)</pre>
+<pre class="out">ValueError: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()</pre>
+Say: "<code class="inline">and</code> wants one true-or-false value and each side is 2,903 answers. Same message as <code class="inline">if week &gt; 6000</code> last session." Now drop the parentheses:</li>
+  <li><b>The missing parentheses.</b> 
+<pre class="code">both = revenue &gt; <span class="s">10000</span> &amp; promo == <span class="s">1</span></pre>
+<pre class="out">TypeError: ufunc 'bitwise_and' not supported for the input types, and the inputs could not be safely coerced to any supported types according to the casting rule ''safe''</pre>
+Say: "Cryptic, but learn the keyword: when an error says <code class="inline">bitwise_and</code>, look for missing parentheses. Python tried <code class="inline">10000 &amp; promo</code> first." Fix it on screen: <code class="inline">(revenue &gt; 10000) &amp; (promo == 1)</code>.</li>
+  <li><b>An if/else for every element (3m).</b> Say: "A mask answers 'which ones?'. <code class="inline">np.where</code> answers 'this value where it holds, that value where it does not'. For three or more outcomes, <code class="inline">np.select</code>: first true condition wins, like if/elif."
+<pre class="code">print(np.where(week &gt; <span class="s">9000</span>, <span class="s">"strong"</span>, <span class="s">"normal"</span>))
+
+conditions = [np.isnan(revenue), revenue &gt;= <span class="s">12000</span>, revenue &gt;= <span class="s">6000</span>]
+tier = np.select(conditions, [<span class="s">"missing"</span>, <span class="s">"high"</span>, <span class="s">"medium"</span>], default=<span class="s">"low"</span>)
+names, counts = np.unique(tier, return_counts=<span class="k">True</span>)
+print(names)
+print(counts)</pre>
+<pre class="out">['normal' 'normal' 'normal' 'normal' 'strong' 'strong' 'strong']
+['high' 'low' 'medium' 'missing']
+[ 260 1120 1517    6]</pre>
+Ask: "Why is the <code class="inline">isnan</code> condition first?" (First match wins; a missing value fails both comparisons and would fall through to "low".) <code class="inline">np.unique(..., return_counts=True)</code> is the quickest tally in NumPy.</li>
+  <li><b>Which way to collapse? (3m).</b> Point at board rule three. Draw the 3 by 4 table on the board and physically squash it flat downward for <code class="inline">axis=0</code>. Ask for each shape before running.
+<pre class="code">units3 = np.array([[<span class="s">110</span>, <span class="s">105</span>, <span class="s">148</span>,  <span class="s">69</span>],
+                   [ <span class="s">88</span>,  <span class="s">84</span>, <span class="s">152</span>,  <span class="s">82</span>],
+                   [<span class="s">103</span>, <span class="s">133</span>,  <span class="s">90</span>,  <span class="s">92</span>]])
+
+print(units3.sum())           <span class="c"># everything</span>
+print(units3.sum(axis=<span class="s">0</span>))     <span class="c"># collapse the rows: one total per store</span>
+print(units3.sum(axis=<span class="s">1</span>))     <span class="c"># collapse the columns: one total per day</span></pre>
+<pre class="out">1256
+[301 322 390 243]
+[432 406 418]</pre>
+Say: "Shape <code class="inline">(3, 4)</code>. <code class="inline">axis=0</code> squashes the 3 away and leaves 4 numbers. If you cannot remember which is which, print the shape of the result: it tells you what survived."</li>
+  <li><b>Positions and parallel arrays (2m).</b> Say: "<code class="inline">argmax</code> does not return the largest value. It returns WHERE it is. A position can look something up in a parallel array."
+<pre class="code">days = np.array([<span class="s">"Mon"</span>, <span class="s">"Tue"</span>, <span class="s">"Wed"</span>, <span class="s">"Thu"</span>, <span class="s">"Fri"</span>, <span class="s">"Sat"</span>, <span class="s">"Sun"</span>])
+
+print(week.argmax(), days[week.argmax()], week.max())
+print(days[np.argsort(week)][::-<span class="s">1</span>][:<span class="s">3</span>])      <span class="c"># the top three days</span></pre>
+<pre class="out">5 Sat 12388.57
+['Sat' 'Fri' 'Sun']</pre>
+<code class="inline">np.argsort</code> gives the positions that would sort the array; reversed and cut to three, they index the day names.</li>
+  <li><b>The quiet one: nan fails every comparison (2m).</b> Ask: "Every store-day is either above zero or it is not. So these two counts add up to 2,903. Yes?"
+<pre class="code">print(revenue.size)
+print((revenue &gt; <span class="s">0</span>).sum() + (revenue &lt;= <span class="s">0</span>).sum())
+print((revenue == np.nan).sum(), np.isnan(revenue).sum())</pre>
+<pre class="out">2903
+2897
+0 6</pre>
+Say: "Six rows are in neither group, and nothing equals <code class="inline">nan</code>, not even <code class="inline">nan</code>. 'The rest' is not the same as 'not the first group'. Test for missing values on purpose with <code class="inline">np.isnan</code>."</li>
+</ol>
+</div>
+<div class="blk warn"><div class="h">Three mistakes to expect, and how to coach each</div>
+<ul class="tick">
+  <li>**<code class="inline">and</code> / <code class="inline">or</code>, or no parentheses.** Symptoms: <code class="inline">ValueError: The truth value of an array with more than one element is ambiguous</code>, or <code class="inline">TypeError: ufunc 'bitwise_and' not supported for the input types</code>. Coach: "Read me the last line. Which word in your line wants a single True or False?" For the second: "What does Python do first here, the <code class="inline">&amp;</code> or the <code class="inline">&gt;</code>? Put a pair of parentheses around each question." Do not type the fix for them; point at board rule two.</li>
+  <li><b>The wrong axis, with no error.</b> Symptom: 56 numbers where 4 were expected (or the reverse), or a plausible answer to a different question. Coach: "How many answers should there be: one per store or one per day? Print <code class="inline">.shape</code> of what you got." Then: "Which axis has to disappear to leave that many?" In Lab B make every learner say the expected shape before running each aggregation.</li>
+  <li>**Forgetting that <code class="inline">nan</code> is in neither group.** Symptom: counts that do not add up to 2,903; a mean of <code class="inline">nan</code> after filtering revenue; <code class="inline">(revenue == np.nan).sum()</code> giving 0. Coach: "How many store-days are there? How many are in your two groups? Where are the other six?" The habit: any time revenue is involved, ask what happens to the six missing values, and use <code class="inline">np.isnan</code> and the <code class="inline">nan</code>-aware functions on purpose.</li>
+</ul>
+</div>
+<div class="blk lab"><div class="h">Guided lab</div>
+<p><b>Lab A (13m, everyone):</b> <code class="inline">labs/module-02/l1_2-vectorized-operations/staffing_load_starter.py</code>; reference <code class="inline">labs/module-02/l1_2-vectorized-operations/staffing_load_solution.py</code>. A question the lesson does not ask: how many visitors does each staff member look after, and when is a store stretched? One division, one mask, two combined masks, <code class="inline">np.select</code>, <code class="inline">argmax</code> with parallel arrays.</p>
+<p><b>Expected, Lab A:</b> visitors per staff member: mean 55.3, min 28.2, max 116.5; 814 stretched store-days (60 or more), 28.0%; stretched AND sale day 26; stretched OR sale day 884; labels quiet 361, steady 1,728, stretched 814; most stretched day 2025-02-26 at Bend (233 visitors, 2 staff).</p>
+<p><b>Circulate in Lab A for:</b> <code class="inline">stretched and is_promo</code>; <code class="inline">per_staff &gt;= 60 &amp; promo == 1</code> (the <code class="inline">bitwise_and</code> error); <code class="inline">np.select</code> conditions in the wrong order (<code class="inline">&gt;= 45</code> first labels everything from 45 up as steady and the stretched count comes out 0: ask "which condition does a value of 80 meet first?"); <code class="inline">per_staff.max()</code> printed where the date and store are wanted (ask "that is the value: where is it?").</p>
+<p><b>Debrief Lab A (2m):</b> show the solution's last block: visitors per staff is 52 to 58 at all four stores. Ask why (staff are scheduled from expected demand, so a bigger store simply has more people on duty). That idea returns in Module 4 as a confound.</p>
+<p><b>Lab B (10m, pairs):</b> <code class="inline">labs/module-02/l1_2-vectorized-operations/eight_weeks_axis_starter.py</code>; reference <code class="inline">labs/module-02/l1_2-vectorized-operations/eight_weeks_axis_solution.py</code>. A 56-day by 4-store table of transactions; every answer is one aggregation with the right axis. The rule for pairs: the partner who is not typing says the expected shape out loud before each run.</p>
+<p><b>Expected, Lab B:</b> total 13,255; per store <code class="inline">[2935. 3312. 4347. 2661.]</code>; first five day totals <code class="inline">[204. 196. 196. 234. 287.]</code>; busiest day per store 2024-02-24, 2024-02-24, 2024-01-13, 2024-01-27; three busiest days 2024-02-24 (392), 2024-01-13 (374), 2024-01-20 (360); days won: Asheville 1, Bend 8, Boise 45, Flagstaff 2.</p>
+<p><b>Circulate in Lab B for:</b> <code class="inline">table.argmax(axis=1)</code> used for "each store's busiest day" (56 positions, all 0 to 3: ask "can a row number be 3 at most when there are 56 rows?"); <code class="inline">day[top3]</code> forgotten, so positions 54, 12, 19 are reported as if they were answers; <code class="inline">np.argsort(day_total)[:3]</code> (the three QUIETEST days).</p>
+<p><b>Fast finishers:</b> <code class="inline">labs/module-02/l1_2-vectorized-operations/debug_masks.py</code>: two bugs that raise errors (<code class="inline">and</code>; missing parentheses) and two that do not (the six <code class="inline">nan</code> rows in neither group; a "copy" that is a second name, so capping it changes the real data). Fixed answers: 15, 15, 6, and 101 capped values with <code class="inline">revenue</code> untouched.</p>
+</div>
+<div class="blk lab"><div class="h">Start the lesson project</div>
+<p>The lesson project is the store scorecard: conversion, basket value and sale-weekend lift for all four stores, with no loop over the 2,903 rows. In the room, do <b>Steps 1 and 2</b> (10 minutes).</p>
+<p>Step 1 together: load seven arrays, including <code class="inline">dates</code> with <code class="inline">dtype="datetime64[D]"</code> and <code class="inline">stores</code> with <code class="inline">dtype=str</code>. Check: <code class="inline">2903 store-days, 6 with no revenue</code>. Step 2 on their own: conversion, basket value and units per sale, one array expression each. Done in the room = <code class="inline">23.5%</code>, <code class="inline">$88.64</code>, <code class="inline">2.11</code>.</p>
+<p>Goes home: Step 3 (one line per store; the only loop runs four times), Step 4 (sale-day lift 1.93x, weekend mean $10,073.19, the weekday trick with date subtraction), Step 5 (<code class="inline">np.select</code> labels: the four counts add up to 2,903) and Step 6 (the five biggest days, all Boise sale days, found with <code class="inline">argsort</code>). Tell them the headline before they leave so they know where it is going: conversion and basket value are nearly identical at every store; Boise's extra revenue is almost all foot traffic.</p>
+</div>
+<div class="blk"><div class="h">Checks for understanding</div>
+<p>Ask these out loud during the demo and the lab (cold-call gently, or think-pair-share):</p>
+<ol class="steps">
+  <li><code class="inline">big = revenue &gt; 15000</code>. What is <code class="inline">big.sum()</code>? What is <code class="inline">revenue[big].sum()</code>? <b>Answer:</b> The first counts the store-days above $15,000 (101). The second adds up their revenue.</li>
+  <li>How do I write "Flagstaff or Bend" as a mask? <b>Answer:</b> <code class="inline">(stores == "Flagstaff") | (stores == "Bend")</code>, or <code class="inline">np.isin(stores, ["Flagstaff", "Bend"])</code>.</li>
+  <li>A table has shape <code class="inline">(56, 4)</code>. What is the shape of <code class="inline">table.mean(axis=0)</code>, and what does it hold? <b>Answer:</b> <code class="inline">(4,)</code>: one average per store. The 56 days were collapsed.</li>
+  <li><code class="inline">picked = week[week &gt; 9000]</code>, then <code class="inline">picked[0] = 0</code>. Did <code class="inline">week</code> change? <b>Answer:</b> No. Selecting with a mask builds a new array. Assigning through the mask, <code class="inline">week[week &gt; 9000] = 0</code>, would change it.</li>
+  <li>When is a Python loop still fine? <b>Answer:</b> Over a handful of groups (four stores, twelve months), or when each step truly depends on the previous result. Not over the rows.</li>
+</ol>
+<p>Workbook self-check, items Q1 to Q6 (learners do them at the end of the block or at home).</p>
+<p style="font-size:.9rem;margin:.2rem 0">Answers: <b>Q1</b> <span data-sc="1">A) <code class="inline">3 0.75</code></span>; <b>Q2</b> <span data-sc="2">C) <code class="inline">((stores == "Bend") &amp; (visitors &gt; 500)).sum()</code></span>; <b>Q3</b> <span data-sc="3"><code class="inline">[3 6] (3,)</code></span>; <b>Q4</b> <span data-sc="4">B) <code class="inline">2</code></span>; <b>Q5</b> <span data-sc="5"><code class="inline">['retry' 'pass' 'pass']</code></span>; <b>Q6</b> <span data-sc="6">D) <code class="inline">Boise 3</code></span>. Full set with explanations in the Answer Key.</p>
+</div>
+<div class="blk"><div class="h">Differentiation</div>
+<p><b>Support:</b> For learners who write the loop in their head first: let them. Have them say the loop in words ("for each day, if it is above 9,000, count it") and then find each phrase in the lesson's loop-to-array table, which is printed in the workbook's key ideas. For the axis, use fingers on the printed table: "squash it this way: how many numbers are left?" Pair anyone who missed Session 1's views question with a partner for Lab A.</p>
+<p><b>Stretch:</b> <code class="inline">debug_masks.py</code>; then the lesson's Exercise 4 (retire the shipping loop with <code class="inline">np.select</code> and check it with <code class="inline">np.allclose</code>) or the Bonus Challenge (a 7 by 4 table of mean revenue by weekday and store built from 28 masks, which Lesson 1.3 then standardizes in one line).</p>
+</div>
+    </div>
+  </section>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">1.3</span><h3>Broadcasting</h3><span class="dur">75 min</span></div>
+    <div class="lesson-body">
+<div class="blk"><div class="h">Objectives (from the lesson page)</div>
+<ul class="tick">
+  <li>State the broadcasting rules and use them to predict the shape of a result, or that an operation will fail</li>
+  <li>Combine a 2-D table with a row of values and with a column of values</li>
+  <li>Reshape an array for broadcasting with <code class="inline">np.newaxis</code>, <code class="inline">reshape</code> and <code class="inline">keepdims=True</code></li>
+  <li>Build a grid of every combination from two 1-D arrays</li>
+  <li>Recognize the broadcasting mistakes that raise no error, and catch them by checking shapes</li>
+</ul>
+</div>
+<div class="blk"><div class="h">Timing in the room</div>
+<table class="timing">
+<tbody>
+<tr><td class="t">10m</td><td>Frame: the rubber stamp; the two rules; shapes written right-aligned</td></tr>
+<tr><td class="t">25m</td><td>Live demo: table and row, table and column (the error, then <code class="inline">keepdims</code>), <code class="inline">np.broadcast_shapes</code>, three ways to add an axis, a grid, z-scores, two silent mistakes</td></tr>
+<tr><td class="t">25m</td><td>Guided lab: <code class="inline">fair_visitors_starter.py</code>, then <code class="inline">target_grid_starter.py</code></td></tr>
+<tr><td class="t">15m</td><td>Start the lesson project: the weekday index, Steps 1 and 2</td></tr>
+</tbody>
+</table>
+</div>
+<div class="blk"><div class="h">Mental model to say</div>
+<p>Say: "Picture a paper form with seven lines and a rubber stamp that prints one line of four numbers. To stamp the whole form you press it on line 1, then line 2, down the page. The stamp does not get longer. It is reused. Broadcasting is NumPy doing the stamping: when one array is missing a dimension, or has length 1 along it, NumPy reuses it along that dimension."</p>
+<p>The two rules, written on the board as a procedure learners will do on paper all session: <b>1. Write the shapes one above the other, lined up on the RIGHT. A missing entry counts as 1. 2. Each pair must be equal, or one of them is 1.</b> The result takes the larger of each pair. Any pair that fails: the "could not be broadcast together" error.</p>
+<p>And the pattern to remember, under the rules: **per column (per store): a table and a row, it just works. Per row (per day): a table and a column, so <code class="inline">keepdims=True</code>.**</p>
+</div>
+<div class="blk"><div class="h">Live demo (you type, they follow)</div>
+<p>New notebook, <code class="inline">lesson_1_3</code>. Before <b>every</b> operation in this demo, write the two shapes on the board one above the other, right-aligned, and have the room call the result or "error". That paper habit is the skill; the code is short. Steps 11 and 12 are mistakes that raise no error: let the wrong number sit on the screen and ask whether anyone would have caught it.</p>
+<ol class="steps">
+  <li><b>The week as a table (2m).</b> Say: "The first week of revenue again: 7 days by 4 stores, Asheville, Bend, Boise, Flagstaff. And the broadcast you already know: a table and one number."
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+
+<span class="k">def</span> load(col, dtype=float):
+    <span class="s">"""Read one column of daily_sales.csv into an array."""</span>
+    <span class="k">return</span> np.genfromtxt(<span class="s">"data/daily_sales.csv"</span>, delimiter=<span class="s">","</span>,
+                         skip_header=<span class="s">1</span>, usecols=col, dtype=dtype)
+
+revenue = load(<span class="s">5</span>)
+week1 = revenue[:<span class="s">28</span>].reshape(<span class="s">7</span>, <span class="s">4</span>)
+print(week1.shape)
+print((week1 / <span class="s">1000</span>).round(<span class="s">1</span>)[:<span class="s">2</span>])        <span class="c"># revenue in thousands: first two days</span></pre>
+<pre class="out">(7, 4)
+[[5.  4.1 6.  3.1]
+ [3.6 3.7 6.6 3.6]]</pre></li>
+  <li><b>A table and a row (3m).</b> Board: <code class="inline">(7, 4)</code> over <code class="inline">(4,)</code>. Ask: "4 meets 4. 7 meets nothing. Result?" Then run.
+<pre class="code">store_mean = week1.mean(axis=<span class="s">0</span>)
+print(store_mean.round(<span class="s">2</span>), store_mean.shape)
+
+diff = week1 - store_mean
+print(diff.shape)
+print(diff.round(<span class="s">0</span>)[-<span class="s">2</span>:])                 <span class="c"># Saturday and Sunday</span></pre>
+<pre class="out">[5099.55 5446.93 7914.32 4681.29] (4,)
+(7, 4)
+[[1703. 1636. 4474. 1576.]
+ [-985. 1272. 1447. 1283.]]</pre>
+Say: "The row of four averages was stamped onto each of the seven rows. Every cell now reads 'dollars above or below this store's own average'."</li>
+  <li><b>A ratio reads better across stores (2m).</b> Say: "Boise is nearly twice Asheville's size, so raw dollars only say 'Boise is bigger'. Divide by each store's own average instead."
+<pre class="code">print((week1 / store_mean).round(<span class="s">2</span>)[-<span class="s">3</span>:])    <span class="c"># Friday, Saturday, Sunday</span></pre>
+<pre class="out">[[1.44 0.87 1.21 1.2 ]
+ [1.33 1.3  1.57 1.34]
+ [0.81 1.23 1.18 1.27]]</pre>
+Read one cell: "Boise's Saturday at 1.57 is 57% above Boise's weekly average." Every store's best day now stands out on the same scale.</li>
+  <li><b>A table and a column: the error (3m).</b> Say: "Next question: what share of each day's total did each store take? Every row divided by its own total." Board: <code class="inline">(7, 4)</code> over <code class="inline">(7,)</code>. Ask the room to apply the rules before you run it.
+<pre class="code">day_total = week1.sum(axis=<span class="s">1</span>)
+print(day_total.shape)
+share = week1 / day_total</pre>
+<pre class="out">(7,)
+ValueError: operands could not be broadcast together with shapes (7,4) (7,)</pre>
+Read the shapes in the message from the right: "4 meets 7. Not equal, neither is 1." Say: "A flat array can only be a row, and a row of seven does not fit a table four wide. We need seven numbers standing as a column."</li>
+  <li><b>keepdims keeps the axis (3m).</b> Say: "Ask the aggregation to keep the axis it collapsed." Board: <code class="inline">(7, 4)</code> over <code class="inline">(7, 1)</code>.
+<pre class="code">day_total = week1.sum(axis=<span class="s">1</span>, keepdims=<span class="k">True</span>)
+print(day_total.shape)
+
+share = week1 / day_total
+print(share.round(<span class="s">3</span>)[:<span class="s">2</span>])
+print(share.sum(axis=<span class="s">1</span>))          <span class="c"># every row should add up to 1</span></pre>
+<pre class="out">(7, 1)
+[[0.276 0.227 0.328 0.168]
+ [0.207 0.211 0.377 0.205]]
+[1. 1. 1. 1. 1. 1. 1.]</pre>
+The last line is a check worth making every time: shares of a whole must add up to 1.</li>
+  <li><b>Let NumPy apply the rules (2m).</b> Say: "You can ask for the result shape without doing any arithmetic." Have the room predict each line.
+<pre class="code">print(np.broadcast_shapes((<span class="s">7</span>, <span class="s">4</span>), (<span class="s">4</span>,)))
+print(np.broadcast_shapes((<span class="s">7</span>, <span class="s">4</span>), (<span class="s">7</span>, <span class="s">1</span>)))
+print(np.broadcast_shapes((<span class="s">3</span>, <span class="s">1</span>), (<span class="s">1</span>, <span class="s">5</span>)))</pre>
+<pre class="out">(7, 4)
+(7, 4)
+(3, 5)</pre>
+The last one is new: both arrays have a 1, in different places, and both are stretched. A column of 3 meets a row of 5: a 3 by 5 table.</li>
+  <li><b>Three ways to make a column (2m).</b> Say: "Most broadcasting work is one move: turn n flat values into a column of shape (n, 1). You will meet all three spellings in other people's code."
+<pre class="code">totals = week1.sum(axis=<span class="s">1</span>)                 <span class="c"># flat: shape (7,)</span>
+
+col_a = totals[:, np.newaxis]              <span class="c"># index with a new axis</span>
+col_b = totals.reshape(-<span class="s">1</span>, <span class="s">1</span>)              <span class="c"># -1 means "work this out for me"</span>
+col_c = week1.sum(axis=<span class="s">1</span>, keepdims=<span class="k">True</span>)   <span class="c"># never flatten in the first place</span>
+print(totals.shape, col_a.shape, col_b.shape, col_c.shape)</pre>
+<pre class="out">(7,) (7, 1) (7, 1) (7, 1)</pre>
+Advice to give: if the small array comes from an aggregation of the big one, use <code class="inline">keepdims=True</code>. It is right for every shape.</li>
+  <li><b>Column meets row: a grid (3m).</b> Say: "Four tent prices, three possible discounts. Every combination, with no loop inside a loop." Board: <code class="inline">(4, 1)</code> over <code class="inline">(3,)</code>.
+<pre class="code">prices = np.array([<span class="s">299.95</span>, <span class="s">217.95</span>, <span class="s">449.00</span>, <span class="s">129.50</span>])     <span class="c"># four products</span>
+discounts = np.array([<span class="s">0.10</span>, <span class="s">0.15</span>, <span class="s">0.20</span>])                <span class="c"># three scenarios</span>
+
+sale_price = prices[:, np.newaxis] * (<span class="s">1</span> - discounts)
+print(sale_price.shape)
+print(sale_price.round(<span class="s">2</span>))</pre>
+<pre class="out">(4, 3)
+[[269.96 254.96 239.96]
+ [196.16 185.26 174.36]
+ [404.1  381.65 359.2 ]
+ [116.55 110.08 103.6 ]]</pre>
+Rows are products, columns are discount levels. Ask: "What would <code class="inline">prices * (1 - discounts)</code> do, without the new axis?" (<code class="inline">(4,)</code> with <code class="inline">(3,)</code>: an error.)</li>
+  <li><b>Standardize every column in one line (2m).</b> Say: "Subtract each column's mean, divide by its standard deviation: a z-score. Two broadcasts in one expression, both a table and a row."
+<pre class="code">z = (week1 - week1.mean(axis=<span class="s">0</span>)) / week1.std(axis=<span class="s">0</span>)
+print(z.round(<span class="s">2</span>)[-<span class="s">2</span>:])
+print(z.std(axis=<span class="s">0</span>))</pre>
+<pre class="out">[[ 1.29  1.35  1.73  1.36]
+ [-0.75  1.05  0.56  1.1 ]]
+[1. 1. 1. 1.]</pre>
+Say: "Boise's Saturday is 1.73 standard deviations above Boise's own average. You can now compare stores of different sizes directly. This one line comes back in Module 4 and in Lesson 2.9."</li>
+  <li><b>The accidental grid (3m).</b> Say: "Four actual values, four predictions, and I want the four errors. One array arrived as a column." Run it and say nothing for a moment.
+<pre class="code">actual = np.array([<span class="s">100.0</span>, <span class="s">200.0</span>, <span class="s">300.0</span>, <span class="s">400.0</span>])
+predicted = np.array([[<span class="s">110.0</span>], [<span class="s">190.0</span>], [<span class="s">330.0</span>], [<span class="s">380.0</span>]])    <span class="c"># shape (4, 1)</span>
+
+errors = actual - predicted
+print(errors.shape)
+print(np.abs(errors).mean())      <span class="c"># the average size of an error</span></pre>
+<pre class="out">(4, 4)
+126.25</pre>
+Ask: "Is 126.25 right?" Board: <code class="inline">(4,)</code> over <code class="inline">(4, 1)</code>: a row meets a column, so NumPy built all sixteen combinations. No error, and a plausible number that means nothing. Fix:</li>
+  <li><b>Four in, four out.</b> 
+<pre class="code">errors = actual - predicted.ravel()
+print(errors.shape, errors, np.abs(errors).mean())</pre>
+<pre class="out">(4,) [-10.  10. -30.  20.] 17.5</pre>
+Say: "The habit that catches it: four values in should mean four values out. Print the shape."</li>
+  <li><b>The square table that hides a wrong axis (2m).</b> Say: "With seven rows, forgetting <code class="inline">keepdims</code> gave an error. With four rows and four columns it does not."
+<pre class="code">square = week1[:<span class="s">4</span>]                               <span class="c"># 4 days x 4 stores</span>
+wrong = square - square.mean(axis=<span class="s">1</span>)             <span class="c"># flat array of 4 day-means</span>
+right = square - square.mean(axis=<span class="s">1</span>, keepdims=<span class="k">True</span>)
+
+print(np.abs(wrong.sum(axis=<span class="s">1</span>)).round(<span class="s">2</span>))        <span class="c"># should be zeros if the rows were centered</span>
+print(np.abs(right.sum(axis=<span class="s">1</span>)).round(<span class="s">2</span>))</pre>
+<pre class="out">[ 829.24 1563.14  620.76 3013.13]
+[0. 0. 0. 0.]</pre>
+Say: "The four day-means happened to fit as a row, so day 1's mean came off column 1, day 2's off column 2. Wrong answer, no complaint. Use <code class="inline">keepdims=True</code> whenever you aggregate along <code class="inline">axis=1</code> and combine with the table: then the code is right for every shape."</li>
+</ol>
+</div>
+<div class="blk warn"><div class="h">Three mistakes to expect, and how to coach each</div>
+<ul class="tick">
+  <li><b>A flat array where a column was needed.</b> Symptom: <code class="inline">ValueError: operands could not be broadcast together with shapes (224,4) (224,)</code>. This is the friendly one. Coach: "The message gives you both shapes. Write them one above the other, right-aligned. Which pair fails?" Then: "What shape would work? Which keyword keeps that axis?" Resist saying <code class="inline">keepdims</code> first.</li>
+  <li><b>The accidental grid.</b> Symptom: no error; a result with far more values than expected, or a summary number that is wildly off (an average error of 1,753 when every forecast was within about 250). Coach: "How many answers should there be? Print <code class="inline">.shape</code>." Then the board procedure on <code class="inline">(4,)</code> and <code class="inline">(4, 1)</code>. Lab B Step 4 is built to produce this; let pairs be puzzled for a minute before you step in.</li>
+  <li><b>The square table that hides a wrong axis.</b> Symptom: no error and a right-shaped result that is simply wrong, only when rows and columns happen to be equal in number. Coach: "Check it: if each row was centered on its own mean, what should each row add up to?" The durable fix is a habit, not a patch: <code class="inline">keepdims=True</code> on every <code class="inline">axis=1</code> aggregation that is combined with its table, and a check line such as <code class="inline">share.sum(axis=1)</code>.</li>
+</ul>
+</div>
+<div class="blk lab"><div class="h">Guided lab</div>
+<p><b>Lab A (13m, everyone):</b> <code class="inline">labs/module-02/l1_3-broadcasting/fair_visitors_starter.py</code>; reference <code class="inline">labs/module-02/l1_3-broadcasting/fair_visitors_solution.py</code>. Visitors (not the project's revenue) for 224 days by 4 stores. A table and a row to compare each store with its own normal; a table and a column for each store's share of the day. Learners write the two shapes and a prediction in the starter's comments before each operation.</p>
+<p><b>Expected, Lab A:</b> store averages <code class="inline">[281.4 323.4 440.9 281.6]</code>; ratio shape <code class="inline">(224, 4)</code>; busiest day at 2.51, 2.45, 2.30 and 2.40 times normal, all four on 2024-05-25; rows of the share table add up to 1; average share <code class="inline">[0.213 0.244 0.332 0.211]</code>; Boise's largest share 0.406 on 2024-04-20 and smallest 0.243 on 2024-02-10.</p>
+<p><b>Circulate in Lab A for:</b> skipping the written prediction (insist: it is the skill); <code class="inline">table.mean(axis=1)</code> for the store averages (224 numbers: ask how many stores there are); the <code class="inline">keepdims</code> error in Step 4, which the starter asks them to cause on purpose and read from the right.</p>
+<p><b>Debrief Lab A (2m):</b> "All four stores had their busiest day, relative to normal, on the same date. What is special about Saturday May 25, 2024?" (The Memorial Day sale weekend. The project finds the same weekend with z-scores on revenue.)</p>
+<p><b>Lab B (10m, pairs):</b> <code class="inline">labs/module-02/l1_3-broadcasting/target_grid_starter.py</code>; reference <code class="inline">labs/module-02/l1_3-broadcasting/target_grid_solution.py</code>. Four shape predictions checked with <code class="inline">np.broadcast_shapes</code>, a 4 by 3 grid of revenue targets (stores by growth scenarios), a mask on the grid, then a forecast check that silently builds a 4 by 4 grid.</p>
+<p><b>Expected, Lab B:</b> <code class="inline">(4,)</code> with <code class="inline">(3,)</code> fails; <code class="inline">(4, 1)</code> with <code class="inline">(3,)</code> gives <code class="inline">(4, 3)</code>; <code class="inline">(224, 4)</code> with <code class="inline">(4,)</code> gives <code class="inline">(224, 4)</code>; <code class="inline">(4,)</code> with <code class="inline">(4, 1)</code> gives <code class="inline">(4, 4)</code>. Targets: Asheville 5875, 5989, 6274; Bend 7208, 7348, 7698; Boise 10449, 10651, 11159; Flagstaff 7096, 7234, 7579. Five of twelve above $7,500; per store <code class="inline">[0 1 3 1]</code>. Step 4 as shipped: shape <code class="inline">(4, 4)</code>, average size 1753.02. Fixed: errors <code class="inline">[-196.17 197.87 -255.79 189.75]</code>, average size 209.9.</p>
+<p><b>Circulate in Lab B for:</b> <code class="inline">current * (1 + growth)</code> with no new axis (the <code class="inline">(4,)</code> <code class="inline">(3,)</code> error: perfect, ask them to draw it); <code class="inline">above.sum(axis=0)</code> for "per store" (three numbers, one per scenario); pairs who "fix" Step 4 by taking <code class="inline">errors[0]</code> or the diagonal instead of fixing the shape.</p>
+<p><b>Fast finishers:</b> <code class="inline">labs/module-02/l1_3-broadcasting/debug_shapes.py</code>: one loud bug and two silent ones (a flat array where a column was needed; a <code class="inline">(7,)</code> minus <code class="inline">(7, 1)</code> grid of 49 "gaps"; the square-table trap). Fixed answers: seven zeros; 7 gaps with a largest gap of 6131.55; four zeros.</p>
+</div>
+<div class="blk lab"><div class="h">Start the lesson project</div>
+<p>The lesson project is the weekday index: how much is a Saturday worth at each store, on a scale where 1.00 means "an average day for this store", plus the days that were unusual for their own store. In the room, do <b>Steps 1 and 2</b> (15 minutes).</p>
+<p>Step 1 together, slowly, because the reshape only works when no rows are missing: the first 896 rows are exactly 224 days of 4 stores (January 1 to August 11, 2024; Bend's export fails the next day). Check the store order by printing three rows of the reshaped names. Done = <code class="inline">table.shape</code> is <code class="inline">(224, 4)</code> and missing values per store are <code class="inline">[1 1 0 1]</code>.</p>
+<p>Step 2 on their own: <code class="inline">store_mean = np.nanmean(table, axis=0)</code> and <code class="inline">ratio = table / store_mean</code>. Done in the room = store means <code class="inline">[5697.45 6650.89 9108.3 5895.63]</code> and a ratio table of shape <code class="inline">(224, 4)</code>. Ask: "Why does this broadcast as it stands?" (A table and a row.)</p>
+<p>Goes home: Step 3 (reshape to <code class="inline">(32, 7, 4)</code> and average over the weeks: Saturday is about 1.5 at every store), Step 4 (the line chart: four lines that nearly overlap), Step 5 (z-scores above 3: 13 store-days, eight of them on the Memorial Day sale weekend) and Step 6 (shares with <code class="inline">keepdims=True</code>: Boise takes about a third).</p>
+</div>
+<div class="blk"><div class="h">Checks for understanding</div>
+<p>Ask these out loud during the demo and the lab (cold-call gently, or think-pair-share):</p>
+<ol class="steps">
+  <li>Shapes <code class="inline">(5, 3)</code> and <code class="inline">(5,)</code>. Does it broadcast? <b>Answer:</b> No. From the right, 3 meets 5: not equal, neither is 1. The five values need to be a column, <code class="inline">(5, 1)</code>.</li>
+  <li>I want each store's column minus that store's mean. Do I need <code class="inline">keepdims</code>? <b>Answer:</b> No. Per-column values are a row of shape <code class="inline">(4,)</code>, which lines up with the table's last axis as it stands.</li>
+  <li>What does a column of shape <code class="inline">(3, 1)</code> times a row of shape <code class="inline">(5,)</code> give? <b>Answer:</b> A <code class="inline">(3, 5)</code> table of every combination.</li>
+  <li>Name the three ways to turn a flat array of n values into a column. <b>Answer:</b> <code class="inline">arr[:, np.newaxis]</code>, <code class="inline">arr.reshape(-1, 1)</code>, or <code class="inline">keepdims=True</code> on the aggregation that made it.</li>
+  <li>Does broadcasting copy the small array seven times before subtracting? <b>Answer:</b> No. The small array is reused from the same memory. Only the result is full size.</li>
+</ol>
+<p>Workbook self-check, items Q7 to Q12 (learners do them at the end of the block or at home).</p>
+<p style="font-size:.9rem;margin:.2rem 0">Answers: <b>Q7</b> <span data-sc="7">B) An array of shape <code class="inline">(6, 3)</code></span>; <b>Q8</b> <span data-sc="8">C) <code class="inline">t - t.mean(axis=1, keepdims=True)</code></span>; <b>Q9</b> <span data-sc="9"><code class="inline">(2, 3) 60</code></span>; <b>Q10</b> <span data-sc="10">D) <code class="inline">(8, 5)</code> and <code class="inline">(8,)</code></span>; <b>Q11</b> <span data-sc="11"><code class="inline">(4, 3)</code></span>; <b>Q12</b> <span data-sc="12">A) An array of shape <code class="inline">(12, 12)</code>: every sales value minus every plan value, with no error</span>. Full set with explanations in the Answer Key.</p>
+</div>
+<div class="blk"><div class="h">Differentiation</div>
+<p><b>Support:</b> Hand out a half-sheet with six pairs of shapes and two empty right-aligned boxes for each; learners fill in the result or "error" on paper before touching a keyboard (the lesson's Exercise 2 pairs work well). For anyone who is lost in <code class="inline">axis=</code>, stay with the 7 by 4 week and the two questions "per store or per day?" and "row or column?" until both come quickly; the 224-day table adds nothing new.</p>
+<p><b>Stretch:</b> <code class="inline">debug_shapes.py</code>; then the lesson's Exercise 4 (a 4 by 4 table of how alike the stores' weekly profiles are, built with two new axes and no loop) or the Bonus Challenge (the 32 by 7 by 4 array: each store's share of its own week, and the week when Saturday's share was highest at Boise).</p>
+</div>
+    </div>
+  </section>
+
+  <div class="sec"><h2>Closing</h2><span class="rule"></span></div>
+<div class="blk"><div class="h">Exit ticket (3 questions, no notes, 4 minutes)</div>
+<p>Three questions on the slide, answered on a sticky note or in the workbook's Exit Ticket box. Question 3 is the one to sort by: a learner who writes <code class="inline">keepdims=True</code> and can say why has the session.</p>
+<ol class="steps">
+  <li><code class="inline">revenue</code> and <code class="inline">promo</code> are parallel arrays. Write one line that counts the sale days (<code class="inline">promo</code> equal to 1) with revenue above 10,000. <b>Answer:</b> <code class="inline">((revenue &gt; 10000) &amp; (promo == 1)).sum()</code>: <code class="inline">&amp;</code>, parentheses around each comparison, and the sum of the mask counts.</li>
+  <li>A table has shape <code class="inline">(224, 4)</code>: days by stores. What is the shape of <code class="inline">table.mean(axis=0)</code>, and what does each value mean? <b>Answer:</b> <code class="inline">(4,)</code>: one mean per store. The axis you name (the 224 days) is the one that disappears.</li>
+  <li>You want every row of that table divided by its own row total. Write the expression, and say what goes wrong if you leave out the keyword. <b>Answer:</b> <code class="inline">table / table.sum(axis=1, keepdims=True)</code>. Without <code class="inline">keepdims=True</code> the totals have shape <code class="inline">(224,)</code>; from the right, 4 meets 224 and NumPy raises "could not be broadcast together".</li>
+</ol>
+</div>
+<div class="blk"><div class="h">Homework (about 2 to 3 hours)</div>
+<ul class="tick">
+  <li><b>Finish both lesson projects.</b> The store scorecard (Steps 3 to 6: four store rows, sale-day lift 1.93x, weekend mean $10,073.19, labels that add up to 2,903, the five biggest days) and the weekday index (Steps 3 to 6: Saturday near 1.5 at every store, the chart, 13 store-days with z above 3, Boise's share about a third).</li>
+  <li><b>Read in full</b> the two 1.2 sections the room only touched: "Sorting and Picking by Position" and "From Loop to Array Expression".</li>
+  <li><b>Lesson exercises.</b> 1.2: Exercises 1 to 3 (units per visitor, two conditions, along each axis); Exercise 4 (retire a loop) is a stretch. 1.3: Exercises 1 to 3 (row then column, predict the shape, scale every store from 0 to 1); Exercise 4 is a stretch.</li>
+  <li><b>Both Quick Quizzes</b> on the lesson pages, and <b>both journal entries</b>.</li>
+  <li><b>Before the Next Lesson (from 1.3):</b> keep the project notebook; predict what <code class="inline">(8, 1, 3)</code> and <code class="inline">(5, 1)</code> give, then check with <code class="inline">np.broadcast_shapes</code>; and write down a guess: if you picked 30 days at random from Boise's revenue and added them up, then did it again with a different 30, how different would the two totals be?</li>
+  <li><b>If Lab B of either lesson was not finished in class,</b> finish it: the starter says what to expect.</li>
+</ul>
+</div>
+<div class="note lab"><div class="t">Bring list for Session 3</div>
+<ul class="tick">
+  <li>The same working environment (READY). Nothing new to install: <code class="inline">numpy</code> and <code class="inline">matplotlib</code> are already there.</li>
+  <li>The <code class="inline">pinecrest-analysis</code> folder with <code class="inline">data/</code> and <code class="inline">labs/</code>. Session 3's starters are in <code class="inline">labs/module-03/</code>.</li>
+  <li>The finished Lesson 1.3 project notebook: the 224-day by 4-store table is used again.</li>
+  <li>The written guess from 1.3's "Before the Next Lesson" (two random 30-day totals: how different?). Session 3 opens Lesson 1.4 with it.</li>
+  <li>The workbook and the journal. No servers, no accounts, no internet needed.</li>
+</ul>
+</div>
+
+  <div class="sec"><h2>If You Run Long or Short</h2><span class="rule"></span></div>
+<div class="blk warn"><div class="h">Running long: what to protect and what to cut first</div>
+<ul class="tick">
+  <li><b>Protect:</b> 1.3 demo Steps 4, 5 and 10 to 12; Lab A of each lesson; the exit ticket.</li>
+  <li><b>Cut first (saves 3m):</b> 1.2 demo Steps 3 and 4 (ufuncs). Point at the lesson's ufunc table instead.</li>
+  <li><b>Cut second (saves 10m):</b> 1.2 Lab B (<code class="inline">eight_weeks_axis</code>). Do its fill-in from the workbook on the board in two minutes and assign the file as homework.</li>
+  <li><b>Cut third (saves 4m):</b> 1.3 demo Steps 7 and 9 (three ways to add an axis; z-scores). The project teaches z-scores at home.</li>
+  <li><b>Cut fourth (saves 10m):</b> the 1.2 project start. Read the brief, give the three check numbers (23.5%, $88.64, 2.11), send all six steps home.</li>
+  <li><b>Do not cut</b> the 1.3 project's Step 1 walk-through: the "is this reshape safe?" check is hard to do alone the first time.</li>
+</ul>
+</div>
+<div class="blk"><div class="h">Running short: what to add</div>
+<ul class="tick">
+  <li>Run <code class="inline">debug_masks.py</code> or <code class="inline">debug_shapes.py</code> as a pairs race; the first pair explains each bug at the projector.</li>
+  <li>Do 1.3's Exercise 2 (predict the shape for five pairs) as a show of fingers: 1 for "works", 2 for "error", then call the shape.</li>
+  <li>Do 1.2's Exercise 3 (along each axis) on the board with the hand-drawn 7 by 4 table: learners call <code class="inline">axis=0</code> or <code class="inline">axis=1</code> and the shape before you type.</li>
+  <li>Start Step 3 of the weekday index together: the reshape to <code class="inline">(32, 7, 4)</code> and averaging over the weeks is the first three-dimensional array of the course, and it is easier with a picture.</li>
+</ul>
+</div>
+
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 2 · Facilitator Guide · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

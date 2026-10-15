@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Participant Workbook: Session 12</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Student workbook —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">write in it · bring it to every session</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Participant Workbook</div>
+    <h1>Session 12: Correlation and Hypothesis Tests</h1>
+    <p class="sub">Your working notebook for the session that turns tables into claims you can defend. First you measure how two columns move together and learn why a strong correlation can point the wrong way. Then you ask whether a difference could be chance, answer it with a test you build yourself, and learn to report the answer honestly.</p>
+    <div class="meta-row">
+      <span class="chip">Lessons <b>4.4–4.5</b></span>
+      <span class="chip">Session <b>12</b> · 3 hours</span>
+      <span class="chip">Name: ____________________</span>
+    </div>
+  </header>
+  <div class="note"><div class="t">How to use this workbook</div>
+    <p>Each lesson has <b>By the end you can</b> (your goals), <b>Key ideas</b> (the page to keep), a <b>Worked example</b> (new code with its real output), the <b>Guided lab</b> you do in class, <b>Predict, then run</b> boxes, where the lesson project starts, space for notes, and a six-question <b>Self-check</b>. Lab files are in <code class="inline">labs/module-12/</code>: open the <code class="inline">_starter.py</code> files. Today the code is easy and the sentences are hard. Practice saying results out loud: "goes with", not "causes"; "not detected", not "the same"; and every p-value with how big and how sure.</p>
+  </div>
+
+  <div class="sec"><h2>Session Goals</h2><span class="rule"></span></div>
+  <ul class="tick">
+          <li>Draw the scatter plot first, then measure association with Pearson and Spearman and choose between them.</li>
+          <li>Read a correlation matrix, and test a suspected confounder by comparing like with like.</li>
+          <li>Fit a regression line and read its slope, intercept and r squared in the units of the data, without reading the slope as a cause.</li>
+          <li>Explain what a p-value is and what it is not, and build a test yourself by shuffling.</li>
+          <li>Choose and run a Welch, one-sample, paired, chi-square or Mann-Whitney test.</li>
+          <li>Report every test with an effect size, a confidence interval and its caveats.</li>
+        </ul>
+
+  <div class="sec"><h2>Progress Tracker</h2><span class="rule"></span></div>
+  <ul class="tick lab">
+          <li>☐ <b>4.4</b> I plotted first, measured two ways, and wrote an answer about reviews and sales that does not claim a cause (lab <code class="inline">reviews_and_sales</code>)</li>
+          <li>☐ <b>4.4</b> My Rain Check compares like with like and gives the effect in visitors (lesson project)</li>
+          <li>☐ <b>4.5</b> I wrote my hypotheses before testing, and my report on returned orders says both "real" and "small" (lab <code class="inline">returned_order_size</code>)</li>
+          <li>☐ <b>4.5</b> My rain finding uses the reporting template, with Holm-adjusted p-values and caveats (lesson project)</li>
+          <li>☐ I finished the exercises and the Quick Quiz for each lesson at home</li>
+          <li>☐ I wrote a journal entry after each lesson, and I am ready for the Session 13 checkpoint</li>
+        </ul>
+
+  <div class="sec"><h2>Lessons</h2><span class="rule"></span></div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">4.4</span><h3>Correlation Analysis</h3><span class="dur">95 min alone</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">By the end you can</div>
+        <ul class="tick">
+          <li>Read direction, form and strength from a scatter plot, and explain why the plot comes before the number</li>
+          <li>Compute Pearson and Spearman correlations with pandas and scipy, and choose between them</li>
+          <li>Build a correlation matrix and draw it as an annotated heatmap with Matplotlib</li>
+          <li>Identify a confounding variable and test for it by comparing like with like</li>
+          <li>Fit and interpret a simple regression line, and state what it does and does not tell you</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Key ideas</div>
+        <ul class="tick">
+          <li><b>Plot first.</b> A scatter plot shows direction (rising or falling), form (straight, curved, clusters) and strength (how tightly points hug the form). r summarizes one kind of pattern only.</li>
+          <li><b>Pearson's r</b> measures straight-line association from -1 to +1. It is the average product of z-scores: no units, symmetric, and sensitive to extreme points. <code class="inline">x.corr(y)</code>.</li>
+          <li><b>r is not a slope and not a percentage.</b> The share of variance a straight line accounts for is r squared: r = 0.5 is 25%.</li>
+          <li><b>r = 0 means no linear trend</b>, not no relationship. A perfect curve can score 0.</li>
+          <li><b>Spearman's rho</b> is Pearson on ranks (<code class="inline">method="spearman"</code>): consistent up or down, straight or not. Use it for curves, outliers and ordinal data. A gap between the two means a curve or an influential point. Compute both.</li>
+          <li><b>A correlation matrix</b> (<code class="inline">df[cols].corr()</code>) shows every pair. A block of high correlations usually has one common driver. Heatmaps: a diverging colormap with the scale fixed at -1 to 1.</li>
+          <li><b>Correlation is not causation.</b> A causes B, B causes A, a confounder causes both, selection, or chance. Ask how the data came to be.</li>
+          <li><b>A confounder</b> drives both variables. Test for it by comparing like with like: subtract each group's mean (<code class="inline">groupby().transform("mean")</code>) and correlate the deviations, or use a partial correlation.</li>
+          <li><b>The staffing verdict:</b> staff and revenue r = 0.88 pooled, 0.14 among comparable days, 0.07 holding visitors constant. The calendar drives both.</li>
+          <li><b>A regression line</b> (<code class="inline">stats.linregress(x, y)</code>, predictor first) gives the slope in real units. Predict only within the data's range. A slope describes; it is not the effect of changing x.</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Worked example</div>
+        <p>Do orders with more product lines cost more? Measure two ways, then fit a line to get the answer in dollars. (No test here: whether a pattern could be chance is Lesson 4.5's question.)</p>
+<pre class="code"><span class="k">import</span> pandas <span class="k">as</span> pd
+<span class="k">from</span> scipy <span class="k">import</span> stats
+
+orders = pd.read_csv(<span class="s">"data/orders.csv"</span>)
+items = pd.read_csv(<span class="s">"data/order_items.csv"</span>)
+lines = items.groupby(<span class="s">"order_id"</span>).size().rename(<span class="s">"lines"</span>)
+both = orders.merge(lines, on=<span class="s">"order_id"</span>)
+
+print(<span class="s">"orders:"</span>, len(both))
+print(<span class="s">"Pearson :"</span>, round(both[<span class="s">"lines"</span>].corr(both[<span class="s">"order_total"</span>]), <span class="s">3</span>))
+print(<span class="s">"Spearman:"</span>, round(both[<span class="s">"lines"</span>].corr(both[<span class="s">"order_total"</span>],
+                                            method=<span class="s">"spearman"</span>), <span class="s">3</span>))
+fit = stats.linregress(both[<span class="s">"lines"</span>], both[<span class="s">"order_total"</span>])
+print(<span class="s">"slope   :"</span>, round(fit.slope, <span class="s">2</span>), <span class="s">"dollars per extra product line"</span>)
+print(<span class="s">"r squared:"</span>, round(fit.rvalue ** <span class="s">2</span>, <span class="s">3</span>))</pre>
+<pre class="out">orders: 20302
+Pearson : 0.54
+Spearman: 0.646
+slope   : 86.46 dollars per extra product line
+r squared: 0.291</pre>
+        <p>Spearman (0.65) is clearly above Pearson (0.54): the relationship is consistent but not a straight band, because a few orders with one bulk line are very large. Each extra product line goes with about $86 more, on average, and the line accounts for about 30% of the variance: the number of lines is far from the whole story (what is on them matters more). Notice the reading: "goes with", not "adds".</p>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab</div>
+        <p><b>Lab 4.4-A:</b> open <code class="inline">labs/module-12/l4_4-correlation-analysis/reviews_and_sales_starter.py</code>. Marketing says "products with more reviews sell more". Plot first (write a sentence about each panel before you compute anything), then measure two ways, draw a heatmap, and decide what you can and cannot tell marketing. Your charts are saved into an <code class="inline">output</code> folder next to the lab file.</p>
+        <p><b>Lab 4.4-B:</b> open <code class="inline">labs/module-12/l4_4-correlation-analysis/staffing_rule_starter.py</code>. In class: Steps 1 and 2 (the line and its typical miss). At home: one line per store, the reversed line, and what the line does not say.</p>
+        <p><b>Finished early?</b> <code class="inline">labs/module-12/l4_4-correlation-analysis/debug_correlation_claims.py</code>: four claims about r, all wrong.</p>
+      </div>
+      <div class="blk"><div class="h">Predict, then run</div>
+        <p>Write your prediction first. Then type the code and run it. A wrong prediction is useful: it shows exactly which idea to revisit.</p>
+        <div class="q"><div class="qn">Predict 4.4-1</div><div class="qt">Two correlations. Predict both before you run.</div><pre class="code">u = pd.Series([-<span class="s">2</span>, -<span class="s">1</span>, <span class="s">0</span>, <span class="s">1</span>, <span class="s">2</span>])
+print(u.corr(u ** <span class="s">2</span>), u.corr(u * <span class="s">3</span> + <span class="s">1</span>))</pre><div class="write"></div></div>
+        <div class="q"><div class="qn">Predict 4.4-2</div><div class="qt">Pearson, then Spearman. Which one is 1?</div><pre class="code">a = pd.Series([<span class="s">1</span>, <span class="s">2</span>, <span class="s">3</span>, <span class="s">4</span>, <span class="s">5</span>])
+b = pd.Series([<span class="s">1</span>, <span class="s">4</span>, <span class="s">9</span>, <span class="s">16</span>, <span class="s">100</span>])
+print(round(a.corr(b), <span class="s">2</span>), round(a.corr(b, method=<span class="s">"spearman"</span>), <span class="s">2</span>))</pre><div class="write"></div></div>
+      </div>
+      <div class="blk lab"><div class="h">Lesson project: where you start in class</div>
+        <p><b>The Rain Check.</b> New notebook <code class="inline">lesson_4_4_project</code>. In class you do Step 1: merge <code class="inline">store_weather.csv</code> into <code class="inline">daily_sales.csv</code> (the location column is <code class="inline">city</code> in one file and <code class="inline">store</code> in the other) and check that you still have 2,903 rows with no missing weather. Keep this table: the 4.5 project uses the same merge. At home: Steps 2 to 6 (look, measure two ways, compare like with like, put the effect in visitors, write the finding).</p>
+      </div>
+      <div class="blk"><div class="h">My notes</div>
+        <div class="notes-lines"></div>
+      </div>
+      <div class="blk"><div class="h">Self-check (Q1 to Q6)</div>
+        <div class="q" data-sc="1"><div class="qn">Q1</div><div class="qt">Across the 234 products that have sold, the number of reviews and the units sold have r = 0.46. Which reading is soundest?</div><div class="opts"><div class="opt">A) Asking customers for more reviews will raise sales</div><div class="opt">B) Products with more reviews tend to have sold more; the arrow may run from sales to reviews, and the data alone cannot say</div><div class="opt">C) 46% of a product's sales are explained by its reviews</div><div class="opt">D) The correlation is too weak to mean anything</div></div></div>
+        <div class="q" data-sc="2" data-kind="short"><div class="qn">Q2</div><div class="qt">What does this print?</div><pre class="code">x = pd.Series([<span class="s">1</span>, <span class="s">2</span>, <span class="s">3</span>, <span class="s">4</span>])
+y = pd.Series([<span class="s">10</span>, <span class="s">8</span>, <span class="s">6</span>, <span class="s">4</span>])
+print(round(x.corr(y), <span class="s">2</span>))</pre><div class="write"></div></div>
+        <div class="q" data-sc="3"><div class="qn">Q3</div><div class="qt">To check whether staffing and revenue are linked beyond the calendar, which calculation compares like with like?</div><div class="opts"><div class="opt">A) Correlate the z-scores of staff and revenue instead of the raw values</div><div class="opt">B) Use Spearman's correlation instead of Pearson's</div><div class="opt">C) Subtract each group's mean (same store, month, weekday and promotion status) from both columns with <code class="inline">groupby().transform("mean")</code>, then correlate the deviations</div><div class="opt">D) Remove the outlier days first, then recompute r</div></div></div>
+        <div class="q" data-sc="4"><div class="qn">Q4</div><div class="qt">For which pair of columns is Spearman clearly the better choice than Pearson?</div><div class="opts"><div class="opt">A) Visitors and revenue, which form a straight, tight band</div><div class="opt">B) Revenue in dollars and the same revenue in cents</div><div class="opt">C) Two columns that are identical</div><div class="opt">D) 1-to-5 overall satisfaction and the 0-to-10 recommend score</div></div></div>
+        <div class="q" data-sc="5" data-kind="short"><div class="qn">Q5</div><div class="qt">A line fitted to two columns with r = 0.5. What does this print?</div><pre class="code">r = <span class="s">0.5</span>
+print(<span class="s">f"the line accounts for {r ** 2:.0%} of the variance"</span>)</pre><div class="write"></div></div>
+        <div class="q" data-sc="6"><div class="qn">Q6</div><div class="qt">A regression of revenue on staff on duty gives a slope of $1,154 per extra staff member. A manager plans to add two people every Tuesday to gain about $2,300 a day. What is the problem?</div><div class="opts"><div class="opt">A) A slope describes how revenue differs across days with different staffing, not what changing the staffing would do; here it is mostly the calendar acting on both</div><div class="opt">B) The slope must first be multiplied by r</div><div class="opt">C) The intercept was left out of the calculation</div><div class="opt">D) Regression cannot be used when one column holds whole numbers</div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">4.5</span><h3>Hypothesis Testing</h3><span class="dur">110 min alone</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">By the end you can</div>
+        <ul class="tick">
+          <li>Explain the logic of a hypothesis test in plain words, and say what a p-value is and what it is not</li>
+          <li>Build a permutation test by simulation and match it to SciPy's ready-made tests</li>
+          <li>Choose and run a one-sample, Welch two-sample or paired t-test, a chi-square test, or a rank-based test for the data in front of you</li>
+          <li>Report every test with an effect size and a confidence interval, and check its assumptions on the data</li>
+          <li>Describe Type I and Type II errors and power, and correct for multiple comparisons</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Key ideas</div>
+        <ul class="tick">
+          <li><b>A hypothesis test asks one question:</b> how surprising would these data be if nothing were going on?</li>
+          <li><b>The four steps:</b> state what "nothing going on" means (the null, H0); work out what that would produce; see where the real result falls; report how rare it is.</li>
+          <li><b>The p-value</b> is the probability, if the null hypothesis were true, of a result at least as extreme as the one observed. It is <b>not</b> the probability that the null is true, and it is <b>not</b> a measure of size.</li>
+          <li><b>Verdicts:</b> p below alpha (usually 0.05, chosen before looking): reject the null. Otherwise: fail to reject. Never "accept". 0.049 and 0.051 are the same evidence: report the number.</li>
+          <li><b>A permutation test</b> builds "nothing going on" by shuffling the labels many times. The named tests reach the same answer with theory.</li>
+          <li><b>Choosing:</b> two independent groups: Welch (<code class="inline">ttest_ind(x, y, equal_var=False)</code>). One group against a target: <code class="inline">ttest_1samp</code>. The same units twice: paired (<code class="inline">ttest_rel</code>). Counts in categories: chi-square (<code class="inline">chi2_contingency(crosstab)</code>). Ratings or ranks: Mann-Whitney (<code class="inline">mannwhitneyu</code>).</li>
+          <li><b>Every p-value travels with an effect size and a confidence interval.</b> Cohen's d (0.2 small, 0.5 medium, 0.8 large); for tables, the rates and their ratio.</li>
+          <li><b>Statistically significant</b> = unlikely to be chance alone. <b>Practically significant</b> = big enough to matter. Large samples make tiny effects significant.</li>
+          <li><b>Two ways to be wrong:</b> a false alarm (Type I, rate alpha) and a miss (Type II). <b>Power</b> is the chance of catching a real effect; it rises with sample size. "Not significant" means "not detected".</li>
+          <li><b>Many tests, many false alarms.</b> Count every test you ran, correct with Holm (<code class="inline">multipletests(..., method="holm")</code>), and label scanned results as exploratory.</li>
+          <li><b>Every test assumes independent observations.</b> SciPy does not skip missing values: <code class="inline">.dropna()</code> first.</li>
+          <li><b>Report template:</b> what was compared (and n) · the estimate · its 95% CI · the test and p · the effect size in words · caveats.</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Worked example</div>
+        <p>Do Bend and Flagstaff shoppers differ in how likely they are to recommend Pinecrest? Hypotheses first, then the test, the interval and a careful sentence.</p>
+<pre class="code"><span class="k">import</span> pandas <span class="k">as</span> pd
+<span class="k">from</span> scipy <span class="k">import</span> stats
+
+survey = pd.read_csv(<span class="s">"data/survey.csv"</span>)
+bend = survey.loc[survey[<span class="s">"store"</span>] == <span class="s">"Bend"</span>, <span class="s">"recommend"</span>].dropna()
+flag = survey.loc[survey[<span class="s">"store"</span>] == <span class="s">"Flagstaff"</span>, <span class="s">"recommend"</span>].dropna()
+<span class="c"># H0: Bend and Flagstaff shoppers have the same mean recommend score.</span>
+<span class="c"># H1: the means differ (two-sided). alpha = 0.05. Welch t-test.</span>
+
+res = stats.ttest_ind(bend, flag, equal_var=<span class="k">False</span>)
+ci = res.confidence_interval()
+print(<span class="s">f"Bend n = {len(bend)}, mean {bend.mean():.2f}; "</span>
+      <span class="s">f"Flagstaff n = {len(flag)}, mean {flag.mean():.2f}"</span>)
+print(<span class="s">f"difference {bend.mean() - flag.mean():.2f}, "</span>
+      <span class="s">f"95% CI {ci.low:.2f} to {ci.high:.2f}"</span>)
+print(<span class="s">f"t = {res.statistic:.2f}, p = {res.pvalue:.2f}"</span>)</pre>
+<pre class="out">Bend n = 223, mean 7.27; Flagstaff n = 207, mean 7.39
+difference -0.11, 95% CI -0.51 to 0.28
+t = -0.57, p = 0.57</pre>
+        <p>p = 0.57: a gap this size (about a tenth of a point) turns up by chance more than half the time, so you fail to reject the null. The careful sentence: "We did not detect a difference between Bend and Flagstaff shoppers; the data are consistent with Bend being anywhere from about half a point lower to about a quarter of a point higher." It does not say the two stores are the same.</p>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab</div>
+        <p><b>Lab 4.5-A:</b> open <code class="inline">labs/module-12/l4_5-hypothesis-testing/returned_order_size_starter.py</code>. Customer service says "people send back the big orders". Write your hypotheses in the TODO 0 comment <b>before</b> you run any test. Then Welch, the interval, Cohen's d, a permutation test, and a challenge to your own result. Your report must say how big the difference is, not only whether it is significant.</p>
+        <p><b>Lab 4.5-B:</b> open <code class="inline">labs/module-12/l4_5-hypothesis-testing/footwear_returns_starter.py</code>. In class: Step 1 (online orders with and without footwear: a table, the rates, a chi-square test). At home: the same question for store orders, the Holm correction, and the report.</p>
+        <p><b>Finished early?</b> <code class="inline">labs/module-12/l4_5-hypothesis-testing/debug_test_report.py</code>: five conclusions, each one misreading a test.</p>
+      </div>
+      <div class="blk"><div class="h">Predict, then run</div>
+        <p>Write your prediction first. Then type the code and run it. A wrong prediction is useful: it shows exactly which idea to revisit.</p>
+        <div class="q"><div class="qn">Predict 4.5-1</div><div class="qt">Two identical groups. What are t and p?</div><pre class="code">res = stats.ttest_ind([<span class="s">1</span>, <span class="s">2</span>, <span class="s">3</span>], [<span class="s">1</span>, <span class="s">2</span>, <span class="s">3</span>], equal_var=<span class="k">False</span>)
+print(res.statistic, res.pvalue)</pre><div class="write"></div></div>
+        <div class="q"><div class="qn">Predict 4.5-2</div><div class="qt">A table in which both rows have the same proportions. Predict the statistic, the p-value and the expected counts.</div><pre class="code">table = pd.DataFrame([[<span class="s">30</span>, <span class="s">10</span>], [<span class="s">30</span>, <span class="s">10</span>]])
+chi = stats.chi2_contingency(table)
+print(chi.statistic, chi.pvalue, chi.expected_freq.tolist())</pre><div class="write"></div></div>
+      </div>
+      <div class="blk lab"><div class="h">Lesson project: where you start in class</div>
+        <p><b>Does Rain Keep Shoppers Away?</b> New notebook <code class="inline">lesson_4_5_project</code>. In class you do Steps 1 and 2: the merge from the Rain Check plus a <code class="inline">rainy</code> column (0.10 inches or more), the summary of visitors by store and rain, and your hypotheses and alpha written as a comment <b>before</b> the first test. At home: Steps 3 to 7 (Asheville in full, a permutation check, all four stores with Holm, a challenge for season and weekday, the written finding).</p>
+      </div>
+      <div class="blk"><div class="h">My notes</div>
+        <div class="notes-lines"></div>
+      </div>
+      <div class="blk"><div class="h">Self-check (Q7 to Q12)</div>
+        <div class="q" data-sc="7"><div class="qn">Q7</div><div class="qt">Shuffling the store labels 10,000 times gives a p-value of 0.030 for Asheville's lower recommend score. What does 0.030 measure?</div><div class="opts"><div class="opt">A) In a world where the store makes no difference, about 3% of shuffles produced a gap at least as large as the real one</div><div class="opt">B) There is a 3% probability that the null hypothesis is true</div><div class="opt">C) There is a 97% probability that Asheville really is worse</div><div class="opt">D) The gap is 3% of the average score</div></div></div>
+        <div class="q" data-sc="8"><div class="qn">Q8</div><div class="qt">You want to compare 1-to-5 staff-satisfaction ratings at Asheville (193 answers) with the other stores (754 answers). Which test fits best?</div><div class="opts"><div class="opt">A) A Welch t-test on the two means</div><div class="opt">B) A paired t-test</div><div class="opt">C) A one-sample t-test against 4</div><div class="opt">D) A Mann-Whitney U test</div></div></div>
+        <div class="q" data-sc="9" data-kind="short"><div class="qn">Q9</div><div class="qt">What does this print?</div><pre class="code">print(stats.ttest_ind([<span class="s">1</span>, <span class="s">2</span>, <span class="s">3</span>], [<span class="s">1</span>, <span class="s">2</span>, np.nan], equal_var=<span class="k">False</span>).pvalue)</pre><div class="write"></div></div>
+        <div class="q" data-sc="10"><div class="qn">Q10</div><div class="qt">A Welch t-test reports a 95% confidence interval for the difference in means of -0.68 to -0.03. Without computing it, what do you know about the two-sided p-value at alpha = 0.05?</div><div class="opts"><div class="opt">A) It is above 0.05</div><div class="opt">B) It is exactly 0.05</div><div class="opt">C) It is below 0.05</div><div class="opt">D) It cannot be known from the interval</div></div></div>
+        <div class="q" data-sc="11"><div class="qn">Q11</div><div class="qt">A pilot with 10 Asheville answers and 50 others gives p = 0.82 for a staff-rating gap that the full survey shows clearly (p near 3 in a billion). How should the pilot's result be worded?</div><div class="opts"><div class="opt">A) The stores' staff ratings are the same</div><div class="opt">B) We could not detect a difference with this sample; it is too small to say much</div><div class="opt">C) The pilot proves the null hypothesis</div><div class="opt">D) The full survey must contain an error</div></div></div>
+        <div class="q" data-sc="12" data-kind="short"><div class="qn">Q12</div><div class="qt">Five independent tests, all of true null hypotheses, each at alpha = 0.05. What does this print?</div><pre class="code">print(<span class="s">f"{1 - 0.95 ** 5:.0%}"</span>)</pre><div class="write"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="sec"><h2>Exit Ticket</h2><span class="rule"></span></div>
+  <p>Three questions at the end of class. No notes: this is for you and your instructor to see what stuck.</p>
+  <div class="q"><div class="qn">Exit 1</div><div class="qt">Staff on duty and revenue correlate at r = 0.88. Give two explanations other than "more staff cause more revenue".</div><div class="write"></div></div>
+  <div class="q"><div class="qn">Exit 2</div><div class="qt">Complete the sentence: "A p-value is the probability of ______, assuming ______."</div><div class="write"></div></div>
+  <div class="q"><div class="qn">Exit 3</div><div class="qt">Besides the p-value, which two numbers belong in every test report?</div><div class="write"></div></div>
+
+  <div class="sec"><h2>Homework Checklist</h2><span class="rule"></span></div>
+  <ul class="tick lab">
+          <li>☐ <b>Lesson 4.4 project:</b> finish the Rain Check (Steps 2 to 6): look, measure two ways, compare like with like, the effect in visitors, the finding with its limits.</li>
+          <li>☐ <b>Lesson 4.4 practice:</b> Exercises 1 to 3 (Exercise 4 is a stretch), the Quick Quiz, and the journal prompt.</li>
+          <li>☐ <b>Lesson 4.5 project:</b> finish Does Rain Keep Shoppers Away? (Steps 3 to 7), ending with a written finding in the reporting template.</li>
+          <li>☐ <b>Lesson 4.5 practice:</b> Exercises 1 to 4 (Exercise 5 is a stretch), the Quick Quiz, and the journal prompt. Reread the "What a p-value Is Not" table tomorrow.</li>
+          <li>☐ <b>Kit labs:</b> finish <code class="inline">staffing_rule</code> (Steps 3 to 5) and <code class="inline">footwear_returns</code> (Steps 2 to 4).</li>
+          <li>☐ <b>Workbook:</b> the 12 self-check items and anything left in Predict, then run.</li>
+          <li>☐ <b>Before Lesson 4.6</b> (from the lesson page): open <code class="inline">data/ab_test.csv</code> and look at its columns. Before running anything, write down which test from Lesson 4.5 you would use to compare conversion between the two variants, and why.</li>
+          <li>☐ <b>Prepare for the Session 13 checkpoint:</b> a short open-notebook task on Modules 1 to 4 (NumPy, pandas, Matplotlib, statistics). Tidy your lesson notebooks so you can find things, and skim the key ideas pages of this workbook from Session 1 on. No memorizing needed: it is open-notebook.</li>
+        </ul>
+  <div class="note lab"><div class="t">Bring to Session 13</div>
+    <ul class="tick">
+          <li><b>Session 13 includes a short open-notebook checkpoint on Modules 1 to 4.</b> Bring your lesson notebooks from Modules 1 to 4 and this workbook. You may use them, the lesson pages and the documentation.</li>
+          <li>Your <code class="inline">cohens_d</code> function, the reporting template, and your note on which test you would use for <code class="inline">ab_test.csv</code>.</li>
+          <li>Nothing new to install, no accounts, no servers.</li>
+          <li>A charged laptop.</li>
+        </ul>
+  </div>
+
+  <div class="sec"><h2>Glossary</h2><span class="rule"></span></div>
+  <ul class="tick">
+          <li><b>Scatter plot:</b> one point per row, one variable on each axis; read direction, form and strength from it.</li>
+          <li><b>Pearson's r:</b> a number from -1 to +1 for straight-line association: the average product of z-scores.</li>
+          <li><b>Spearman's rho:</b> Pearson's r on the ranks: consistent (monotonic) association, robust to outliers, suited to ordinal data.</li>
+          <li><b>Monotonic:</b> consistently rising or consistently falling, whether or not along a straight line.</li>
+          <li><b>Correlation matrix:</b> a square table of the correlation of every pair of columns.</li>
+          <li><b>Confounder:</b> a third variable that influences both variables being correlated.</li>
+          <li><b>Partial correlation:</b> the correlation of two variables after removing the straight-line effect of a third from each.</li>
+          <li><b>Simpson's paradox:</b> a pooled correlation with the opposite sign to the correlation inside every group.</li>
+          <li><b>Regression line:</b> the least-squares line y = intercept + slope x; predictor first in <code class="inline">stats.linregress(x, y)</code>.</li>
+          <li><b>r squared:</b> the share of the variance in y that the straight line accounts for.</li>
+          <li><b>Residual:</b> actual value minus the value the line predicts.</li>
+          <li><b>Null hypothesis (H0):</b> the "nothing is going on" claim assumed in order to test it.</li>
+          <li><b>Alternative hypothesis (H1):</b> what you conclude if the null does not hold up; usually two-sided.</li>
+          <li><b>p-value:</b> the probability, if the null hypothesis were true, of a result at least as extreme as the one observed.</li>
+          <li><b>Significance level (alpha):</b> the cutoff chosen before looking, usually 0.05.</li>
+          <li><b>Permutation test:</b> a test that builds the null by shuffling group labels many times.</li>
+          <li><b>Welch's t-test:</b> a two-sample t-test that does not assume equal variances (<code class="inline">equal_var=False</code>).</li>
+          <li><b>Paired t-test:</b> a test on the differences within matched pairs (<code class="inline">ttest_rel</code>).</li>
+          <li><b>Chi-square test:</b> a test of independence for a table of counts (<code class="inline">chi2_contingency</code>).</li>
+          <li><b>Mann-Whitney U:</b> a rank-based test for two independent groups; effect size U / (n1 x n2).</li>
+          <li><b>Effect size:</b> how big a difference is: Cohen's d, a rate ratio, Cramér's V, a probability of superiority.</li>
+          <li><b>Type I / Type II error:</b> a false alarm (rate alpha) / a miss.</li>
+          <li><b>Power:</b> the probability that a test detects an effect that truly exists; it grows with sample size.</li>
+          <li><b>Multiple comparisons:</b> running many tests, which multiplies false alarms; correct with Holm.</li>
+        </ul>
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 12 · Participant Workbook · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

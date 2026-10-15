@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Participant Workbook: Session 6</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Student workbook —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">write in it · bring it to every session</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Participant Workbook</div>
+    <h1>Session 6: Merging and Reshaping</h1>
+    <p class="sub">Your working pages for connecting tables and changing their shape. Before the break: <code class="inline">merge</code>, the four kinds of join, and the two silent ways a merge goes wrong. After the break: pivot tables, crosstabs and <code class="inline">melt</code>, and the checks to run before you trust a grid.</p>
+    <div class="meta-row">
+      <span class="chip">Lessons <b>2.5–2.6</b></span>
+      <span class="chip">Session <b>6</b> · 3 hours</span>
+      <span class="chip">Name: ____________________</span>
+    </div>
+  </header>
+
+  <div class="note"><div class="t">How to use this workbook</div><p>Each lesson has <b>By the end you can</b>, <b>Key ideas</b> (one page to keep), a <b>Worked example</b> with its real output, the <b>Guided lab</b> you do in class, three <b>Predict, then run</b> boxes, the lesson project's class and home parts, space for notes, and a six-question <b>Self-check</b>. Lab files are in <code class="inline">labs/module-06/</code>. Two habits for today: <b>count before and after every merge</b>, and <b>check that the corner of a pivot matches the source</b>.</p></div>
+  <div class="sec"><h2>Session Goals</h2><span class="rule"></span></div>
+  <ul class="tick">
+          <li>Combine two tables on a key and choose the right kind of join</li>
+          <li>Predict the row count of a merge, check it, and find the keys that did not match</li>
+          <li>State the relationship between two tables and enforce it with <code class="inline">validate=</code></li>
+          <li>Avoid double counting after a one-to-many merge</li>
+          <li>Build grids with <code class="inline">pivot_table</code> and <code class="inline">crosstab</code>, with totals and percentages</li>
+          <li>Move between wide and tidy layouts with <code class="inline">melt</code>, and check a pivot before you trust it</li>
+        </ul>
+  <div class="sec"><h2>Lessons</h2><span class="rule"></span></div>
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">2.5</span><h3>Merging and Joining</h3><span class="dur">95 min lesson</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">By the end you can</div>
+        <ul class="tick">
+          <li>Combine two tables on a key with <code class="inline">merge()</code> and choose between inner, left, right and outer joins</li>
+          <li>Find the keys that have no match on either side with <code class="inline">indicator=True</code>, and decide what to do about them</li>
+          <li>State the relationship between two tables (one-to-one, many-to-one, many-to-many) and enforce it with <code class="inline">validate=</code></li>
+          <li>Predict and check the row count of a merge, and avoid double counting after a one-to-many merge</li>
+          <li>Merge on differently named or multiple keys, stack tables with <code class="inline">concat()</code>, and recognize when <code class="inline">merge_asof()</code> is the right tool</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Key ideas</div>
+        <ul class="tick">
+          <li><b>The claim ticket.</b> A key is a column that appears in both tables. <code class="inline">left.merge(right, on="key")</code> finds, for each left row, the right rows with the same key. Two questions: what if a key has no match? What if it matches more than once?</li>
+          <li><b>Four joins.</b> <code class="inline">how="inner"</code> (the default) keeps only keys in both tables · <code class="inline">"left"</code> keeps every row of the left table · <code class="inline">"right"</code> every row of the right · <code class="inline">"outer"</code> every row of both. Missing partners become NaN.</li>
+          <li><b>Count before, count after.</b> Say what the row count should be, then check. Fewer rows: keys failed to match. More rows: keys matched more than once.</li>
+          <li><b>The working default.</b> Adding columns to a main table? <code class="inline">how="left"</code>. Select only the columns you need from the right table (key included) before merging.</li>
+          <li><b><code class="inline">indicator=True</code></b> adds <code class="inline">_merge</code>: <code class="inline">both</code>, <code class="inline">left_only</code>, <code class="inline">right_only</code>. Unmatched rows are findings with causes (closed accounts, discontinued products). Decide what to do with them; do not let the default decide.</li>
+          <li><b>Relationships.</b> one-to-one, many-to-one (safe: the row count cannot grow), one-to-many (rows multiply: one per match), many-to-many (usually a mistake). <code class="inline">validate="many_to_one"</code> makes pandas check that the key is unique where you believe it is.</li>
+          <li><b>Know what one row means.</b> After a one-to-many merge, columns from the 'one' side are repeated. Never sum or average them there. Aggregate first, then merge.</li>
+          <li><b>Awkward keys.</b> Different names: <code class="inline">left_on=</code>, <code class="inline">right_on=</code>. Several columns: lists. Clashing column names: <code class="inline">suffixes=</code>. Keys must have the same dtype. Missing keys match each other.</li>
+          <li><b>Other tools.</b> <code class="inline">pd.concat([a, b], ignore_index=True)</code> stacks tables with the same columns. <code class="inline">pd.merge_asof</code> matches the nearest earlier key (both tables sorted).</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Worked example: which products never sold, and which sales have no product?</div>
+        <p>A question that needs two tables: the catalog (<code class="inline">products.csv</code>, one row per product) and the order lines (<code class="inline">order_items.csv</code>, one row per line). The pattern is the one you will use in the lab: <b>aggregate</b> the long table to one row per key, <b>then merge</b>, and audit both sides.</p>
+<p>Aggregate first: one row per SKU that was ever sold. Then check the keys before merging anything.</p>
+<pre class="code">items[<span class="s">"line_total"</span>] = items[<span class="s">"quantity"</span>] * items[<span class="s">"unit_price"</span>]
+sold = items.groupby(<span class="s">"sku"</span>, as_index=<span class="k">False</span>).agg(units=(<span class="s">"quantity"</span>, <span class="s">"sum"</span>), revenue=(<span class="s">"line_total"</span>, <span class="s">"sum"</span>))
+print(len(products), len(sold), products[<span class="s">"sku"</span>].is_unique, sold[<span class="s">"sku"</span>].is_unique)</pre>
+<pre class="out">242 240 True True</pre>
+<p>Prediction: catalog on the left, one-to-one, 242 rows. A left join keeps every product.</p>
+<pre class="code">catalog = products[[<span class="s">"sku"</span>, <span class="s">"name"</span>, <span class="s">"category"</span>, <span class="s">"launch_date"</span>]].merge(
+    sold, on=<span class="s">"sku"</span>, how=<span class="s">"left"</span>, validate=<span class="s">"one_to_one"</span>, indicator=<span class="k">True</span>)
+print(len(catalog), catalog[<span class="s">"_merge"</span>].value_counts().to_dict())
+print(catalog.loc[catalog[<span class="s">"_merge"</span>] == <span class="s">"left_only"</span>, [<span class="s">"sku"</span>, <span class="s">"name"</span>, <span class="s">"launch_date"</span>]].head(<span class="s">3</span>))</pre>
+<pre class="out">242 {'both': 234, 'left_only': 8, 'right_only': 0}
+         sku                               name launch_date
+49  PCK-1002    Pinecrest Headwater 30L Daypack  2025-12-20
+56  PCK-1009  Juniper Vane Sawtooth 30L Daypack  2025-12-28
+89  FTW-1018     Granite Fork Wayfinder Insoles  2025-12-28</pre>
+<p>Now audit the other side with an outer join: are there sales with no product in the catalog?</p>
+<pre class="code">audit = products[[<span class="s">"sku"</span>]].merge(sold, on=<span class="s">"sku"</span>, how=<span class="s">"outer"</span>, indicator=<span class="k">True</span>)
+print(audit[<span class="s">"_merge"</span>].value_counts().to_dict())
+gone = audit[audit[<span class="s">"_merge"</span>] == <span class="s">"right_only"</span>]
+print(gone[<span class="s">"sku"</span>].tolist(), int(gone[<span class="s">"units"</span>].sum()), round(gone[<span class="s">"revenue"</span>].sum(), <span class="s">2</span>))</pre>
+<pre class="out">{'both': 234, 'left_only': 8, 'right_only': 6}
+['APL-1033', 'KIT-1016', 'PCK-1015', 'PCK-1025', 'SNW-1007', 'SNW-1018'] 1193 36495.55</pre>
+<p>With names attached, the best sellers are readable.</p>
+<pre class="code">print(catalog.nlargest(<span class="s">3</span>, <span class="s">"revenue"</span>)[[<span class="s">"sku"</span>, <span class="s">"name"</span>, <span class="s">"units"</span>, <span class="s">"revenue"</span>]])</pre>
+<pre class="out">          sku                                name   units    revenue
+224  ACC-1015  Cedar Notch Sawtooth First-Aid Kit  3475.0  159029.25
+100  APL-1001    Granite Fork Cascade Rain Jacket   420.0  117579.00
+48   PCK-1001        Wrenfield Canyon 22L Daypack   784.0  107368.80</pre>
+        <p>Eight products have never sold: all of them launched on or after 2025-12-20, at the very end of the data, so that is no surprise. Six SKUs have sales but no catalog entry: discontinued products, last sold in 2024. Both groups of unmatched keys have a cause, and neither is an error. A default inner join would have hidden both without a word.</p>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab</div>
+        <ul class="tick lab">
+          <li><code class="inline">labs/module-06/l2_5-merging-joining/customer_profiles_starter.py</code> (about 25 min): Who are the five biggest spenders by name, how many account holders never ordered (and in which tier), and which orders belong to nobody in <code class="inline">customers.csv</code>?</li>
+          <li><code class="inline">labs/module-06/l2_5-merging-joining/orders_weather_starter.py</code> (about 20 min): On rainy days, how many orders do signed-in customers place in each store, compared with dry days?</li>
+        </ul>
+        <p>Extra: <code class="inline">labs/module-06/l2_5-merging-joining/debug_merges.py</code>. A file that is broken on purpose. Three bugs stop the program; two are quiet. Each has a 'should print' note.</p>
+        <ol class="steps lab">
+          <li>Open <code class="inline">customer_profiles_starter.py</code>. The pattern is <b>aggregate first, then merge</b>.</li>
+          <li>Before TODO 2, write your prediction. Left table: ________ Relationship: ________ Rows after the merge: ________</li>
+          <li>After every merge, count the rows. Fewer than you predicted: keys failed to match. More: keys matched more than once.</li>
+          <li>TODO 3 fills missing order counts with 0. Why is that honest here, when filling a missing order total with 0 was wrong last session? ______________________</li>
+          <li>If you finish: <code class="inline">orders_weather_starter.py</code> (which table goes on the left, and why does it matter?), then <code class="inline">debug_merges.py</code>.</li>
+        </ol>
+      </div>
+      <div class="blk"><div class="h">Predict, then run</div>
+        <p>Write what you think each one prints <b>before</b> you run it. Being wrong here is useful: it shows you exactly which rule to look at again.</p>
+<p><b>P1.</b> An outer join with an indicator.</p>
+<pre class="code">left = pd.DataFrame({<span class="s">"k"</span>: [<span class="s">1</span>, <span class="s">2</span>, <span class="s">2</span>], <span class="s">"a"</span>: [<span class="s">"x"</span>, <span class="s">"y"</span>, <span class="s">"z"</span>]})
+right = pd.DataFrame({<span class="s">"k"</span>: [<span class="s">2</span>, <span class="s">2</span>, <span class="s">3</span>], <span class="s">"b"</span>: [<span class="s">10</span>, <span class="s">20</span>, <span class="s">30</span>]})
+m = left.merge(right, on=<span class="s">"k"</span>, how=<span class="s">"outer"</span>, indicator=<span class="k">True</span>)
+print(len(m), (m[<span class="s">"_merge"</span>] == <span class="s">"both"</span>).sum(), (m[<span class="s">"_merge"</span>] == <span class="s">"left_only"</span>).sum())</pre>
+<div class="write"></div>
+<p><b>P2.</b> Missing keys.</p>
+<pre class="code">a = pd.DataFrame({<span class="s">"k"</span>: [<span class="s">1.0</span>, np.nan], <span class="s">"a"</span>: [<span class="s">"x"</span>, <span class="s">"y"</span>]})
+b = pd.DataFrame({<span class="s">"k"</span>: [np.nan, np.nan], <span class="s">"b"</span>: [<span class="s">"p"</span>, <span class="s">"q"</span>]})
+print(len(a.merge(b, on=<span class="s">"k"</span>)), len(a.merge(b, on=<span class="s">"k"</span>, how=<span class="s">"left"</span>)))</pre>
+<div class="write"></div>
+<p><b>P3.</b> An average after a merge.</p>
+<pre class="code">o = pd.DataFrame({<span class="s">"order"</span>: [<span class="s">1</span>, <span class="s">2</span>], <span class="s">"total"</span>: [<span class="s">300</span>, <span class="s">100</span>]})
+i = pd.DataFrame({<span class="s">"order"</span>: [<span class="s">1</span>, <span class="s">1</span>, <span class="s">1</span>, <span class="s">2</span>], <span class="s">"qty"</span>: [<span class="s">1</span>, <span class="s">1</span>, <span class="s">1</span>, <span class="s">1</span>]})
+print(o[<span class="s">"total"</span>].mean(), o.merge(i, on=<span class="s">"order"</span>)[<span class="s">"total"</span>].mean())</pre>
+<div class="write"></div>
+      </div>
+      <div class="blk"><div class="h">Lesson project: start in class, finish at home</div>
+        <ul class="tick">
+          <li>Project: <b>Revenue by Category</b> (lesson page, seven steps). In class: Steps 1 to 3 in <code class="inline">lesson_2_5_project</code> (inspect the keys, lines + orders, + products with an indicator).</li>
+          <li>At home: Steps 4 to 7. You are done when <code class="inline">lines</code> still has 45,490 rows, the six discontinued SKUs have their category back, completed merchandise revenue is $3,715,829.95, and you can explain the 1.7% pricing trap in one sentence.</li>
+          <li>Then the lesson's Exercises 1 to 4, the Quick Quiz and your journal entry. Exercise 5 is a stretch.</li>
+          <li>Keep <code class="inline">output/order_lines.parquet</code>.</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">My notes</div>
+        <div class="write tall"></div>
+      </div>
+      <div class="blk"><div class="h">Self-check</div>
+        <p>Six questions on Lesson 2.5. No notes on the first pass; then check with your instructor.</p>
+        <div class="q" data-sc="1"><div class="qn">Q1</div><div class="qt">What does this print (the lengths of an inner, a left and an outer merge)?</div><pre class="code">a = pd.DataFrame({<span class="s">"k"</span>: [<span class="s">1</span>, <span class="s">2</span>, <span class="s">3</span>], <span class="s">"x"</span>: [<span class="s">"p"</span>, <span class="s">"q"</span>, <span class="s">"r"</span>]})
+b = pd.DataFrame({<span class="s">"k"</span>: [<span class="s">2</span>, <span class="s">3</span>, <span class="s">3</span>, <span class="s">4</span>], <span class="s">"y"</span>: [<span class="s">10</span>, <span class="s">20</span>, <span class="s">30</span>, <span class="s">40</span>]})
+print(len(a.merge(b, on=<span class="s">"k"</span>)), len(a.merge(b, on=<span class="s">"k"</span>, how=<span class="s">"left"</span>)),
+      len(a.merge(b, on=<span class="s">"k"</span>, how=<span class="s">"outer"</span>)))</pre><div class="opts"><div class="opt">A) <code class="inline">2 3 4</code></div><div class="opt">B) <code class="inline">3 3 5</code></div><div class="opt">C) <code class="inline">3 4 5</code></div><div class="opt">D) <code class="inline">3 4 4</code></div></div></div>
+        <div class="q" data-sc="2"><div class="qn">Q2</div><div class="qt">You want to add each customer's loyalty tier to <code class="inline">orders</code> without losing any order, and you want the merge to fail loudly if <code class="inline">customers</code> ever contains a duplicated id. Which call does both?</div><div class="opts"><div class="opt">A) <code class="inline">orders.merge(customers, on="customer_id")</code></div><div class="opt">B) <code class="inline">orders.merge(customers, on="customer_id", how="left", validate="many_to_one")</code></div><div class="opt">C) <code class="inline">orders.merge(customers, on="customer_id", how="inner", validate="one_to_one")</code></div><div class="opt">D) <code class="inline">pd.concat([orders, customers])</code></div></div></div>
+        <div class="q" data-sc="3" data-kind="short"><div class="qn">Q3</div><div class="qt">What does this print?</div><pre class="code">o = pd.DataFrame({<span class="s">"order"</span>: [<span class="s">1</span>, <span class="s">2</span>], <span class="s">"total"</span>: [<span class="s">100</span>, <span class="s">50</span>]})
+i = pd.DataFrame({<span class="s">"order"</span>: [<span class="s">1</span>, <span class="s">1</span>, <span class="s">1</span>, <span class="s">2</span>], <span class="s">"sku"</span>: [<span class="s">"a"</span>, <span class="s">"b"</span>, <span class="s">"c"</span>, <span class="s">"d"</span>]})
+m = o.merge(i, on=<span class="s">"order"</span>)
+print(m[<span class="s">"total"</span>].sum(), m.drop_duplicates(<span class="s">"order"</span>)[<span class="s">"total"</span>].sum())</pre><div class="write"></div></div>
+        <div class="q" data-sc="4"><div class="qn">Q4</div><div class="qt"><code class="inline">orders.merge(customers, on="customer_id", how="outer", indicator=True)</code> shows 739 rows marked <code class="inline">left_only</code>. What are they?</div><div class="opts"><div class="opt">A) Orders whose <code class="inline">customer_id</code> has no row in <code class="inline">customers</code></div><div class="opt">B) Customers who have never placed an order</div><div class="opt">C) Orders that matched more than one customer</div><div class="opt">D) Duplicate orders that the merge removed</div></div></div>
+        <div class="q" data-sc="5" data-kind="short"><div class="qn">Q5</div><div class="qt">What does this print?</div><pre class="code">a = pd.DataFrame({<span class="s">"store"</span>: [<span class="s">"Boise"</span>], <span class="s">"rev"</span>: [<span class="s">100</span>]})
+b = pd.DataFrame({<span class="s">"store"</span>: [<span class="s">"Bend"</span>], <span class="s">"rev"</span>: [<span class="s">80</span>], <span class="s">"visitors"</span>: [<span class="s">300</span>]})
+c = pd.concat([a, b], ignore_index=<span class="k">True</span>)
+print(c.shape, c[<span class="s">"visitors"</span>].isna().sum())</pre><div class="write"></div></div>
+        <div class="q" data-sc="6"><div class="qn">Q6</div><div class="qt"><code class="inline">daily</code> has the columns <code class="inline">date</code> and <code class="inline">store</code>; <code class="inline">weather</code> has <code class="inline">date</code> and <code class="inline">city</code> (the same four place names). Each has one row per place per day. Which call attaches the weather to every sales row?</div><div class="opts"><div class="opt">A) <code class="inline">daily.merge(weather, on=["date", "store"])</code></div><div class="opt">B) <code class="inline">daily.merge(weather, on="date", how="left")</code></div><div class="opt">C) <code class="inline">pd.concat([daily, weather], ignore_index=True)</code></div><div class="opt">D) <code class="inline">daily.merge(weather, left_on=["date", "store"], right_on=["date", "city"], how="left", validate="one_to_one")</code></div></div></div>
+      </div>
+    </div>
+  </section>
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">2.6</span><h3>Pivot Tables and Reshaping</h3><span class="dur">85 min lesson</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">By the end you can</div>
+        <ul class="tick">
+          <li>Build a summary grid with <code class="inline">pivot_table()</code> by choosing its rows, columns, values and aggregation, and add totals with <code class="inline">margins=True</code></li>
+          <li>Count and compare categories with <code class="inline">pd.crosstab()</code>, including row and column percentages</li>
+          <li>Choose between <code class="inline">pivot()</code> and <code class="inline">pivot_table()</code>, and explain the "duplicate entries" error</li>
+          <li>Recognize wide and tidy (long) layouts and convert between them with <code class="inline">melt()</code>, <code class="inline">stack()</code> and <code class="inline">unstack()</code></li>
+          <li>Check a pivot before you trust it: its aggregation, its cell counts, its empty cells and its totals</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Key ideas</div>
+        <ul class="tick">
+          <li><b>Logbook and scoreboard.</b> Long (tidy) data has one row per observation: it is for analysis. Wide data spreads one variable across the header: it is for reading. Tidy means each variable is a column, each observation a row, each cell one value.</li>
+          <li><b>Four questions.</b> <code class="inline">df.pivot_table(index=..., columns=..., values=..., aggfunc=...)</code>: what is each row, what is each column, which number goes in the cells, how are many rows combined? A pivot table is a groupby spread into a grid.</li>
+          <li><b>Always write <code class="inline">aggfunc=</code>.</b> The default is the mean, not the sum.</li>
+          <li><b>Totals and empty cells.</b> <code class="inline">margins=True</code> adds totals computed from all the underlying rows. A combination that never occurs is NaN: <code class="inline">fill_value=0</code> is right for counts and sums, wrong for averages. The corner of a count pivot should equal the number of source rows.</li>
+          <li><b><code class="inline">pd.crosstab(a, b)</code></b> counts combinations. <code class="inline">normalize="index"</code>: each row sums to 1 ('of online orders, what share were returned?'). <code class="inline">normalize="columns"</code>: each column sums to 1 ('of returned orders, what share were online?'). Different questions.</li>
+          <li><b><code class="inline">pivot()</code> versus <code class="inline">pivot_table()</code>.</b> <code class="inline">pivot()</code> only rearranges and fails with 'duplicate entries' when a cell would get several rows. That error is information about your data.</li>
+          <li><b><code class="inline">melt(id_vars=..., value_vars=..., var_name=..., value_name=...)</code></b> turns header labels back into a column. <code class="inline">stack()</code> and <code class="inline">unstack()</code> do the same moves on index levels.</li>
+          <li><b>Labels are sorted.</b> Month and weekday names come out alphabetical. Pivot on numbers, or <code class="inline">reindex</code> in the order you want.</li>
+          <li><b>Before you trust a pivot.</b> What is one row of the source? What is the aggregation? How many rows are behind each cell? What do empty cells mean? Do the totals reconcile? Does a total hide a difference inside it?</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Worked example: on which days do people order, online and in store?</div>
+        <p>A counting question with a trap in it. The orders are a logbook; the answer is a small grid: weekdays down the side, the two channels across the top. Watch the label order, and watch which direction the percentages run.</p>
+<p>Count the combinations with <code class="inline">crosstab</code>. The rows come out in alphabetical order: Friday first.</p>
+<pre class="code">day = orders[<span class="s">"order_date"</span>].dt.day_name().rename(<span class="s">"day"</span>)
+counts = pd.crosstab(day, orders[<span class="s">"channel"</span>], margins=<span class="k">True</span>)
+print(counts)</pre>
+<pre class="out">channel    online  store    All
+day                            
+Friday       1677   1098   2775
+Monday       2023    874   2897
+Saturday     1789   1487   3276
+Sunday       2004   1332   3336
+Thursday     1727    913   2640
+Tuesday      1853    859   2712
+Wednesday    1781    885   2666
+All         12854   7448  20302</pre>
+<p>Put the days in calendar order with <code class="inline">reindex</code>, and check that the corner is the number of orders.</p>
+<pre class="code">week = [<span class="s">"Monday"</span>, <span class="s">"Tuesday"</span>, <span class="s">"Wednesday"</span>, <span class="s">"Thursday"</span>, <span class="s">"Friday"</span>, <span class="s">"Saturday"</span>, <span class="s">"Sunday"</span>]
+counts = counts.reindex(week + [<span class="s">"All"</span>])
+print(counts.index.tolist())
+print(counts.loc[<span class="s">"All"</span>, <span class="s">"All"</span>], len(orders))</pre>
+<pre class="out">['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'All']
+20302 20302</pre>
+<p>Raw counts mislead, because there are more online orders on every day. Make each <b>column</b> add up to 100%: of each channel's orders, what share falls on each day?</p>
+<pre class="code">share = pd.crosstab(day, orders[<span class="s">"channel"</span>], normalize=<span class="s">"columns"</span>).reindex(week) * <span class="s">100</span>
+print(share.round(<span class="s">1</span>))</pre>
+<pre class="out">channel    online  store
+day                     
+Monday       15.7   11.7
+Tuesday      14.4   11.5
+Wednesday    13.9   11.9
+Thursday     13.4   12.3
+Friday       13.0   14.7
+Saturday     13.9   20.0
+Sunday       15.6   17.9</pre>
+<p>The grid is for people. Melt it back to a logbook for a program (a chart in Module 3 would want this shape).</p>
+<pre class="code">tidy = share.round(<span class="s">1</span>).reset_index().melt(id_vars=<span class="s">"day"</span>, var_name=<span class="s">"channel"</span>, value_name=<span class="s">"pct"</span>)
+print(tidy.shape)
+print(tidy.sort_values(<span class="s">"pct"</span>, ascending=<span class="k">False</span>).head(<span class="s">3</span>))</pre>
+<pre class="out">(14, 3)
+         day channel   pct
+12  Saturday   store  20.0
+13    Sunday   store  17.9
+0     Monday  online  15.7</pre>
+        <p>Stores are a weekend business: Saturday and Sunday bring 20.0% and 17.9% of in-store orders, when an even week would give 14.3% a day. Online ordering is flatter, with Monday and Sunday on top at 15.7% and 15.6%. The column percentages answer 'of store orders, what share is on a Saturday?'. Row percentages would answer a different question: 'of Saturday's orders, what share is in a store?'.</p>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab</div>
+        <ul class="tick lab">
+          <li><code class="inline">labs/module-06/l2_6-pivot-tables/payment_returns_starter.py</code> (about 15 min): Are orders paid one way returned more often than orders paid another way?</li>
+          <li><code class="inline">labs/module-06/l2_6-pivot-tables/survey_by_age_starter.py</code> (about 15 min): Which survey question does each age group score lowest, and how many answers are behind each average?</li>
+          <li><code class="inline">labs/module-06/l2_6-pivot-tables/weather_grid_starter.py</code> (about 15 min): On how many days was each city the warmest, what is the average high by month, and what goes wrong when months are names?</li>
+        </ul>
+        <ol class="steps lab">
+          <li>Open <code class="inline">payment_returns_starter.py</code>. Before each pivot, say the four things: rows ______ columns ______ values ______ how to combine ______</li>
+          <li>TODO 2: one cell is empty. Should you fill it with 0? Yes / No, because ______________________</li>
+          <li>TODO 4: finish both sentences with your numbers. Which one answers the question 'which payment method has a returns problem?'</li>
+          <li>TODO 5: compare the <code class="inline">All</code> column with the two columns beside it. What do you now think about payment method and returns? ______________________</li>
+          <li>Then <code class="inline">survey_by_age_starter.py</code> (it saves one file to the <code class="inline">output/</code> folder next to the lab). <code class="inline">weather_grid_starter.py</code> is homework or a stretch.</li>
+        </ol>
+      </div>
+      <div class="blk"><div class="h">Predict, then run</div>
+        <p>Write what you think each one prints <b>before</b> you run it. Being wrong here is useful: it shows you exactly which rule to look at again.</p>
+<p><b>P1.</b> An empty cell.</p>
+<pre class="code">t = pd.DataFrame({<span class="s">"pay"</span>: [<span class="s">"card"</span>, <span class="s">"cash"</span>, <span class="s">"card"</span>], <span class="s">"ch"</span>: [<span class="s">"web"</span>, <span class="s">"shop"</span>, <span class="s">"shop"</span>],
+                  <span class="s">"n"</span>: [<span class="s">1</span>, <span class="s">1</span>, <span class="s">1</span>]})
+p = t.pivot_table(index=<span class="s">"pay"</span>, columns=<span class="s">"ch"</span>, values=<span class="s">"n"</span>, aggfunc=<span class="s">"count"</span>)
+print(p.shape, p.isna().sum().sum(), p.loc[<span class="s">"card"</span>, <span class="s">"web"</span>])</pre>
+<div class="write"></div>
+<p><b>P2.</b> Labels after a pivot.</p>
+<pre class="code">t = pd.DataFrame({<span class="s">"month"</span>: [<span class="s">"Jan"</span>, <span class="s">"Feb"</span>, <span class="s">"Mar"</span>, <span class="s">"Apr"</span>], <span class="s">"store"</span>: [<span class="s">"a"</span>] * <span class="s">4</span>,
+                  <span class="s">"rev"</span>: [<span class="s">1</span>, <span class="s">2</span>, <span class="s">3</span>, <span class="s">4</span>]})
+print(t.pivot(index=<span class="s">"month"</span>, columns=<span class="s">"store"</span>, values=<span class="s">"rev"</span>).index.tolist())</pre>
+<div class="write"></div>
+<p><b>P3.</b> A margin of means.</p>
+<pre class="code">t = pd.DataFrame({<span class="s">"store"</span>: [<span class="s">"a"</span>, <span class="s">"a"</span>, <span class="s">"a"</span>, <span class="s">"b"</span>], <span class="s">"amt"</span>: [<span class="s">10</span>, <span class="s">10</span>, <span class="s">10</span>, <span class="s">50</span>]})
+p = t.pivot_table(index=<span class="s">"store"</span>, values=<span class="s">"amt"</span>, aggfunc=<span class="s">"mean"</span>, margins=<span class="k">True</span>)
+print(p[<span class="s">"amt"</span>].tolist(), t.groupby(<span class="s">"store"</span>)[<span class="s">"amt"</span>].mean().mean())</pre>
+<div class="write"></div>
+      </div>
+      <div class="blk"><div class="h">Lesson project: start in class, finish at home</div>
+        <ul class="tick">
+          <li>Project: <b>The Seasonality Report</b> (lesson page, six steps). In class: Steps 1 to 3 in <code class="inline">lesson_2_6_project</code> (build the logbook, pivot with totals, find the missing revenue).</li>
+          <li>At home: Steps 4 to 6. You are done when the pivot's <code class="inline">All</code> / <code class="inline">All</code> cell equals $3,715,829.95, the month columns run 1 to 12, and <code class="inline">category_seasonality.csv</code> has 108 rows and three columns.</li>
+          <li>Then the lesson's Exercises 1 to 3, the Quick Quiz and your journal entry. Exercise 4 is a stretch.</li>
+          <li>Keep <code class="inline">category_seasonality.csv</code> for Module 3.</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">My notes</div>
+        <div class="write tall"></div>
+      </div>
+      <div class="blk"><div class="h">Self-check</div>
+        <p>Six questions on Lesson 2.6. No notes on the first pass; then check with your instructor.</p>
+        <div class="q" data-sc="7"><div class="qn">Q7</div><div class="qt">What does this print?</div><pre class="code">t = pd.DataFrame({<span class="s">"store"</span>: [<span class="s">"a"</span>, <span class="s">"a"</span>, <span class="s">"b"</span>], <span class="s">"year"</span>: [<span class="s">2024</span>, <span class="s">2024</span>, <span class="s">2025</span>], <span class="s">"amt"</span>: [<span class="s">10</span>, <span class="s">30</span>, <span class="s">5</span>]})
+p = t.pivot_table(index=<span class="s">"store"</span>, columns=<span class="s">"year"</span>, values=<span class="s">"amt"</span>)
+print(p.loc[<span class="s">"a"</span>, <span class="s">2024</span>], p.shape)</pre><div class="opts"><div class="opt">A) <code class="inline">20.0 (2, 2)</code></div><div class="opt">B) <code class="inline">40 (2, 2)</code></div><div class="opt">C) <code class="inline">20.0 (3, 2)</code></div><div class="opt">D) A <code class="inline">ValueError: Index contains duplicate entries</code></div></div></div>
+        <div class="q" data-sc="8" data-kind="short"><div class="qn">Q8</div><div class="qt">What does this print?</div><pre class="code">w = pd.DataFrame({<span class="s">"month"</span>: [<span class="s">"Jan"</span>, <span class="s">"Feb"</span>], <span class="s">"Boise"</span>: [<span class="s">5</span>, <span class="s">6</span>], <span class="s">"Bend"</span>: [<span class="s">3</span>, <span class="s">4</span>], <span class="s">"Online"</span>: [<span class="s">1</span>, <span class="s">2</span>]})
+tidy = w.melt(id_vars=<span class="s">"month"</span>, var_name=<span class="s">"store"</span>, value_name=<span class="s">"rev"</span>)
+print(tidy.shape, tidy[<span class="s">"rev"</span>].sum())</pre><div class="write"></div></div>
+        <div class="q" data-sc="9"><div class="qn">Q9</div><div class="qt">In <code class="inline">pd.crosstab(orders["channel"], orders["status"], normalize="index")</code>, the cell in row <code class="inline">online</code>, column <code class="inline">returned</code> is 0.069. What does it mean?</div><div class="opts"><div class="opt">A) Of all returned orders, 6.9% were online</div><div class="opt">B) 6.9% of all orders are online orders that were returned</div><div class="opt">C) Online orders are 6.9% more likely to be returned than store orders</div><div class="opt">D) Of online orders, 6.9% were returned</div></div></div>
+        <div class="q" data-sc="10"><div class="qn">Q10</div><div class="qt">A pivot that counts order lines by category and month, with <code class="inline">margins=True</code>, shows a grand total of 44,881. The source table has 45,490 rows. What is the most likely explanation?</div><div class="opts"><div class="opt">A) <code class="inline">fill_value=0</code> removed the lines in empty cells</div><div class="opt">B) <code class="inline">margins=True</code> leaves the largest category out of the total</div><div class="opt">C) 609 lines have a missing category (or month), and rows with a missing key are dropped silently</div><div class="opt">D) <code class="inline">pivot_table</code> removes duplicate rows before counting</div></div></div>
+        <div class="q" data-sc="11" data-kind="short"><div class="qn">Q11</div><div class="qt">What does this print?</div><pre class="code">idx = pd.MultiIndex.from_product([[<span class="s">"a"</span>, <span class="s">"b"</span>], [<span class="s">2024</span>, <span class="s">2025</span>]])
+s = pd.Series([<span class="s">1</span>, <span class="s">2</span>, <span class="s">3</span>, <span class="s">4</span>], index=idx)
+u = s.unstack()
+print(u.shape, u.loc[<span class="s">"b"</span>, <span class="s">2024</span>])</pre><div class="write"></div></div>
+        <div class="q" data-sc="12"><div class="qn">Q12</div><div class="qt"><code class="inline">orders.pivot(index="store", columns="status", values="order_total")</code> raises <code class="inline">ValueError: Index contains duplicate entries, cannot reshape</code>. What is the right response?</div><div class="opts"><div class="opt">A) Call <code class="inline">orders.drop_duplicates()</code> first, then <code class="inline">pivot()</code> again</div><div class="opt">B) Decide how to combine the rows and use <code class="inline">pivot_table(..., aggfunc="sum")</code></div><div class="opt">C) Sort the table by store and status, then <code class="inline">pivot()</code> again</div><div class="opt">D) Convert <code class="inline">store</code> and <code class="inline">status</code> to the <code class="inline">category</code> dtype</div></div></div>
+      </div>
+    </div>
+  </section>
+  <div class="sec"><h2>Notes</h2><span class="rule"></span></div>
+  <div class="notes-lines"></div>
+  <div class="sec"><h2>Homework Checklist</h2><span class="rule"></span></div>
+  <ul class="tick lab">
+          <li>☐ 2.5 project finished: <code class="inline">lines</code> has 45,490 rows after both merges, revenue $3,715,829.95, the pricing trap explained</li>
+          <li>☐ 2.5 exercises 1 to 4, Quick Quiz, journal entry</li>
+          <li>☐ 2.6 project finished: the corner reconciles, months run 1 to 12, <code class="inline">category_seasonality.csv</code> has 108 rows</li>
+          <li>☐ 2.6 exercises 1 to 3, Quick Quiz, journal entry</li>
+          <li>☐ Labs: <code class="inline">customer_profiles</code>, <code class="inline">payment_returns</code>, <code class="inline">survey_by_age</code>; then <code class="inline">orders_weather</code>, <code class="inline">weather_grid</code>, <code class="inline">debug_merges.py</code></li>
+          <li>☐ Rebuilt <code class="inline">wide</code> (daily revenue, one column per store) from memory and looked at Bend, 10 to 16 August 2024</li>
+          <li>☐ Bring to Session 7: laptop, this workbook, my note about Bend. Nothing new to install</li>
+        </ul>
+  <div class="sec"><h2>Glossary for Session 6</h2><span class="rule"></span></div>
+  <ul class="tick">
+          <li><b>Key:</b> a column (or set of columns) that appears in two tables and connects their rows.</li>
+          <li><b>Merge / join:</b> combining two tables side by side by matching rows on a key.</li>
+          <li><b>Inner join:</b> keeps only keys found in both tables. The default of <code class="inline">merge</code>.</li>
+          <li><b>Left join:</b> keeps every row of the left table; unmatched rows get NaN in the borrowed columns.</li>
+          <li><b>Outer join:</b> keeps every row of both tables.</li>
+          <li><b>Indicator:</b> the <code class="inline">_merge</code> column added by <code class="inline">indicator=True</code>: <code class="inline">both</code>, <code class="inline">left_only</code> or <code class="inline">right_only</code>.</li>
+          <li><b>Many-to-one:</b> a relationship in which the key is unique in the right table: each left row finds at most one partner.</li>
+          <li><b>One-to-many:</b> the key is unique in the left table: each left row can match several right rows, so rows multiply.</li>
+          <li><b>Many-to-many:</b> the key repeats on both sides: every pairing appears. Usually a mistake.</li>
+          <li><b><code class="inline">validate=</code>:</b> a <code class="inline">merge</code> argument that states the expected relationship and raises <code class="inline">MergeError</code> if the keys say otherwise.</li>
+          <li><b>Concatenate:</b> stacking tables on top of each other with <code class="inline">pd.concat</code>.</li>
+          <li><b>Long (tidy) data:</b> one row per observation, one column per variable: the logbook.</li>
+          <li><b>Wide data:</b> one variable's values spread across the column headers: the scoreboard.</li>
+          <li><b>Pivot table:</b> a groupby on row and column keys whose result is spread into a grid.</li>
+          <li><b>Margins:</b> the totals row and column added by <code class="inline">margins=True</code>, computed from all the underlying rows.</li>
+          <li><b>Crosstab:</b> a table of counts of two categorical columns (<code class="inline">pd.crosstab</code>); <code class="inline">normalize</code> turns counts into shares.</li>
+          <li><b>Melt:</b> turning column headers back into the values of one column (<code class="inline">df.melt</code>): wide to tidy.</li>
+        </ul>
+
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 6 · Participant Workbook · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Participant Workbook: Session 7</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Student workbook —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">write in it · bring it to every session</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Participant Workbook</div>
+    <h1>Session 7: Time Series and Windows</h1>
+    <p class="sub">Your working notebook for the session where the calendar becomes part of your data. Before the break you turn a column of date text into a ruler, find the days that are missing from two years of store sales, and roll days up into weeks, months and years. After the break you slide windows along that ruler: moving averages, running totals and ranks, and you learn to keep every calculation honest about what it could have known.</p>
+    <div class="meta-row">
+      <span class="chip">Lessons <b>2.7–2.8</b></span>
+      <span class="chip"><b>2</b> lessons</span>
+      <span class="chip">Session <b>7</b> · 3 hours</span>
+      <span class="chip">Name: ____________________</span>
+    </div>
+  </header>
+
+  <div class="note"><div class="t">How to use this workbook</div><p>Each lesson has <b>Key ideas</b> (the reference to keep), a <b>Worked example</b> with its real output, the <b>Guided lab</b> you do in class, <b>Predict, then run</b> boxes, the start of the <b>lesson project</b>, a six-question <b>Self-check</b> and space for notes. The lab files are in <code class="inline">labs/module-07/</code>: open the <code class="inline">_starter.py</code> file, run it as it is, then work through the TODOs in order. Every starter runs before you change anything and tells you which TODOs are still open.</p></div>
+  <div class="sec"><h2>Session Goals</h2><span class="rule"></span></div>
+  <ul class="tick">
+    <li>Turn date text into real dates and select days, months and ranges with a date string</li>
+    <li>Check a time series against the calendar, and decide whether each missing day is a true zero or an unknown</li>
+    <li>Roll daily rows up to weeks, months and years with <code class="inline">resample()</code>, and print the count beside every total</li>
+    <li>Measure change with <code class="inline">shift()</code>, <code class="inline">diff()</code> and <code class="inline">pct_change()</code>, including year over year</li>
+    <li>Smooth a series with a rolling window, and build running totals, year-to-date figures and ranks</li>
+    <li>Write a baseline that uses only the past, and explain look-ahead leakage in your own words</li>
+  </ul>
+  <div class="sec"><h2>Progress Tracker</h2><span class="rule"></span></div>
+  <ul class="tick lab">
+    <li>☐ <b>2.7 lab</b> <code class="inline">units_calendar</code>: I found Bend's incomplete weeks and its best complete week</li>
+    <li>☐ <b>2.7 project</b> The Store Trend Report: Step 1 runs in class; Steps 2 to 6 finished at home</li>
+    <li>☐ <b>2.8 lab</b> <code class="inline">foot_traffic</code>: I found the date from which Flagstaff has stayed ahead of Bend</li>
+    <li>☐ <b>2.8 project</b> The Sale-Day Detector: Step 1 runs in class; Steps 2 to 5 finished at home</li>
+    <li>☐ I did each lesson's exercises and Quick Quiz, and wrote both journal entries</li>
+  </ul>
+  <div class="sec"><h2>Lessons</h2><span class="rule"></span></div>
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">2.7</span><h3>Time Series</h3><span class="dur">90 min solo</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Key ideas</div>
+        <ul class="tick">
+    <li><b>Dates are a ruler, not labels.</b> Text that looks like a date has no order, no distances and no months. Parse it: <code class="inline">pd.read_csv(..., parse_dates=["date"])</code> or <code class="inline">pd.to_datetime(column)</code>. Check <code class="inline">df.dtypes</code> after every load.</li>
+    <li><b><code class="inline">.dt</code> reads the parts</b> of a date column: <code class="inline">.dt.year</code>, <code class="inline">.dt.month</code>, <code class="inline">.dt.dayofweek</code> (Monday is 0), <code class="inline">.dt.day_name()</code>. The new columns are ordinary columns you can group by.</li>
+    <li><b>Put dates in the index</b> and <code class="inline">.loc</code> understands strings: <code class="inline">.loc["2025-07-04"]</code> is a day, <code class="inline">.loc["2025-07"]</code> a month, <code class="inline">.loc["2025"]</code> a year. A string range includes <b>both</b> ends.</li>
+    <li><b>Check against the calendar.</b> <code class="inline">pd.date_range(start, end, freq="D")</code> is every day; <code class="inline">calendar.difference(table.index)</code> is the days you do not have; <code class="inline">asfreq("D")</code> gives each of them a row of <code class="inline">NaN</code>.</li>
+    <li><b>A gap is a decision.</b> Closed store: a true 0. Export failed or value blank: unknown, so leave it <code class="inline">NaN</code>, or estimate it and say so. The data cannot tell you which is which; documentation can.</li>
+    <li><b><code class="inline">resample()</code> is groupby for the calendar.</b> Sums skip <code class="inline">NaN</code> without telling you, so print <code class="inline">count</code> beside every <code class="inline">sum</code>.</li>
+    <li><b>Change means "compared with an earlier row".</b> <code class="inline">shift(1)</code> shows the previous row, <code class="inline">diff()</code> subtracts it, <code class="inline">pct_change()</code> divides by it. They count rows, so they mean "earlier in time" only on a complete calendar.</li>
+    <li><b>The order of operations:</b> parse → index → complete the calendar → decide each gap → then resample, shift or compare.</li>
+  </ul>
+        <table class="timing"><thead><tr><th>You want</th><th>Write</th></tr></thead><tbody><tr><td>Real dates when loading</td><td><code class="inline">pd.read_csv(path, parse_dates=["date"])</code></td></tr><tr><td>Every row of one month</td><td><code class="inline">s.loc["2025-07"]</code></td></tr><tr><td>A range, both ends included</td><td><code class="inline">s.loc["2024-12-30":"2025-01-02"]</code></td></tr><tr><td>The days that are missing</td><td><code class="inline">pd.date_range(a, b, freq="D").difference(df.index)</code></td></tr><tr><td>One row per calendar day</td><td><code class="inline">df.asfreq("D")</code></td></tr><tr><td>Monthly totals with a check</td><td><code class="inline">s.resample("ME").agg(["sum", "count"])</code></td></tr><tr><td>Monthly totals from a date column</td><td><code class="inline">df.resample("ME", on="order_date")["order_total"].sum()</code></td></tr><tr><td>Per group and per quarter, long table</td><td><code class="inline">df.groupby(["store", pd.Grouper(key="date", freq="QE")])</code></td></tr><tr><td>Growth against last year (monthly rows)</td><td><code class="inline">monthly.pct_change(12)</code></td></tr><tr><td class="t">Buckets</td><td><code class="inline">"D"</code> day · <code class="inline">"W"</code> week ending Sunday · <code class="inline">"ME"</code> month · <code class="inline">"QE"</code> quarter · <code class="inline">"YE"</code> year</td></tr></tbody></table>
+      </div>
+      <div class="blk"><div class="h">Worked example: how many rainy days, and is the calendar complete?</div>
+        <p>The weather file has one row per city per day. Before counting anything by month, check the calendar. (This example uses <code class="inline">data/store_weather.csv</code>, which the lesson does not, so the numbers are new.)</p>
+        <p>Parse the dates, go wide, and compare with a full calendar.</p>
+<pre class="code">weather = pd.read_csv(<span class="s">"data/store_weather.csv"</span>, parse_dates=[<span class="s">"date"</span>])
+rain = weather.pivot(index=<span class="s">"date"</span>, columns=<span class="s">"city"</span>, values=<span class="s">"precip_in"</span>)
+calendar = pd.date_range(rain.index.min(), rain.index.max(), freq=<span class="s">"D"</span>)
+print(len(rain), len(calendar), len(calendar.difference(rain.index)))</pre>
+<pre class="out">731 731 0</pre>
+        <p>731 rows, 731 days, nothing missing: this table needs no <code class="inline">asfreq</code>. Now count the days with at least 0.10 inches of rain in each quarter. A comparison gives True/False, and the sum of True/False values is a count.</p>
+<pre class="code">rainy = rain &gt;= <span class="s">0.10</span>
+by_quarter = rainy.resample(<span class="s">"QE"</span>).agg([<span class="s">"sum"</span>, <span class="s">"count"</span>])
+print(by_quarter[<span class="s">"Flagstaff"</span>])</pre>
+<pre class="out">            sum  count
+date                  
+2024-03-31   15     91
+2024-06-30    3     91
+2024-09-30   26     92
+2024-12-31    9     92
+2025-03-31    9     90
+2025-06-30    4     91
+2025-09-30   25     92
+2025-12-31    8     92</pre>
+        <p><code class="inline">count</code> confirms each quarter is complete (90 to 92 days). Flagstaff's rain arrives in the third quarter. Is that the same in both years? Compare each quarter with the same quarter a year earlier: 4 rows back.</p>
+<pre class="code">print(rainy.resample(<span class="s">"QE"</span>).sum().diff(<span class="s">4</span>).loc[<span class="s">"2025"</span>])</pre>
+<pre class="out">city        Asheville  Bend  Boise  Flagstaff
+date                                         
+2025-03-31       -3.0   3.0   -5.0       -6.0
+2025-06-30        4.0  -2.0    1.0        1.0
+2025-09-30        3.0  -1.0    4.0       -1.0
+2025-12-31       -2.0   2.0    0.0       -1.0</pre>
+        <p>Read one cell: Asheville had 3 more rainy days in the third quarter of 2025 than in the third quarter of 2024. The pattern for this example was the order of operations: parse, index, check the calendar, then resample and compare.</p>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab</div>
+        <p>Two labs practice this lesson on data the lesson did not use. Do Lab 2.7-A in class. Lab 2.7-B is for early finishers and for homework.</p>
+        <p><b>Lab 2.7-A · An honest weekly calendar</b> (25 minutes, in class): open <code class="inline">labs/module-07/l2_7-time-series/units_calendar_starter.py</code>. Bend's manager wants unit sales by week with no misleading weeks. Which weekly totals are built from fewer than 7 days, what was the best complete week, and which week-over-week changes should not be reported?</p>
+        <ol class="steps lab">
+    <li><b>TODO 1:</b> build the full calendar and find the days on which every store was closed.</li>
+    <li><b>TODO 2:</b> give the table a row for every day with <code class="inline">asfreq("D")</code> and count the missing days per store.</li>
+    <li><b>TODO 3:</b> set the closed days to 0. Leave the failed exports as <code class="inline">NaN</code>.</li>
+    <li><b>TODO 4:</b> resample Bend to weeks with <code class="inline">sum</code> and <code class="inline">count</code>, and list the weeks with fewer than 7 days.</li>
+    <li><b>TODO 5:</b> find the best week among the complete ones.</li>
+    <li><b>TODO 6:</b> print the week-over-week change for August 2024 and mark the changes you would not report.</li>
+  </ol>
+        <p><b>Done looks like:</b> a list of four closed dates; missing days of 4, 7, 4, 6 and then 0, 3, 0, 2; two incomplete weeks; a best complete week ending on a Sunday in late summer 2025; four changes, two of them caused by the gap.</p>
+        <p><b>Lab 2.7-B · Is the online return rate getting worse?</b> (20 minutes, early finishers or homework): open <code class="inline">labs/module-07/l2_7-time-series/returns_trend_starter.py</code>. The support team says returns feel worse this year. Compute the share of online orders returned by month, quarter and year, compare each month with the same month a year earlier, and write one honest sentence.</p>
+        <ol class="steps lab">
+    <li><b>TODO 1:</b> resample the online orders by month on <code class="inline">order_date</code> and aggregate the True/False <code class="inline">returned</code> column with <code class="inline">mean</code>, <code class="inline">sum</code> and <code class="inline">count</code>.</li>
+    <li><b>TODO 2:</b> name the highest and the lowest month.</li>
+    <li><b>TODO 3:</b> the same rate by quarter and by year.</li>
+    <li><b>TODO 4:</b> <code class="inline">diff(12)</code> for the year-over-year change in percentage points; count the 2025 months that were worse.</li>
+    <li><b>TODO 5:</b> write your conclusion in one sentence.</li>
+  </ol>
+        <p><b>Done looks like:</b> 24 monthly rates between about 5.7% and 9.1%, 8 quarterly rates, 2 yearly rates, 12 year-over-year changes, and a sentence that says whether there is a trend.</p>
+      </div>
+      <div class="blk"><div class="h">Predict, then run</div>
+        <p>Write your prediction on the line <b>before</b> you run the code. Being wrong here is useful: it shows you exactly which idea to revisit.</p>
+        <p><b>Predict 2.7.1</b> How many rows does each selection return? (Two numbers.)</p>
+<pre class="code">days = pd.Series(<span class="s">1</span>, index=pd.date_range(<span class="s">"2024-01-01"</span>, <span class="s">"2024-12-31"</span>, freq=<span class="s">"D"</span>))
+print(len(days.loc[<span class="s">"2024-02"</span>]), len(days.loc[<span class="s">"2024-12-30"</span>:<span class="s">"2024-12-31"</span>]))</pre>
+        <div class="write"></div>
+        <p><b>Predict 2.7.2</b> One Sunday is missing from this small table. What are the two weekly sums, and the two counts?</p>
+<pre class="code">s = pd.Series([<span class="s">5</span>, <span class="s">5</span>, <span class="s">5</span>, <span class="s">5</span>, <span class="s">5</span>, <span class="s">5</span>, <span class="s">9</span>, <span class="s">9</span>, <span class="s">9</span>, <span class="s">9</span>, <span class="s">9</span>, <span class="s">9</span>, <span class="s">9</span>],
+              index=pd.date_range(<span class="s">"2025-03-03"</span>, periods=<span class="s">14</span>, freq=<span class="s">"D"</span>).delete(<span class="s">6</span>))
+print(s.resample(<span class="s">"W"</span>).agg([<span class="s">"sum"</span>, <span class="s">"count"</span>]).values.tolist())</pre>
+        <div class="write"></div>
+        <p><b>Predict 2.7.3</b> What does <code class="inline">diff()</code> print for the last row, and why is that surprising?</p>
+<pre class="code">s = pd.Series([<span class="s">100</span>, <span class="s">104</span>, <span class="s">120</span>],
+              index=pd.to_datetime([<span class="s">"2025-06-01"</span>, <span class="s">"2025-06-02"</span>, <span class="s">"2025-06-06"</span>]))
+print(s.diff().tolist())
+print(s.asfreq(<span class="s">"D"</span>).diff().tolist())</pre>
+        <div class="write"></div>
+      </div>
+      <div class="blk lab"><div class="h">Project start: The Store Trend Report</div>
+        <p>Lesson 2.7's project takes you from the raw daily file to a one-page trend report for each store. In class you do <b>Step 1</b> in a new notebook called <code class="inline">lesson_2_7_project</code>: load, go wide, complete the calendar, zero the closed days.</p><p><b>You are done with Step 1 when</b> your output shows <code class="inline">(731, 4)</code>, <code class="inline">4 days closed</code>, and unknown days of Asheville 1, Bend 6, Boise 1, Flagstaff 3.</p><p><b>At home:</b> Steps 2 to 6. Check yourself against two numbers in the headline table: Flagstaff +19.7% and Asheville -5.0%. Keep <code class="inline">store_monthly_revenue.csv</code>: Session 8 charts it.</p>
+      </div>
+      <div class="blk"><div class="h">Self-check (answers are with your instructor)</div>
+        <div class="q" data-sc="1"><div class="qn">Q1</div><div class="qt">After <code class="inline">raw = pd.read_csv("data/daily_sales.csv")</code>, the line <code class="inline">raw["date"].dt.month</code> raises <code class="inline">AttributeError: Can only use .dt accessor with datetimelike values</code>. What is the cause?</div><div class="opts"><div class="opt">A) Some dates are missing from the file</div><div class="opt">B) The column was loaded as text; pass <code class="inline">parse_dates=["date"]</code> or convert with <code class="inline">pd.to_datetime</code></div><div class="opt">C) <code class="inline">.dt</code> only works on the index, not on a column</div><div class="opt">D) <code class="inline">month</code> is a method and needs parentheses</div></div></div>
+        <div class="q" data-sc="2" data-kind="short"><div class="qn">Q2</div><div class="qt">What does this print?</div><pre class="code">s = pd.Series(range(<span class="s">10</span>),
+              index=pd.date_range(<span class="s">"2025-01-28"</span>, periods=<span class="s">10</span>, freq=<span class="s">"D"</span>))
+print(len(s.loc[<span class="s">"2025-01"</span>]), len(s.loc[<span class="s">"2025-01-30"</span>:<span class="s">"2025-02-02"</span>]))</pre><div class="write"></div></div>
+        <div class="q" data-sc="3"><div class="qn">Q3</div><div class="qt"><code class="inline">wide</code> has one row per date and 727 rows between 2024-01-01 and 2025-12-31, a span of 731 days. What does <code class="inline">wide.asfreq("D")</code> return?</div><div class="opts"><div class="opt">A) 727 rows; the four gaps are interpolated</div><div class="opt">B) 731 rows; the four new rows are filled with 0</div><div class="opt">C) An error, because the index has missing dates</div><div class="opt">D) 731 rows; the four new rows hold <code class="inline">NaN</code></div></div></div>
+        <div class="q" data-sc="4"><div class="qn">Q4</div><div class="qt">What does this print?</div><pre class="code">s = pd.Series([<span class="s">10.0</span>, np.nan, <span class="s">30.0</span>],
+              index=pd.to_datetime([<span class="s">"2025-05-01"</span>, <span class="s">"2025-05-02"</span>, <span class="s">"2025-05-03"</span>]))
+print(s.resample(<span class="s">"ME"</span>).agg([<span class="s">"sum"</span>, <span class="s">"count"</span>]).values.tolist())</pre><div class="opts"><div class="opt">A) <code class="inline">[[40.0, 2.0]]</code></div><div class="opt">B) <code class="inline">[[nan, 3.0]]</code></div><div class="opt">C) <code class="inline">[[40.0, 3.0]]</code></div><div class="opt">D) <code class="inline">[[nan, 2.0]]</code></div></div></div>
+        <div class="q" data-sc="5"><div class="qn">Q5</div><div class="qt">Bend has no rows at all for three days in August 2024. On that rows-only Series, what does <code class="inline">bend_rows.diff(7)</code> compare the first Saturday after the gap with?</div><div class="opts"><div class="opt">A) The previous Saturday, seven days earlier</div><div class="opt">B) Nothing: the result is <code class="inline">NaN</code> because the window crosses a gap</div><div class="opt">C) The value seven <b>rows</b> earlier, which is ten days back and not a Saturday</div><div class="opt">D) Nothing: pandas raises an error on an irregular index</div></div></div>
+        <div class="q" data-sc="6" data-kind="short"><div class="qn">Q6</div><div class="qt">What does this print?</div><pre class="code">m = pd.Series([<span class="s">200</span>, <span class="s">220</span>, <span class="s">264</span>],
+              index=pd.date_range(<span class="s">"2025-01-31"</span>, periods=<span class="s">3</span>, freq=<span class="s">"ME"</span>))
+print((m.pct_change() * <span class="s">100</span>).round(<span class="s">1</span>).tolist())</pre><div class="write"></div></div>
+      </div>
+      <div class="blk"><div class="h">My notes for this lesson</div>
+        <div class="notes-lines"></div>
+      </div>
+    </div>
+  </section>
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">2.8</span><h3>Window Functions</h3><span class="dur">90 min solo</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Key ideas</div>
+        <ul class="tick">
+    <li><b>A window function returns one value for every row</b>, computed from nearby rows. <code class="inline">groupby().agg()</code> and <code class="inline">resample()</code> return one value per group.</li>
+    <li><b><code class="inline">rolling(n)</code></b> is a fixed pane sliding down the rows: this row and the <code class="inline">n - 1</code> before it. Follow it with <code class="inline">.mean()</code>, <code class="inline">.sum()</code>, <code class="inline">.max()</code>, <code class="inline">.std()</code>. Match <code class="inline">n</code> to the cycle you want to remove: 7 for a weekly rhythm.</li>
+    <li><b>A window must be full by default.</b> The first <code class="inline">n - 1</code> rows are <code class="inline">NaN</code>, and one missing value blanks <code class="inline">n</code> results. <code class="inline">min_periods=</code> relaxes that. Choose a threshold you can defend (6 of 7, 21 of 28), not 1.</li>
+    <li><b><code class="inline">center=True</code></b> puts the row in the middle of its window, so it uses future rows. Fine for describing history; never for predicting or flagging.</li>
+    <li><b>Expanding windows only grow:</b> <code class="inline">cumsum()</code> is a running total, <code class="inline">cummax()</code> the best so far, <code class="inline">expanding().mean()</code> the average so far. Year to date is a running total within each year: <code class="inline">groupby(index.year).cumsum()</code>.</li>
+    <li><b>On a long table: sort, group, window.</b> <code class="inline">groupby("store")["revenue"].transform(lambda s: s.rolling(7).mean())</code> keeps the rows lined up. Quick test: the first rows of <b>each</b> group are <code class="inline">NaN</code>.</li>
+    <li><b><code class="inline">rank()</code></b> gives positions. <code class="inline">ascending=False</code> makes the largest value rank 1; <code class="inline">method=</code> settles ties; <code class="inline">pct=True</code> gives percentiles; <code class="inline">groupby(...).rank()</code> ranks inside each group.</li>
+    <li><b>Look-ahead leakage:</b> a baseline must not contain the row it judges, or anything after it. Ask of every window: "On that day, could I have known every number in it?" Shift first: <code class="inline">s.shift(1).rolling(7).mean()</code>.</li>
+  </ul>
+        <table class="timing"><thead><tr><th>Window</th><th>Remembers</th><th>Good for</th></tr></thead><tbody><tr><td class="t"><code class="inline">rolling(n)</code></td><td>The last n rows, equally</td><td>Removing a known cycle; easy to explain</td></tr><tr><td><code class="inline">expanding()</code> / <code class="inline">cumsum()</code></td><td>Everything so far, equally</td><td>Running totals, year to date, records</td></tr><tr><td class="t"><code class="inline">ewm(span=n)</code></td><td>Everything, recent rows more</td><td>A level that drifts; reacting quickly (read the lesson section)</td></tr><tr><td><code class="inline">shift(1)</code> then a window</td><td>Only rows before this one</td><td>Anything used to predict, flag or score the current row</td></tr></tbody></table>
+      </div>
+      <div class="blk"><div class="h">Worked example: smoothing temperatures, and a record that keeps being broken</div>
+        <p>Daily high temperatures in Boise jump around from day to day. A window makes the season visible. (This example uses <code class="inline">data/store_weather.csv</code>, which has no gaps, so it needs no calendar repair.)</p>
+        <p>One row per day for Boise, then a trailing 7-day mean. The first six rows have no full window yet.</p>
+<pre class="code">weather = pd.read_csv(<span class="s">"data/store_weather.csv"</span>, parse_dates=[<span class="s">"date"</span>])
+boise_high = weather[weather[<span class="s">"city"</span>] == <span class="s">"Boise"</span>].set_index(<span class="s">"date"</span>)[<span class="s">"high_f"</span>]
+view = pd.DataFrame({<span class="s">"high_f"</span>: boise_high,
+                     <span class="s">"avg_7d"</span>: boise_high.rolling(<span class="s">7</span>).mean().round(<span class="s">1</span>)})
+print(view.head(<span class="s">8</span>))</pre>
+<pre class="out">            high_f  avg_7d
+date                      
+2024-01-01      37     NaN
+2024-01-02      44     NaN
+2024-01-03      30     NaN
+2024-01-04      26     NaN
+2024-01-05      29     NaN
+2024-01-06      27     NaN
+2024-01-07      32    32.1
+2024-01-08      26    30.6</pre>
+        <p>A day sets a record when it equals the hottest day so far. <code class="inline">cummax()</code> is the hottest day so far.</p>
+<pre class="code">records = boise_high[boise_high == boise_high.cummax()]
+print(len(records), <span class="s">"record days; the last three:"</span>)
+print(records.tail(<span class="s">3</span>))</pre>
+<pre class="out">26 record days; the last three:
+date
+2024-07-02    109
+2025-07-12    110
+2025-07-13    112
+Name: high_f, dtype: int64</pre>
+        <p>Was July 13, 2025 unusual? Compare it with the 7 days <b>before</b> it, not with a window that contains it.</p>
+<pre class="code">before = boise_high.shift(<span class="s">1</span>).rolling(<span class="s">7</span>).mean()
+with_today = boise_high.rolling(<span class="s">7</span>).mean()
+day = <span class="s">"2025-07-13"</span>
+print(boise_high.loc[day], <span class="s">"| before:"</span>, round(before.loc[day], <span class="s">1</span>),
+      <span class="s">"| with today:"</span>, round(with_today.loc[day], <span class="s">1</span>))</pre>
+<pre class="out">112 | before: 88.3 | with today: 93.0</pre>
+        <p>The honest baseline (the seven days before) is lower than the one that includes the day itself, so the hot day stands out more against it. Any day you want to judge has to stay out of its own baseline.</p>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab</div>
+        <p>Two labs practice this lesson on data the lesson did not use. Do Lab 2.8-A in class. Lab 2.8-B is for early finishers and for homework.</p>
+        <p><b>Lab 2.8-A · Foot traffic: when did Flagstaff pass Bend?</b> (25 minutes, in class): open <code class="inline">labs/module-07/l2_8-window-functions/foot_traffic_starter.py</code>. Daily visitor counts zigzag with the week. Smooth them, then find when Flagstaff's foot traffic passed Bend's, how many visitor records Flagstaff set, and each store's busiest 7 consecutive days.</p>
+        <ol class="steps lab">
+    <li><b>TODO 1:</b> a 7-day rolling mean of visitors; look at Boise's first 8 rows.</li>
+    <li><b>TODO 2:</b> a 28-day rolling mean that still answers when at least 21 of the 28 days are known.</li>
+    <li><b>TODO 3:</b> compare Flagstaff's 28-day average with Bend's: the first day ahead, the number of days ahead, and the date from which Flagstaff has stayed ahead.</li>
+    <li><b>TODO 4:</b> Flagstaff's record days with <code class="inline">cummax()</code>.</li>
+    <li><b>TODO 5:</b> each store's busiest 7 consecutive days with a rolling sum and <code class="inline">idxmax()</code>.</li>
+  </ol>
+        <p><b>Done looks like:</b> six <code class="inline">NaN</code> then two numbers; a 4-by-4 table of 28-day averages; three lines about the crossover; a count of record days with the last three; four lines naming each store's busiest 7 days.</p>
+        <p><b>Lab 2.8-B · The online shop: milestones, ranks and a fair baseline</b> (20 minutes, early finishers or homework): open <code class="inline">labs/module-07/l2_8-window-functions/online_milestones_starter.py</code>. When did completed online revenue pass $1,000,000 in each year, where does each month rank within its year, how often did the shop set a new best day, and how unusual was the best day when judged only by what was known that morning?</p>
+        <ol class="steps lab">
+    <li><b>TODO 1:</b> year-to-date revenue with <code class="inline">groupby(day.index.year).cumsum()</code>, and the first date at or above 1,000,000 in each year.</li>
+    <li><b>TODO 2:</b> monthly totals, ranked within each year with <code class="inline">groupby(...).rank(ascending=False)</code>.</li>
+    <li><b>TODO 3:</b> record days with <code class="inline">cummax()</code>.</li>
+    <li><b>TODO 4:</b> a leak-free weekday baseline (the mean of the 4 same weekdays before) and the best day's ratio to it.</li>
+    <li><b>TODO 5:</b> the same baseline without <code class="inline">shift(1)</code>, and the count of days at 2 times baseline under each version.</li>
+  </ol>
+        <p><b>Done looks like:</b> two million-dollar dates about two months apart in the calendar; a 24-row table with December ranked 1 in both years; a count of record days; and two ratios for the best day, the honest one clearly larger.</p>
+      </div>
+      <div class="blk"><div class="h">Predict, then run</div>
+        <p>Write your prediction on the line <b>before</b> you run the code. Being wrong here is useful: it shows you exactly which idea to revisit.</p>
+        <p><b>Predict 2.8.1</b> How many <code class="inline">NaN</code> values, and what is the last number?</p>
+<pre class="code">s = pd.Series([<span class="s">2</span>, <span class="s">4</span>, <span class="s">6</span>, <span class="s">8</span>, <span class="s">10</span>, <span class="s">12</span>])
+r = s.rolling(<span class="s">4</span>).mean()
+print(int(r.isna().sum()), r.iloc[-<span class="s">1</span>])</pre>
+        <div class="write"></div>
+        <p><b>Predict 2.8.2</b> Two groups stacked in one column. What does each line print?</p>
+<pre class="code">t = pd.DataFrame({<span class="s">"g"</span>: [<span class="s">"a"</span>, <span class="s">"a"</span>, <span class="s">"a"</span>, <span class="s">"b"</span>, <span class="s">"b"</span>, <span class="s">"b"</span>],
+                  <span class="s">"v"</span>: [<span class="s">1</span>, <span class="s">2</span>, <span class="s">3</span>, <span class="s">10</span>, <span class="s">20</span>, <span class="s">30</span>]})
+print(t[<span class="s">"v"</span>].cumsum().tolist())
+print(t.groupby(<span class="s">"g"</span>)[<span class="s">"v"</span>].cumsum().tolist())</pre>
+        <div class="write"></div>
+        <p><b>Predict 2.8.3</b> Which of the three columns could you have computed on the morning of each row? Predict the last row of each.</p>
+<pre class="code">s = pd.Series([<span class="s">10</span>, <span class="s">10</span>, <span class="s">10</span>, <span class="s">40</span>, <span class="s">10</span>])
+print(s.rolling(<span class="s">3</span>).mean().round(<span class="s">1</span>).tolist())
+print(s.rolling(<span class="s">3</span>, center=<span class="k">True</span>).mean().round(<span class="s">1</span>).tolist())
+print(s.shift(<span class="s">1</span>).rolling(<span class="s">3</span>).mean().round(<span class="s">1</span>).tolist())</pre>
+        <div class="write"></div>
+      </div>
+      <div class="blk lab"><div class="h">Project start: The Sale-Day Detector</div>
+        <p>Lesson 2.8's project asks: Pinecrest ran six sale weekends in two years. If nobody had told you when, could you find them from revenue alone? In class you do <b>Step 1</b> in a new notebook called <code class="inline">lesson_2_8_project</code>: the clean revenue calendar, and a matching table of promotion flags to score against.</p><p><b>You are done with Step 1 when</b> <code class="inline">revenue</code> and <code class="inline">promo</code> are both <code class="inline">(731, 4)</code> and <code class="inline">promo.sum()</code> shows 24 for every store.</p><p><b>At home:</b> Steps 2 to 5. Your first detector will be wrong about three times in four. That is planned: Step 3 asks you to look at which days it gets wrong before you change anything. Check numbers: 260 store-days flagged at first, 142 with the weekday baseline. Keep <code class="inline">sale_day_flags.csv</code>.</p>
+      </div>
+      <div class="blk"><div class="h">Self-check (answers are with your instructor)</div>
+        <div class="q" data-sc="7"><div class="qn">Q7</div><div class="qt">What does this print?</div><pre class="code">s = pd.Series([<span class="s">4</span>, <span class="s">8</span>, <span class="s">6</span>, <span class="s">10</span>])
+print(s.rolling(<span class="s">3</span>, min_periods=<span class="s">2</span>).mean().tolist())</pre><div class="opts"><div class="opt">A) <code class="inline">[nan, nan, 6.0, 8.0]</code></div><div class="opt">B) <code class="inline">[4.0, 6.0, 6.0, 8.0]</code></div><div class="opt">C) <code class="inline">[nan, 6.0, 6.0, 8.0]</code></div><div class="opt">D) <code class="inline">[6.0, 6.0, 8.0, nan]</code></div></div></div>
+        <div class="q" data-sc="8" data-kind="short"><div class="qn">Q8</div><div class="qt">What does this print?</div><pre class="code">s = pd.Series([<span class="s">5</span>, <span class="s">3</span>, <span class="s">9</span>, <span class="s">4</span>, <span class="s">9</span>])
+print((s == s.cummax()).tolist())</pre><div class="write"></div></div>
+        <div class="q" data-sc="9"><div class="qn">Q9</div><div class="qt">A long table has columns <code class="inline">store</code>, <code class="inline">date</code>, <code class="inline">revenue</code>, sorted by date and then store. Which code adds each store's own 7-day average, lined up with the right rows?</div><div class="opts"><div class="opt">A) <code class="inline">df["avg"] = df["revenue"].rolling(7).mean()</code></div><div class="opt">B) <code class="inline">df["avg"] = df.groupby("store")["revenue"].rolling(7).mean()</code></div><div class="opt">C) <code class="inline">df["avg"] = df.groupby("date")["revenue"].transform(lambda s: s.rolling(7).mean())</code></div><div class="opt">D) Sort by store and date, then <code class="inline">df["avg"] = df.groupby("store")["revenue"].transform(lambda s: s.rolling(7).mean())</code></div></div></div>
+        <div class="q" data-sc="10"><div class="qn">Q10</div><div class="qt">What does this print?</div><pre class="code">s = pd.Series([<span class="s">30</span>, <span class="s">10</span>, <span class="s">30</span>, <span class="s">20</span>])
+print(s.rank(ascending=<span class="k">False</span>, method=<span class="s">"dense"</span>).tolist())</pre><div class="opts"><div class="opt">A) <code class="inline">[1.0, 3.0, 1.0, 2.0]</code></div><div class="opt">B) <code class="inline">[1.5, 4.0, 1.5, 3.0]</code></div><div class="opt">C) <code class="inline">[1.0, 4.0, 1.0, 3.0]</code></div><div class="opt">D) <code class="inline">[3.0, 1.0, 3.0, 2.0]</code></div></div></div>
+        <div class="q" data-sc="11"><div class="qn">Q11</div><div class="qt">To flag unusual days, an analyst computes <code class="inline">lift = rev / rev.rolling(28).mean()</code> and flags days where <code class="inline">lift &gt;= 1.5</code>. What is wrong with the baseline?</div><div class="opts"><div class="opt">A) A 28-day window is too long to react to a sale</div><div class="opt">B) Each day is inside its own baseline, so every spike is understated; use <code class="inline">rev.shift(1).rolling(28).mean()</code></div><div class="opt">C) A rolling mean cannot be used as a divisor</div><div class="opt">D) The first 27 rows are <code class="inline">NaN</code>, so the division fails</div></div></div>
+        <div class="q" data-sc="12" data-kind="short"><div class="qn">Q12</div><div class="qt">What does this print?</div><pre class="code">s = pd.Series([<span class="s">1</span>, <span class="s">2</span>, <span class="s">3</span>, <span class="s">4</span>, <span class="s">5</span>])
+print(s.shift(<span class="s">1</span>).rolling(<span class="s">2</span>).sum().tolist())</pre><div class="write"></div></div>
+      </div>
+      <div class="blk"><div class="h">My notes for this lesson</div>
+        <div class="notes-lines"></div>
+      </div>
+    </div>
+  </section>
+  <div class="sec"><h2>Exit Ticket</h2><span class="rule"></span></div>
+  <p>Answer on a sticky note or a scrap of paper, and hand it in on the way out.</p>
+  <ol class="steps">
+    <li>You resample daily revenue to monthly totals with <code class="inline">.sum()</code>. What do you print beside every total, and why?</li>
+    <li>Write an expression for a 7-day average of the Series <code class="inline">rev</code> that is safe to use for judging or predicting today.</li>
+    <li>List the order of operations for a time series, and name the step people skip most often.</li>
+  </ol>
+  <div class="sec"><h2>Homework Checklist</h2><span class="rule"></span></div>
+  <ul class="tick lab">
+    <li>☐ Finish the Lesson 2.7 project, <b>The Store Trend Report</b> (Steps 2 to 6). Check: Flagstaff +19.7%, Asheville -5.0%, and <code class="inline">store_monthly_revenue.csv</code> saved.</li>
+    <li>☐ Finish the Lesson 2.8 project, <b>The Sale-Day Detector</b> (Steps 2 to 5). Check: 260 flags at first, then 142 with the weekday baseline, and <code class="inline">sale_day_flags.csv</code> with 2,924 rows.</li>
+    <li>☐ Lesson 2.7: Exercises 1 to 3 (Exercise 4 is a stretch), the Quick Quiz and the journal prompt. Read <b>Time Zones in Brief</b>: it was not covered in the room.</li>
+    <li>☐ Lesson 2.8: Exercises 1 to 3 (Exercise 4 is a stretch), the Quick Quiz and the journal prompt. Read <b>Exponentially Weighted Windows</b>: it was only mentioned in the room.</li>
+    <li>☐ Kit labs not reached in the room: <code class="inline">labs/module-07/l2_7-time-series/returns_trend_starter.py</code> and <code class="inline">labs/module-07/l2_8-window-functions/online_milestones_starter.py</code> (about 20 minutes each).</li>
+    <li>☐ From Lesson 2.8, "Before the Next Lesson": open <code class="inline">data/customers.csv</code> and list three new columns you could compute for each customer that might help predict whether they will order again.</li>
+  </ul>
+  <div class="note lab"><div class="t">Bring to Session 8</div><p>Your two project notebooks, <code class="inline">store_monthly_revenue.csv</code> and <code class="inline">sale_day_flags.csv</code>, and your list of three customer features. Nothing new to install. At home, run <code class="inline">import matplotlib; print(matplotlib.__version__)</code> once and tell your instructor before the session if it fails.</p></div>
+  <div class="sec"><h2>Glossary</h2><span class="rule"></span></div>
+  <table class="timing"><thead><tr><th>Term</th><th>Meaning</th></tr></thead><tbody><tr><td class="t">Timestamp</td><td>One point in time. A <code class="inline">datetime64</code> column holds one per row; it knows its year, month and weekday.</td></tr><tr><td class="t">Timedelta</td><td>A length of time: what you get when you subtract two timestamps.</td></tr><tr><td class="t">NaT</td><td>"Not a time": the missing value for dates, as <code class="inline">NaN</code> is for numbers.</td></tr><tr><td class="t">DatetimeIndex</td><td>Row labels that are dates. It lets <code class="inline">.loc["2024-07"]</code> select a month and makes <code class="inline">resample</code> possible.</td></tr><tr><td class="t">asfreq</td><td>Give the table one row for every period (<code class="inline">"D"</code> = every day). Rows that did not exist appear as <code class="inline">NaN</code>.</td></tr><tr><td class="t">Resample</td><td>Groupby for the calendar: drop rows into weeks, months or quarters, then aggregate each bucket.</td></tr><tr><td>Frequency alias</td><td>The code for a bucket size: <code class="inline">"D"</code>, <code class="inline">"W"</code>, <code class="inline">"ME"</code>, <code class="inline">"QE"</code>, <code class="inline">"YE"</code>, <code class="inline">"h"</code>. The old <code class="inline">"M"</code>, <code class="inline">"Q"</code>, <code class="inline">"Y"</code>, <code class="inline">"H"</code> raise an error.</td></tr><tr><td>shift / diff / pct_change</td><td>The previous row's value beside this one; this row minus that; that change as a fraction.</td></tr><tr><td>Year over year</td><td>A period compared with the same period one year earlier: 12 rows back in monthly data, 4 in quarterly.</td></tr><tr><td>Window function</td><td>A calculation that returns one value for every row, computed from nearby rows.</td></tr><tr><td>Rolling window</td><td>A fixed-size window that slides down the rows: <code class="inline">rolling(7)</code> is this row and the six before it.</td></tr><tr><td class="t">min_periods</td><td>How many real values a window needs before it gives an answer. The default is all of them.</td></tr><tr><td>Expanding window</td><td>A window that starts at the first row and only grows: running totals, best so far.</td></tr><tr><td class="t">Year to date</td><td>A running total that restarts each January 1: <code class="inline">groupby(index.year).cumsum()</code>.</td></tr><tr><td class="t">Rank</td><td>A value's position in sorted order. <code class="inline">method=</code> settles ties; <code class="inline">pct=True</code> gives a percentile.</td></tr><tr><td>Look-ahead leakage</td><td>Using information in a calculation that was not available at the moment the calculation describes.</td></tr></tbody></table>
+
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 7 · Participant Workbook · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

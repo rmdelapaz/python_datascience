@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Participant Workbook: Session 16</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Student workbook —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">write in it · bring it to every session</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Participant Workbook</div>
+    <h1>Session 16: Documents and HTTP</h1>
+    <p class="sub">Your pages for Session 16. Before the break: a database whose records are nested documents, not rows. After the break: the request-and-response conversation behind every web page and API, and how to take part in it politely.</p>
+    <div class="meta-row">
+      <span class="chip">Lessons <b>5.5–6.1</b></span>
+      <span class="chip">Session <b>16</b> · 3 hours</span>
+      <span class="chip">Name: ____________________</span>
+    </div>
+  </header>
+
+  <div class="sec"><h2>Session Goals</h2><span class="rule"></span></div>
+<p>By the end of this session you will be able to:</p>
+<ul class="tick">
+  <li>explain how a document differs from a row, and say when each kind of database fits</li>
+  <li>query nested documents with pymongo: dot notation, operators, <code class="inline">$exists</code>, <code class="inline">$elemMatch</code>, projections</li>
+  <li>build a small aggregation pipeline and name the SQL and pandas counterpart of each stage</li>
+  <li>bring MongoDB results back into a pandas DataFrame</li>
+  <li>describe an HTTP request and response, and read the status, headers and body from Python</li>
+  <li>check <code class="inline">robots.txt</code>, identify yourself, set a timeout and check the status on every request</li>
+  <li>fetch JSON from an API with query parameters and turn it into a DataFrame</li>
+</ul>
+<div class="note"><div class="t">Two halves, one idea</div>
+<p>Before the break the data is nested documents in a database. After the break it is nested documents arriving over the web. Both end where everything in this course ends: in a DataFrame you already know how to clean, summarize and plot.</p>
+</div>
+
+  <div class="sec"><h2>Lessons</h2><span class="rule"></span></div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">5.5</span><h3>NoSQL with MongoDB</h3></div>
+    <div class="lesson-body">
+<div class="blk"><div class="h">Key ideas</div>
+<ul class="tick">
+  <li>A <b>document</b> is one record that can hold nested objects and lists: one website visit with its device, its pages and its cart. A <b>collection</b> is a set of documents, and they need not all have the same fields.</li>
+  <li>A <b>query is a dictionary</b>: <code class="inline">{"converted": True}</code>. Several pairs mean AND. Reach inside nested objects with <b>dot notation</b> in quotes: <code class="inline">"device.type"</code>.</li>
+  <li>Anything other than "equals" uses an <b>operator</b> that starts with <code class="inline">$</code>: <code class="inline">{"cart.value": {"$gte": 500}}</code>, <code class="inline">$in</code>, <code class="inline">$exists</code>, <code class="inline">$regex</code>.</li>
+  <li><b>Missing is not null.</b> In a query, <code class="inline">None</code> matches both. <code class="inline">{"$exists": False}</code> asks precisely "is the field absent?"</li>
+  <li>A condition on a list field (<code class="inline">"pages.path"</code>) is true when <b>any</b> element matches. Two conditions on the <b>same</b> element need <code class="inline">$elemMatch</code>.</li>
+  <li>The <b>aggregation pipeline</b> is a list of stages. <code class="inline">$match</code> filters (WHERE, or HAVING after a group), <code class="inline">$group</code> summarizes (GROUP BY), <code class="inline">$unwind</code> makes one document per list element (pandas <code class="inline">explode</code>), <code class="inline">$sort</code> and <code class="inline">$limit</code> order and cut.</li>
+  <li>Inside a pipeline, a field's <b>value</b> is written with a leading dollar: <code class="inline">"$device.type"</code>. In a query, the field name is just the key, with no dollar.</li>
+  <li>A wrong field name does not raise an error. It returns zero. <b>Be suspicious of zero:</b> look at one document with <code class="inline">find_one()</code> first.</li>
+  <li>Finish in pandas: <code class="inline">pd.DataFrame(list(cursor))</code> for flat results, <code class="inline">pd.json_normalize(docs)</code> for nested ones.</li>
+</ul>
+<table class="rubric"><thead><tr><th>SQL</th><th>MongoDB</th></tr></thead><tbody>
+<tr><td class="crit">Table</td><td>Collection</td></tr>
+<tr><td class="crit">Row</td><td>Document</td></tr>
+<tr><td class="crit">Column</td><td>Field</td></tr>
+<tr><td class="crit"><code class="inline">WHERE a = 1 AND b &gt; 2</code></td><td><code class="inline">{"a": 1, "b": {"$gt": 2}}</code></td></tr>
+<tr><td class="crit"><code class="inline">SELECT a, b</code></td><td>projection <code class="inline">{"a": 1, "b": 1, "_id": 0}</code></td></tr>
+<tr><td class="crit"><code class="inline">GROUP BY</code> + <code class="inline">COUNT(*)</code></td><td><code class="inline">$group</code> with <code class="inline">{"$sum": 1}</code></td></tr>
+<tr><td class="crit"><code class="inline">ORDER BY x DESC LIMIT 3</code></td><td><code class="inline">.sort("x", -1).limit(3)</code></td></tr>
+<tr><td class="crit">join to a child table</td><td>an embedded list, or <code class="inline">$unwind</code></td></tr>
+</tbody></table>
+</div>
+<div class="blk"><div class="h">Worked example: the search audience</div>
+<p>Question: how do visitors who arrive from a search engine behave? Read each block, cover the output, and say what you expect before you look.</p>
+<p><b>Step 1. Three counts with one base query.</b> <code class="inline">{**news, ...}</code> copies the dictionary and adds a condition. <code class="inline">"cart.items.0"</code> is "element 0 of the list": if it exists, the cart is not empty.</p>
+<pre class="code"><span class="k">with</span> open(<span class="s">"data/web_sessions.json"</span>, encoding=<span class="s">"utf-8"</span>) <span class="k">as</span> f:
+    sessions = json.load(f)[<span class="s">"sessions"</span>]
+web = mongomock.MongoClient()[<span class="s">"shop"</span>][<span class="s">"sessions"</span>]
+web.insert_many(sessions)
+
+news = {<span class="s">"utm.source"</span>: <span class="s">"search"</span>}
+print(<span class="s">"search sessions :"</span>, web.count_documents(news))
+has_cart = {<span class="s">"cart.items.0"</span>: {<span class="s">"$exists"</span>: <span class="k">True</span>}}
+print(<span class="s">"  with a cart   :"</span>, web.count_documents({**news, **has_cart}))
+print(<span class="s">"  that ordered  :"</span>, web.count_documents({**news, <span class="s">"converted"</span>: <span class="k">True</span>}))</pre>
+<pre class="out">search sessions : 915
+  with a cart   : 201
+  that ordered  : 85</pre>
+<p><b>Step 2. The same audience, grouped in one pipeline.</b> <code class="inline">$ifNull</code> supplies a label when the campaign is missing; <code class="inline">$cond</code> inside <code class="inline">$sum</code> counts only the sessions that converted. The percentage is finished in pandas.</p>
+<pre class="code">rows = list(web.aggregate([
+    {<span class="s">"$match"</span>: news},
+    {<span class="s">"$group"</span>: {<span class="s">"_id"</span>: {<span class="s">"$ifNull"</span>: [<span class="s">"$utm.campaign"</span>, <span class="s">"(no campaign)"</span>]},
+                <span class="s">"sessions"</span>: {<span class="s">"$sum"</span>: <span class="s">1</span>},
+                <span class="s">"orders"</span>: {<span class="s">"$sum"</span>: {<span class="s">"$cond"</span>: [<span class="s">"$converted"</span>, <span class="s">1</span>, <span class="s">0</span>]}},
+                <span class="s">"avg_cart"</span>: {<span class="s">"$avg"</span>: <span class="s">"$cart.value"</span>}}},
+    {<span class="s">"$sort"</span>: {<span class="s">"sessions"</span>: -<span class="s">1</span>}},
+]))
+table = pd.DataFrame(rows).rename(columns={<span class="s">"_id"</span>: <span class="s">"campaign"</span>})
+table = table[[<span class="s">"campaign"</span>, <span class="s">"sessions"</span>, <span class="s">"orders"</span>, <span class="s">"avg_cart"</span>]]
+table[<span class="s">"order_pct"</span>] = (<span class="s">100</span> * table[<span class="s">"orders"</span>] / table[<span class="s">"sessions"</span>]).round(<span class="s">1</span>)
+print(table.round(<span class="s">2</span>).to_string(index=<span class="k">False</span>))</pre>
+<pre class="out">        campaign  sessions  orders  avg_cart  order_pct
+   (no campaign)       601      52     56.88        8.7
+fall_gear_search       314      33     47.37       10.5</pre>
+<p><b>Step 3. Check it a second way.</b> Flatten the same documents and count in pandas. 601 + 314 = 915 and 52 + 33 = 85: the two routes agree. Notice which sessions have no campaign: the organic ones. Nobody ran a campaign for them.</p>
+<pre class="code">docs = list(web.find(news, {<span class="s">"_id"</span>: <span class="s">0</span>, <span class="s">"session_id"</span>: <span class="s">1</span>, <span class="s">"converted"</span>: <span class="s">1</span>,
+                            <span class="s">"utm"</span>: <span class="s">1</span>}))
+flat = pd.json_normalize(docs)
+print(flat.shape, list(flat.columns))
+print(flat.groupby(<span class="s">"utm.medium"</span>)[<span class="s">"converted"</span>].agg([<span class="s">"size"</span>, <span class="s">"sum"</span>]).to_string())
+print(flat[<span class="s">"utm.campaign"</span>].isna().sum(), <span class="s">"rows with no campaign"</span>)</pre>
+<pre class="out">(915, 5) ['session_id', 'converted', 'utm.source', 'utm.medium', 'utm.campaign']
+            size  sum
+utm.medium           
+cpc          314   33
+organic      601   52
+601 rows with no campaign</pre>
+</div>
+<div class="blk lab"><div class="h">Guided lab</div>
+<p><b>Lab 5.5-A · The sale page audit.</b> Open <code class="inline">labs/module-16/l5_5-nosql-mongodb/sale_page_audit_starter.py</code>. Run it once as it is: it prints the field names and several <code class="inline">None</code> values. Then work through TODO 1 to TODO 5. Each one is a single query.</p>
+<ul class="tick lab">
+  <li>Run after every TODO. One small step, then look.</li>
+  <li>TODO 3 is the thinking step: two queries that sound alike and count different things.</li>
+  <li>When you finish, line 6 compares two order rates. Write one sentence: what may you conclude from it, and what may you not?</li>
+</ul>
+<div class="write"></div>
+<div class="write"></div>
+<p><b>Lab 5.5-B · Landing pages and what is in the carts</b> (if you finish, or at home): <code class="inline">labs/module-16/l5_5-nosql-mongodb/landing_pages_starter.py</code>. Two pipelines, then a pandas check that should agree with them.</p>
+</div>
+<div class="blk"><div class="h">Predict, then run</div>
+<p>Set up once: load the sessions into a collection called <code class="inline">web</code>, as in the worked example.</p>
+<p>Write your prediction on the line <b>before</b> you run the code. A wrong prediction that you then explain is worth more than a right one.</p>
+<p><b>1.</b> The collection <code class="inline">web</code> holds the 2,400 sessions. 916 have no <code class="inline">utm</code> at all; another 737 have a <code class="inline">utm</code> object with no <code class="inline">campaign</code> in it. Predict the three numbers.</p>
+<pre class="code">print(web.count_documents({<span class="s">"utm.campaign"</span>: <span class="k">None</span>}))
+print(web.count_documents({<span class="s">"utm.campaign"</span>: {<span class="s">"$exists"</span>: <span class="k">False</span>}}))
+print(web.count_documents({<span class="s">"utm"</span>: {<span class="s">"$exists"</span>: <span class="k">True</span>},
+                           <span class="s">"utm.campaign"</span>: {<span class="s">"$exists"</span>: <span class="k">False</span>}}))</pre>
+<div class="write"></div>
+<p><b>2.</b> 15 converted sessions used a tablet. Predict the two numbers.</p>
+<pre class="code">cursor = web.find({<span class="s">"device.type"</span>: <span class="s">"tablet"</span>, <span class="s">"converted"</span>: <span class="k">True</span>},
+                  {<span class="s">"_id"</span>: <span class="s">0</span>, <span class="s">"session_id"</span>: <span class="s">1</span>})
+first = [d[<span class="s">"session_id"</span>] <span class="k">for</span> d <span class="k">in</span> cursor]
+second = [d[<span class="s">"session_id"</span>] <span class="k">for</span> d <span class="k">in</span> cursor]
+print(len(first), len(second))</pre>
+<div class="write"></div>
+<p><b>3.</b> 200 sessions have exactly one page. Every session has at least one page. Predict the first two numbers; then guess what the third line is counting.</p>
+<pre class="code">print(web.count_documents({<span class="s">"pages"</span>: {<span class="s">"$size"</span>: <span class="s">1</span>}}))
+print(web.count_documents({<span class="s">"pages.0"</span>: {<span class="s">"$exists"</span>: <span class="k">True</span>}}))
+print(web.count_documents({<span class="s">"cart.items"</span>: {<span class="s">"$size"</span>: <span class="s">0</span>}}))</pre>
+<div class="write"></div>
+</div>
+<div class="blk"><div class="h">Self-check (answers are in your instructor's key)</div>
+<div class="q" data-sc="1"><div class="qn">Q1</div><div class="qt">In the sessions collection, <code class="inline">utm</code> is <b>absent</b> from direct visits and never set to null. Which query counts exactly the sessions where the field is not there, and would still be right if some documents held <code class="inline">utm: null</code>?</div><div class="opts"><div class="opt">A) <code class="inline">{"utm": None}</code></div><div class="opt">B) <code class="inline">{"utm": {"$exists": False}}</code></div><div class="opt">C) <code class="inline">{"utm": ""}</code></div><div class="opt">D) <code class="inline">{"utm": {"$size": 0}}</code></div></div></div>
+<div class="q" data-sc="2"><div class="qn">Q2</div><div class="qt">What does this print?</div><pre class="code">c = mongomock.MongoClient()[<span class="s">"demo"</span>][<span class="s">"notes"</span>]
+c.insert_many([{<span class="s">"n"</span>: <span class="s">1</span>, <span class="s">"tags"</span>: [<span class="s">"a"</span>, <span class="s">"b"</span>]},
+               {<span class="s">"n"</span>: <span class="s">2</span>, <span class="s">"tags"</span>: [<span class="s">"b"</span>]},
+               {<span class="s">"n"</span>: <span class="s">3</span>}])
+print(c.count_documents({<span class="s">"tags"</span>: <span class="s">"b"</span>}), c.count_documents({<span class="s">"tags"</span>: <span class="k">None</span>}))</pre><div class="opts"><div class="opt">A) <code class="inline">3 0</code></div><div class="opt">B) <code class="inline">2 0</code></div><div class="opt">C) <code class="inline">1 1</code></div><div class="opt">D) <code class="inline">2 1</code></div></div></div>
+<div class="q" data-sc="3" data-kind="short"><div class="qn">Q3</div><div class="qt">What does this print?</div><pre class="code">c = mongomock.MongoClient()[<span class="s">"demo"</span>][<span class="s">"sales"</span>]
+c.insert_many([{<span class="s">"store"</span>: <span class="s">"Bend"</span>, <span class="s">"units"</span>: <span class="s">2</span>},
+               {<span class="s">"store"</span>: <span class="s">"Boise"</span>, <span class="s">"units"</span>: <span class="s">5</span>},
+               {<span class="s">"store"</span>: <span class="s">"Bend"</span>, <span class="s">"units"</span>: <span class="s">4</span>}])
+rows = c.aggregate([{<span class="s">"$group"</span>: {<span class="s">"_id"</span>: <span class="s">"$store"</span>, <span class="s">"units"</span>: {<span class="s">"$sum"</span>: <span class="s">"$units"</span>}}},
+                    {<span class="s">"$sort"</span>: {<span class="s">"units"</span>: -<span class="s">1</span>}}])
+print([(r[<span class="s">"_id"</span>], r[<span class="s">"units"</span>]) <span class="k">for</span> r <span class="k">in</span> rows])</pre><div class="write"></div></div>
+<div class="q" data-sc="4"><div class="qn">Q4</div><div class="qt">Which pipeline stage turns every element of a list into its own document, the way <code class="inline">explode</code> does in pandas?</div><div class="opts"><div class="opt">A) <code class="inline">$unwind</code></div><div class="opt">B) <code class="inline">$group</code></div><div class="opt">C) <code class="inline">$project</code></div><div class="opt">D) <code class="inline">$match</code></div></div></div>
+<div class="q" data-sc="5"><div class="qn">Q5</div><div class="qt">What does this print?</div><pre class="code">c = mongomock.MongoClient()[<span class="s">"demo"</span>][<span class="s">"visits"</span>]
+c.insert_many([
+    {<span class="s">"id"</span>: <span class="s">1</span>, <span class="s">"pages"</span>: [{<span class="s">"path"</span>: <span class="s">"/cart"</span>, <span class="s">"seconds"</span>: <span class="s">10</span>},
+                        {<span class="s">"path"</span>: <span class="s">"/sale"</span>, <span class="s">"seconds"</span>: <span class="s">200</span>}]},
+    {<span class="s">"id"</span>: <span class="s">2</span>, <span class="s">"pages"</span>: [{<span class="s">"path"</span>: <span class="s">"/cart"</span>, <span class="s">"seconds"</span>: <span class="s">150</span>}]},
+])
+loose = {<span class="s">"pages.path"</span>: <span class="s">"/cart"</span>, <span class="s">"pages.seconds"</span>: {<span class="s">"$gte"</span>: <span class="s">100</span>}}
+strict = {<span class="s">"pages"</span>: {<span class="s">"$elemMatch"</span>: {<span class="s">"path"</span>: <span class="s">"/cart"</span>, <span class="s">"seconds"</span>: {<span class="s">"$gte"</span>: <span class="s">100</span>}}}}
+print(c.count_documents(loose), c.count_documents(strict))</pre><div class="opts"><div class="opt">A) <code class="inline">1 1</code></div><div class="opt">B) <code class="inline">2 2</code></div><div class="opt">C) <code class="inline">2 1</code></div><div class="opt">D) <code class="inline">1 2</code></div></div></div>
+<div class="q" data-sc="6"><div class="qn">Q6</div><div class="qt">What does this print? (The collection holds the three sales documents from Q3.)</div><pre class="code">rows = list(c.aggregate([{<span class="s">"$group"</span>: {<span class="s">"_id"</span>: <span class="s">"store"</span>, <span class="s">"n"</span>: {<span class="s">"$sum"</span>: <span class="s">1</span>}}}]))
+print(rows)</pre><div class="opts"><div class="opt">A) <code class="inline">[{'n': 2, '_id': 'Bend'}, {'n': 1, '_id': 'Boise'}]</code></div><div class="opt">B) <code class="inline">[{'n': 3, '_id': 'store'}]</code></div><div class="opt">C) <code class="inline">[]</code></div><div class="opt">D) A <code class="inline">KeyError</code>: there is no field called <code class="inline">store</code></div></div></div>
+</div>
+    </div>
+  </section>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">6.1</span><h3>HTTP with Requests</h3></div>
+    <div class="lesson-body">
+<div class="note warn"><div class="t">The six ground rules (every session of Module 6 starts here)</div>
+<ol class="steps">
+  <li><b>Read <code class="inline">robots.txt</code> and obey it.</b> It is the owner's published request to programs: where they may go and how fast.</li>
+  <li><b>Read the terms of use.</b> If they forbid automated collection, the answer is no, however easy the code would be.</li>
+  <li><b>Prefer an API or a download</b> when one exists. It is the front door.</li>
+  <li><b>Go slowly and say who you are.</b> Pause between requests; send a User-Agent with a way to contact you.</li>
+  <li><b>Never go around a login, a paywall or a block.</b> If you are asked to stop, stop.</li>
+  <li><b>Do not collect personal data.</b> Names, emails, profiles and photos of real people are protected by law in many places.</li>
+</ol>
+</div>
+<div class="blk"><div class="h">Key ideas</div>
+<ul class="tick">
+  <li><b>HTTP is request and response.</b> Out: a method (<code class="inline">GET</code> to read), a URL, headers, maybe a body. Back: a <b>status code</b>, headers, a body.</li>
+  <li><b>Status codes by first digit:</b> 2xx success, 3xx look elsewhere (handled for you), 4xx your request has a problem, 5xx the server has a problem.</li>
+  <li>A 404 or a 500 is <b>not an exception</b> until you call <code class="inline">r.raise_for_status()</code>. The pattern is: <b>get → raise_for_status() → use the body.</b></li>
+  <li><b>Rules first.</b> Fetch <code class="inline">robots.txt</code>, parse it with <code class="inline">RobotFileParser</code>, ask <code class="inline">can_fetch()</code> and <code class="inline">crawl_delay()</code>.</li>
+  <li>Send a <b>User-Agent</b> that names your project and gives a contact address. Never pretend to be a browser.</li>
+  <li><code class="inline">r.content</code> is bytes; <code class="inline">r.text</code> is those bytes decoded with <code class="inline">r.encoding</code>. Junk like <code class="inline">â˜…</code> means the wrong encoding: set <code class="inline">r.encoding = "utf-8"</code>.</li>
+  <li>Pass query parameters as a dictionary (<code class="inline">params=</code>) and read JSON with <code class="inline">r.json()</code>. A list of flat dictionaries goes straight into <code class="inline">pd.DataFrame</code>.</li>
+  <li><b>Every request gets a <code class="inline">timeout</code>.</b> Without one, <code class="inline">requests</code> waits forever.</li>
+  <li>A <code class="inline">Session</code> reuses the connection and remembers your headers (not your timeout). Save <code class="inline">r.content</code> to disk once; parse the saved copy as often as you like.</li>
+</ul>
+<table class="rubric"><thead><tr><th>Range</th><th>Meaning</th><th>What to do</th></tr></thead><tbody>
+<tr><td class="crit">2xx</td><td>Success</td><td>Use the body</td></tr>
+<tr><td class="crit">3xx</td><td>Look elsewhere</td><td>Nothing: <code class="inline">requests</code> follows redirects</td></tr>
+<tr><td class="crit">4xx</td><td>Your request has a problem (400, 401, 403, 404, 429)</td><td>Fix the request (429: wait first)</td></tr>
+<tr><td class="crit">5xx</td><td>The server has a problem (500, 503)</td><td>Wait and try again later</td></tr>
+</tbody></table>
+</div>
+<div class="blk"><div class="h">Worked example: does this product exist?</div>
+<p>Question: the shop has a page for SLP-1004. Does it have one for SLP-9004? Ask the website, then ask the API, and compare how each one says "no".</p>
+<p><b>Step 1. Ask the website.</b> The function checks the status before it touches the body. For a missing page it returns the status and <code class="inline">None</code>: it never tries to read a title out of an error page. (Setup: <code class="inline">BASE_URL</code>, <code class="inline">HEADERS</code>, <code class="inline">urljoin</code> and <code class="inline">time</code> as in the demo.)</p>
+<pre class="code"><span class="k">def</span> product_page(sku):
+    <span class="s">"""Return (status, title) for one product page; title None if missing."""</span>
+    url = urljoin(BASE_URL, <span class="s">f"products/{sku}.html"</span>)
+    resp = requests.get(url, headers=HEADERS, timeout=<span class="s">10</span>)
+    <span class="k">try</span>:
+        resp.raise_for_status()
+    <span class="k">except</span> requests.exceptions.HTTPError:
+        <span class="k">return</span> resp.status_code, <span class="k">None</span>
+    resp.encoding = <span class="s">"utf-8"</span>
+    html = resp.text
+    title = html[html.index(<span class="s">"&lt;title&gt;"</span>) + <span class="s">7</span> : html.index(<span class="s">"&lt;/title&gt;"</span>)]
+    <span class="k">return</span> resp.status_code, title
+
+<span class="k">for</span> sku <span class="k">in</span> [<span class="s">"SLP-1004"</span>, <span class="s">"SLP-9004"</span>]:
+    print(sku, product_page(sku))
+    time.sleep(<span class="s">1</span>)</pre>
+<pre class="out">SLP-1004 (200, 'Larkspur Ridge Backcountry Sleeping Pad | Pinecrest Outfitters (practice site)')
+SLP-9004 (404, None)</pre>
+<p><b>Step 2. Ask the API.</b> Same question, one line of parsing. The API answers a missing product with status 404 <b>and</b> a JSON body that explains itself. (<code class="inline">API = "http://127.0.0.1:8000"</code>; start it with <code class="inline">python data/mock_api.py</code>.)</p>
+<pre class="code"><span class="k">for</span> sku <span class="k">in</span> [<span class="s">"SLP-1004"</span>, <span class="s">"SLP-9004"</span>]:
+    r = requests.get(<span class="s">f"{API}/products/{sku}"</span>, headers=HEADERS, timeout=<span class="s">10</span>)
+    body = r.json()
+    print(sku, r.status_code, body.get(<span class="s">"name"</span>) <span class="k">or</span> body[<span class="s">"error"</span>][<span class="s">"message"</span>])</pre>
+<pre class="out">SLP-1004 200 Larkspur Ridge Backcountry Sleeping Pad
+SLP-9004 404 No product with SKU 'SLP-9004'.</pre>
+<p>Both sources agree, and neither needed you to guess: the status code told the program what happened, and the message told you.</p>
+</div>
+<div class="blk lab"><div class="h">Guided lab</div>
+<p><b>Lab 6.1-A · Three category pages, one of them missing.</b> Open <code class="inline">labs/module-16/l6_1-http-requests/category_check_starter.py</code> and run it as it is. It already fetches the pages (or, with no network, reads saved copies: your instructor will tell you which). Then:</p>
+<ul class="tick lab">
+  <li>TODO 1: ask <code class="inline">robots.txt</code> whether each page may be fetched.</li>
+  <li>TODO 2: check the status <b>before</b> counting anything on the page.</li>
+  <li>TODO 4: decode the same bytes with the wrong table, then the right one, and watch the stars.</li>
+  <li>Last line of the lab: which page must not get a count, and why? One sentence.</li>
+</ul>
+<div class="write"></div>
+<div class="write"></div>
+<p><b>Lab 6.1-B · Ask the API: which category costs the most?</b> (if you finish, or at home): <code class="inline">labs/module-16/l6_1-http-requests/api_price_check_starter.py</code>. Start the practice API first: <code class="inline">python data/mock_api.py</code> in a second terminal.</p>
+<p>No network at all? Both labs run from saved responses: <code class="inline">LABS_OFFLINE=1 python category_check_starter.py</code> (PowerShell: <code class="inline">$env:LABS_OFFLINE = "1"</code>, then <code class="inline">python category_check_starter.py</code>).</p>
+</div>
+<div class="blk"><div class="h">Predict, then run</div>
+<p>Set up once: <code class="inline">BASE_URL</code>, <code class="inline">HEADERS</code> and <code class="inline">urljoin</code> as in the demo.</p>
+<p>Write your prediction on the line <b>before</b> you run the code. A wrong prediction that you then explain is worth more than a right one.</p>
+<p><b>1.</b> The catalog has 13 pages; the last one holds 2 products. Predict both lines.</p>
+<pre class="code"><span class="k">for</span> name <span class="k">in</span> [<span class="s">"page-13.html"</span>, <span class="s">"page-14.html"</span>]:
+    r = requests.get(urljoin(BASE_URL, name), headers=HEADERS, timeout=<span class="s">10</span>)
+    print(r.status_code, r.ok, r.text.count(<span class="s">'class="product-card"'</span>))</pre>
+<div class="write"></div>
+<p><b>2.</b> Nothing is sent here: <code class="inline">prepare()</code> only builds the request. Predict the URL.</p>
+<pre class="code">params = {<span class="s">"category"</span>: <span class="s">"Tents"</span>, <span class="s">"per_page"</span>: <span class="s">5</span>, <span class="s">"page"</span>: <span class="s">2</span>}
+prepared = requests.Request(<span class="s">"GET"</span>, <span class="s">"http://127.0.0.1:8000/products"</span>,
+                            params=params).prepare()
+print(prepared.url)</pre>
+<div class="write"></div>
+<p><b>3.</b> <code class="inline">BASE_URL</code> is the shop's front page. Predict the first line, then what the second line does.</p>
+<pre class="code">r = requests.get(BASE_URL, headers=HEADERS, timeout=<span class="s">10</span>)
+print(r.headers[<span class="s">"Content-Type"</span>])
+r.json()</pre>
+<div class="write"></div>
+</div>
+<div class="blk"><div class="h">Self-check (answers are in your instructor's key)</div>
+<div class="q" data-sc="7"><div class="qn">Q7</div><div class="qt">A script runs <code class="inline">r = requests.get(url, timeout=10)</code> and the server answers with status 404. What happens on that line?</div><div class="opts"><div class="opt">A) <code class="inline">requests</code> raises <code class="inline">HTTPError</code></div><div class="opt">B) <code class="inline">r</code> is <code class="inline">None</code></div><div class="opt">C) The call is retried until it succeeds or 10 seconds pass</div><div class="opt">D) A normal response comes back; <code class="inline">r.ok</code> is <code class="inline">False</code> and nothing is raised</div></div></div>
+<div class="q" data-sc="8" data-kind="short"><div class="qn">Q8</div><div class="qt">What does this print?</div><pre class="code">star = <span class="s">"★"</span>.encode(<span class="s">"utf-8"</span>)
+print(len(<span class="s">"★"</span>), len(star), star.decode(<span class="s">"cp1252"</span>) == <span class="s">"★"</span>)</pre><div class="write"></div></div>
+<div class="q" data-sc="9"><div class="qn">Q9</div><div class="qt">You print <code class="inline">r.text</code> from a category page and every rating shows <code class="inline">â˜… 4.5</code>. What is the first thing to check?</div><div class="opts"><div class="opt">A) <code class="inline">r.encoding</code> and the <code class="inline">Content-Type</code> header</div><div class="opt">B) Whether the page needs JavaScript</div><div class="opt">C) <code class="inline">r.status_code</code>, because this means the page is a 404</div><div class="opt">D) Your <code class="inline">timeout</code> value</div></div></div>
+<div class="q" data-sc="10" data-kind="short"><div class="qn">Q10</div><div class="qt">What does this print? (<code class="inline">prepare()</code> only builds the request; nothing is sent.)</div><pre class="code">params = {<span class="s">"status"</span>: <span class="s">"returned"</span>, <span class="s">"since"</span>: <span class="s">"2025-12-01"</span>}
+prepared = requests.Request(<span class="s">"GET"</span>, <span class="s">"http://127.0.0.1:8000/orders"</span>,
+                            params=params).prepare()
+print(prepared.url)</pre><div class="write"></div></div>
+<div class="q" data-sc="11"><div class="qn">Q11</div><div class="qt">A site's <code class="inline">robots.txt</code> says <code class="inline">Disallow: /staff/</code> and <code class="inline">Crawl-delay: 1</code>. The staff page has no login. What should your collection script do?</div><div class="opts"><div class="opt">A) Fetch the staff page, but only once</div><div class="opt">B) Fetch it with a browser's User-Agent so the site cannot tell</div><div class="opt">C) Skip the staff page, and wait at least one second between its other requests</div><div class="opt">D) Skip <code class="inline">robots.txt</code>: it has no legal force</div></div></div>
+<div class="q" data-sc="12"><div class="qn">Q12</div><div class="qt">What does this print?</div><pre class="code">resp = requests.Response()
+resp.status_code = <span class="s">503</span>
+print(resp.ok)
+<span class="k">try</span>:
+    resp.raise_for_status()
+    print(<span class="s">"fine"</span>)
+<span class="k">except</span> requests.exceptions.HTTPError:
+    print(<span class="s">"caught"</span>)</pre><div class="opts"><div class="opt">A) <code class="inline">True</code> then <code class="inline">fine</code></div><div class="opt">B) <code class="inline">False</code> then <code class="inline">caught</code></div><div class="opt">C) <code class="inline">False</code> then <code class="inline">fine</code></div><div class="opt">D) <code class="inline">True</code> then <code class="inline">caught</code></div></div></div>
+</div>
+    </div>
+  </section>
+
+  <div class="sec"><h2>Notes</h2><span class="rule"></span></div>
+<div class="notes-lines"></div>
+
+  <div class="sec"><h2>Homework Checklist</h2><span class="rule"></span></div>
+<ul class="tick">
+  <li>☐ Lesson 5.5: finish the Funnel Report. Your funnel should read 2,400 → 1,610 → 543 → 230 → 230.</li>
+  <li>☐ Lesson 5.5: the four exercises, the quiz and the journal prompt.</li>
+  <li>☐ Lesson 6.1: finish the Polite Snapshot. <code class="inline">raw/</code> should hold four saved files and <code class="inline">manifest.csv</code> with six rows.</li>
+  <li>☐ Lesson 6.1: the four exercises, the quiz and the journal prompt.</li>
+  <li>☐ Finish any kit lab you did not finish in the room.</li>
+  <li>☐ Put your real contact address in <code class="inline">USER_AGENT</code>.</li>
+  <li>☐ <b>For Session 17:</b> make sure Google Chrome is installed and run the one-minute Chrome check your instructor gave you, while you have internet. Bring the exact error message if it fails.</li>
+  <li>☐ <b>For Session 17:</b> bring your Lesson 6.1 notebook and <code class="inline">raw/</code> folder, and have <code class="inline">data/pinecrest-practice-site.zip</code> in your project folder.</li>
+</ul>
+
+  <div class="sec"><h2>Glossary</h2><span class="rule"></span></div>
+<p><b>Document:</b> one record in MongoDB: like a Python dictionary, and it may hold nested objects and lists.</p>
+<p><b>Collection:</b> a set of documents (the counterpart of a table). Its documents need not share a shape.</p>
+<p><b>Dot notation:</b> <code class="inline">"device.type"</code>: the name of a field inside a nested object, written in quotes.</p>
+<p><b>Operator:</b> a key that starts with <code class="inline">$</code> (<code class="inline">$gt</code>, <code class="inline">$in</code>, <code class="inline">$exists</code>, <code class="inline">$set</code>) and says how to compare or change.</p>
+<p><b>Projection:</b> the second argument of <code class="inline">find</code>: which fields to return (<code class="inline">1</code>) or leave out (<code class="inline">0</code>).</p>
+<p><b>Aggregation pipeline:</b> a list of stages (<code class="inline">$match</code>, <code class="inline">$unwind</code>, <code class="inline">$group</code>, <code class="inline">$sort</code>...) that each transform the documents and pass them on.</p>
+<p><b>mongomock:</b> a library that imitates a MongoDB server inside Python, with pymongo's methods. Data lives in memory only.</p>
+<p><b>HTTP:</b> the request-and-response conversation every web page and API is built on.</p>
+<p><b>Status code:</b> the three-digit summary of a response: 2xx success, 3xx look elsewhere, 4xx your request, 5xx the server.</p>
+<p><b>Header:</b> a name-and-value note that travels with a request or a response (<code class="inline">User-Agent</code>, <code class="inline">Content-Type</code>).</p>
+<p><b>robots.txt:</b> a site's published request to programs: where they may go and how fast.</p>
+<p><b>Query parameters:</b> the <code class="inline">?name=value&amp;name=value</code> part of a URL. Pass them to <code class="inline">requests</code> as a dictionary (<code class="inline">params=</code>).</p>
+<p><b>Timeout:</b> the longest <code class="inline">requests</code> will wait to connect, and between bytes. Without one it waits forever.</p>
+<p><b>Mojibake:</b> junk such as <code class="inline">â˜…</code> that appears when bytes are decoded with the wrong encoding.</p>
+<p><b>API:</b> addresses that return data (usually JSON) for programs instead of pages for people.</p>
+
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 16 · Participant Workbook · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

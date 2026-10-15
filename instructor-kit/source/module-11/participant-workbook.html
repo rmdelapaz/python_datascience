@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Participant Workbook: Session 11</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Student workbook —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">write in it · bring it to every session</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Participant Workbook</div>
+    <h1>Session 11: Shape, Outliers and Distributions</h1>
+    <p class="sub">Your working notebook for the session that finishes describing data and starts reasoning about chance. First you measure the shape of a column, locate values inside it and decide what to do with the ones that stand apart. Then you model uncertainty with four distributions, simulate when the math gets hard, and put an honest margin of error on an average.</p>
+    <div class="meta-row">
+      <span class="chip">Lessons <b>4.2–4.3</b></span>
+      <span class="chip">Session <b>11</b> · 3 hours</span>
+      <span class="chip">Name: ____________________</span>
+    </div>
+  </header>
+  <div class="note"><div class="t">How to use this workbook</div>
+    <p>Each lesson has <b>By the end you can</b> (your goals), <b>Key ideas</b> (the page to keep), a <b>Worked example</b> (new code with its real output), the <b>Guided lab</b> you do in class, <b>Predict, then run</b> boxes, where the lesson project starts, space for notes, and a six-question <b>Self-check</b>. Lab files are in <code class="inline">labs/module-11/</code>: open the <code class="inline">_starter.py</code> files. This is a full session. You are not expected to remember four distributions by tonight. Aim to leave with two habits: look at what a rule flags before you remove anything, and check a model against the data before you trust it.</p>
+  </div>
+
+  <div class="sec"><h2>Session Goals</h2><span class="rule"></span></div>
+  <ul class="tick">
+          <li>Measure the shape of a column with <code class="inline">.skew()</code> and say what it means for your choice of summary.</li>
+          <li>Locate a value with percentiles and with a z-score.</li>
+          <li>Run the IQR and z-score outlier rules, explain why they disagree, and decide what to do with a flagged value.</li>
+          <li>Read <code class="inline">describe()</code> and a box plot, and summarize survey answers by group with their n.</li>
+          <li>Choose a distribution (uniform, normal, binomial, Poisson), freeze it with <code class="inline">scipy.stats</code>, and ask it questions with <code class="inline">cdf</code>, <code class="inline">sf</code>, <code class="inline">ppf</code> and <code class="inline">pmf</code>.</li>
+          <li>Compute a standard error and a 95% confidence interval for a mean, and say what the 95% describes.</li>
+        </ul>
+
+  <div class="sec"><h2>Progress Tracker</h2><span class="rule"></span></div>
+  <ul class="tick lab">
+          <li>☐ <b>4.2</b> I ran both outlier rules on a column and investigated the flagged values before deciding anything (lab <code class="inline">catalog_weights</code>)</li>
+          <li>☐ <b>4.2</b> My Store Profile Sheet explains what the 91 flagged days are and what I did about them (lesson project)</li>
+          <li>☐ <b>4.3</b> I froze a normal distribution, checked it against data, and answered questions with <code class="inline">cdf</code>, <code class="inline">sf</code> and <code class="inline">ppf</code> (lab <code class="inline">conversion_model</code>)</li>
+          <li>☐ <b>4.3</b> My Returns Forecast has a checked Poisson model, capacity numbers and a confidence interval (lesson project)</li>
+          <li>☐ I finished the exercises and the Quick Quiz for each lesson at home</li>
+          <li>☐ I wrote a journal entry after each lesson</li>
+        </ul>
+
+  <div class="sec"><h2>Lessons</h2><span class="rule"></span></div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">4.2</span><h3>Descriptive Statistics II: Shape, Position and Outliers</h3><span class="dur">90 min alone</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">By the end you can</div>
+        <ul class="tick">
+          <li>Describe the shape of a distribution with a histogram and a skewness value, and say what the shape implies for your choice of summary</li>
+          <li>Locate a value within its column using percentiles, quantiles and z-scores</li>
+          <li>Apply the IQR and z-score outlier rules, explain why they disagree, and choose a defensible action for flagged values</li>
+          <li>Read every line of <code class="inline">describe()</code> and every part of a box plot</li>
+          <li>Summarize by group with <code class="inline">groupby().agg()</code>, and summarize 1-to-5 survey answers as the ordered categories they are</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Key ideas</div>
+        <ul class="tick">
+          <li><b>Four things to know about a column:</b> center, spread, shape, and one value's position in it. Shape decides which summaries are fair.</li>
+          <li><b>Skewness</b> (<code class="inline">.skew()</code>): 0 for a symmetric pile, positive for a long right tail. Between -0.5 and 0.5: mean and SD are fair. Beyond 1: median and IQR. It is not robust and does not show humps: always look at a histogram.</li>
+          <li><b>A logarithm tames a right tail.</b> Order totals: skew 5.48; <code class="inline">np.log(totals)</code>: -0.41.</li>
+          <li><b>Percentiles and quantiles locate by rank.</b> <code class="inline">totals.quantile(0.90)</code> takes a fraction (0 to 1). <code class="inline">np.percentile(totals, 90)</code> takes 0 to 100. The reverse question: <code class="inline">(totals &lt;= 500).mean()</code>.</li>
+          <li><b>A z-score locates by distance:</b> z = (value - mean) / SD. It makes different scales comparable. Standardizing gives mean 0 and SD 1 and does not change the shape.</li>
+          <li><b>Two outlier rules.</b> IQR fences: below Q1 - 1.5 x IQR or above Q3 + 1.5 x IQR. z-scores: beyond 3. They disagree, because the mean and SD are inflated by the values being judged.</li>
+          <li><b>A flag is a question, not a verdict.</b> Provable error? Fix or remove it, and note what you did. Real and part of your question? Keep it and use the median and IQR. Real but a different kind of thing? Analyze separately and say so.</li>
+          <li><b><code class="inline">describe()</code></b>: count (non-missing), mean, std (sample SD), min, 25%, 50%, 75%, max. Compare mean with 50%, and the two halves of the box.</li>
+          <li><b>A box plot</b>: the line is the median; the box is Q1 to Q3; each whisker ends at the last data point inside the fence; separate points are the flagged values. Good for comparing groups; hides humps.</li>
+          <li><b>Grouped summaries always carry their n.</b> <code class="inline">count</code> is the number of values, <code class="inline">size</code> the number of rows.</li>
+          <li><b>Survey answers on a 1-to-5 scale are ordinal:</b> ordered categories. Lead with the distribution, the median and the share satisfied (4 or 5), and check who did not answer.</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Worked example</div>
+        <p>Was Black Friday 2025 an unusual day for foot traffic at the Flagstaff store? Locate it two ways: by distance (a z-score) and by rank (a percentile).</p>
+<pre class="code"><span class="k">import</span> pandas <span class="k">as</span> pd
+
+daily = pd.read_csv(<span class="s">"data/daily_sales.csv"</span>, parse_dates=[<span class="s">"date"</span>])
+flagstaff = daily.loc[daily[<span class="s">"store"</span>] == <span class="s">"Flagstaff"</span>].set_index(<span class="s">"date"</span>)
+visitors = flagstaff[<span class="s">"visitors"</span>]
+
+day = visitors.loc[<span class="s">"2025-11-28"</span>]                  <span class="c"># Black Friday 2025</span>
+z = (day - visitors.mean()) / visitors.std()
+rank = (visitors &lt;= day).mean()
+
+print(<span class="s">"visitors that day:"</span>, day)
+print(<span class="s">"store mean:"</span>, round(visitors.mean(), <span class="s">1</span>))
+print(<span class="s">"store SD  :"</span>, round(visitors.std(), <span class="s">1</span>))
+print(<span class="s">"z-score:"</span>, round(z, <span class="s">2</span>))
+print(<span class="s">f"at or below this on {rank:.1%} of Flagstaff's days"</span>)
+
+boise = daily.loc[daily[<span class="s">"store"</span>] == <span class="s">"Boise"</span>, <span class="s">"visitors"</span>]
+print(<span class="s">"the same count in Boise: z ="</span>,
+      round((day - boise.mean()) / boise.std(), <span class="s">2</span>))</pre>
+<pre class="out">visitors that day: 596
+store mean: 328.5
+store SD  : 117.4
+z-score: 2.28
+at or below this on 96.8% of Flagstaff's days
+the same count in Boise: z = 0.68</pre>
+        <p>596 visitors is 2.28 standard deviations above Flagstaff's average, and only about 3 days in 100 were busier. The same 596 visitors in Boise would be 0.68 SDs above average: a good day, nothing more. A z-score is always measured against a particular group's mean and SD, so say which group.</p>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab</div>
+        <p><b>Lab 4.2-A:</b> open <code class="inline">labs/module-11/l4_2-shape-position-outliers/catalog_weights_starter.py</code>. The shipping team wants you to "remove the outlier weights" before computing a typical product weight. Describe the shape, run both rules, look at what they flag, then decide. Write your guess (mean above or below the median?) before TODO 1.</p>
+        <p><b>Lab 4.2-B:</b> open <code class="inline">labs/module-11/l4_2-shape-position-outliers/price_satisfaction_starter.py</code>. In class: TODO 1 to 3 (the distribution, <code class="inline">bottom_two()</code>, the table by age group). At home: who skipped the question, the saved chart, and your one-sentence finding with its n. The chart is saved into an <code class="inline">output</code> folder next to the lab file; open it from there.</p>
+        <p><b>Finished early?</b> <code class="inline">labs/module-11/l4_2-shape-position-outliers/debug_summary_report.py</code>: four results that run without an error and are quietly wrong.</p>
+      </div>
+      <div class="blk"><div class="h">Predict, then run</div>
+        <p>Write your prediction first. Then type the code and run it. A wrong prediction is useful: it shows exactly which idea to revisit.</p>
+        <div class="q"><div class="qn">Predict 4.2-1</div><div class="qt">One number. Careful: is the answer one of the values in the list?</div><pre class="code">print(pd.Series([<span class="s">10</span>, <span class="s">20</span>, <span class="s">30</span>, <span class="s">40</span>, <span class="s">50</span>]).quantile(<span class="s">0.25</span>))</pre><div class="write"></div></div>
+        <div class="q"><div class="qn">Predict 4.2-2</div><div class="qt">Three z-scores. Predict the list.</div><pre class="code">s = pd.Series([<span class="s">2</span>, <span class="s">4</span>, <span class="s">6</span>])
+z = (s - s.mean()) / s.std()
+print(z.tolist())</pre><div class="write"></div></div>
+      </div>
+      <div class="blk lab"><div class="h">Lesson project: where you start in class</div>
+        <p><b>The Store Profile Sheet.</b> New notebook <code class="inline">lesson_4_2_project</code>. In class you do Step 1: drop the 6 store-days with no revenue, add the weekday name, and build the profile table (n, median, q1, q3, p95, max, iqr) for the four stores. Check: Boise's median is 9,360 and its maximum 27,677. At home: Steps 2 to 6 (z-scores within each store, the flagged days, what they turn out to be, the box plot, the written profile).</p>
+      </div>
+      <div class="blk"><div class="h">My notes</div>
+        <div class="notes-lines"></div>
+      </div>
+      <div class="blk"><div class="h">Self-check (Q1 to Q6)</div>
+        <div class="q" data-sc="1"><div class="qn">Q1</div><div class="qt">Pinecrest's order totals have a skewness of 5.48. After <code class="inline">np.log(totals)</code> the skewness is -0.41. What does that tell you?</div><div class="opts"><div class="opt">A) The logarithm deleted the twelve bulk orders</div><div class="opt">B) The original totals contained errors that the logarithm repaired</div><div class="opt">C) On the log scale the pile is roughly symmetric, so methods that prefer symmetric data will behave better there</div><div class="opt">D) The mean of the logs is the log of the mean</div></div></div>
+        <div class="q" data-sc="2" data-kind="short"><div class="qn">Q2</div><div class="qt">What does this print?</div><pre class="code">print(pd.Series([<span class="s">10</span>, <span class="s">20</span>, <span class="s">30</span>, <span class="s">40</span>]).quantile(<span class="s">0.5</span>))</pre><div class="write"></div></div>
+        <div class="q" data-sc="3"><div class="qn">Q3</div><div class="qt">A $12,000 day has a z-score of 3.05 at the Asheville store and 0.50 at the Boise store. What does that mean?</div><div class="opts"><div class="opt">A) The day is far above Asheville's own average, measured in Asheville's SDs, and only a little above Boise's</div><div class="opt">B) Asheville took 3.05 times as much revenue as Boise that day</div><div class="opt">C) The day was in the top 3.05% of Asheville's days</div><div class="opt">D) z-scores from different stores cannot be compared</div></div></div>
+        <div class="q" data-sc="4"><div class="qn">Q4</div><div class="qt">On the order totals the IQR rule flags 848 orders and the rule "|z| above 3" flags 217. Why does the z-score rule flag so many fewer?</div><div class="opts"><div class="opt">A) The z-score rule only looks at the smallest values</div><div class="opt">B) The IQR rule counts duplicated orders twice</div><div class="opt">C) z-scores cannot be computed for skewed data</div><div class="opt">D) The mean and SD are inflated by the same large orders being judged, which pushes the z-score line outward; the quartiles are not</div></div></div>
+        <div class="q" data-sc="5" data-kind="short"><div class="qn">Q5</div><div class="qt">What does this print?</div><pre class="code">s = pd.Series([<span class="s">1</span>, <span class="s">2</span>, <span class="s">3</span>, <span class="s">4</span>, <span class="s">5</span>, <span class="s">6</span>, <span class="s">7</span>, <span class="s">8</span>, <span class="s">9</span>, <span class="s">50</span>])
+q1, q3 = s.quantile(<span class="s">0.25</span>), s.quantile(<span class="s">0.75</span>)
+upper = q3 + <span class="s">1.5</span> * (q3 - q1)
+print(upper, (s &gt; upper).sum())</pre><div class="write"></div></div>
+        <div class="q" data-sc="6"><div class="qn">Q6</div><div class="qt">In the survey, Online shoppers' mean <code class="inline">sat_staff</code> is 4.07, computed from 248 of the 824 Online respondents. What is the honest way to report it?</div><div class="opts"><div class="opt">A) Report 4.07 as the staff satisfaction of Online shoppers</div><div class="opt">B) Report it with its n and say who answered: 70% of Online shoppers skipped the question, so it describes the minority who dealt with staff</div><div class="opt">C) Fill the 576 missing answers with 4.07 so that the n is 824</div><div class="opt">D) Leave the Online row out of the table without comment</div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">4.3</span><h3>Probability Distributions</h3><span class="dur">100 min alone</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">By the end you can</div>
+        <ul class="tick">
+          <li>Explain what a random variable and a probability distribution are, and tell discrete from continuous</li>
+          <li>Choose between the uniform, normal, binomial and Poisson distributions for a situation, and check the choice against data</li>
+          <li>Answer probability questions with <code class="inline">scipy.stats</code> using <code class="inline">pmf</code>/<code class="inline">pdf</code>, <code class="inline">cdf</code>, <code class="inline">sf</code> and <code class="inline">ppf</code></li>
+          <li>Simulate random outcomes reproducibly with <code class="inline">np.random.default_rng</code> and use simulation to check a calculation</li>
+          <li>Demonstrate the central limit theorem by simulation, compute a standard error, and build and correctly interpret a 95% confidence interval for a mean</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Key ideas</div>
+        <ul class="tick">
+          <li><b>A random variable</b> is a number decided by chance. Its <b>distribution</b> lists the possible values with their probabilities: the vending machine's stocking list.</li>
+          <li><b>Discrete</b> variables are counted (returns in a day). <b>Continuous</b> ones are measured (spend per visitor), and only ranges have probability.</li>
+          <li><b>Four workhorses.</b> Uniform: equally likely anywhere in a range. Normal: sums and averages of many small effects (mean, SD). Binomial: successes in n independent tries with the same p. Poisson: events in an interval at a steady rate (mean about equal to variance).</li>
+          <li><b>Freeze, then ask.</b> <code class="inline">model = stats.norm(loc=mean, scale=sd)</code>. <code class="inline">cdf(x)</code>: this or less. <code class="inline">sf(x)</code>: more than this. <code class="inline">ppf(q)</code>: which value has q below it. <code class="inline">pmf(k)</code>: exactly k (discrete). <code class="inline">rvs(size, random_state=rng)</code>: random draws.</li>
+          <li><b><code class="inline">scale</code> is the SD, not the variance.</b> For <code class="inline">stats.uniform</code>, <code class="inline">loc</code> is the start and <code class="inline">scale</code> is the width.</li>
+          <li><b>For a count, "5 or more" is <code class="inline">sf(4)</code>.</b></li>
+          <li><b>Simulation checks any formula.</b> Create one seeded generator at the top (<code class="inline">rng = np.random.default_rng(42)</code>) and keep drawing from it. Never create it inside a loop.</li>
+          <li><b>68-95-99.7:</b> in a normal distribution about 68% of values are within 1 SD of the mean, 95% within 2, 99.7% within 3. It is a property of the normal shape only.</li>
+          <li><b>A model's assumptions are part of it.</b> Check the fit against data before trusting its answers.</li>
+          <li><b>Central limit theorem:</b> means of random samples are approximately normal, centered on the population mean, with SD sigma / sqrt(n), whatever the population's shape. The data itself does not become normal.</li>
+          <li><b>Standard error:</b> SE = s / sqrt(n): how much a sample mean varies from sample to sample. The SD describes single values and does not shrink with more data.</li>
+          <li><b>95% confidence interval:</b> mean plus or minus about 2 SE (<code class="inline">stats.t.interval</code>). The 95% describes the method: about 95 of 100 intervals built this way contain the true mean. It is not a range for individual values.</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Worked example</div>
+        <p>About 7% of Pinecrest's orders are paid with a gift card. Out of the next 30 orders, how many will be? A fixed number of tries (30), each with the same probability: a binomial model. Compute, then check by simulation.</p>
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+<span class="k">import</span> pandas <span class="k">as</span> pd
+<span class="k">from</span> scipy <span class="k">import</span> stats
+
+rng = np.random.default_rng(<span class="s">3</span>)
+orders = pd.read_csv(<span class="s">"data/orders.csv"</span>)
+p_gift = (orders[<span class="s">"payment_method"</span>] == <span class="s">"gift_card"</span>).mean()
+
+batch = stats.binom(n=<span class="s">30</span>, p=p_gift)               <span class="c"># gift-card orders out of 30</span>
+print(<span class="s">"share paid by gift card:"</span>, round(p_gift, <span class="s">4</span>))
+print(<span class="s">"expected in a batch of 30:"</span>, round(batch.mean(), <span class="s">2</span>))
+print(<span class="s">f"P(none)      = {batch.pmf(0):.3f}"</span>)
+print(<span class="s">f"P(5 or more) = {batch.sf(4):.3f}"</span>)
+
+sim = rng.binomial(n=<span class="s">30</span>, p=p_gift, size=<span class="s">100_000</span>)  <span class="c"># check by counting</span>
+print(<span class="s">"simulated P(5 or more):"</span>, round((sim &gt;= <span class="s">5</span>).mean(), <span class="s">3</span>))</pre>
+<pre class="out">share paid by gift card: 0.074
+expected in a batch of 30: 2.22
+P(none)      = 0.100
+P(5 or more) = 0.067
+simulated P(5 or more): 0.067</pre>
+        <p>About 2 gift-card orders per batch on average; one batch in ten has none; five or more happens in about 7% of batches. "5 or more" is <code class="inline">sf(4)</code>: more than 4. The simulation, which only counts, agrees with the formula to the third decimal. The model assumes each order is independent with the same probability, which is worth doubting in December.</p>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab</div>
+        <p><b>Lab 4.3-A:</b> open <code class="inline">labs/module-11/l4_3-probability-distributions/conversion_model_starter.py</code>. What share of walk-in visitors buy something on a typical store-day, and what do a bad day and a great day look like? Fit a normal model, check it against the data, then use <code class="inline">cdf</code>, <code class="inline">sf</code> and <code class="inline">ppf</code>. Write the method next to each question before you code it.</p>
+        <p><b>Lab 4.3-B:</b> open <code class="inline">labs/module-11/l4_3-probability-distributions/lines_per_order_ci_starter.py</code>. In class: Steps 1 to 4 (one sample of 150 orders, its standard error, a 95% interval, and a prediction). At home: Steps 5 and 6 (is "95%" honest? what does four times the sample buy?).</p>
+        <p>Both files create one seeded generator at the top. Run them from top to bottom and your numbers match your neighbor's.</p>
+        <p><b>Finished early?</b> <code class="inline">labs/module-11/l4_3-probability-distributions/debug_delivery_model.py</code>: four model answers, all quietly wrong.</p>
+      </div>
+      <div class="blk"><div class="h">Predict, then run</div>
+        <p>Write your prediction first. Then type the code and run it. A wrong prediction is useful: it shows exactly which idea to revisit.</p>
+        <div class="q"><div class="qn">Predict 4.3-1</div><div class="qt">Two numbers. No calculator needed.</div><pre class="code">model = stats.norm(loc=<span class="s">50</span>, scale=<span class="s">10</span>)
+print(model.cdf(<span class="s">50</span>), model.ppf(<span class="s">0.5</span>))</pre><div class="write"></div></div>
+        <div class="q"><div class="qn">Predict 4.3-2</div><div class="qt">Ten coin flips. Three numbers: predict each.</div><pre class="code">flips = stats.binom(n=<span class="s">10</span>, p=<span class="s">0.5</span>)
+print(flips.mean(), flips.cdf(<span class="s">10</span>), flips.sf(<span class="s">10</span>))</pre><div class="write"></div></div>
+      </div>
+      <div class="blk lab"><div class="h">Lesson project: where you start in class</div>
+        <p><b>The Returns Forecast.</b> New notebook <code class="inline">lesson_4_3_project</code>. In class you do Steps 1 and 2: count returned orders per day including the zero days (731 days, 1,143 returns, 151 days with none), then check that a Poisson model fits (mean 1.564, variance 1.526, and an observed-against-expected table with no large differences). At home: Steps 3 to 6 (planning questions, a simulated year, a week, a confidence interval for the rate, the forecast).</p>
+      </div>
+      <div class="blk"><div class="h">My notes</div>
+        <div class="notes-lines"></div>
+      </div>
+      <div class="blk"><div class="h">Self-check (Q7 to Q12)</div>
+        <div class="q" data-sc="7"><div class="qn">Q7</div><div class="qt">You want to model the number of returned orders in a day: events scattered through time at a steady average rate, with no fixed number of tries. Which distribution do you try first, and what do you check?</div><div class="opts"><div class="opt">A) Uniform; check that the histogram is flat</div><div class="opt">B) Normal; check that the 68-95-99.7 rule holds</div><div class="opt">C) Binomial with n = 731; check that p is the same every day</div><div class="opt">D) Poisson; check that the mean and the variance are about equal</div></div></div>
+        <div class="q" data-sc="8" data-kind="short"><div class="qn">Q8</div><div class="qt">What does this print?</div><pre class="code">print(stats.norm(loc=<span class="s">20</span>, scale=<span class="s">3</span>).cdf(<span class="s">20</span>))</pre><div class="write"></div></div>
+        <div class="q" data-sc="9"><div class="qn">Q9</div><div class="qt"><code class="inline">batch = stats.binom(n=25, p=0.07)</code> models returns in a batch of 25 orders. Which expression is the probability of 3 or more returns?</div><div class="opts"><div class="opt">A) <code class="inline">batch.sf(2)</code></div><div class="opt">B) <code class="inline">batch.sf(3)</code></div><div class="opt">C) <code class="inline">batch.pmf(3)</code></div><div class="opt">D) <code class="inline">batch.cdf(3)</code></div></div></div>
+        <div class="q" data-sc="10"><div class="qn">Q10</div><div class="qt">The standard deviation of order totals is about $178.76. What is the standard error of the mean of a random sample of 400 orders?</div><div class="opts"><div class="opt">A) About $178.76</div><div class="opt">B) About $8.94</div><div class="opt">C) About $0.45</div><div class="opt">D) About $3,575</div></div></div>
+        <div class="q" data-sc="11"><div class="qn">Q11</div><div class="qt">From 200 orders an auditor gets a 95% confidence interval for the mean order total that is about $44 wide. Roughly how many orders are needed for an interval half as wide?</div><div class="opts"><div class="opt">A) 100</div><div class="opt">B) 400</div><div class="opt">C) 800</div><div class="opt">D) 20,000</div></div></div>
+        <div class="q" data-sc="12"><div class="qn">Q12</div><div class="qt">What is true of the two lists this prints?</div><pre class="code"><span class="k">for</span> _ <span class="k">in</span> range(<span class="s">2</span>):
+    rng = np.random.default_rng(<span class="s">7</span>)
+    print(rng.integers(<span class="s">1</span>, <span class="s">7</span>, size=<span class="s">3</span>).tolist())</pre><div class="opts"><div class="opt">A) They are identical: each pass builds a new generator from the same seed, which replays the same numbers</div><div class="opt">B) They differ, because a generator never repeats itself</div><div class="opt">C) The second list continues where the first one stopped</div><div class="opt">D) The code raises an error, because a seed can be used only once</div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="sec"><h2>Exit Ticket</h2><span class="rule"></span></div>
+  <p>Three questions at the end of class. No notes: this is for you and your instructor to see what stuck.</p>
+  <div class="q"><div class="qn">Exit 1</div><div class="qt">The IQR rule flags 91 store-days as unusually high. What do you do before removing any of them?</div><div class="write"></div></div>
+  <div class="q"><div class="qn">Exit 2</div><div class="qt">You have a frozen distribution called <code class="inline">model</code>. Which method returns the value that 95% of the distribution lies below?</div><div class="write"></div></div>
+  <div class="q"><div class="qn">Exit 3</div><div class="qt">A 95% confidence interval for the mean order total is $165 to $209. Does that mean 95% of orders are between $165 and $209? If not, what does the 95% describe?</div><div class="write"></div></div>
+
+  <div class="sec"><h2>Homework Checklist</h2><span class="rule"></span></div>
+  <ul class="tick lab">
+          <li>☐ <b>Lesson 4.2 project:</b> finish the Store Profile Sheet (Steps 2 to 6): z-scores within each store, the flagged days and what they turn out to be, the box plot saved as <code class="inline">store_profile.png</code>, the written profile.</li>
+          <li>☐ <b>Lesson 4.2 practice:</b> Exercises 1 to 3 (Exercise 4 is a stretch), the five-question Quick Quiz, and the journal prompt. Read the survey section in full, including "Who Did Not Answer?"</li>
+          <li>☐ <b>Lesson 4.3 project:</b> finish the Returns Forecast (Steps 3 to 6): planning questions with <code class="inline">pmf</code>, <code class="inline">sf</code> and <code class="inline">ppf</code>, a simulated year, a week, a confidence interval for the rate.</li>
+          <li>☐ <b>Lesson 4.3 practice:</b> Exercises 1 to 3 (Exercise 4 is a stretch), the Quick Quiz, and the journal prompt. Read "Common Mistakes" in full: all six are silent.</li>
+          <li>☐ <b>Kit labs:</b> finish <code class="inline">price_satisfaction</code> (TODO 4 to 6) and <code class="inline">lines_per_order_ci</code> (Steps 5 and 6).</li>
+          <li>☐ <b>Workbook:</b> the 12 self-check items and anything left in Predict, then run.</li>
+          <li>☐ <b>Before Lesson 4.4</b> (from the lesson page): make a scatter plot of <code class="inline">visitors</code> against <code class="inline">revenue</code> from <code class="inline">daily_sales.csv</code> and describe the pattern in one sentence. Then predict: do stores take more revenue on days when more staff are on duty? Why might that be true even if adding staff did nothing?</li>
+        </ul>
+  <div class="note lab"><div class="t">Bring to Session 12</div>
+    <ul class="tick">
+          <li>Your scatter plot of visitors against revenue, and your written prediction about staffing and revenue.</li>
+          <li>The pattern mean plus or minus t x s / sqrt(n) in your notes.</li>
+          <li>Nothing new to install, no accounts, no servers. Check once at home that <code class="inline">import statsmodels</code> works in the course environment.</li>
+          <li>This workbook.</li>
+        </ul>
+  </div>
+
+  <div class="sec"><h2>Glossary</h2><span class="rule"></span></div>
+  <ul class="tick">
+          <li><b>Distribution:</b> how the values of a column (or the outcomes of a random variable) are spread: which values occur and how often.</li>
+          <li><b>Skewness:</b> a number for lopsidedness: 0 for symmetric, positive for a long right tail, negative for a long left tail.</li>
+          <li><b>Percentile / quantile:</b> the value with a given share of the data at or below it, on a 0-to-100 scale (percentile) or a 0-to-1 scale (quantile).</li>
+          <li><b>z-score:</b> (value - mean) / SD: how many standard deviations a value lies above or below the mean.</li>
+          <li><b>Outlier:</b> a value that sits far from the rest of its column. A candidate for a closer look, not automatically an error.</li>
+          <li><b>IQR fences:</b> Q1 - 1.5 x IQR and Q3 + 1.5 x IQR. Values beyond them are flagged; box plots use this rule.</li>
+          <li><b>Box plot:</b> a drawing of the median, the quartiles, whiskers to the last points inside the fences, and the flagged points.</li>
+          <li><b>Ordinal data:</b> ordered categories with no guaranteed distances between them, such as 1-to-5 survey answers (a Likert item).</li>
+          <li><b>Top-two-box:</b> the share of answers that are 4 or 5 on a 1-to-5 scale.</li>
+          <li><b>Missing not at random:</b> missing for a reason connected to what is being measured, so the answers you have may not represent the group.</li>
+          <li><b>Random variable:</b> a number whose value is decided by chance.</li>
+          <li><b>Discrete / continuous:</b> counted in separate values / measured on a continuous range.</li>
+          <li><b>Expected value:</b> the long-run average of a random variable.</li>
+          <li><b>Frozen distribution:</b> a <code class="inline">scipy.stats</code> distribution with its parameters fixed, ready to answer questions.</li>
+          <li><b>pmf / pdf:</b> the probability of exactly k (discrete) / the height of the curve at x (continuous; not a probability).</li>
+          <li><b>cdf / sf / ppf:</b> the probability of x or less / of more than x / the value with probability q below it.</li>
+          <li><b>Normal distribution:</b> the bell curve, described by its mean and SD.</li>
+          <li><b>Binomial distribution:</b> the number of successes in n independent tries with the same probability p.</li>
+          <li><b>Poisson distribution:</b> the number of events in a fixed interval at a steady average rate; its mean equals its variance.</li>
+          <li><b>Overdispersion:</b> more day-to-day variation than a single-rate Poisson allows: variance well above the mean.</li>
+          <li><b>Central limit theorem (CLT):</b> means of random samples are approximately normal, centered on the population mean, with SD sigma / sqrt(n).</li>
+          <li><b>Standard error (SE):</b> s / sqrt(n): how much a sample mean varies from sample to sample.</li>
+          <li><b>Confidence interval:</b> an estimate with a margin of error, from a method that captures the true value a stated share of the time (95%).</li>
+        </ul>
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 11 · Participant Workbook · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

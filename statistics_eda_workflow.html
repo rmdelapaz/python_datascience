@@ -1,1230 +1,1278 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>EDA Workflow - Systematic Data Exploration | Python Data Science</title>
-    <link href="styles/main.css" rel="stylesheet"/>
-    <link href="/favicon.png" rel="icon" type="image/png"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="A repeatable seven-step routine for exploring a dataset you have never seen: questions, structure, quality, single variables, pairs, segments, and written findings with caveats. Python Data Science Lesson 4.7.">
+    <meta name="author" content="Ray de la Paz">
+    <title>An EDA Workflow - Python Data Science</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid: rendered (and re-rendered on theme change) by js/course-enhancements.js -->
     <script type="module">
         import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({ startOnLoad: true });
+        window.__mermaid = mermaid;
+        mermaid.initialize({ startOnLoad: false });
+        document.dispatchEvent(new Event('mermaid-ready'));
     </script>
-    <style>
-        .breadcrumb {
-            background: #f8f9fa;
-            padding: 1rem;
-            border-radius: 5px;
-            margin-bottom: 2rem;
-            font-size: 0.9rem;
-        }
-        
-        .breadcrumb a {
-            color: #667eea;
-            text-decoration: none;
-        }
-        
-        .breadcrumb a:hover {
-            text-decoration: underline;
-        }
-        
-        .navigation-links {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 2rem 0;
-            margin-top: 3rem;
-            border-top: 2px solid #e0e0e0;
-        }
-        
-        .navigation-links a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 500;
-            padding: 0.5rem 1rem;
-            border-radius: 5px;
-            transition: all 0.3s ease;
-        }
-        
-        .navigation-links a:hover {
-            background: #f0f0f0;
-        }
-        
-        .nav-prev, .nav-next {
-            flex: 1;
-        }
-        
-        .nav-next {
-            text-align: right;
-        }
-        
-        .nav-home {
-            text-align: center;
-        }
-        
-        .eda-checklist {
-            background: #f0f8ff;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 20px 0;
-        }
-        
-        .eda-checklist h3 {
-            margin-top: 0;
-            color: #2196f3;
-        }
-        
-        .eda-checklist ul {
-            list-style: none;
-            padding-left: 0;
-        }
-        
-        .eda-checklist li {
-            padding: 5px 0;
-            padding-left: 25px;
-            position: relative;
-        }
-        
-        .eda-checklist li:before {
-            content: "□";
-            position: absolute;
-            left: 0;
-            color: #2196f3;
-        }
-        
-        .insight-box {
-            background: #fffbf0;
-            border-left: 4px solid #ffc107;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 4px;
-        }
-        
-        .insight-box h4 {
-            margin-top: 0;
-            color: #f57c00;
-        }
-        
-        .method-comparison {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
-            margin: 20px 0;
-        }
-        
-        .method-card {
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            background: #fff;
-        }
-        
-        .method-card h4 {
-            margin-top: 0;
-            color: #667eea;
-        }
-    </style>
-    <link rel="stylesheet" href="styles/standard.css">
 </head>
 <body>
-    <nav class="breadcrumb">
-        <a href="index.html">Home</a> &gt; 
-        <a href="index.html#module4">Statistical Analysis</a> &gt; 
-        <span>EDA Workflow</span>
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+    <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
+        <div class="progress-bar"></div>
+    </div>
+
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">📊 Python Data Science</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">☰</button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
     </nav>
 
-    <h1>🔍 EDA Workflow: Systematic Data Exploration Like a Detective</h1>
+    <main id="main-content">
+        <div class="container">
+            <header>
+                <h1>🔍 Lesson 4.7: An EDA Workflow</h1>
+                <p class="lead">Bring pandas, Matplotlib and statistics together into one repeatable routine for the moment someone hands you a file you have never seen and asks, "What does this tell us?"</p>
 
-    <!-- What You'll Learn (learning objectives) -->
-    <div class="card card-info">
-        <h2>📚 What You'll Learn</h2>
-        <p>By the end of this lesson, you will be able to:</p>
-        <ul>
-            <li>Follow a repeatable EDA workflow: reconnaissance, univariate, bivariate, multivariate, outliers, and pattern discovery</li>
-            <li>Perform initial data reconnaissance — shape, types, missing values, duplicates, and quick statistics</li>
-            <li>Analyze single variables and pairs with the right plots and tests (histograms, box plots, Q-Q plots, correlation, ANOVA, chi-square)</li>
-            <li>Detect outliers with multiple methods: IQR, z-score, modified z-score (MAD), and Isolation Forest</li>
-            <li>Synthesize findings into actionable insights and a shareable EDA report</li>
-            <li>Avoid EDA pitfalls such as Simpson's paradox, ignoring time dependencies, and confusing correlation with causation</li>
-        </ul>
-        <p><strong>⏱️ Estimated Time:</strong> 45–60 minutes</p>
-        <p><strong>🎯 Project:</strong> Run the full EDA workflow on a fresh dataset and produce a short report documenting its structure, key relationships, outliers, and three actionable insights.</p>
-    </div>
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Follow a seven-step exploratory data analysis (EDA) routine on an unfamiliar dataset, starting from written questions</li>
+                        <li>Establish what one row means, which columns are keys, and which values are missing and why</li>
+                        <li>Summarize single variables, pairs of variables and segments with the right table, chart or test for each</li>
+                        <li>Tell a finding from a lead: correct for scanning many comparisons and check an obvious competing explanation</li>
+                        <li>Write up findings, caveats and next questions so that someone else can act on them</li>
+                    </ul>
+                </div>
 
-    <p>Imagine you're a detective arriving at a crime scene. You wouldn't just randomly look around - you'd have a systematic approach to gather clues, form hypotheses, and solve the case. Exploratory Data Analysis (EDA) is exactly that for data scientists! It's the crucial first step that can make or break your entire analysis. Let's master the art of systematic data exploration! 🕵️‍♂️</p>
+                <ul class="lesson-meta">
+                    <li><span class="meta-label">⏱️ Time</span> 110 minutes</li>
+                    <li><span class="meta-label">📋 Prerequisites</span> Modules 2 to 4, especially <a href="pandas_merging_joining.html">Lesson 2.5: Merging and Joining</a>, <a href="statistics_correlation_analysis.html">Lesson 4.4: Correlation Analysis</a> and <a href="statistics_hypothesis_testing.html">Lesson 4.5: Hypothesis Testing</a></li>
+                    <li><span class="meta-label">🛠️ You will build</span> A complete exploratory analysis of why Pinecrest orders are returned, ending in a one-page findings note</li>
+                    <li><span class="meta-label">📂 Data</span> <code>data/survey.csv</code>, <code>data/customers.csv</code>, <code>data/orders.csv</code>, <code>data/order_items.csv</code>, <code>data/products.csv</code>, <code>data/daily_sales.csv</code></li>
+                </ul>
+            </header>
 
-    <h2>The EDA Philosophy: Ask First, Code Second 🤔</h2>
-    
-    <p>EDA isn't just about running code and making plots. It's about understanding your data's story. Every dataset has secrets, patterns, and surprises waiting to be discovered. The key is knowing how to look!</p>
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#routine" class="toc-link">Why a Routine?</a></li>
+                        <li><a href="#questions" class="toc-link">Step 1: Questions First</a></li>
+                        <li><a href="#structure" class="toc-link">Step 2: Structure</a></li>
+                        <li><a href="#quality" class="toc-link">Step 3: Quality</a></li>
+                        <li><a href="#univariate" class="toc-link">Step 4: One Variable at a Time</a></li>
+                        <li><a href="#bivariate" class="toc-link">Step 5: Two Variables Together</a></li>
+                        <li><a href="#segments" class="toc-link">Step 6: Segments</a></li>
+                        <li><a href="#findings" class="toc-link">Step 7: Findings and Caveats</a></li>
+                        <li><a href="#mistakes" class="toc-link">Common Mistakes</a></li>
+                        <li><a href="#project" class="toc-link">Project: Why Do Orders Come Back?</a></li>
+                        <li><a href="#exercises" class="toc-link">Hands-on Exercises</a></li>
+                        <li><a href="#quiz" class="toc-link">Quick Quiz</a></li>
+                        <li><a href="#faq" class="toc-link">Common Questions</a></li>
+                        <li><a href="#journal" class="toc-link">Learning Journal</a></li>
+                        <li><a href="#summary" class="toc-link">Lesson Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
 
-    <div class="mermaid">
-    graph TD
-        A[New Dataset Arrives] --> B[Initial Questions]
-        B --> C[Data Overview]
-        C --> D[Univariate Analysis]
-        D --> E[Bivariate Analysis]
-        E --> F[Multivariate Analysis]
-        F --> G[Outlier Detection]
-        G --> H[Pattern Discovery]
-        H --> I[Hypothesis Formation]
-        I --> J[Validation]
-        J --> K[Documentation]
-        
-        B --> L[What's the goal?]
-        B --> M[What's the context?]
-        B --> N[What's expected?]
-        
-        style A fill:#ff6b6b
-        style K fill:#51cf66
-        style B fill:#667eea,color:#fff
-    </div>
+            <!-- ============================================================ -->
+            <section id="routine" class="lesson-section">
+                <h2>🧭 Why a Routine?</h2>
 
-    <h2>The Complete EDA Framework: Your Data Investigation Toolkit 🛠️</h2>
-    
-    <pre><code>import pandas as pd
-import numpy as np
+                <p>Over the last three modules you collected a full toolkit: loading and cleaning, grouping and merging, charts, summaries, correlation, tests. Each lesson handed you the right tool for its topic. Real work does not. Someone sends a file and a vague question, and you have to decide what to do first, what to do next, and when to stop.</p>
+
+                <p><strong>Exploratory data analysis</strong> (EDA) is the work of getting to know a dataset before you rely on it: what it contains, what is wrong with it, and what it suggests. Without a routine, EDA turns into making charts until something looks interesting, which is slow and, as Lesson 4.5 showed, a reliable way to fool yourself.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Mental Model: The Detective at the Scene</h4>
+                    <p>A good detective does not walk in and arrest the first person who looks nervous. They ask what they are trying to find out, secure the scene, note what is there and what is missing, examine each piece of evidence, look for connections, and write a report that separates what is established from what is suspected. They follow the same order every time, because the routine is what stops them from overlooking the obvious. EDA is the same job with DataFrames.</p>
+                </div>
+
+                <div class="mermaid">
+graph TD
+    A["1. Questions"] --> B["2. Structure"]
+    B --> C["3. Quality"]
+    C --> D["4. One variable"]
+    D --> E["5. Two variables"]
+    E --> F["6. Segments"]
+    F --> G["7. Findings and caveats"]
+    G -->|"new questions"| A
+                </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Step</th><th>The question you are answering</th><th>Main tools</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>1. Questions</td><td>Who wants to know what, and what would they do with the answer?</td><td>A text cell</td></tr>
+                            <tr><td>2. Structure</td><td>What is one row? Which columns identify it? What types are the columns?</td><td><code>shape</code>, <code>dtypes</code>, <code>nunique</code>, <code>is_unique</code> (Module 2)</td></tr>
+                            <tr><td>3. Quality</td><td>What is missing, impossible, duplicated or unrepresentative?</td><td><code>isna</code>, <code>duplicated</code>, ranges, <code>merge</code> with <code>validate</code> (Lessons 2.3, 2.5)</td></tr>
+                            <tr><td>4. One variable</td><td>What does each column look like by itself?</td><td>Counts, medians, histograms and bar charts (Lessons 4.1, 4.2, Module 3)</td></tr>
+                            <tr><td>5. Two variables</td><td>Which columns move together?</td><td>Correlation, grouped summaries (Lessons 2.4, 4.4)</td></tr>
+                            <tr><td>6. Segments</td><td>Is the story the same for every group?</td><td><code>groupby</code>, pivot tables, tests with a correction (Lessons 2.6, 4.5)</td></tr>
+                            <tr><td>7. Findings</td><td>What did we learn, how sure are we, and what next?</td><td>Plain sentences</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>You will walk through all seven steps on Pinecrest's customer survey, then run the routine yourself in the project on a different question. There is very little new syntax in this lesson. What is new is the order, and the judgment about what each result means.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="questions" class="lesson-section">
+                <h2>❓ Step 1: Questions First</h2>
+
+                <p>Before opening the file, write down what you are trying to learn. Questions decide which columns matter, which comparisons are planned and which are fishing, and when you are done. They come from the person who asked, so find out who that is and what decision is waiting on the answer.</p>
+
+                <p>The scenario: Pinecrest surveyed customers in the autumn of 2025. The head of customer experience has budget for one or two improvement projects next year and wants to know where to spend it.</p>
+
+                <div class="card card-accent">
+                    <h4>📝 Questions for the Survey, Written Before Loading It</h4>
+                    <ol>
+                        <li>Which parts of the experience (selection, price, staff, website) do customers rate lowest?</li>
+                        <li>Which of those parts is most closely tied to overall satisfaction and to recommending Pinecrest?</li>
+                        <li>Is any store or age group noticeably less satisfied than the rest, and with what?</li>
+                        <li>Who answered? Can these responses speak for Pinecrest's customers in general?</li>
+                    </ol>
+                </div>
+
+                <p>Four questions is plenty. Questions 1 to 3 map onto steps 4, 5 and 6 of the routine, and question 4 belongs to step 3. That is no accident: the routine is built so that ordinary questions have a place to be answered.</p>
+
+                <div class="card card-success">
+                    <h4>✅ Your Questions Are Allowed to Be Imperfect</h4>
+                    <p>You will not know the best questions before you have seen the data, and nobody does. Write the best ones you can, then revise them openly when the data teach you something. A changed question that you recorded is good practice. A question invented afterward to fit a pretty chart is not.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="structure" class="lesson-section">
+                <h2>🧱 Step 2: Structure</h2>
+
+                <p>Now load the file and establish the basics. The most important fact about any table is its <strong>grain</strong>: what one row represents. Every count and every average you compute later depends on it.</p>
+
+                <pre><code class="language-python">import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
 from scipy import stats
-import warnings
-warnings.filterwarnings('ignore')
 
-# Set up visualization style
-sns.set_style("whitegrid")
-plt.rcParams['figure.figsize'] = (12, 8)
-plt.rcParams['font.size'] = 11
+pd.set_option("display.width", 150)
+pd.set_option("display.max_columns", 20)
 
-# Load a real-world dataset for demonstration
-# We'll use a synthetic dataset that mimics real e-commerce data
-np.random.seed(42)
+survey = pd.read_csv("data/survey.csv", parse_dates=["survey_date"])
 
-# Generate realistic e-commerce data
-n_customers = 5000
-dates = pd.date_range('2023-01-01', '2023-12-31', freq='D')
+print(survey.shape)
+print(survey.drop(columns="comment").head(3).T)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>(1800, 12)
+                                 0                    1                    2
+response_id                      1                    2                    3
+customer_id                  13742                12267                10108
+survey_date    2025-10-01 00:00:00  2025-10-01 00:00:00  2025-10-01 00:00:00
+age_group                      65+                18-24                25-34
+store                    Asheville                Boise               Online
+sat_overall                    5.0                  3.0                  4.0
+sat_selection                  5.0                  3.0                  5.0
+sat_price                      5.0                  3.0                  4.0
+sat_staff                      5.0                  3.0                  3.0
+sat_website                    3.0                  NaN                  4.0
+recommend                      NaN                  6.0                  7.0</code></pre>
+                </div>
 
-# Create customer data
-customers = pd.DataFrame({
-    'customer_id': range(1, n_customers + 1),
-    'age': np.random.normal(35, 12, n_customers).clip(18, 80).astype(int),
-    'signup_date': pd.to_datetime('2020-01-01') + pd.to_timedelta(np.random.randint(0, 1095, n_customers), unit='D'),
-    'country': np.random.choice(['USA', 'UK', 'Canada', 'Australia', 'Germany'], n_customers, p=[0.4, 0.2, 0.15, 0.15, 0.1]),
-    'device': np.random.choice(['mobile', 'desktop', 'tablet'], n_customers, p=[0.5, 0.35, 0.15]),
-    'subscription_type': np.random.choice(['free', 'basic', 'premium'], n_customers, p=[0.6, 0.3, 0.1])
-})
+                <p>1,800 rows and 12 columns. Printing the first rows <em>transposed</em> (<code>.T</code>) turns a wide table into a readable list, one column per line (the long free-text <code>comment</code> column is left out here to keep it narrow). You can already see ratings stored as decimals and at least one missing value.</p>
 
-# Add some patterns and anomalies
-customers.loc[customers['age'] > 50, 'device'] = np.random.choice(['desktop', 'tablet'], 
-                                                                   sum(customers['age'] > 50), p=[0.7, 0.3])
-customers.loc[customers['subscription_type'] == 'premium', 'age'] += np.random.randint(5, 10, 
-                                                                                       sum(customers['subscription_type'] == 'premium'))
+                <p>You will want the same summary of every column for every new table, so write it once as a function and keep it.</p>
 
-# Create transaction data
-n_transactions = 20000
-transactions = pd.DataFrame({
-    'transaction_id': range(1, n_transactions + 1),
-    'customer_id': np.random.choice(customers['customer_id'], n_transactions),
-    'date': np.random.choice(dates, n_transactions),
-    'amount': np.random.lognormal(3.5, 1.2, n_transactions),
-    'product_category': np.random.choice(['Electronics', 'Clothing', 'Books', 'Home', 'Sports'], 
-                                        n_transactions, p=[0.3, 0.25, 0.15, 0.2, 0.1]),
-    'payment_method': np.random.choice(['credit_card', 'paypal', 'debit_card', 'crypto'], 
-                                      n_transactions, p=[0.45, 0.3, 0.2, 0.05])
-})
-
-# Add patterns
-transactions.loc[transactions['product_category'] == 'Electronics', 'amount'] *= 2.5
-transactions.loc[transactions['payment_method'] == 'crypto', 'amount'] *= 1.8
-
-# Add some outliers and missing values
-outlier_idx = np.random.choice(transactions.index, 100)
-transactions.loc[outlier_idx, 'amount'] *= np.random.uniform(5, 10, 100)
-
-missing_idx = np.random.choice(transactions.index, 500)
-transactions.loc[missing_idx, 'product_category'] = np.nan
-
-# Merge for complete dataset
-df = transactions.merge(customers, on='customer_id', how='left')
-
-print("📊 Dataset Loaded Successfully!")
-print(f"Shape: {df.shape}")
-print(f"Date Range: {df['date'].min()} to {df['date'].max()}")
-print(f"Customers: {df['customer_id'].nunique()}")
-print(f"Transactions: {len(df)}")
-</code></pre>
-
-    <h2>Step 1: Initial Data Reconnaissance 🔎</h2>
-    
-    <p>Before diving deep, we need to understand what we're working with. This is like reading the case file before investigating.</p>
-
-    <pre><code>class EDAWorkflow:
-    """
-    A systematic EDA workflow that can be applied to any dataset.
-    Like having a seasoned data detective as your partner!
-    """
-    
-    def __init__(self, df, target=None):
-        self.df = df
-        self.target = target
-        self.report = {}
-        
-    def initial_reconnaissance(self):
-        """Step 1: Get the lay of the land"""
-        print("="*60)
-        print("📊 INITIAL DATA RECONNAISSANCE")
-        print("="*60)
-        
-        # Basic information
-        print(f"\n📌 Dataset Shape: {self.df.shape[0]:,} rows × {self.df.shape[1]} columns")
-        print(f"📌 Memory Usage: {self.df.memory_usage().sum() / 1024**2:.2f} MB")
-        
-        # Column types
-        print("\n📋 Column Types:")
-        type_counts = self.df.dtypes.value_counts()
-        for dtype, count in type_counts.items():
-            print(f"  • {dtype}: {count} columns")
-        
-        # Missing values overview
-        missing = self.df.isnull().sum()
-        missing_pct = 100 * missing / len(self.df)
-        missing_df = pd.DataFrame({
-            'Missing_Count': missing,
-            'Missing_Percentage': missing_pct
-        }).sort_values('Missing_Percentage', ascending=False)
-        
-        print("\n⚠️ Missing Values:")
-        if missing_df['Missing_Count'].sum() > 0:
-            print(missing_df[missing_df['Missing_Count'] > 0])
-        else:
-            print("  ✅ No missing values!")
-        
-        # Duplicates
-        duplicates = self.df.duplicated().sum()
-        print(f"\n🔄 Duplicate Rows: {duplicates} ({100*duplicates/len(self.df):.2f}%)")
-        
-        # Basic statistics
-        print("\n📈 Quick Statistics:")
-        print(self.df.describe(include='all').round(2))
-        
-        # Save to report
-        self.report['shape'] = self.df.shape
-        self.report['missing'] = missing_df
-        self.report['duplicates'] = duplicates
-        
-        return self
-
-# Run initial reconnaissance
-eda = EDAWorkflow(df)
-eda.initial_reconnaissance()
-
-# Specific checks for our dataset
-print("\n🎯 Domain-Specific Checks:")
-print(f"  • Customers with transactions: {df['customer_id'].nunique()}")
-print(f"  • Average transactions per customer: {len(df) / df['customer_id'].nunique():.1f}")
-print(f"  • Revenue range: ${df['amount'].min():.2f} - ${df['amount'].max():.2f}")
-print(f"  • Most common payment method: {df['payment_method'].mode()[0]}")
-</code></pre>
-
-    <h2>Step 2: Univariate Analysis - Know Each Variable 📊</h2>
-    
-    <p>Like interviewing each witness separately, we need to understand each variable on its own before looking at relationships.</p>
-
-    <pre><code>def univariate_analysis(df):
-    """Analyze each variable independently"""
-    print("="*60)
-    print("📊 UNIVARIATE ANALYSIS")
-    print("="*60)
-    
-    # Separate numerical and categorical columns
-    numerical_cols = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
-    categorical_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
-    datetime_cols = df.select_dtypes(include=['datetime64']).columns.tolist()
-    
-    # Remove ID columns from analysis
-    id_cols = [col for col in numerical_cols if 'id' in col.lower()]
-    numerical_cols = [col for col in numerical_cols if col not in id_cols]
-    
-    print(f"\n📈 Numerical Variables ({len(numerical_cols)}): {numerical_cols}")
-    print(f"📝 Categorical Variables ({len(categorical_cols)}): {categorical_cols}")
-    print(f"📅 Datetime Variables ({len(datetime_cols)}): {datetime_cols}")
-    
-    # Analyze numerical variables
-    if numerical_cols:
-        fig, axes = plt.subplots(len(numerical_cols), 3, figsize=(15, 5*len(numerical_cols)))
-        if len(numerical_cols) == 1:
-            axes = axes.reshape(1, -1)
-        
-        for idx, col in enumerate(numerical_cols):
-            data = df[col].dropna()
-            
-            # Distribution plot
-            axes[idx, 0].hist(data, bins=50, edgecolor='black', alpha=0.7)
-            axes[idx, 0].set_title(f'{col} - Distribution')
-            axes[idx, 0].set_xlabel(col)
-            axes[idx, 0].set_ylabel('Frequency')
-            
-            # Add mean and median lines
-            axes[idx, 0].axvline(data.mean(), color='red', linestyle='--', label=f'Mean: {data.mean():.2f}')
-            axes[idx, 0].axvline(data.median(), color='green', linestyle='--', label=f'Median: {data.median():.2f}')
-            axes[idx, 0].legend()
-            
-            # Box plot
-            axes[idx, 1].boxplot(data)
-            axes[idx, 1].set_title(f'{col} - Box Plot')
-            axes[idx, 1].set_ylabel(col)
-            
-            # Q-Q plot for normality check
-            stats.probplot(data, dist="norm", plot=axes[idx, 2])
-            axes[idx, 2].set_title(f'{col} - Q-Q Plot')
-            
-            # Statistical tests
-            shapiro_stat, shapiro_p = stats.shapiro(data.sample(min(5000, len(data))))
-            print(f"\n📊 {col}:")
-            print(f"  • Mean: {data.mean():.2f}")
-            print(f"  • Median: {data.median():.2f}")
-            print(f"  • Std Dev: {data.std():.2f}")
-            print(f"  • Skewness: {data.skew():.2f}")
-            print(f"  • Kurtosis: {data.kurtosis():.2f}")
-            print(f"  • Normality (Shapiro): p={shapiro_p:.4f} {'✅ Normal' if shapiro_p > 0.05 else '❌ Not Normal'}")
-        
-        plt.tight_layout()
-        plt.show()
-    
-    # Analyze categorical variables
-    if categorical_cols:
-        fig, axes = plt.subplots(len(categorical_cols), 2, figsize=(12, 4*len(categorical_cols)))
-        if len(categorical_cols) == 1:
-            axes = axes.reshape(1, -1)
-        
-        for idx, col in enumerate(categorical_cols):
-            # Value counts
-            value_counts = df[col].value_counts()
-            
-            # Bar plot
-            axes[idx, 0].bar(range(len(value_counts)), value_counts.values)
-            axes[idx, 0].set_title(f'{col} - Frequency')
-            axes[idx, 0].set_xlabel(col)
-            axes[idx, 0].set_ylabel('Count')
-            axes[idx, 0].set_xticks(range(len(value_counts)))
-            axes[idx, 0].set_xticklabels(value_counts.index, rotation=45, ha='right')
-            
-            # Pie chart (if not too many categories)
-            if len(value_counts) <= 10:
-                axes[idx, 1].pie(value_counts.values, labels=value_counts.index, autopct='%1.1f%%')
-                axes[idx, 1].set_title(f'{col} - Distribution')
-            else:
-                # Show top 10 for pie chart
-                top_10 = value_counts.head(10)
-                other_count = value_counts[10:].sum()
-                if other_count > 0:
-                    plot_values = top_10.tolist() + [other_count]
-                    plot_labels = top_10.index.tolist() + ['Others']
-                else:
-                    plot_values = top_10.values
-                    plot_labels = top_10.index
-                axes[idx, 1].pie(plot_values, labels=plot_labels, autopct='%1.1f%%')
-                axes[idx, 1].set_title(f'{col} - Top 10 + Others')
-            
-            print(f"\n📝 {col}:")
-            print(f"  • Unique values: {df[col].nunique()}")
-            print(f"  • Most common: {value_counts.index[0]} ({value_counts.iloc[0]:,} occurrences)")
-            print(f"  • Least common: {value_counts.index[-1]} ({value_counts.iloc[-1]:,} occurrences)")
-        
-        plt.tight_layout()
-        plt.show()
-
-# Perform univariate analysis
-univariate_analysis(df)
-</code></pre>
-
-    <h2>Step 3: Bivariate Analysis - Finding Relationships 🔗</h2>
-    
-    <p>Now we look for connections between pairs of variables. This is where patterns start to emerge!</p>
-
-    <pre><code>def bivariate_analysis(df, target_col=None):
-    """Analyze relationships between pairs of variables"""
-    print("="*60)
-    print("🔗 BIVARIATE ANALYSIS")
-    print("="*60)
-    
-    numerical_cols = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
-    categorical_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
-    
-    # Remove ID columns
-    numerical_cols = [col for col in numerical_cols if 'id' not in col.lower()]
-    
-    # 1. Numerical vs Numerical: Correlation Matrix
-    if len(numerical_cols) > 1:
-        print("\n📊 Numerical Correlations:")
-        
-        # Calculate correlations
-        corr_matrix = df[numerical_cols].corr()
-        
-        # Plot heatmap
-        plt.figure(figsize=(10, 8))
-        sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', center=0, 
-                   square=True, linewidths=1, cbar_kws={"shrink": 0.8})
-        plt.title('Correlation Matrix - Numerical Variables')
-        plt.show()
-        
-        # Find strong correlations
-        strong_corr = []
-        for i in range(len(corr_matrix.columns)):
-            for j in range(i+1, len(corr_matrix.columns)):
-                if abs(corr_matrix.iloc[i, j]) > 0.5:
-                    strong_corr.append({
-                        'var1': corr_matrix.columns[i],
-                        'var2': corr_matrix.columns[j],
-                        'correlation': corr_matrix.iloc[i, j]
-                    })
-        
-        if strong_corr:
-            print("\n💪 Strong Correlations (|r| > 0.5):")
-            for item in strong_corr:
-                print(f"  • {item['var1']} ↔ {item['var2']}: {item['correlation']:.3f}")
-    
-    # 2. Categorical vs Numerical
-    if categorical_cols and numerical_cols:
-        print("\n📊 Categorical vs Numerical Relationships:")
-        
-        # Select most important combinations
-        for cat_col in categorical_cols[:2]:  # Limit to first 2 categorical
-            for num_col in numerical_cols[:2]:  # Limit to first 2 numerical
-                if df[cat_col].nunique() <= 10:  # Only if reasonable number of categories
-                    plt.figure(figsize=(10, 5))
-                    
-                    # Box plot
-                    plt.subplot(1, 2, 1)
-                    df.boxplot(column=num_col, by=cat_col, ax=plt.gca())
-                    plt.title(f'{num_col} by {cat_col}')
-                    plt.suptitle('')
-                    
-                    # Violin plot
-                    plt.subplot(1, 2, 2)
-                    cat_order = df[cat_col].value_counts().index
-                    sns.violinplot(data=df, x=cat_col, y=num_col, order=cat_order)
-                    plt.title(f'{num_col} Distribution by {cat_col}')
-                    plt.xticks(rotation=45)
-                    
-                    plt.tight_layout()
-                    plt.show()
-                    
-                    # Statistical test (ANOVA)
-                    groups = [group[num_col].dropna() for name, group in df.groupby(cat_col)]
-                    if len(groups) > 1:
-                        f_stat, p_value = stats.f_oneway(*groups)
-                        print(f"\n  {cat_col} vs {num_col}:")
-                        print(f"    ANOVA F-statistic: {f_stat:.3f}")
-                        print(f"    p-value: {p_value:.4f}")
-                        if p_value < 0.05:
-                            print(f"    ✅ Significant relationship!")
-                        else:
-                            print(f"    ❌ No significant relationship")
-    
-    # 3. Categorical vs Categorical
-    if len(categorical_cols) > 1:
-        print("\n📊 Categorical Associations:")
-        
-        for i, cat1 in enumerate(categorical_cols[:3]):
-            for cat2 in categorical_cols[i+1:4]:
-                if df[cat1].nunique() <= 10 and df[cat2].nunique() <= 10:
-                    # Create crosstab
-                    crosstab = pd.crosstab(df[cat1], df[cat2])
-                    
-                    # Chi-square test
-                    chi2, p_value, dof, expected = stats.chi2_contingency(crosstab)
-                    
-                    # Cramér's V for effect size
-                    n = crosstab.sum().sum()
-                    min_dim = min(crosstab.shape[0] - 1, crosstab.shape[1] - 1)
-                    cramers_v = np.sqrt(chi2 / (n * min_dim))
-                    
-                    print(f"\n  {cat1} vs {cat2}:")
-                    print(f"    Chi-square: {chi2:.3f}")
-                    print(f"    p-value: {p_value:.4f}")
-                    print(f"    Cramér's V: {cramers_v:.3f}")
-                    
-                    if p_value < 0.05:
-                        print(f"    ✅ Significant association!")
-                        
-                        # Visualize with heatmap
-                        plt.figure(figsize=(8, 6))
-                        sns.heatmap(crosstab, annot=True, fmt='d', cmap='YlOrRd')
-                        plt.title(f'Crosstab: {cat1} vs {cat2}')
-                        plt.show()
-
-# Perform bivariate analysis
-bivariate_analysis(df, target_col='amount')
-</code></pre>
-
-    <h2>Step 4: Outlier Detection - Finding the Unusual 🔍</h2>
-    
-    <p>Outliers can be errors, anomalies, or the most interesting insights in your data. Let's find them systematically!</p>
-
-    <pre><code>def outlier_detection(df):
-    """Systematic outlier detection using multiple methods"""
-    print("="*60)
-    print("🔍 OUTLIER DETECTION")
-    print("="*60)
-    
-    numerical_cols = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
-    numerical_cols = [col for col in numerical_cols if 'id' not in col.lower()]
-    
-    outlier_report = {}
-    
-    for col in numerical_cols:
-        data = df[col].dropna()
-        outliers_dict = {}
-        
-        # Method 1: IQR (Interquartile Range)
-        Q1 = data.quantile(0.25)
-        Q3 = data.quantile(0.75)
-        IQR = Q3 - Q1
-        lower_bound = Q1 - 1.5 * IQR
-        upper_bound = Q3 + 1.5 * IQR
-        outliers_iqr = data[(data < lower_bound) | (data > upper_bound)]
-        outliers_dict['IQR'] = len(outliers_iqr)
-        
-        # Method 2: Z-Score
-        z_scores = np.abs(stats.zscore(data))
-        outliers_zscore = data[z_scores > 3]
-        outliers_dict['Z-Score'] = len(outliers_zscore)
-        
-        # Method 3: Modified Z-Score (MAD - Median Absolute Deviation)
-        median = data.median()
-        mad = np.median(np.abs(data - median))
-        modified_z_scores = 0.6745 * (data - median) / (mad if mad else 1)
-        outliers_mad = data[np.abs(modified_z_scores) > 3.5]
-        outliers_dict['MAD'] = len(outliers_mad)
-        
-        # Method 4: Isolation Forest
-        from sklearn.ensemble import IsolationForest
-        iso_forest = IsolationForest(contamination=0.05, random_state=42)
-        outliers_iso = iso_forest.fit_predict(data.values.reshape(-1, 1))
-        outliers_dict['Isolation Forest'] = sum(outliers_iso == -1)
-        
-        outlier_report[col] = outliers_dict
-        
-        # Visualize outliers
-        fig, axes = plt.subplots(1, 4, figsize=(16, 4))
-        
-        # Box plot
-        axes[0].boxplot(data)
-        axes[0].set_title(f'{col} - Box Plot')
-        axes[0].set_ylabel('Value')
-        
-        # Histogram with outlier boundaries
-        axes[1].hist(data, bins=50, alpha=0.7, edgecolor='black')
-        axes[1].axvline(lower_bound, color='r', linestyle='--', label=f'IQR Lower: {lower_bound:.2f}')
-        axes[1].axvline(upper_bound, color='r', linestyle='--', label=f'IQR Upper: {upper_bound:.2f}')
-        axes[1].set_title(f'{col} - Distribution with IQR Bounds')
-        axes[1].legend()
-        
-        # Z-score distribution
-        axes[2].hist(z_scores, bins=50, alpha=0.7, edgecolor='black')
-        axes[2].axvline(3, color='r', linestyle='--', label='Z = 3')
-        axes[2].set_title(f'{col} - Z-Score Distribution')
-        axes[2].legend()
-        
-        # Scatter plot with outliers highlighted
-        axes[3].scatter(range(len(data)), data, alpha=0.5, s=10)
-        outlier_indices = outliers_iqr.index
-        axes[3].scatter(outlier_indices, outliers_iqr, color='red', s=20, label='Outliers')
-        axes[3].set_title(f'{col} - Outliers Highlighted')
-        axes[3].set_xlabel('Index')
-        axes[3].set_ylabel('Value')
-        axes[3].legend()
-        
-        plt.tight_layout()
-        plt.show()
-        
-        print(f"\n📊 {col}:")
-        print(f"  • Total observations: {len(data)}")
-        for method, count in outliers_dict.items():
-            pct = 100 * count / len(data)
-            print(f"  • {method}: {count} outliers ({pct:.2f}%)")
-    
-    # Summary table
-    outlier_df = pd.DataFrame(outlier_report).T
-    print("\n📋 Outlier Summary Table:")
-    print(outlier_df)
-    
-    return outlier_df
-
-# Perform outlier detection
-outlier_summary = outlier_detection(df)
-</code></pre>
-
-    <h2>Step 5: Pattern Discovery & Insights 💡</h2>
-    
-    <p>This is where we synthesize everything we've learned and extract actionable insights!</p>
-
-    <pre><code>def pattern_discovery(df):
-    """Discover patterns and generate insights"""
-    print("="*60)
-    print("💡 PATTERN DISCOVERY & INSIGHTS")
-    print("="*60)
-    
-    insights = []
-    
-    # Temporal patterns
-    if 'date' in df.columns:
-        df['month'] = pd.to_datetime(df['date']).dt.month
-        df['day_of_week'] = pd.to_datetime(df['date']).dt.dayofweek
-        
-        # Monthly trends
-        monthly_stats = df.groupby('month')['amount'].agg(['mean', 'sum', 'count'])
-        
-        plt.figure(figsize=(15, 5))
-        
-        plt.subplot(1, 3, 1)
-        monthly_stats['sum'].plot(kind='bar')
-        plt.title('Monthly Revenue')
-        plt.xlabel('Month')
-        plt.ylabel('Total Revenue')
-        
-        plt.subplot(1, 3, 2)
-        monthly_stats['count'].plot(kind='bar')
-        plt.title('Monthly Transaction Count')
-        plt.xlabel('Month')
-        plt.ylabel('Number of Transactions')
-        
-        plt.subplot(1, 3, 3)
-        monthly_stats['mean'].plot(kind='bar')
-        plt.title('Average Transaction Value by Month')
-        plt.xlabel('Month')
-        plt.ylabel('Average Amount')
-        
-        plt.tight_layout()
-        plt.show()
-        
-        # Best and worst months
-        best_month = monthly_stats['sum'].idxmax()
-        worst_month = monthly_stats['sum'].idxmin()
-        insights.append(f"📈 Best revenue month: {best_month} (${monthly_stats.loc[best_month, 'sum']:,.2f})")
-        insights.append(f"📉 Worst revenue month: {worst_month} (${monthly_stats.loc[worst_month, 'sum']:,.2f})")
-    
-    # Customer segmentation patterns
-    if 'customer_id' in df.columns:
-        customer_stats = df.groupby('customer_id').agg({
-            'amount': ['sum', 'mean', 'count'],
-            'product_category': lambda x: x.mode()[0] if not x.empty else 'Unknown'
-        })
-        customer_stats.columns = ['total_spent', 'avg_transaction', 'transaction_count', 'favorite_category']
-        
-        # RFM-like segmentation
-        customer_stats['value_segment'] = pd.qcut(customer_stats['total_spent'], 
-                                                   q=3, labels=['Low', 'Medium', 'High'])
-        customer_stats['frequency_segment'] = pd.qcut(customer_stats['transaction_count'], 
-                                                      q=3, labels=['Low', 'Medium', 'High'])
-        
-        # Segment distribution
-        segment_dist = customer_stats.groupby(['value_segment', 'frequency_segment']).size().unstack(fill_value=0)
-        
-        plt.figure(figsize=(8, 6))
-        sns.heatmap(segment_dist, annot=True, fmt='d', cmap='YlOrRd')
-        plt.title('Customer Segmentation Matrix')
-        plt.xlabel('Frequency Segment')
-        plt.ylabel('Value Segment')
-        plt.show()
-        
-        # High-value customers
-        high_value_customers = customer_stats[customer_stats['value_segment'] == 'High']
-        insights.append(f"👑 High-value customers: {len(high_value_customers)} ({100*len(high_value_customers)/len(customer_stats):.1f}%)")
-        insights.append(f"💰 They contribute ${high_value_customers['total_spent'].sum():,.2f} in revenue")
-    
-    # Product patterns
-    if 'product_category' in df.columns:
-        product_stats = df.groupby('product_category')['amount'].agg(['sum', 'mean', 'count'])
-        
-        fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-        
-        # Revenue by category
-        product_stats['sum'].sort_values().plot(kind='barh', ax=axes[0])
-        axes[0].set_title('Revenue by Product Category')
-        axes[0].set_xlabel('Total Revenue')
-        
-        # Average transaction by category
-        product_stats['mean'].sort_values().plot(kind='barh', ax=axes[1])
-        axes[1].set_title('Average Transaction Value by Category')
-        axes[1].set_xlabel('Average Amount')
-        
-        plt.tight_layout()
-        plt.show()
-        
-        best_category = product_stats['sum'].idxmax()
-        insights.append(f"🏆 Top revenue category: {best_category} (${product_stats.loc[best_category, 'sum']:,.2f})")
-    
-    # Payment method patterns
-    if 'payment_method' in df.columns:
-        payment_stats = df.groupby('payment_method').agg({
-            'amount': ['mean', 'sum', 'count']
-        })
-        payment_stats.columns = ['avg_amount', 'total_amount', 'count']
-        
-        insights.append(f"💳 Most popular payment: {payment_stats['count'].idxmax()} ({payment_stats['count'].max()} transactions)")
-        insights.append(f"💎 Highest value payment method: {payment_stats['avg_amount'].idxmax()} (avg ${payment_stats['avg_amount'].max():.2f})")
-    
-    # Display insights
-    print("\n🎯 KEY INSIGHTS DISCOVERED:")
-    print("-" * 40)
-    for i, insight in enumerate(insights, 1):
-        print(f"{i}. {insight}")
-    
-    return insights
-
-# Discover patterns
-insights = pattern_discovery(df)
-</code></pre>
-
-    <div class="eda-checklist">
-        <h3>📋 EDA Checklist - Never Miss a Step!</h3>
-        <ul>
-            <li>Understand the business context and goals</li>
-            <li>Check data types and convert if necessary</li>
-            <li>Identify and handle missing values</li>
-            <li>Check for and remove duplicates</li>
-            <li>Analyze each variable individually (univariate)</li>
-            <li>Explore relationships between variables (bivariate)</li>
-            <li>Detect and investigate outliers</li>
-            <li>Check for data quality issues</li>
-            <li>Identify patterns and trends</li>
-            <li>Form and test hypotheses</li>
-            <li>Document findings and insights</li>
-            <li>Create visualizations for stakeholders</li>
-        </ul>
-    </div>
-
-    <h2>Advanced EDA Techniques 🚀</h2>
-    
-    <pre><code># Advanced technique 1: Automated EDA with pandas-profiling
-# Note: Install with: pip install pandas-profiling
-"""
-from pandas_profiling import ProfileReport
-
-# Generate comprehensive EDA report
-profile = ProfileReport(df, title='E-commerce Data Analysis', explorative=True)
-profile.to_file("eda_report.html")
-print("✅ Comprehensive EDA report generated!")
-"""
-
-# Advanced technique 2: Correlation network visualization
-def plot_correlation_network(df, threshold=0.3):
-    """Create network graph of correlations"""
-    import networkx as nx
-    
-    numerical_cols = df.select_dtypes(include=['float64', 'int64']).columns
-    numerical_cols = [col for col in numerical_cols if 'id' not in col.lower()]
-    
-    if len(numerical_cols) < 2:
-        return
-    
-    corr = df[numerical_cols].corr()
-    
-    # Create network
-    G = nx.Graph()
-    
-    # Add nodes
-    for col in numerical_cols:
-        G.add_node(col)
-    
-    # Add edges for correlations above threshold
-    for i in range(len(numerical_cols)):
-        for j in range(i+1, len(numerical_cols)):
-            if abs(corr.iloc[i, j]) > threshold:
-                G.add_edge(numerical_cols[i], numerical_cols[j], 
-                          weight=abs(corr.iloc[i, j]),
-                          correlation=corr.iloc[i, j])
-    
-    # Plot
-    plt.figure(figsize=(10, 8))
-    pos = nx.spring_layout(G)
-    
-    # Draw nodes
-    nx.draw_networkx_nodes(G, pos, node_size=1000, node_color='lightblue')
-    
-    # Draw edges with varying thickness
-    edges = G.edges()
-    weights = [G[u][v]['weight'] * 3 for u, v in edges]
-    colors = ['red' if G[u][v]['correlation'] < 0 else 'green' for u, v in edges]
-    nx.draw_networkx_edges(G, pos, width=weights, edge_color=colors, alpha=0.6)
-    
-    # Draw labels
-    nx.draw_networkx_labels(G, pos)
-    
-    plt.title(f'Correlation Network (|r| > {threshold})')
-    plt.axis('off')
-    plt.show()
-
-plot_correlation_network(df, threshold=0.3)
-
-# Advanced technique 3: Dimensionality reduction for visualization
-from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA
-
-def perform_pca_analysis(df):
-    """PCA for pattern discovery in high-dimensional data"""
-    
-    # Select numerical features
-    numerical_cols = df.select_dtypes(include=['float64', 'int64']).columns
-    numerical_cols = [col for col in numerical_cols if 'id' not in col.lower()]
-    
-    if len(numerical_cols) < 3:
-        print("Not enough numerical features for PCA")
-        return
-    
-    # Prepare data
-    X = df[numerical_cols].dropna()
-    X_scaled = StandardScaler().fit_transform(X)
-    
-    # Perform PCA
-    pca = PCA()
-    X_pca = pca.fit_transform(X_scaled)
-    
-    # Explained variance
-    exp_var_ratio = pca.explained_variance_ratio_
-    cum_var_ratio = np.cumsum(exp_var_ratio)
-    
-    # Plot
-    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-    
-    # Scree plot
-    axes[0].bar(range(1, len(exp_var_ratio)+1), exp_var_ratio)
-    axes[0].plot(range(1, len(exp_var_ratio)+1), cum_var_ratio, 'r-', marker='o')
-    axes[0].set_xlabel('Principal Component')
-    axes[0].set_ylabel('Explained Variance Ratio')
-    axes[0].set_title('PCA Scree Plot')
-    axes[0].axhline(y=0.9, color='g', linestyle='--', label='90% variance')
-    axes[0].legend()
-    
-    # Biplot (first 2 components)
-    axes[1].scatter(X_pca[:, 0], X_pca[:, 1], alpha=0.5)
-    axes[1].set_xlabel(f'PC1 ({exp_var_ratio[0]:.2%} variance)')
-    axes[1].set_ylabel(f'PC2 ({exp_var_ratio[1]:.2%} variance)')
-    axes[1].set_title('PCA Biplot - First 2 Components')
-    
-    # Add feature vectors
-    for i, col in enumerate(numerical_cols):
-        axes[1].arrow(0, 0, pca.components_[0, i]*3, pca.components_[1, i]*3,
-                     head_width=0.1, head_length=0.1, fc='red', ec='red')
-        axes[1].text(pca.components_[0, i]*3.5, pca.components_[1, i]*3.5, col,
-                    fontsize=9, ha='center')
-    
-    plt.tight_layout()
-    plt.show()
-    
-    print(f"✅ Components needed for 90% variance: {np.argmax(cum_var_ratio >= 0.9) + 1}")
-
-perform_pca_analysis(df)
-</code></pre>
-
-    <div class="insight-box">
-        <h4>💡 Pro Tips for Effective EDA</h4>
-        <ul>
-            <li><strong>Start with questions:</strong> What do you want to learn from this data?</li>
-            <li><strong>Document everything:</strong> Your future self will thank you</li>
-            <li><strong>Visualize generously:</strong> A picture is worth a thousand statistics</li>
-            <li><strong>Be skeptical:</strong> Question unusual patterns - they might be errors</li>
-            <li><strong>Think about causation:</strong> Correlation doesn't imply causation</li>
-            <li><strong>Consider domain knowledge:</strong> Context matters more than p-values</li>
-            <li><strong>Iterate:</strong> EDA is not linear - go back and refine</li>
-        </ul>
-    </div>
-
-    <h2>Common Pitfalls in EDA 🕳️</h2>
-    
-    <pre><code># Common EDA mistakes and how to avoid them
-
-def eda_pitfalls_demo():
-    """Demonstrate common EDA pitfalls"""
-    print("="*60)
-    print("⚠️ COMMON EDA PITFALLS")
-    print("="*60)
-    
-    # Pitfall 1: Simpson's Paradox
-    print("\n1️⃣ Simpson's Paradox - Aggregation can reverse trends!")
-    
-    # Create example data
-    np.random.seed(42)
-    data_simpson = pd.DataFrame({
-        'department': np.repeat(['A', 'B'], 100),
-        'experience': np.concatenate([np.random.normal(5, 2, 100), np.random.normal(10, 2, 100)]),
-        'salary': np.concatenate([np.random.normal(50000, 5000, 100), np.random.normal(70000, 5000, 100)])
+                <pre><code class="language-python">def overview(df):
+    """One row per column: type, missing values, distinct values and an example."""
+    return pd.DataFrame({
+        "dtype": df.dtypes.astype(str),
+        "missing": df.isna().sum(),
+        "missing_pct": (df.isna().mean() * 100).round(1),
+        "unique": df.nunique(),
+        "example": df.apply(lambda col: str(col.dropna().iloc[0])[:22]),
     })
-    
-    # Add negative correlation within groups but positive overall
-    data_simpson.loc[data_simpson['department'] == 'A', 'salary'] -= data_simpson.loc[data_simpson['department'] == 'A', 'experience'] * 1000
-    data_simpson.loc[data_simpson['department'] == 'B', 'salary'] -= data_simpson.loc[data_simpson['department'] == 'B', 'experience'] * 1000
-    
-    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-    
-    # Overall correlation
-    axes[0].scatter(data_simpson['experience'], data_simpson['salary'], alpha=0.5)
-    axes[0].set_xlabel('Experience')
-    axes[0].set_ylabel('Salary')
-    axes[0].set_title('Overall: Positive Correlation')
-    z = np.polyfit(data_simpson['experience'], data_simpson['salary'], 1)
-    p = np.poly1d(z)
-    axes[0].plot(data_simpson['experience'], p(data_simpson['experience']), "r--")
-    
-    # By department
-    for dept in ['A', 'B']:
-        dept_data = data_simpson[data_simpson['department'] == dept]
-        axes[1].scatter(dept_data['experience'], dept_data['salary'], label=f'Dept {dept}', alpha=0.5)
-        z = np.polyfit(dept_data['experience'], dept_data['salary'], 1)
-        p = np.poly1d(z)
-        axes[1].plot(dept_data['experience'], p(dept_data['experience']), "--")
-    
-    axes[1].set_xlabel('Experience')
-    axes[1].set_ylabel('Salary')
-    axes[1].set_title('By Department: Negative Correlations!')
-    axes[1].legend()
-    
-    plt.tight_layout()
-    plt.show()
-    
-    print("⚠️ Lesson: Always check subgroups - aggregated data can be misleading!")
-    
-    # Pitfall 2: Ignoring time dependencies
-    print("\n2️⃣ Ignoring Time Dependencies")
-    
-    # Create time series with trend
-    dates = pd.date_range('2023-01-01', periods=365, freq='D')
-    trend = np.linspace(100, 200, 365)
-    seasonal = 20 * np.sin(np.arange(365) * 2 * np.pi / 30)  # Monthly pattern
-    noise = np.random.normal(0, 10, 365)
-    values = trend + seasonal + noise
-    
-    ts_data = pd.DataFrame({'date': dates, 'value': values})
-    
-    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-    
-    # Without considering time
-    axes[0].hist(ts_data['value'], bins=30, edgecolor='black')
-    axes[0].set_title('Distribution (ignoring time) - Looks normal!')
-    axes[0].set_xlabel('Value')
-    
-    # With time
-    axes[1].plot(ts_data['date'], ts_data['value'])
-    axes[1].set_title('Time Series - Clear trend and seasonality!')
-    axes[1].set_xlabel('Date')
-    axes[1].set_ylabel('Value')
-    
-    plt.tight_layout()
-    plt.show()
-    
-    print("⚠️ Lesson: Always check if your data has time dependencies!")
-    
-    # Pitfall 3: Correlation vs Causation
-    print("\n3️⃣ Correlation ≠ Causation")
-    
-    # Spurious correlation example
-    years = np.arange(2010, 2020)
-    ice_cream_sales = np.array([100, 105, 108, 112, 118, 125, 132, 138, 145, 152])
-    shark_attacks = np.array([45, 48, 47, 52, 55, 58, 62, 65, 68, 70])
-    
-    correlation = np.corrcoef(ice_cream_sales, shark_attacks)[0, 1]
-    
-    plt.figure(figsize=(10, 5))
-    plt.scatter(ice_cream_sales, shark_attacks)
-    z = np.polyfit(ice_cream_sales, shark_attacks, 1)
-    p = np.poly1d(z)
-    plt.plot(ice_cream_sales, p(ice_cream_sales), "r--")
-    plt.xlabel('Ice Cream Sales (thousands)')
-    plt.ylabel('Shark Attacks')
-    plt.title(f'Spurious Correlation (r = {correlation:.3f}) - Both driven by summer/temperature!')
-    plt.show()
-    
-    print("⚠️ Lesson: Correlation doesn't imply causation - look for confounding variables!")
 
-eda_pitfalls_demo()
-</code></pre>
+print(overview(survey))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>                        dtype  missing  missing_pct  unique                 example
+response_id             int64        0          0.0    1800                       1
+customer_id             int64        0          0.0    1800                   13742
+survey_date    datetime64[us]        0          0.0      46     2025-10-01 00:00:00
+age_group                 str        0          0.0       6                     65+
+store                     str        0          0.0       5               Asheville
+sat_overall           float64       53          2.9       5                     5.0
+sat_selection         float64       53          2.9       5                     5.0
+sat_price             float64       47          2.6       5                     5.0
+sat_staff             float64      605         33.6       5                     5.0
+sat_website           float64      472         26.2       5                     3.0
+recommend             float64       54          3.0      11                     6.0
+comment                   str      977         54.3      26  Love this store. Will</code></pre>
+                </div>
 
-    <h2>EDA Report Template 📝</h2>
-    
-    <pre><code>def generate_eda_report(df, output_file='eda_report.txt'):
-    """Generate a comprehensive EDA report"""
-    
-    with open(output_file, 'w') as f:
-        f.write("="*60 + "\n")
-        f.write("EXPLORATORY DATA ANALYSIS REPORT\n")
-        f.write("="*60 + "\n\n")
-        
-        # Executive Summary
-        f.write("EXECUTIVE SUMMARY\n")
-        f.write("-"*40 + "\n")
-        f.write(f"Dataset: {df.shape[0]:,} rows × {df.shape[1]} columns\n")
-        f.write(f"Date Range: {df['date'].min()} to {df['date'].max()}\n" if 'date' in df.columns else "")
-        f.write(f"Missing Values: {df.isnull().sum().sum()} total\n")
-        f.write(f"Memory Usage: {df.memory_usage().sum() / 1024**2:.2f} MB\n\n")
-        
-        # Key Findings
-        f.write("KEY FINDINGS\n")
-        f.write("-"*40 + "\n")
-        
-        numerical_cols = df.select_dtypes(include=['float64', 'int64']).columns
-        for col in numerical_cols[:5]:  # Top 5 numerical columns
-            if 'id' not in col.lower():
-                f.write(f"\n{col}:\n")
-                f.write(f"  • Mean: {df[col].mean():.2f}\n")
-                f.write(f"  • Median: {df[col].median():.2f}\n")
-                f.write(f"  • Std Dev: {df[col].std():.2f}\n")
-                f.write(f"  • Range: [{df[col].min():.2f}, {df[col].max():.2f}]\n")
-        
-        # Data Quality Issues
-        f.write("\nDATA QUALITY ISSUES\n")
-        f.write("-"*40 + "\n")
-        
-        missing = df.isnull().sum()
-        for col in missing[missing > 0].index:
-            f.write(f"  • {col}: {missing[col]} missing ({100*missing[col]/len(df):.1f}%)\n")
-        
-        # Recommendations
-        f.write("\nRECOMMENDATIONS\n")
-        f.write("-"*40 + "\n")
-        f.write("1. Handle missing values in categorical features\n")
-        f.write("2. Investigate outliers in amount column\n")
-        f.write("3. Consider feature engineering for date components\n")
-        f.write("4. Segment customers based on behavior patterns\n")
-        
-        f.write("\n" + "="*60 + "\n")
-        f.write("Report generated successfully!\n")
-    
-    print(f"✅ EDA Report saved to {output_file}")
-    return output_file
+                <p>One table, and a lot to read from it:</p>
+                <ul>
+                    <li><code>response_id</code> and <code>customer_id</code> each have 1,800 distinct values in 1,800 rows, so each identifies a row. The grain is <strong>one response per customer</strong>.</li>
+                    <li>The five <code>sat_</code> columns have 5 distinct values: ratings from 1 to 5. <code>recommend</code> has 11: a 0-to-10 scale. They are <code>float64</code> only because they contain missing values.</li>
+                    <li><code>age_group</code> (6 values) and <code>store</code> (5 values) are the segment variables.</li>
+                    <li><code>sat_staff</code> and <code>sat_website</code> are missing for a third and a quarter of respondents. That is too many to be carelessness, so it goes on the list for step 3.</li>
+                    <li><code>comment</code> is free text, present for under half.</li>
+                </ul>
 
-# Generate report
-report_file = generate_eda_report(df)
-</code></pre>
+                <pre><code class="language-python">print("Survey dates:", survey["survey_date"].min().date(), "to", survey["survey_date"].max().date())
+print(survey["store"].value_counts().to_string())
+print()
+print(survey["age_group"].value_counts().sort_index().to_string())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>Survey dates: 2025-10-01 to 2025-11-15
+store
+Online       824
+Boise        329
+Bend         232
+Flagstaff    213
+Asheville    202
 
-    <h2>Summary: Your EDA Master Checklist 📋</h2>
-    
-    <div class="method-comparison">
-        <div class="method-card">
-            <h4>📊 Data Overview</h4>
-            <ul>
-                <li>Shape & size</li>
-                <li>Data types</li>
-                <li>Missing values</li>
-                <li>Duplicates</li>
-                <li>Basic statistics</li>
-            </ul>
+age_group
+18-24    192
+25-34    280
+35-44    318
+45-54    339
+55-64    279
+65+      392</code></pre>
+                </div>
+
+                <p>Six weeks of responses. Almost half of the respondents shop mostly online, and the store groups hold about 200 to 330 people each. Keep those sizes in mind: a group of 200 gives a much rougher estimate than a group of 800.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="quality" class="lesson-section">
+                <h2>🩺 Step 3: Quality</h2>
+
+                <p>Before trusting any number, look for what is impossible, duplicated, missing or unrepresentative. Start with the quick checks.</p>
+
+                <pre><code class="language-python">items = ["sat_overall", "sat_selection", "sat_price", "sat_staff", "sat_website"]
+
+print(survey[items + ["recommend"]].agg(["min", "max"]))
+print("Fully duplicated rows:", survey.duplicated().sum())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>     sat_overall  sat_selection  sat_price  sat_staff  sat_website  recommend
+min          1.0            1.0        1.0        1.0          1.0        0.0
+max          5.0            5.0        5.0        5.0          5.0       10.0
+Fully duplicated rows: 0</code></pre>
+                </div>
+
+                <p>Every rating is inside its scale and no row is repeated. Now the missing values. The useful question is never only "how many?" but <strong>"missing for whom?"</strong></p>
+
+                <pre><code class="language-python">survey["shops"] = np.where(survey["store"] == "Online", "online", "in store")
+
+missing_share = survey.groupby("shops")[items].agg(lambda col: col.isna().mean())
+print(missing_share.round(2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>          sat_overall  sat_selection  sat_price  sat_staff  sat_website
+shops
+in store         0.03           0.03       0.02       0.03         0.46
+online           0.03           0.03       0.03       0.70         0.03</code></pre>
+                </div>
+
+                <p>There is the explanation. 70% of online shoppers skipped the staff question, and 46% of store shoppers skipped the website question, while the other items are missing for about 3% of everyone. People left out the questions about the part of Pinecrest they do not use. The values are <strong>not missing at random</strong>, and that changes how the columns must be read: <code>sat_staff</code> is, in practice, "what store shoppers think of the staff".</p>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Missing Values Carry Information</h4>
+                    <p>If you fill these gaps with the column average, or drop every row that has one, you quietly change who the analysis is about. Decide per question. For staff satisfaction, analyze store shoppers. For website satisfaction, remember that the answers come mostly from online shoppers. Write the decision down: it becomes a caveat.</p>
+                </div>
+
+                <p>The last quality check is the one most often skipped: <strong>who is in this data, compared with who you want to talk about?</strong> The customer table can tell you. Each survey row should match exactly one customer, and <code>validate="one_to_one"</code> makes pandas raise an error if that is not true.</p>
+
+                <pre><code class="language-python">customers = pd.read_csv("data/customers.csv")
+orders = pd.read_csv("data/orders.csv", parse_dates=["order_date"])
+
+joined = survey.merge(customers[["customer_id", "loyalty_tier"]], on="customer_id",
+                      how="left", validate="one_to_one")
+
+who = pd.DataFrame({
+    "survey": joined["loyalty_tier"].value_counts(normalize=True),
+    "all_customers": customers["loyalty_tier"].value_counts(normalize=True),
+}).round(3)
+print(who)
+
+has_ordered = customers["customer_id"].isin(orders["customer_id"])
+print(f"\nCustomers with at least one order: {has_ordered.mean():.0%}")
+print(f"Survey respondents with at least one order: "
+      f"{survey['customer_id'].isin(orders['customer_id']).mean():.0%}")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>              survey  all_customers
+loyalty_tier
+Basic          0.456          0.582
+Silver         0.349          0.267
+Gold           0.195          0.151
+
+Customers with at least one order: 78%
+Survey respondents with at least one order: 100%</code></pre>
+                </div>
+
+                <p>The respondents are not a cross-section of Pinecrest's customers. Every one of them has placed an order (against 78% of all accounts), and Silver and Gold members are over-represented: 54% of respondents against 42% of customers. That makes sense, since engaged customers answer surveys, and it means the survey describes <em>active, fairly loyal</em> customers. It cannot tell you why the 22% who never ordered stayed away. Question 4 is answered, and the answer is a caveat for everything that follows.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="univariate" class="lesson-section">
+                <h2>📊 Step 4: One Variable at a Time</h2>
+
+                <p>Look at every column of interest by itself before comparing anything. These are ordinal ratings, so, as in Lesson 4.2, the informative summaries are the median and the share of answers at each end, with the mean as a convenient extra for comparing items.</p>
+
+                <pre><code class="language-python">summary = pd.DataFrame({
+    "answers": survey[items].count(),
+    "median": survey[items].median(),
+    "mean": survey[items].mean().round(2),
+    "pct_4_or_5": (survey[items].ge(4).sum() / survey[items].count() * 100).round(1),
+    "pct_1_or_2": (survey[items].le(2).sum() / survey[items].count() * 100).round(1),
+})
+print(summary.sort_values("mean"))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>               answers  median  mean  pct_4_or_5  pct_1_or_2
+sat_price         1753     3.0  3.31        41.5        17.5
+sat_website       1328     4.0  3.54        51.9        11.4
+sat_overall       1747     4.0  3.92        68.3         6.6
+sat_staff         1195     4.0  4.02        73.3         5.0
+sat_selection     1747     4.0  4.04        75.1         3.5</code></pre>
+                </div>
+
+                <p>Question 1 has its answer. <strong>Price</strong> is rated lowest: a median of 3, only 42% satisfied (a 4 or 5), and about one in six dissatisfied. <strong>Website</strong> comes next. Selection and staff are strong, with at most one answer in twenty at the bottom of the scale. (Dividing by <code>.count()</code>, the number who answered, keeps the missing values from being counted as "not satisfied".)</p>
+
+                <p>A table of summaries can hide the shape, so draw every distribution. Six small panels on one figure, the layout from Lesson 3.2, make them easy to compare.</p>
+
+                <pre><code class="language-python">fig, axes = plt.subplots(2, 3, figsize=(9, 5.5), layout="constrained")
+
+for ax, col in zip(axes.flat, items + ["recommend"]):
+    counts = survey[col].value_counts().sort_index()
+    ax.bar(counts.index, counts.to_numpy() / counts.sum() * 100, color="#667eea")
+    ax.set_title(col)
+    ax.set_xticks(counts.index)
+    ax.set_ylim(0, 45)
+
+for ax in axes[:, 0]:
+    ax.set_ylabel("% of answers")
+fig.suptitle("How 1,800 customers answered each question")
+plt.show()</code></pre>
+                <figure>
+                    <img src="images/statistics_eda_workflow_distributions.png" alt="Six bar charts of survey answers. Overall, selection and staff satisfaction pile up on 4 and 5. Price satisfaction peaks at 3 with a clear share of 2s. Website satisfaction is split between 3 and 4. The 0 to 10 recommend score is spread from 5 to 10 with a peak at 8 and a second bump at 10." width="990" height="605" loading="lazy">
+                    <figcaption>Price is the only item whose most common answer is the middle of the scale. Every panel has one clear peak and no impossible values.</figcaption>
+                </figure>
+
+                <p>The pictures confirm the table and add detail. Price peaks at 3 where the others peak at 4. The recommend score has a bump at 10, a common pattern on such scales: some people give the top mark out of habit. Nothing looks broken: no spike at an impossible value, no suspicious gap.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="bivariate" class="lesson-section">
+                <h2>🔗 Step 5: Two Variables Together</h2>
+
+                <p>Question 2 asks which part of the experience is most closely tied to overall satisfaction and to recommending. That is a question about pairs of columns. For ordinal ratings, Lesson 4.4 gave you the tool: Spearman's rank correlation.</p>
+
+                <pre><code class="language-python">corr = survey[items + ["recommend"]].corr(method="spearman")
+print(corr.round(2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>               sat_overall  sat_selection  sat_price  sat_staff  sat_website  recommend
+sat_overall           1.00           0.49       0.45       0.49         0.43       0.63
+sat_selection         0.49           1.00       0.40       0.43         0.43       0.55
+sat_price             0.45           0.40       1.00       0.41         0.37       0.53
+sat_staff             0.49           0.43       0.41       1.00         0.38       0.58
+sat_website           0.43           0.43       0.37       0.38         1.00       0.48
+recommend             0.63           0.55       0.53       0.58         0.48       1.00</code></pre>
+                </div>
+
+                <p>Read the <code>sat_overall</code> and <code>recommend</code> columns. Overall satisfaction and willingness to recommend are strongly related (0.63), as you would hope. Each specific item correlates moderately with both, between 0.43 and 0.58, with <strong>staff</strong> and <strong>selection</strong> slightly ahead and <strong>website</strong> last. The honest reading is that no single item dominates: the differences between 0.43 and 0.49 are small, and each correlation is computed only on the people who answered both questions, which for staff means mostly store shoppers.</p>
+
+                <p>A correlation coefficient compresses a relationship into one number. Look at the relationship itself at least once.</p>
+
+                <pre><code class="language-python">print(survey.groupby("sat_overall")["recommend"].agg(["count", "median", "mean"]).round(2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>             count  median  mean
+sat_overall
+1.0              8     3.5  3.12
+2.0            105     5.0  4.73
+3.0            421     6.0  6.12
+4.0            634     8.0  7.44
+5.0            531     9.0  8.86</code></pre>
+                </div>
+
+                <p>The median recommend score climbs steadily with each step of overall satisfaction, from 5 among people who answered 2 to 9 among people who answered 5. (Only eight people gave a 1, so that row means little.) The relationship is steady and monotonic, which is what Spearman's coefficient assumes.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Correlation Still Is Not Causation</h4>
+                    <p>It is tempting to say "staff satisfaction drives recommendations, so invest in staff". The survey cannot show that. A customer in a good mood rates everything higher, which alone would make every pair of items correlate. What step 5 can do is tell you where to look. Step 6 looks.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="segments" class="lesson-section">
+                <h2>🧩 Step 6: Segments</h2>
+
+                <p>Averages over everyone can hide a group with a very different experience. Question 3 asks whether any store or age group stands out. Build one table of means for both ways of slicing the respondents.</p>
+
+                <pre><code class="language-python">by_store = survey.groupby("store")[items].mean()
+by_age = survey.groupby("age_group")[items].mean()
+everyone = survey[items].mean().to_frame("ALL").T
+
+segment_means = pd.concat([everyone, by_store, by_age])
+print(segment_means.round(2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>           sat_overall  sat_selection  sat_price  sat_staff  sat_website
+ALL               3.92           4.04       3.31       4.02         3.54
+Asheville         3.77           4.05       3.35       3.62         3.58
+Bend              3.96           4.01       3.30       4.16         3.63
+Boise             3.86           4.01       3.24       4.11         3.50
+Flagstaff         3.99           4.00       3.40       4.02         3.50
+Online            3.96           4.07       3.30       4.07         3.54
+18-24             3.95           4.06       2.80       4.05         3.69
+25-34             3.88           3.99       3.32       4.02         3.67
+35-44             3.99           4.07       3.38       3.94         3.67
+45-54             3.95           4.08       3.38       4.01         3.66
+55-64             3.85           3.99       3.44       4.04         3.72
+65+               3.92           4.05       3.33       4.05         3.04</code></pre>
+                </div>
+
+                <p>Eleven groups by five items is 55 numbers, and three of them are hard to find by eye. Subtract the overall mean from each row and color the result, and they jump out.</p>
+
+                <pre><code class="language-python">gaps = segment_means.drop(index="ALL") - segment_means.loc["ALL"]
+
+fig, ax = plt.subplots(figsize=(9, 5.5), layout="constrained")
+image = ax.imshow(gaps, cmap="RdBu", vmin=-0.6, vmax=0.6, aspect="auto")
+ax.set_xticks(range(len(items)), labels=[c.replace("sat_", "") for c in items])
+ax.set_yticks(range(len(gaps)), labels=gaps.index)
+for i in range(gaps.shape[0]):
+    for j in range(gaps.shape[1]):
+        value = gaps.iloc[i, j]
+        ax.text(j, i, f"{value:+.2f}", ha="center", va="center",
+                color="white" if abs(value) &gt; 0.35 else "black")
+ax.axhline(4.5, color="black", linewidth=1)
+ax.set_title("Mean rating of each group minus the mean of all respondents")
+fig.colorbar(image, ax=ax, label="Difference in mean rating")
+plt.show()</code></pre>
+                <figure>
+                    <img src="images/statistics_eda_workflow_segment_gaps.png" alt="Heatmap with eleven rows, five stores and six age groups, and five columns for the satisfaction items. Almost every cell is pale, within 0.2 of zero. Three cells are dark red: Asheville staff at minus 0.40, age 18 to 24 price at minus 0.51, and age 65 plus website at minus 0.50." width="990" height="605" loading="lazy">
+                    <figcaption>Three dark cells in a pale grid: staff in Asheville, price among 18 to 24 year olds, and the website among customers of 65 and over.</figcaption>
+                </figure>
+
+                <p>Every other group is within 0.2 of the overall mean on every item. Three cells are not. Before these become findings, apply the two disciplines from Lesson 4.5.</p>
+
+                <h3>Discipline 1: You Just Ran 55 Comparisons</h3>
+
+                <p>Scanning a grid for the darkest cells is multiple testing, whether or not you call it that. Test each group against everyone else on each item, with the Mann-Whitney test for ratings, and correct with Holm's method.</p>
+
+                <pre><code class="language-python">from statsmodels.stats.multitest import multipletests
+
+rows = []
+for seg in ["store", "age_group"]:
+    for level in sorted(survey[seg].unique()):
+        inside = survey[seg] == level
+        for item in items:
+            x = survey.loc[inside, item].dropna()
+            y = survey.loc[~inside, item].dropna()
+            rows.append({"group": level, "item": item, "n": len(x),
+                         "gap": x.mean() - y.mean(),
+                         "p": stats.mannwhitneyu(x, y).pvalue})
+
+scan = pd.DataFrame(rows)
+scan["p_holm"] = multipletests(scan["p"], method="holm")[1]
+
+print(f"{len(scan)} tests, {(scan['p'] &lt; 0.05).sum()} below 0.05 before correction, "
+      f"{(scan['p_holm'] &lt; 0.05).sum()} after")
+top = scan.sort_values("p").head(6).copy()
+top["gap"] = top["gap"].round(2)
+top["p"] = top["p"].map("{:.1e}".format)
+top["p_holm"] = top["p_holm"].map("{:.1e}".format)
+print(top.to_string(index=False))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>55 tests, 9 below 0.05 before correction, 4 after
+    group        item   n   gap       p  p_holm
+      65+ sat_website 291 -0.64 7.3e-25 4.0e-23
+    18-24   sat_price 186 -0.57 7.0e-16 3.8e-14
+Asheville   sat_staff 193 -0.47 2.0e-09 1.1e-07
+    55-64 sat_website 210  0.21 9.2e-04 4.8e-02
+    55-64   sat_price 273  0.16 2.6e-03 1.3e-01
+     Bend   sat_staff 228  0.17 6.9e-03 3.5e-01</code></pre>
+                </div>
+
+                <p>The three dark cells survive the correction with room to spare: their adjusted p-values are far below 0.05, and their gaps, around half a rating point, are large for a five-point scale. One more result survives: 55 to 64 year olds rate the website slightly higher than everyone else. Look at its size, +0.21, and at its cause: "everyone else" includes the unhappy 65+ group, which pulls the comparison group down. It is a side effect of the scan design, and it does not belong in the findings.</p>
+
+                <h3>Discipline 2: Could Something Else Explain It?</h3>
+
+                <p>Asheville's staff rating is the result most likely to lead to action, so challenge it. Maybe Asheville simply has a different mix of customers. If the gap came from its age mix, it would shrink or vanish inside each age group.</p>
+
+                <pre><code class="language-python">in_store = survey[survey["store"] != "Online"]
+staff_table = in_store.pivot_table(index="store", columns="age_group", values="sat_staff", aggfunc="mean")
+print(staff_table.round(2))
+print("\nAsheville responses per age group:",
+      in_store[in_store["store"] == "Asheville"].groupby("age_group")["sat_staff"].count().to_list())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>age_group  18-24  25-34  35-44  45-54  55-64   65+
+store
+Asheville   3.67   3.71   3.17   3.57   3.79  3.82
+Bend        4.22   4.08   4.07   4.27   4.15  4.17
+Boise       4.18   4.13   4.10   4.15   4.02  4.11
+Flagstaff   3.85   4.11   4.05   4.05   3.94  4.09
+
+Asheville responses per age group: [18, 31, 30, 46, 24, 44]</code></pre>
+                </div>
+
+                <p>Asheville is the lowest store in <em>every</em> age group. The cells are small (18 to 46 Asheville responses each), so individual numbers bounce around, but the direction never changes. Age mix does not explain the gap. That does not prove the staff are the cause: it removes one competing explanation and leaves the finding standing.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="findings" class="lesson-section">
+                <h2>📝 Step 7: Findings and Caveats</h2>
+
+                <p>Exploration that stays in a notebook helps nobody. The last step is to write down, in plain sentences, what you found, how sure you are, and what you would do next. Often a finding points at another dataset, and following the lead for five minutes is worth it. Asheville has the least satisfied store shoppers. How is Asheville doing commercially?</p>
+
+                <pre><code class="language-python">daily = pd.read_csv("data/daily_sales.csv", parse_dates=["date"])
+
+yearly = daily.pivot_table(index="store", columns=daily["date"].dt.year, values="revenue", aggfunc="sum")
+yearly["change"] = (yearly[2025] / yearly[2024] - 1).map("{:+.1%}".format)
+print(yearly.round(0))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>date            2024       2025  change
+store
+Asheville  2123278.0  2017699.0   -5.0%
+Bend       2476118.0  2569350.0   +3.8%
+Boise      3518292.0  3846406.0   +9.3%
+Flagstaff  2270180.0  2717997.0  +19.7%</code></pre>
+                </div>
+
+                <p>Asheville is the only store whose revenue fell from 2024 to 2025, while the other three grew. Two independent datasets now point at the same store. That is still not proof that service problems caused the decline (a new competitor or roadworks could produce both), and it turns "a low survey number" into "a store someone should visit".</p>
+
+                <div class="card">
+                    <h4>📄 Customer survey, autumn 2025: what the data say</h4>
+                    <p><strong>Findings</strong></p>
+                    <ol>
+                        <li><strong>Price is the weakest part of the experience.</strong> Only 42% of customers are satisfied with prices (median 3 of 5), against 75% for selection. Website satisfaction is second lowest (52%).</li>
+                        <li><strong>No single item dominates overall satisfaction.</strong> Every item correlates moderately with overall satisfaction and with recommending (Spearman 0.43 to 0.58).</li>
+                        <li><strong>Three groups stand out</strong>, each by about half a rating point, each surviving a correction for 55 comparisons: staff satisfaction in Asheville (3.62 against about 4.1 at other stores, and lower in every age group), price satisfaction among 18 to 24 year olds (2.80), and website satisfaction among customers of 65 and over (3.04).</li>
+                        <li><strong>Asheville is also the only store with falling revenue</strong> (2025 against 2024).</li>
+                    </ol>
+                    <p><strong>Caveats</strong></p>
+                    <ul>
+                        <li>Respondents are active, loyal customers: all have ordered, and Silver and Gold members are over-represented. Lapsed and never-ordered customers are not heard.</li>
+                        <li>Staff ratings come almost entirely from store shoppers and website ratings mostly from online shoppers.</li>
+                        <li>The segment results came from scanning, so they are exploratory. The survey shows association, not cause.</li>
+                        <li>Free-text comments were not analyzed.</li>
+                    </ul>
+                    <p><strong>Next questions</strong></p>
+                    <ul>
+                        <li>What changed in Asheville: staffing levels, turnover, local competition?</li>
+                        <li>Which website tasks trouble older customers? The comments and the web session data may say.</li>
+                        <li>Is the price gap among younger customers about list prices or about not knowing of promotions?</li>
+                    </ul>
+                </div>
+
+                <p>Notice the shape of that note. Each finding is one sentence with a number. The caveats say who and what the data cannot speak for. The next questions feed step 1 of the next round, which is why the diagram at the top is a loop.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="mistakes" class="lesson-section">
+                <h2>⚠️ Common Mistakes</h2>
+
+                <p>Exploration goes wrong quietly. Most of these produce a perfectly tidy number, which is what makes them dangerous. Each has caught experienced analysts, so treat a slip as a sign that you are doing real work.</p>
+
+                <h3>1. Dropping Every Row with a Missing Value</h3>
+
+                <pre><code class="language-python">print(len(survey), "responses before,", len(survey.dropna()), "after dropna()")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>1800 responses before, 295 after dropna()</code></pre>
+                </div>
+                <p><strong>What happened:</strong> <code>dropna()</code> with no arguments keeps only rows that are complete in <em>every</em> column, including the optional comment. Five responses in six are gone, and the survivors are an odd group: people who use both the stores and the website and also like to write. <strong>Fix:</strong> drop per question, with <code>dropna(subset=[...])</code> naming only the columns that analysis needs. Most pandas summaries already skip missing values for you.</p>
+
+                <h3>2. Filling Missing Ratings with Zero</h3>
+
+                <pre><code class="language-python">print(f"Mean staff rating, honest: {survey['sat_staff'].mean():.2f}")
+print(f"After fillna(0):           {survey['sat_staff'].fillna(0).mean():.2f}")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>Mean staff rating, honest: 4.02
+After fillna(0):           2.67</code></pre>
+                </div>
+                <p><strong>What happened:</strong> 605 people who did not answer were recorded as giving a rating below the bottom of the scale. <strong>Fix:</strong> leave missing values missing unless you have a reason, grounded in how the data were collected, to believe a specific value.</p>
+
+                <h3>3. A Merge That Silently Multiplies Rows</h3>
+
+                <pre><code class="language-python">with_orders = survey.merge(orders, on="customer_id")
+print(len(survey), "survey rows became", len(with_orders))
+print(f"Mean recommend score: {survey['recommend'].mean():.3f} before, {with_orders['recommend'].mean():.3f} after")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>1800 survey rows became 9230
+Mean recommend score: 7.359 before, 7.326 after</code></pre>
+                </div>
+                <p><strong>What happened:</strong> a customer with nine orders now appears nine times, so frequent buyers count many times over in every average. The grain changed from "one response" to "one order of a respondent" without any message. <strong>Fix:</strong> state the relationship you expect, and let pandas check it.</p>
+
+                <pre data-raises="pd.errors.MergeError"><code class="language-python">survey.merge(orders, on="customer_id", validate="one_to_one")</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>MergeError: Merge keys are not unique in right dataset; not a one-to-one merge
+...</code></pre>
+                </div>
+                <p>That error is the helpful outcome. To bring order information into a survey analysis, first summarize orders to one row per customer (<code>groupby("customer_id")</code>), then merge.</p>
+
+                <h3>4. Reporting a Column Average Without Asking Who Answered</h3>
+                <p>"Customers rate our staff 4.02" sounds like a statement about all customers. Step 3 showed that 70% of online shoppers skipped the question. <strong>Fix:</strong> whenever a column has many missing values, find out whom they belong to before you describe the column.</p>
+
+                <h3>5. Presenting the Best of Many Comparisons as a Planned Result</h3>
+                <p>The segment scan ran 55 tests. Showing only the three winners, with their uncorrected p-values, would overstate the evidence. <strong>Fix:</strong> report how many comparisons you made, correct for them, look at the size of each gap, and call scanned results exploratory.</p>
+
+                <h3>6. Starting with Charts Instead of Questions</h3>
+                <p>There is no error message for an afternoon of plotting everything against everything. <strong>Fix:</strong> step 1. When you catch yourself making a chart, ask which written question it answers. If the answer is "none", either add the question on purpose or skip the chart.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="project" class="lesson-section">
+                <h2>🛠️ Project: Why Do Orders Come Back?</h2>
+
+                <p>In Lesson 4.5 you found that online orders are returned twice as often as store orders. The operations manager wants to know <em>why</em>, and what could be done about it. This time the data are spread over three tables, and nobody has told you where to look. Run the full routine in a new notebook called <code>lesson_4_7_project</code>. Allow about 45 minutes.</p>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 1: Questions <span class="step-time">(5 min)</span></h3>
+                    <p>Write your questions in a Markdown cell before loading anything. A reasonable set:</p>
+                    <ol>
+                        <li>How common are returns, and has the rate changed over time?</li>
+                        <li>Which kinds of orders are returned more: by channel, payment method, order size?</li>
+                        <li>Do certain product categories account for the difference between online and store?</li>
+                        <li>What do the data not tell us about returns?</li>
+                    </ol>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 2: Structure <span class="step-time">(5 min)</span></h3>
+                    <p>Load the three tables and establish the grain and the key of each. Paste in <code>overview</code> from the lesson.</p>
+                    <pre><code class="language-python">import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from scipy import stats
+from statsmodels.stats.multitest import multipletests
+
+def overview(df):
+    """One row per column: type, missing values, distinct values and an example."""
+    return pd.DataFrame({
+        "dtype": df.dtypes.astype(str),
+        "missing": df.isna().sum(),
+        "missing_pct": (df.isna().mean() * 100).round(1),
+        "unique": df.nunique(),
+        "example": df.apply(lambda col: str(col.dropna().iloc[0])[:22]),
+    })
+
+orders = pd.read_csv("data/orders.csv", parse_dates=["order_date"])
+order_items = pd.read_csv("data/order_items.csv")
+products = pd.read_csv("data/products.csv")
+
+print(overview(orders))
+print()
+print("orders:", orders.shape, " key order_id unique:", orders["order_id"].is_unique)
+print("order_items:", order_items.shape, " key order_item_id unique:", order_items["order_item_id"].is_unique)
+print("products:", products.shape, " key sku unique:", products["sku"].is_unique)
+print("lines per order: mean", round(order_items.groupby("order_id").size().mean(), 2))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>                         dtype  missing  missing_pct  unique              example
+order_id                 int64        0          0.0   20302               100001
+customer_id              int64        0          0.0    3942                12673
+order_date      datetime64[us]        0          0.0     731  2024-01-01 00:00:00
+channel                    str        0          0.0       2                store
+store                      str        0          0.0       5            Flagstaff
+status                     str        0          0.0       3            completed
+payment_method             str        0          0.0       4                 cash
+promo_code                 str    18154         89.4       4            WELCOME10
+discount_pct             int64        0          0.0       5                    0
+shipping_cost          float64        0          0.0       3                  0.0
+order_total            float64        0          0.0    6310                434.9
+
+orders: (20302, 11)  key order_id unique: True
+order_items: (45490, 5)  key order_item_id unique: True
+products: (242, 13)  key sku unique: True
+lines per order: mean 2.24</code></pre>
+                    </div>
+                    <p>Three grains: one row per order, one per product line on an order, one per product. Return status lives on the order; product category lives two joins away. The only column with missing values is <code>promo_code</code>, where missing means "no code used".</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 3: Quality <span class="step-time">(5 min)</span></h3>
+                    <p>Check that the tables connect. Attach each line's category with a left merge, and use <code>indicator=True</code> to count lines that found no product.</p>
+                    <pre><code class="language-python">lines = order_items.merge(products[["sku", "category"]], on="sku", how="left",
+                          validate="many_to_one", indicator=True)
+
+unmatched = lines[lines["_merge"] == "left_only"]
+print("Lines with no matching product:", len(unmatched), "in", unmatched["order_id"].nunique(), "orders")
+print("SKUs involved:", sorted(unmatched["sku"].unique()))
+print("Last sold:", orders.loc[orders["order_id"].isin(unmatched["order_id"]), "order_date"].max().date())
+
+lines["category"] = lines["category"].fillna("Discontinued")
+print()
+print(orders["status"].value_counts().to_string())</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>Lines with no matching product: 609 in 598 orders
+SKUs involved: ['APL-1033', 'KIT-1016', 'PCK-1015', 'PCK-1025', 'SNW-1007', 'SNW-1018']
+Last sold: 2024-09-29
+
+status
+completed    18762
+returned      1143
+cancelled      397</code></pre>
+                    </div>
+                    <p>609 lines use six SKUs that are no longer in the catalog and were last sold in September 2024: discontinued products. They are real sales, so keep them under their own label instead of letting them vanish as missing. Also decide what "return rate" means: here, returned orders divided by all orders. (Cancelled orders, about 2%, never shipped. Leaving them in the denominator lowers every rate a little and changes no comparison below. Note the choice as a caveat.)</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 4: One variable <span class="step-time">(5 min)</span></h3>
+                    <p>Create the outcome column and look at it alone: overall and over time.</p>
+                    <pre><code class="language-python">orders["returned"] = orders["status"] == "returned"
+
+print(f"Overall return rate: {orders['returned'].mean():.1%} ({orders['returned'].sum():,} of {len(orders):,})")
+print(orders.groupby(orders["order_date"].dt.year)["returned"].mean().round(4).to_string())
+
+monthly = orders.groupby(orders["order_date"].dt.to_period("M"))["returned"].mean()
+print(f"Monthly rate ranges from {monthly.min():.1%} to {monthly.max():.1%}")</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>Overall return rate: 5.6% (1,143 of 20,302)
+order_date
+2024    0.0574
+2025    0.0554
+Monthly rate ranges from 4.3% to 6.8%</code></pre>
+                    </div>
+                    <p>About one order in eighteen comes back, the rate is nearly the same in both years, and individual months wander between 4.3% and 6.8% with no trend. Whatever drives returns is steady, not a one-time incident.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 5: Two variables <span class="step-time">(10 min)</span></h3>
+                    <p>Write a small helper that gives the return rate for each value of a column, then use it on the columns your questions named. Add two order-level features first: a size quartile and the number of lines.</p>
+                    <pre><code class="language-python">def rate_by(df, col):
+    """Orders, returns and return rate (%) for each value of col."""
+    out = df.groupby(col, observed=True)["returned"].agg(orders="count", returns="sum", rate="mean")
+    out["rate"] = (out["rate"] * 100).round(1)
+    return out
+
+orders["size"] = pd.qcut(orders["order_total"], 4, labels=["smallest", "small", "large", "largest"])
+orders["n_lines"] = orders["order_id"].map(order_items.groupby("order_id").size()).clip(upper=5)
+
+for col in ["channel", "payment_method", "size", "n_lines"]:
+    print(rate_by(orders, col), "\n")</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>         orders  returns  rate
+channel
+online    12854      890   6.9
+store      7448      253   3.4
+
+                orders  returns  rate
+payment_method
+card             12392      708   5.7
+cash              1614       48   3.0
+digital_wallet    4794      309   6.4
+gift_card         1502       78   5.2
+
+          orders  returns  rate
+size
+smallest    5091      223   4.4
+small       5062      246   4.9
+large       5074      346   6.8
+largest     5075      328   6.5
+
+         orders  returns  rate
+n_lines
+1          5890      256   4.3
+2          7244      386   5.3
+3          4559      296   6.5
+4          1841      148   8.0
+5           768       57   7.4</code></pre>
+                    </div>
+                    <p>Channel is the big split (6.9% against 3.4%). Cash looks safest, but cash is used only in stores, so that is the channel effect again. Larger orders and orders with more lines come back more often, which is plausible: more items, more chances that one disappoints. Keep that pattern in mind for the next step.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 6: Segments <span class="step-time">(10 min)</span></h3>
+                    <p>Now bring in the products. Turn the lines into one row per order with a True/False flag for each category the order contains, attach the flags to the orders, and compare return rates for online orders with and without each category.</p>
+                    <pre><code class="language-python">flags = pd.crosstab(lines["order_id"], lines["category"]).gt(0)
+detail = orders.merge(flags, left_on="order_id", right_index=True, how="left", validate="one_to_one")
+online = detail[detail["channel"] == "online"]
+
+rows = []
+for cat in flags.columns:
+    has = online[cat]
+    rows.append({"category": cat, "orders_with": int(has.sum()),
+                 "rate_with": online.loc[has, "returned"].mean() * 100,
+                 "rate_without": online.loc[~has, "returned"].mean() * 100,
+                 "p": stats.chi2_contingency(pd.crosstab(has, online["returned"])).pvalue})
+
+by_cat = pd.DataFrame(rows).sort_values("rate_with", ascending=False)
+by_cat["p_holm"] = multipletests(by_cat["p"], method="holm")[1]
+by_cat[["rate_with", "rate_without"]] = by_cat[["rate_with", "rate_without"]].round(1)
+by_cat["p"] = by_cat["p"].map("{:.1e}".format)
+by_cat["p_holm"] = by_cat["p_holm"].map("{:.1e}".format)
+print(by_cat.to_string(index=False))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>    category  orders_with  rate_with  rate_without       p  p_holm
+    Footwear         2854       14.4           4.8 3.3e-70 3.3e-69
+     Apparel         3030        9.3           6.2 2.7e-09 2.4e-08
+    Climbing         2125        7.0           6.9 9.7e-01 1.0e+00
+        Snow         1588        6.9           6.9 9.6e-01 1.0e+00
+Camp Kitchen         4487        6.5           7.2 1.4e-01 7.1e-01
+ Accessories         6352        6.3           7.5 7.8e-03 6.2e-02
+       Packs         2065        6.2           7.1 1.7e-01 7.1e-01
+       Tents         1417        5.9           7.1 1.1e-01 6.3e-01
+    Sleeping         2146        5.8           7.2 2.5e-02 1.7e-01
+Discontinued          400        5.5           7.0 3.0e-01 9.0e-01</code></pre>
+                    </div>
+                    <p>One category stands far apart. Online orders that include <strong>Footwear</strong> are returned 14.4% of the time, three times the 4.8% rate of online orders without it. Apparel shows a smaller gap (9.3% against 6.2%). Both survive the correction for ten tests; nothing else does. Draw it, then check the same split in stores.</p>
+                    <pre><code class="language-python">chart = by_cat.set_index("category")["rate_with"].sort_values()
+
+fig, ax = plt.subplots(figsize=(9, 4.2), layout="constrained")
+ax.barh(chart.index, chart.to_numpy(), color=["crimson" if c == "Footwear" else "#667eea" for c in chart.index])
+ax.axvline(online["returned"].mean() * 100, color="black", linestyle="--", linewidth=1)
+ax.text(online["returned"].mean() * 100 + 0.15, 0, "all online orders", va="center")
+ax.set_xlabel("Return rate of online orders containing the category (%)")
+ax.set_title("Online returns by product category in the order")
+plt.show()
+
+print(detail.groupby(["channel", "Footwear"])["returned"].agg(orders="count", rate="mean").round(3))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>                  orders   rate
+channel Footwear
+online  False      10000  0.048
+        True        2854  0.144
+store   False       5960  0.033
+        True        1488  0.038</code></pre>
+                    </div>
+                    <figure>
+                        <img src="images/statistics_eda_workflow_returns_by_category.png" alt="Horizontal bar chart of the return rate of online orders containing each product category. Footwear is far ahead at about 14 percent and Apparel next at about 9 percent. The other eight categories sit between 5.5 and 7 percent, close to the dashed line marking the 6.9 percent rate for all online orders." width="990" height="462" loading="lazy">
+                        <figcaption>Footwear, and to a lesser degree Apparel, are the categories where buying online goes wrong. The rest sit at or below the online average.</figcaption>
+                    </figure>
+                    <p>In stores, orders with footwear are returned at 3.8% against 3.3% without: almost no difference. Footwear is a problem <em>online only</em>. The two categories with a gap are the two where fit matters and cannot be checked through a screen. That explanation is a hypothesis: the data are consistent with it and cannot confirm it, because no column records the reason for a return.</p>
+                    <p>One more check. Step 5 found that larger orders come back more often. Is that a separate effect, or are footwear orders simply larger?</p>
+                    <pre><code class="language-python">print(online.groupby("Footwear")["order_total"].mean().round(2).to_string())
+print()
+print((online.pivot_table(index="Footwear", columns="size", values="returned",
+                          aggfunc="mean", observed=True) * 100).round(1))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>Footwear
+False    190.23
+True     255.14
+
+size      smallest  small  large  largest
+Footwear
+False          4.4    4.2    5.2      5.5
+True          10.2   14.9   16.5     13.5</code></pre>
+                    </div>
+                    <p>Footwear orders are larger on average ($255 against $190), so part of the "big orders are returned more" pattern was footwear in disguise. Within each row the size effect is much weaker than the gap <em>between</em> the rows: at every order size, footwear orders are returned at least twice as often. Segmenting turned two findings into one main finding and one minor one.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 7: Findings and caveats <span class="step-time">(5 min)</span></h3>
+                    <p>Write your note in a Markdown cell: findings with numbers, caveats, next questions. Compare it with this one afterward.</p>
+                    <div class="card">
+                        <h4>📄 Order returns, 2024 to 2025: what the data say</h4>
+                        <p><strong>Findings</strong></p>
+                        <ol>
+                            <li>5.6% of orders are returned (1,143 of 20,302). The rate is stable across both years and all months.</li>
+                            <li>Online orders are returned twice as often as store orders (6.9% against 3.4%).</li>
+                            <li>The online excess is concentrated in footwear: online orders containing footwear are returned 14.4% of the time against 4.8% without, at every order size. In stores, footwear makes almost no difference (3.8% against 3.3%). Apparel shows a smaller online gap (9.3% against 6.2%).</li>
+                            <li>Larger orders are returned somewhat more often, partly because footwear orders are larger.</li>
+                        </ol>
+                        <p><strong>Caveats</strong></p>
+                        <ul>
+                            <li>Returns are recorded per order, not per item, so we know a footwear order came back, not that the shoes did.</li>
+                            <li>No reason for return is recorded. "Fit cannot be checked online" is a hypothesis.</li>
+                            <li>Category comparisons were a scan of ten categories (Holm-corrected). Observational data: association, not cause.</li>
+                            <li>Cancelled orders are counted in the denominator. Store orders include only signed-in account holders.</li>
+                        </ul>
+                        <p><strong>Next questions</strong></p>
+                        <ul>
+                            <li>Can return reasons and item-level returns be captured?</li>
+                            <li>Would a size guide or fit notes on footwear pages reduce returns? That is an A/B test (Lesson 4.6).</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card card-success">
+                    <h3>✅ Project Completion Checklist</h3>
+                    <ul class="checklist">
+                        <li>Your questions were written before the first <code>read_csv</code></li>
+                        <li>You can state the grain and key of all three tables, and your merges use <code>validate</code></li>
+                        <li>The 609 lines with discontinued SKUs are accounted for, not silently dropped</li>
+                        <li>The overall return rate is 5.6%, and online against store is 6.9% against 3.4%</li>
+                        <li>You found online footwear at 14.4% against 4.8%, and checked that the gap is absent in stores</li>
+                        <li>You tested whether order size explained the footwear gap, and it did not</li>
+                        <li>Your note separates findings, caveats and next questions</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="exercises" class="lesson-section">
+                <h2>🏋️ Hands-on Exercises</h2>
+
+                <p>The exercises continue from the lesson's variables (<code>survey</code>, <code>items</code>, <code>overview</code>, <code>products</code>, <code>daily</code>).</p>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 1: Read an Overview</h3>
+                    <p>Run <code>overview(products)</code>. From the table alone, answer: what is the grain and key? Which columns have missing values? Then investigate one of them: are the products with a missing <code>rating</code> a random handful, or do they have something in common? (Look at <code>review_count</code>.)</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Filter with <code>products[products["rating"].isna()]</code> and summarize <code>review_count</code> for those rows.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">print(overview(products)[["dtype", "missing", "unique"]])
+
+no_rating = products[products["rating"].isna()]
+print("\nProducts without a rating:", len(no_rating))
+print("Their review counts:", no_rating["review_count"].unique())
+print("Products with zero reviews in total:", (products["review_count"] == 0).sum())</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>                dtype  missing  unique
+sku               str        0     242
+name              str        0     242
+category          str        0       9
+product_type      str        0      67
+brand             str        0       8
+price         float64        0     155
+cost          float64        0     238
+weight_kg     float64       14     115
+color             str        0      10
+rating        float64        8      19
+review_count    int64        0     124
+stock_status      str        0       3
+launch_date       str        0     224
+
+Products without a rating: 8
+Their review counts: [0]
+Products with zero reviews in total: 8</code></pre>
+                        </div>
+                        <p>One row per product, keyed by <code>sku</code> (242 distinct values in 242 rows; <code>name</code> is unique too). The 8 missing ratings are exactly the 8 products with zero reviews: missing because there is nothing to average, not because of an error. Filling them with the mean rating would invent opinions nobody gave.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 2: Promoters and Detractors</h3>
+                    <p>A common way to summarize a 0-to-10 recommend score: <em>promoters</em> answer 9 or 10, <em>detractors</em> answer 0 to 6, and the score is the percentage of promoters minus the percentage of detractors. Compute it for all respondents and for each store.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Work on respondents who answered (<code>dropna(subset=["recommend"])</code>). Two boolean columns, then <code>groupby("store")</code> and <code>.mean()</code> on each.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">answered = survey.dropna(subset=["recommend"]).copy()
+answered["promoter"] = answered["recommend"] &gt;= 9
+answered["detractor"] = answered["recommend"] &lt;= 6
+
+by = answered.groupby("store")[["promoter", "detractor"]].mean() * 100
+by["score"] = by["promoter"] - by["detractor"]
+print(by.round(1))
+print(f"\nAll respondents: {(answered['promoter'].mean() - answered['detractor'].mean()) * 100:.1f}")</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>           promoter  detractor  score
+store
+Asheville      22.8       37.6  -14.7
+Bend           31.4       33.2   -1.8
+Boise          32.0       30.4    1.6
+Flagstaff      34.3       33.8    0.5
+Online         33.5       29.7    3.8
+
+All respondents: 0.2</code></pre>
+                        </div>
+                        <p>Asheville has the lowest score of the five groups, by a wide margin, which fits everything else you found. Note how a difference of 0.4 in the mean becomes a dramatic-looking gap in this score: cutting a scale into categories and subtracting exaggerates differences. Always look at the distribution behind a summary score.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 3: When One Number Hides the Shape</h3>
+                    <p>Is website satisfaction related to age? Turn <code>age_group</code> into a number (0 for the youngest group to 5 for the oldest), compute its Spearman correlation with <code>sat_website</code>, and then print the mean website rating for each age group. What does the correlation miss?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>pd.Categorical(survey["age_group"], ordered=True).codes</code> gives the numbers, because the group labels already sort in age order. (<code>pd.Categorical(..., ordered=True)</code> builds the ordered categorical you met in Lesson 2.9 directly from the values; its <code>.codes</code> are the same integers <code>.cat.codes</code> gave you there.)</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">age_code = pd.Series(pd.Categorical(survey["age_group"], ordered=True).codes, index=survey.index)
+
+print(f"Spearman correlation, age group and website rating: {age_code.corr(survey['sat_website'], method='spearman'):.2f}")
+print(survey.groupby("age_group")["sat_website"].mean().round(2).to_string())</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>Spearman correlation, age group and website rating: -0.19
+age_group
+18-24    3.69
+25-34    3.67
+35-44    3.67
+45-54    3.66
+55-64    3.72
+65+      3.04</code></pre>
+                        </div>
+                        <p>The correlation is weak and negative, which suggests "satisfaction drifts down a little with age". The group means show something quite different: five age groups are level at about 3.7, and the oldest group drops to 3.04. It is a step, not a slope. A correlation coefficient describes a steady trend, so always look at the grouped values or a chart before trusting it.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 4: Find the Missing Days (Stretch)</h3>
+                    <p><code>daily_sales.csv</code> should have one row per store per day for 2024 and 2025. Does it? Count the rows you would expect, find how many store-days are absent, and list the dates on which <em>every</em> store is missing. What do you think happened on those dates?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Pivot to one row per date and one column per store, then <code>reindex</code> to <code>pd.date_range("2024-01-01", "2025-12-31")</code>, which gives every calendar day a row (the job <code>asfreq("D")</code> did in Lesson 2.7; Lesson 4.3 used <code>reindex</code> this way). Absent store-days become <code>NaN</code> in <code>visitors</code>, a column that has no missing values of its own.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">all_days = pd.date_range("2024-01-01", "2025-12-31")
+grid = daily.pivot(index="date", columns="store", values="visitors").reindex(all_days)
+
+print("Expected rows:", len(all_days) * 4, " actual rows:", len(daily))
+print("Absent store-days by store:")
+print(grid.isna().sum().to_string())
+
+closed = grid[grid.isna().all(axis=1)].index
+print("All stores absent on:", [d.strftime("%Y-%m-%d (%a)") for d in closed])</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>Expected rows: 2924  actual rows: 2903
+Absent store-days by store:
+store
+Asheville    4
+Bend         7
+Boise        4
+Flagstaff    6
+All stores absent on: ['2024-11-28 (Thu)', '2024-12-25 (Wed)', '2025-11-27 (Thu)', '2025-12-25 (Thu)']</code></pre>
+                        </div>
+                        <p>21 store-days have no row. Sixteen of them are four dates on which all stores are absent: Thanksgiving and December 25 in both years, when the stores were closed. The other five (three for Bend, two for Flagstaff) are isolated gaps, more likely a failed export. Rows that are absent are harder to notice than cells that are empty, because <code>isna()</code> cannot count a row that is not there. Checking the grain against what you <em>expect</em> is how you find them.</p>
+                    </details>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="quiz" class="lesson-section">
+                <h2>🎯 Quick Quiz</h2>
+                <div class="card quiz-container">
+                    <h3>🎯 Check Your Understanding</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> Why does the routine put written questions before loading the data?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="Questions written first tell you which columns and comparisons matter and when to stop, and they let you separate planned comparisons from patterns you stumbled on, which need more caution.">
+                                A) They focus the work and let you tell planned comparisons from patterns found by scanning
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Questions can and should be revised when the data teach you something, as long as you record the change. What do they give you while you are exploring?">
+                                B) Because questions must never change once the analysis has started
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="The structure and quality steps are still needed whatever the questions are. Think about what happens when you chart everything against everything.">
+                                C) Because with good questions you can skip checking the structure and quality of the data
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> What does this print?</p>
+                        <pre><code class="language-python">quiz_df = pd.DataFrame({"a": [1.0, None, 3.0, None], "b": [5.0, 6.0, None, 8.0]})
+print(len(quiz_df.dropna()), quiz_df["a"].mean())</code></pre>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="dropna() with no arguments removes a row if ANY column is missing in it. Go through the four rows one at a time.">
+                                A) <code>2 2.0</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="The row count is right. For the mean, remember that pandas skips missing values instead of counting them as zero.">
+                                B) <code>1 1.0</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Only the first row is complete in both columns, so dropna() keeps 1 row. The mean of column a skips the missing values and averages 1.0 and 3.0, giving 2.0.">
+                                C) <code>1 2.0</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> In the survey, <code>sat_staff</code> is missing for 70% of online shoppers and 3% of store shoppers. Its mean is 4.02. What is the most accurate description?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Most online shoppers did not answer, and online shoppers are almost half of the respondents. Whose opinions is the 4.02 mostly made of?">
+                                A) Pinecrest customers as a whole rate the staff 4.02
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="The answers come overwhelmingly from store shoppers, because people skipped the question about a part of the business they do not use. The mean describes those who answered, not all customers.">
+                                B) Customers who answered, mostly store shoppers, rate the staff 4.02
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Filling 605 gaps with one number invents answers nobody gave, and here the gaps belong mostly to one kind of customer.">
+                                C) The mean is unusable until the missing values are filled with the average
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 4:</strong> You merge a table of 1,800 survey responses with an orders table on <code>customer_id</code> and get 9,230 rows. What happened, and why does it matter?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="A merge only combines rows that exist. Where could extra rows come from when one customer has several orders?">
+                                A) pandas added rows for customers who were not in the survey; they can be ignored
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Each response was repeated once per order of that customer, so the grain changed from one response to one order. Averages of survey answers would now weight frequent buyers many times over. validate='one_to_one' would have raised an error.">
+                                B) Each response was repeated once for every order of that customer, so frequent buyers now count many times in any average
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="More rows are not more information here: no new survey answers were collected. What is one row in the merged table?">
+                                C) The merge found more survey data, so results from the merged table are more precise
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 5:</strong> A scan of 55 group-by-item comparisons turns up a group whose rating is 0.21 higher than everyone else's, significant even after a Holm correction. What should you do before reporting it?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Surviving a correction makes chance an unlikely explanation. It says nothing about whether the gap is large enough to matter or what produced it.">
+                                A) Report it as a key finding, since it survived the correction
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="The correction already accounts for the number of tests. Throwing away results because they came from a scan would waste real leads too.">
+                                B) Discard it, since anything found by scanning is unreliable
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Significance is only the first filter. A gap of 0.21 is small, and in the lesson it arose because the comparison group contained another, very unhappy group. Check the size and the cause, then label scanned results as exploratory.">
+                                C) Look at how large the gap is and what could produce it, such as an unusual group inside the comparison group
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="faq" class="lesson-section">
+                <h2>❓ Common Questions at This Stage</h2>
+
+                <details>
+                    <summary>How do I know when to stop exploring?</summary>
+                    <p>When your written questions have answers, or you have established that this data cannot answer them. New questions will keep appearing; write them under "next questions" instead of chasing each one. A finished, modest analysis that someone reads is worth more than a sprawling one that never leaves your notebook.</p>
+                </details>
+                <details>
+                    <summary>Do I have to do the steps strictly in order?</summary>
+                    <p>Treat the order as a default. In practice you loop: a strange chart in step 4 sends you back to step 3 to check quality, and a segment result raises a new question for step 1. What should not move is the start (questions, structure, quality come before conclusions) and the end (it is written down).</p>
+                </details>
+                <details>
+                    <summary>Is it wrong to explore without a hypothesis?</summary>
+                    <p>No. Exploration is how hypotheses are found, and the Asheville and footwear results both came from scanning. What matters is honesty about the status of a result. A pattern you went looking for and tested once is confirmed. A pattern that surfaced from many comparisons is a lead, to be corrected for, sanity-checked and, where it matters, confirmed with new data or an experiment.</p>
+                </details>
+                <details>
+                    <summary>There are tools that generate a whole EDA report from one line of code. Why do it by hand?</summary>
+                    <p>Automatic profiling reports are handy for steps 2 to 4: types, missing values, distributions. Your <code>overview</code> function is a small one. They cannot do step 1, because they do not know the question, or the judgment in steps 3, 6 and 7: why values are missing, which comparison is fair, what a result means. Use them to save typing, not thinking.</p>
+                </details>
+                <details>
+                    <summary>How much of this should go into a report?</summary>
+                    <p>Very little. The reader needs the findings, the caveats and one or two charts that carry the main point. Keep the full notebook as the record of how you got there, so that anyone, including you in six months, can rerun it and check.</p>
+                </details>
+
+                <div class="card card-accent">
+                    <h3>🌟 Going Further: Bonus Challenge</h3>
+                    <p>The survey note lists "free-text comments were not analyzed" as a caveat. Remove it. Clean the <code>comment</code> column (strip spaces, lowercase), then flag comments that mention a topic with <code>str.contains</code>: for example <code>"wait|rushed|nobody helped"</code> for service complaints and <code>"website|checkout|logging"</code> for website trouble. Do respondents whose comment mentions a service complaint give lower <code>sat_staff</code> ratings? Are website complaints more common among customers of 65 and over? Decide before you look how many comparisons you will make, and write a three-line findings note with its caveats.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="journal" class="lesson-section">
+                <h2>📓 Learning Journal</h2>
+                <div class="card card-accent">
+                    <p>Take five minutes to write in your learning journal (the <code>journal.md</code> file you started in Lesson 0.1, or a paper notebook). Jot down:</p>
+                    <ul>
+                        <li><strong>Key concepts</strong> you learned today</li>
+                        <li><strong>Techniques that clicked</strong> (and the ones that have not, yet)</li>
+                        <li><strong>Questions or confusion</strong> to come back to</li>
+                        <li><strong>Ideas to try</strong> on your own</li>
+                        <li><strong>Progress and feelings</strong>: how did this lesson go for you?</li>
+                    </ul>
+                    <p><strong>✍️ This lesson's prompt:</strong> Write the seven steps from memory, with one sentence each on what you would actually do. Which step do you expect to be tempted to skip when you are in a hurry, and what could go wrong if you did? Then look back at Module 4 as a whole: which idea changed how you will read a statistic in the news or at work?</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="summary" class="lesson-section">
+                <h2>📝 Lesson Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎓 Key Takeaways</h3>
+                    <ul>
+                        <li>EDA is a routine: <strong>questions, structure, quality, one variable, two variables, segments, findings</strong>, and then around again</li>
+                        <li><strong>Questions come first</strong>. They focus the work and separate planned comparisons from fishing</li>
+                        <li>Know the <strong>grain</strong> (what one row is) and the <strong>key</strong> of every table, and make merges prove their relationship with <code>validate</code></li>
+                        <li>For missing data ask <strong>"missing for whom?"</strong> Values that are not missing at random change who a column describes</li>
+                        <li>Ask <strong>who is in the data</strong> compared with who you want to talk about</li>
+                        <li>Look at every distribution before summarizing it, and at the grouped values behind every correlation</li>
+                        <li>Scanning segments is <strong>multiple testing</strong>: correct for it, judge the size of each gap, and check the obvious competing explanation</li>
+                        <li>An analysis ends with <strong>written findings, caveats and next questions</strong></li>
+                    </ul>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🏆 What You've Accomplished</h3>
+                    <ul>
+                        <li>You ran a seven-step exploration of a customer survey and answered four written questions</li>
+                        <li>You wrote <code>overview()</code>, a reusable first look at any table</li>
+                        <li>You discovered why a third of the staff ratings were missing and what that does to the column's meaning</li>
+                        <li>You found three real segment gaps among 55 comparisons, dismissed a fourth, and ruled out age mix as the explanation for Asheville</li>
+                        <li>You traced online returns to footwear across three joined tables and separated that effect from order size</li>
+                        <li>You wrote two findings notes that a manager could act on</li>
+                    </ul>
+                </div>
+
+                <div class="card card-success">
+                    <h3>🎉 Module 4 Complete</h3>
+                    <p>You began this module computing a mean and a median. You are finishing it able to describe a distribution, reason about chance, measure a relationship without mistaking it for a cause, test a difference and say how big it is, analyze an experiment, and explore an unfamiliar dataset from first question to written conclusion. That is the statistical core of data analysis, and you have practiced all of it on realistic data.</p>
+                </div>
+
+                <h3>🔭 Looking Ahead</h3>
+                <p>So far every dataset arrived as a file someone had prepared for you. In most organizations the data live in a database, and the first step of any analysis is asking the database for the rows you need. Module 5 begins with <a href="sql_database_connections.html"><strong>Lesson 5.1: Database Connections</strong></a>, where you will open <code>data/pinecrest.db</code>, a SQLite database holding the same Pinecrest tables plus two new ones, connect to it from Python, run your first SQL queries and load the results straight into DataFrames. Everything you do in step 2 of the routine (grain, keys, how tables relate) is exactly what you need to read a database.</p>
+
+                <h3>📋 Before the Next Lesson</h3>
+                <ul>
+                    <li>Save <code>overview()</code> and <code>rate_by()</code> in a file of your own helpers. You will reuse them in the capstone.</li>
+                    <li>Check that <code>data/pinecrest.db</code> is in your <code>data</code> folder. It came in the same zip as the CSV files.</li>
+                    <li>Sketch, on paper, how <code>customers</code>, <code>orders</code>, <code>order_items</code> and <code>products</code> connect: which column links each pair, and which side is "one" and which is "many".</li>
+                </ul>
+
+                <div class="card card-accent">
+                    <h3>🌱 Encouragement for the Journey</h3>
+                    <p>The hardest part of analysis was never the syntax. It is knowing what to do when nobody tells you what to do, and you now have an answer to that: start with a question, check what you were given, look before you summarize, doubt your best result, and write it down. You will get faster and your judgment will sharpen with every dataset. The routine stays the same. Well done on finishing Module 4.</p>
+                </div>
+            </section>
+
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="statistics_ab_testing.html" class="prev-lesson">← Previous: A/B Testing</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="sql_database_connections.html" class="next-lesson">Next: Database Connections →</a>
+            </nav>
         </div>
-        
-        <div class="method-card">
-            <h4>📈 Univariate Analysis</h4>
-            <ul>
-                <li>Distributions</li>
-                <li>Central tendency</li>
-                <li>Spread & variability</li>
-                <li>Skewness & kurtosis</li>
-                <li>Normality tests</li>
-            </ul>
-        </div>
-        
-        <div class="method-card">
-            <h4>🔗 Bivariate Analysis</h4>
-            <ul>
-                <li>Correlations</li>
-                <li>Associations</li>
-                <li>Cross-tabulations</li>
-                <li>Statistical tests</li>
-                <li>Relationship plots</li>
-            </ul>
-        </div>
-        
-        <div class="method-card">
-            <h4>🔍 Outlier Detection</h4>
-            <ul>
-                <li>IQR method</li>
-                <li>Z-score method</li>
-                <li>MAD method</li>
-                <li>Isolation Forest</li>
-                <li>Domain knowledge</li>
-            </ul>
-        </div>
-    </div>
+    </main>
 
-    <h2>Key Takeaways 🎯</h2>
-    
-    <ul>
-        <li>📋 <strong>EDA is systematic:</strong> Follow a structured workflow for consistency</li>
-        <li>❓ <strong>Start with questions:</strong> Know what you're looking for</li>
-        <li>👁️ <strong>Visualize everything:</strong> Patterns are easier to see than calculate</li>
-        <li>🔍 <strong>Check your assumptions:</strong> Data often surprises us</li>
-        <li>📊 <strong>Use multiple methods:</strong> Different techniques reveal different insights</li>
-        <li>⚠️ <strong>Watch for pitfalls:</strong> Simpson's paradox, spurious correlations</li>
-        <li>📝 <strong>Document findings:</strong> Create reports for stakeholders</li>
-        <li>🔄 <strong>Iterate:</strong> EDA is not a one-time activity</li>
-    </ul>
-
-    <p>Remember: EDA is where data science becomes detective work. The insights you uncover here will guide everything that follows - feature engineering, model selection, and business decisions. Master EDA, and you master the foundation of data science! 🚀</p>
-
-    <!-- Learning Journal (REQUIRED per the Courseware Authoring Standard) -->
-    <section id="journal" class="lesson-section">
-        <h2>📓 Learning Journal</h2>
-        <div class="card card-info">
-            <p>Keep a learning journal — digital or physical. After this lesson, take a few minutes to write down:</p>
-            <ul>
-                <li><strong>Key concepts</strong> you learned</li>
-                <li><strong>Techniques that clicked</strong> for you</li>
-                <li><strong>Questions or confusion points</strong> to revisit</li>
-                <li><strong>Ideas you want to try</strong></li>
-                <li><strong>Your progress and feelings</strong> about learning this</li>
-            </ul>
-            <p><strong>✍️ This lesson's prompt:</strong> EDA rewards curiosity and punishes assumptions. Think about a dataset (or a question) you'd like to explore — what is the very first thing you'd check, and what surprise are you secretly hoping (or dreading) to find?</p>
-        </div>
-    </section>
-
-    <!-- Lesson Summary (full standard block) -->
-    <section id="summary" class="lesson-section">
-        <h2>📝 Lesson Summary</h2>
-        <div class="card card-success">
-            <h3>🎓 Key Takeaways</h3>
-            <ul>
-                <li>EDA is systematic detective work: a structured workflow keeps you from missing data-quality issues or jumping to conclusions.</li>
-                <li>Move from the whole dataset inward — overview, then one variable, then pairs, then outliers, then patterns.</li>
-                <li>Use multiple lenses: different plots and multiple outlier methods reveal different things, and visualization beats raw statistics for spotting structure.</li>
-                <li>Guard against classic traps — Simpson's paradox, time dependence, and spurious correlations — by always checking subgroups and context.</li>
-            </ul>
-        </div>
-        <h3>🎉 What You've Accomplished</h3>
-        <p>You now have a dependable, end-to-end process for interrogating any new dataset. Instead of poking around randomly, you can systematically surface its quirks, relationships, and stories — the groundwork that makes feature engineering and modeling succeed.</p>
-        <h3>❓ Common Questions at This Stage</h3>
-        <details>
-            <summary>How much EDA is "enough" before I start modeling?</summary>
-            <p>Enough to trust your data: you understand its shape, have addressed missing values and duplicates, know the main relationships, and have investigated notable outliers. EDA is iterative — you'll return to it as questions arise.</p>
-        </details>
-        <details>
-            <summary>An outlier detector flagged some points — should I remove them?</summary>
-            <p>Not automatically. Investigate first: outliers can be data-entry errors (fix or drop) or the most interesting signal in the data (keep and study). Use domain knowledge, not just the algorithm.</p>
-        </details>
-        <details>
-            <summary>Why do different outlier methods disagree?</summary>
-            <p>Each makes different assumptions — IQR and z-score assume roughly symmetric data, MAD is robust to skew, and Isolation Forest is model-based. Comparing them gives a fuller picture than trusting any single one.</p>
-        </details>
-        <h3>🔭 Looking Ahead</h3>
-        <p>With a solid grasp of how to explore real data, you'll next study the probability distributions that describe how that data is generated — the mathematical models behind the patterns you've been discovering.</p>
-        <h3>✅ Before the Next Lesson</h3>
-        <ul>
-            <li>Run the reconnaissance and univariate steps on a dataset and note its missing-value and skewness profile.</li>
-            <li>Apply two different outlier-detection methods to one numeric column and compare what each flags.</li>
-            <li>Write your Learning Journal entry for this lesson</li>
-        </ul>
-        <div class="card card-accent" style="text-align: center; padding: 2rem;">
-            <h3>🌟 Encouragement for the Journey</h3>
-            <p>The best data scientists aren't the ones with the fanciest models — they're the ones who truly understand their data. Every EDA you run sharpens that instinct. Stay curious!</p>
-        </div>
-    </section>
-
-    <footer>
-        <div class="navigation-links">
-            <a class="nav-prev" href="statistics_descriptive_part1.html">← Previous: Advanced Descriptive Stats</a>
-            <a class="nav-home" href="index.html">🏠 Course Home</a>
-            <a class="nav-next" href="statistics_probability_distributions.html">Next: Probability Distributions →</a>
-        </div>
-    </footer>
-
-    <!-- Footer -->
     <footer class="site-footer">
         <p>&copy; 2026 Ray de la Paz. Python Data Science. All rights reserved.</p>
         <div class="footer-links">
@@ -1232,6 +1280,10 @@ report_file = generate_eda_report(df)
             <a href="https://rays-home.netlify.app/contact">Contact</a>
             <a href="#" id="print-button">Print Page</a>
         </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
     </footer>
+
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
 </body>
 </html>

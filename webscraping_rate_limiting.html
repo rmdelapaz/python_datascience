@@ -3,1625 +3,1210 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Learn rate limiting, ethical web scraping, and responsible API usage. Master throttling, backoff strategies, and legal considerations.">
-    <title>Rate Limiting and Ethics - Python Data Science Path</title>
+    <meta name="description" content="Be a polite, resilient client: pace your requests, honor 429 and Retry-After, back off exponentially with jitter, retry with urllib3, cache responses to disk, make long jobs resumable and log what happened. Python Data Science Lesson 6.5.">
+    <meta name="author" content="Ray de la Paz">
+    <title>Rate Limiting and Retries - Python Data Science</title>
     <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/enhanced.css">
-    <link rel="icon" href="/favicon.png" type="image/png">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid: rendered (and re-rendered on theme change) by js/course-enhancements.js -->
     <script type="module">
-      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-      mermaid.initialize({ startOnLoad: true });
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        window.__mermaid = mermaid;
+        mermaid.initialize({ startOnLoad: false });
+        document.dispatchEvent(new Event('mermaid-ready'));
     </script>
-    <script src="js/course-enhancements.js" defer></script>
-    <link rel="stylesheet" href="styles/standard.css">
 </head>
 <body>
-    <!-- Skip to main content for accessibility -->
     <a href="#main-content" class="skip-to-main">Skip to main content</a>
-    
-    <!-- Progress indicator -->
+
     <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
         <div class="progress-bar"></div>
     </div>
-    
+
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">📊 Python Data Science</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">☰</button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
+    </nav>
+
     <main id="main-content">
-    <header role="banner">
-        <h1>Rate Limiting and Ethics</h1>
-        <div class="reading-time" aria-label="Estimated reading time"></div>
-    </header>
+        <div class="container">
+            <header>
+                <h1>🚦 Lesson 6.5: Rate Limiting and Retries</h1>
+                <p class="lead">Finish the module by making your data collection dependable: fast enough to get the job done, slow enough to be welcome, and able to pick itself up when the network or the server stumbles.</p>
 
-    <!-- What You'll Learn (learning objectives) -->
-    <div class="card card-info">
-        <h2>📚 What You'll Learn</h2>
-        <p>By the end of this lesson, you will be able to:</p>
-        <ul>
-            <li>Explain client-side rate limiting and implement fixed-window, sliding-window, token-bucket, and leaky-bucket limiters</li>
-            <li>Parse server rate-limit signals like <code>429</code>, <code>Retry-After</code>, and <code>X-RateLimit-*</code> headers</li>
-            <li>Apply retry strategies including fixed, linear, exponential, and exponential-with-jitter backoff</li>
-            <li>Check and respect <code>robots.txt</code>, crawl delays, and Terms of Service</li>
-            <li>Handle personal data responsibly with GDPR-aware anonymization</li>
-            <li>Build a polite, monitored, cache-aware scraper that behaves as a good web citizen</li>
-        </ul>
-        <p><strong>⏱️ Estimated Time:</strong> 45–60 minutes</p>
-        <p><strong>🎯 Project:</strong> Build a responsible scraper that checks robots.txt, throttles requests with a token bucket, retries with exponential backoff and jitter, and logs a usage report.</p>
-    </div>
-    
-    <!-- Breadcrumb Navigation -->
-    <nav class="breadcrumb" aria-label="Breadcrumb">
-        <a href="index.html">Home</a>
-        <span class="separator">›</span>
-        <a href="#">Intermediate Module</a>
-        <span class="separator">›</span>
-        <a href="#">Web Scraping & APIs</a>
-        <span class="separator">›</span>
-        <span class="current">Rate Limiting and Ethics</span>
-    </nav>
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Read an API's rate-limit headers and pace your requests to stay inside the limit</li>
+                        <li>Respond correctly to <code>429 Too Many Requests</code> by honoring <code>Retry-After</code></li>
+                        <li>Retry temporary failures with exponential backoff and jitter, and recognize errors that must not be retried</li>
+                        <li>Configure automatic retries on a <code>Session</code> with urllib3's <code>Retry</code> and <code>HTTPAdapter</code></li>
+                        <li>Cache responses on disk, make a long download resumable, and log what your job did</li>
+                    </ul>
+                </div>
 
-    <h2>Be a Responsible Data Citizen! 🤝</h2>
-    
-    <blockquote>
-        <p>With great scraping power comes great responsibility. Rate limiting isn't just about avoiding IP bans—it's about respecting the services we use, following legal guidelines, and being a good citizen of the web. Learn to build scrapers that are not only effective but also ethical, sustainable, and legally compliant.</p>
-    </blockquote>
+                <ul class="lesson-meta">
+                    <li><span class="meta-label">⏱️ Time</span> 95 minutes</li>
+                    <li><span class="meta-label">📋 Prerequisites</span> <a href="webscraping_api_authentication.html">Lesson 6.4: API Authentication</a> (the practice API, <code>ApiError</code>, pagination, environment variables)</li>
+                    <li><span class="meta-label">🛠️ You will build</span> A resumable, logged download of two months of orders that survives an interruption and stays inside the rate limit</li>
+                    <li><span class="meta-label">📂 Data</span> <code>data/mock_api.py</code> (the practice API), <code>data/orders.csv</code> as the answer key</li>
+                </ul>
+            </header>
 
-    <h2>Understanding Rate Limiting</h2>
-    
-    <div class="mermaid">
-    graph TD
-        A[Rate Limiting] --> B[Client-Side]
-        A --> C[Server-Side]
-        
-        B --> D[Request Throttling]
-        B --> E[Backoff Strategies]
-        B --> F[Queue Management]
-        
-        C --> G[429 Status]
-        C --> H[Retry-After Header]
-        C --> I[X-RateLimit Headers]
-        
-        E --> J[Fixed Delay]
-        E --> K[Exponential Backoff]
-        E --> L[Jitter]
-        
-        I --> M[Limit]
-        I --> N[Remaining]
-        I --> O[Reset]
-    </div>
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#why" class="toc-link">Why Servers Say "Slow Down"</a></li>
+                        <li><a href="#limits" class="toc-link">Reading the Limit</a></li>
+                        <li><a href="#pacing" class="toc-link">Pacing Yourself</a></li>
+                        <li><a href="#retry-after" class="toc-link">429 and Retry-After</a></li>
+                        <li><a href="#backoff" class="toc-link">Exponential Backoff with Jitter</a></li>
+                        <li><a href="#adapter" class="toc-link">Retries Built into a Session</a></li>
+                        <li><a href="#cache" class="toc-link">Caching Responses on Disk</a></li>
+                        <li><a href="#logging" class="toc-link">Logging</a></li>
+                        <li><a href="#resume" class="toc-link">Resumable Jobs</a></li>
+                        <li><a href="#mistakes" class="toc-link">Common Mistakes</a></li>
+                        <li><a href="#project" class="toc-link">Project: The Resumable Order Pull</a></li>
+                        <li><a href="#exercises" class="toc-link">Hands-on Exercises</a></li>
+                        <li><a href="#quiz" class="toc-link">Quick Quiz</a></li>
+                        <li><a href="#faq" class="toc-link">Common Questions</a></li>
+                        <li><a href="#journal" class="toc-link">Learning Journal</a></li>
+                        <li><a href="#summary" class="toc-link">Lesson Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
 
-    <h2>Types of Rate Limits</h2>
-    
-    <h3>Common Rate Limiting Patterns</h3>
-    <pre class="language-python"><code>import time
-import requests
-from datetime import datetime, timedelta
-from collections import deque
-import threading
+            <!-- ============================================================ -->
+            <section id="why" class="lesson-section">
+                <h2>🚦 Why Servers Say "Slow Down"</h2>
+
+                <p>At the end of Lesson 6.4 you were asked how long it would take to download all 20,302 orders. At 100 per page that is 204 requests. Your computer could send them in a couple of seconds. The API will not let it, and it is right not to.</p>
+
+                <p>A server has finite capacity, and it is shared. A <strong>rate limit</strong> is the owner's rule for how much of that capacity one client may use: so many requests per so many seconds. It keeps one eager script from slowing the service for everyone else, protects the owner's bill, and gives every user a predictable share. Public websites have limits too, usually unwritten ones, which is why <code>robots.txt</code> has a <code>Crawl-delay</code> and why you have been pausing between pages since Lesson 6.1.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Mental Model: The Freeway On-Ramp Light</h4>
+                    <p>Many freeway on-ramps have a traffic light that lets one car go every few seconds. Nobody enjoys it. But without it, everyone merges at once and the whole freeway slows to a crawl, including the cars from that ramp. With it, traffic keeps flowing and everyone arrives sooner.</p>
+                    <p>A rate limit is that light. A good driver does not race up to it and brake hard on every cycle. They arrive at the pace the light allows, wait when it is red for exactly as long as it says, and do not honk.</p>
+                </div>
+
+                <p>Being a good client has two halves, and this lesson teaches both:</p>
+                <ul>
+                    <li><strong>Politeness:</strong> pace yourself so that you rarely hit the limit, obey the server's instructions when you do, and never fetch the same thing twice.</li>
+                    <li><strong>Resilience:</strong> when something fails for a moment (a busy server, a dropped connection, your own laptop going to sleep), recover without losing work and without making the server's bad moment worse.</li>
+                </ul>
+
+                <h3>Start the Practice API with a Tight Limit</h3>
+
+                <p>Stop the practice API if it is still running (<kbd>Ctrl</kbd>+<kbd>C</kbd>) and start it in your second terminal with a deliberately small allowance: 10 requests every 5 seconds.</p>
+
+                <pre><code class="language-bash">python data/mock_api.py --rate 10 --per 5</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>Pinecrest mock API on http://127.0.0.1:8000  (limit: 10 requests per 5 s; Ctrl+C to stop)</code></pre>
+                </div>
+
+                <p>Then set up a new notebook. <code>ApiError</code> and <code>check()</code> are the ones you wrote in Lesson 6.4.</p>
+
+                <pre><code class="language-python">import hashlib
+import json
+import logging
+import os
 import random
-
-# 1. Fixed Window Rate Limiting
-class FixedWindowRateLimiter:
-    """Fixed time window rate limiting"""
-    
-    def __init__(self, max_requests=60, window_seconds=60):
-        self.max_requests = max_requests
-        self.window_seconds = window_seconds
-        self.window_start = time.time()
-        self.request_count = 0
-        self.lock = threading.Lock()
-    
-    def allow_request(self):
-        """Check if request is allowed"""
-        with self.lock:
-            current_time = time.time()
-            
-            # Check if we're in a new window
-            if current_time - self.window_start >= self.window_seconds:
-                self.window_start = current_time
-                self.request_count = 0
-            
-            # Check if we can make a request
-            if self.request_count < self.max_requests:
-                self.request_count += 1
-                return True
-            
-            return False
-    
-    def wait_if_needed(self):
-        """Wait until request is allowed"""
-        while not self.allow_request():
-            # Calculate time until next window
-            time_to_wait = self.window_seconds - (time.time() - self.window_start)
-            if time_to_wait > 0:
-                print(f"Rate limit reached. Waiting {time_to_wait:.2f} seconds...")
-                time.sleep(min(time_to_wait, 1))
-
-# 2. Sliding Window Rate Limiting
-class SlidingWindowRateLimiter:
-    """Sliding window rate limiting"""
-    
-    def __init__(self, max_requests=60, window_seconds=60):
-        self.max_requests = max_requests
-        self.window_seconds = window_seconds
-        self.requests = deque()
-        self.lock = threading.Lock()
-    
-    def allow_request(self):
-        """Check if request is allowed"""
-        with self.lock:
-            current_time = time.time()
-            
-            # Remove old requests outside the window
-            while self.requests and self.requests[0] < current_time - self.window_seconds:
-                self.requests.popleft()
-            
-            # Check if we can make a request
-            if len(self.requests) < self.max_requests:
-                self.requests.append(current_time)
-                return True
-            
-            return False
-    
-    def wait_if_needed(self):
-        """Wait until request is allowed"""
-        while not self.allow_request():
-            with self.lock:
-                if self.requests:
-                    # Wait until oldest request expires
-                    oldest = self.requests[0]
-                    time_to_wait = (oldest + self.window_seconds) - time.time()
-                    if time_to_wait > 0:
-                        print(f"Rate limit reached. Waiting {time_to_wait:.2f} seconds...")
-                        time.sleep(min(time_to_wait, 0.1))
-                else:
-                    time.sleep(0.1)
-
-# 3. Token Bucket Algorithm
-class TokenBucketRateLimiter:
-    """Token bucket rate limiting algorithm"""
-    
-    def __init__(self, tokens_per_second=1, bucket_size=10):
-        self.tokens_per_second = tokens_per_second
-        self.bucket_size = bucket_size
-        self.tokens = bucket_size
-        self.last_update = time.time()
-        self.lock = threading.Lock()
-    
-    def _refill(self):
-        """Refill tokens based on elapsed time"""
-        current_time = time.time()
-        elapsed = current_time - self.last_update
-        
-        # Add new tokens
-        new_tokens = elapsed * self.tokens_per_second
-        self.tokens = min(self.tokens + new_tokens, self.bucket_size)
-        self.last_update = current_time
-    
-    def allow_request(self, tokens=1):
-        """Check if request is allowed"""
-        with self.lock:
-            self._refill()
-            
-            if self.tokens >= tokens:
-                self.tokens -= tokens
-                return True
-            
-            return False
-    
-    def wait_if_needed(self, tokens=1):
-        """Wait until tokens are available"""
-        while not self.allow_request(tokens):
-            with self.lock:
-                self._refill()
-                if self.tokens < tokens:
-                    # Calculate wait time
-                    tokens_needed = tokens - self.tokens
-                    time_to_wait = tokens_needed / self.tokens_per_second
-                    print(f"Waiting {time_to_wait:.2f} seconds for tokens...")
-            
-            time.sleep(0.1)
-
-# 4. Leaky Bucket Algorithm
-class LeakyBucketRateLimiter:
-    """Leaky bucket rate limiting"""
-    
-    def __init__(self, leak_rate=1, bucket_size=10):
-        self.leak_rate = leak_rate  # Requests per second
-        self.bucket_size = bucket_size
-        self.queue = deque(maxlen=bucket_size)
-        self.last_leak = time.time()
-        self.lock = threading.Lock()
-        
-        # Start leak thread
-        self.running = True
-        self.leak_thread = threading.Thread(target=self._leak_loop)
-        self.leak_thread.daemon = True
-        self.leak_thread.start()
-    
-    def _leak_loop(self):
-        """Background thread to process requests"""
-        while self.running:
-            time.sleep(1 / self.leak_rate)
-            with self.lock:
-                if self.queue:
-                    self.queue.popleft()
-    
-    def allow_request(self):
-        """Add request to bucket"""
-        with self.lock:
-            if len(self.queue) < self.bucket_size:
-                self.queue.append(time.time())
-                return True
-            return False
-    
-    def stop(self):
-        """Stop the leak thread"""
-        self.running = False
-        self.leak_thread.join()</code></pre>
-
-    <h2>Handling Server Rate Limits</h2>
-    
-    <h3>Response Header Parsing</h3>
-    <pre class="language-python"><code>import time
-import requests
-from datetime import datetime, timedelta
-
-class ServerRateLimitHandler:
-    """Handle server-side rate limiting responses"""
-    
-    def __init__(self):
-        self.rate_limits = {}
-        self.retry_after = {}
-    
-    def parse_rate_limit_headers(self, response):
-        """Parse rate limit information from headers"""
-        headers = response.headers
-        
-        # Standard rate limit headers
-        rate_limit_info = {
-            'limit': None,
-            'remaining': None,
-            'reset': None,
-            'retry_after': None
-        }
-        
-        # X-RateLimit headers (GitHub, Twitter style)
-        if 'X-RateLimit-Limit' in headers:
-            rate_limit_info['limit'] = int(headers['X-RateLimit-Limit'])
-        
-        if 'X-RateLimit-Remaining' in headers:
-            rate_limit_info['remaining'] = int(headers['X-RateLimit-Remaining'])
-        
-        if 'X-RateLimit-Reset' in headers:
-            reset_timestamp = int(headers['X-RateLimit-Reset'])
-            rate_limit_info['reset'] = datetime.fromtimestamp(reset_timestamp)
-        
-        # Alternative header names
-        if 'X-Rate-Limit-Limit' in headers:
-            rate_limit_info['limit'] = int(headers['X-Rate-Limit-Limit'])
-        
-        if 'X-Rate-Limit-Remaining' in headers:
-            rate_limit_info['remaining'] = int(headers['X-Rate-Limit-Remaining'])
-        
-        if 'X-Rate-Limit-Reset' in headers:
-            reset_timestamp = int(headers['X-Rate-Limit-Reset'])
-            rate_limit_info['reset'] = datetime.fromtimestamp(reset_timestamp)
-        
-        # Retry-After header (429 responses)
-        if 'Retry-After' in headers:
-            retry_after = headers['Retry-After']
-            if retry_after.isdigit():
-                # Seconds to wait
-                rate_limit_info['retry_after'] = int(retry_after)
-            else:
-                # HTTP date
-                retry_time = datetime.strptime(retry_after, '%a, %d %b %Y %H:%M:%S GMT')
-                rate_limit_info['retry_after'] = (retry_time - datetime.utcnow()).total_seconds()
-        
-        return rate_limit_info
-    
-    def should_wait(self, rate_limit_info):
-        """Determine if we should wait based on rate limit info"""
-        if rate_limit_info['retry_after']:
-            return True, rate_limit_info['retry_after']
-        
-        if rate_limit_info['remaining'] is not None and rate_limit_info['remaining'] <= 0:
-            if rate_limit_info['reset']:
-                wait_time = (rate_limit_info['reset'] - datetime.now()).total_seconds()
-                return True, max(wait_time, 0)
-        
-        return False, 0
-    
-    def handle_response(self, response, url=None):
-        """Handle rate limited response"""
-        # Check for rate limit status
-        if response.status_code == 429:
-            print(f"Rate limited (429) for {url or response.url}")
-            
-            rate_limit_info = self.parse_rate_limit_headers(response)
-            should_wait, wait_time = self.should_wait(rate_limit_info)
-            
-            if should_wait:
-                print(f"Waiting {wait_time:.2f} seconds before retry...")
-                time.sleep(wait_time)
-                return True  # Should retry
-        
-        # Check if we're approaching rate limit
-        elif response.status_code == 200:
-            rate_limit_info = self.parse_rate_limit_headers(response)
-            
-            if rate_limit_info['remaining'] is not None:
-                print(f"Rate limit: {rate_limit_info['remaining']}/{rate_limit_info['limit']} remaining")
-                
-                # Proactive slowdown when approaching limit
-                if rate_limit_info['remaining'] < 10:
-                    print("Approaching rate limit, slowing down...")
-                    time.sleep(1)
-        
-        return False  # No retry needed
-
-# Example: Adaptive rate limiting based on server response
-class AdaptiveRateLimiter:
-    """Dynamically adjust rate based on server responses"""
-    
-    def __init__(self, initial_delay=1.0):
-        self.delay = initial_delay
-        self.min_delay = 0.1
-        self.max_delay = 60.0
-        self.success_count = 0
-        self.rate_limit_count = 0
-    
-    def wait(self):
-        """Wait with current delay"""
-        if self.delay > 0:
-            time.sleep(self.delay)
-    
-    def on_success(self):
-        """Adjust delay after successful request"""
-        self.success_count += 1
-        
-        # Speed up after consecutive successes
-        if self.success_count >= 10:
-            self.delay = max(self.delay * 0.9, self.min_delay)
-            self.success_count = 0
-            print(f"Speeding up: delay = {self.delay:.2f}s")
-    
-    def on_rate_limit(self):
-        """Adjust delay after rate limit"""
-        self.rate_limit_count += 1
-        self.success_count = 0
-        
-        # Slow down exponentially
-        self.delay = min(self.delay * 2, self.max_delay)
-        print(f"Slowing down: delay = {self.delay:.2f}s")
-    
-    def on_error(self):
-        """Adjust delay after error"""
-        self.success_count = 0
-        
-        # Slight slowdown
-        self.delay = min(self.delay * 1.5, self.max_delay)
-        print(f"Error encountered: delay = {self.delay:.2f}s")</code></pre>
-
-    <h2>Backoff Strategies</h2>
-    
-    <h3>Implementation of Various Backoff Algorithms</h3>
-    <pre class="language-python"><code>import time
-import random
-from functools import wraps
-
-# 1. Fixed Backoff
-def fixed_backoff(delay=1.0, max_retries=3):
-    """Fixed delay between retries"""
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            for attempt in range(max_retries):
-                try:
-                    return func(*args, **kwargs)
-                except Exception as e:
-                    if attempt < max_retries - 1:
-                        print(f"Attempt {attempt + 1} failed: {e}")
-                        print(f"Waiting {delay} seconds before retry...")
-                        time.sleep(delay)
-                    else:
-                        raise
-            return None
-        return wrapper
-    return decorator
-
-# 2. Linear Backoff
-def linear_backoff(initial_delay=1.0, increment=1.0, max_retries=5):
-    """Linear increase in delay"""
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            delay = initial_delay
-            
-            for attempt in range(max_retries):
-                try:
-                    return func(*args, **kwargs)
-                except Exception as e:
-                    if attempt < max_retries - 1:
-                        print(f"Attempt {attempt + 1} failed: {e}")
-                        print(f"Waiting {delay} seconds before retry...")
-                        time.sleep(delay)
-                        delay += increment
-                    else:
-                        raise
-            return None
-        return wrapper
-    return decorator
-
-# 3. Exponential Backoff
-def exponential_backoff(initial_delay=1.0, multiplier=2, max_delay=60, max_retries=5):
-    """Exponential increase in delay"""
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            delay = initial_delay
-            
-            for attempt in range(max_retries):
-                try:
-                    return func(*args, **kwargs)
-                except Exception as e:
-                    if attempt < max_retries - 1:
-                        print(f"Attempt {attempt + 1} failed: {e}")
-                        actual_delay = min(delay, max_delay)
-                        print(f"Waiting {actual_delay} seconds before retry...")
-                        time.sleep(actual_delay)
-                        delay *= multiplier
-                    else:
-                        raise
-            return None
-        return wrapper
-    return decorator
-
-# 4. Exponential Backoff with Jitter
-def exponential_backoff_with_jitter(initial_delay=1.0, max_delay=60, max_retries=5):
-    """Exponential backoff with random jitter to prevent thundering herd"""
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            for attempt in range(max_retries):
-                try:
-                    return func(*args, **kwargs)
-                except Exception as e:
-                    if attempt < max_retries - 1:
-                        # Calculate delay with jitter
-                        base_delay = min(initial_delay * (2 ** attempt), max_delay)
-                        jitter = random.uniform(0, base_delay * 0.1)  # 10% jitter
-                        actual_delay = base_delay + jitter
-                        
-                        print(f"Attempt {attempt + 1} failed: {e}")
-                        print(f"Waiting {actual_delay:.2f} seconds before retry...")
-                        time.sleep(actual_delay)
-                    else:
-                        raise
-            return None
-        return wrapper
-    return decorator
-
-# 5. Fibonacci Backoff
-def fibonacci_backoff(max_delay=60, max_retries=8):
-    """Fibonacci sequence for delays"""
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            fib_prev, fib_curr = 0, 1
-            
-            for attempt in range(max_retries):
-                try:
-                    return func(*args, **kwargs)
-                except Exception as e:
-                    if attempt < max_retries - 1:
-                        delay = min(fib_curr, max_delay)
-                        print(f"Attempt {attempt + 1} failed: {e}")
-                        print(f"Waiting {delay} seconds before retry...")
-                        time.sleep(delay)
-                        
-                        fib_prev, fib_curr = fib_curr, fib_prev + fib_curr
-                    else:
-                        raise
-            return None
-        return wrapper
-    return decorator
-
-# Advanced retry strategy with conditions
-class RetryStrategy:
-    """Configurable retry strategy"""
-    
-    def __init__(self, 
-                 max_retries=3,
-                 backoff_type='exponential',
-                 initial_delay=1.0,
-                 max_delay=60,
-                 retry_on=(Exception,),
-                 dont_retry_on=(),
-                 on_retry=None):
-        self.max_retries = max_retries
-        self.backoff_type = backoff_type
-        self.initial_delay = initial_delay
-        self.max_delay = max_delay
-        self.retry_on = retry_on
-        self.dont_retry_on = dont_retry_on
-        self.on_retry = on_retry
-    
-    def calculate_delay(self, attempt):
-        """Calculate delay based on backoff type"""
-        if self.backoff_type == 'fixed':
-            return self.initial_delay
-        elif self.backoff_type == 'linear':
-            return self.initial_delay * (attempt + 1)
-        elif self.backoff_type == 'exponential':
-            return min(self.initial_delay * (2 ** attempt), self.max_delay)
-        elif self.backoff_type == 'fibonacci':
-            a, b = 0, self.initial_delay
-            for _ in range(attempt):
-                a, b = b, a + b
-            return min(b, self.max_delay)
-        else:
-            return self.initial_delay
-    
-    def should_retry(self, exception):
-        """Check if exception should trigger retry"""
-        if isinstance(exception, self.dont_retry_on):
-            return False
-        return isinstance(exception, self.retry_on)
-    
-    def execute(self, func, *args, **kwargs):
-        """Execute function with retry strategy"""
-        last_exception = None
-        
-        for attempt in range(self.max_retries):
-            try:
-                return func(*args, **kwargs)
-            except Exception as e:
-                last_exception = e
-                
-                if not self.should_retry(e) or attempt >= self.max_retries - 1:
-                    raise
-                
-                delay = self.calculate_delay(attempt)
-                
-                if self.on_retry:
-                    self.on_retry(attempt, delay, e)
-                
-                print(f"Attempt {attempt + 1}/{self.max_retries} failed: {e}")
-                print(f"Retrying in {delay:.2f} seconds...")
-                time.sleep(delay)
-        
-        raise last_exception
-
-# Usage example
-@exponential_backoff_with_jitter(max_retries=5)
-def fetch_data(url):
-    response = requests.get(url, timeout=10)
-    response.raise_for_status()
-    return response.json()</code></pre>
-
-    <h2>Ethical Web Scraping</h2>
-    
-    <h3>Robots.txt and Ethical Guidelines</h3>
-    <pre class="language-python"><code>from urllib.robotparser import RobotFileParser
-from urllib.parse import urlparse, urljoin
-import requests
+import sys
 import time
+from pathlib import Path
 
-class EthicalScraper:
-    """Web scraper that follows ethical guidelines"""
-    
-    def __init__(self, user_agent="EthicalBot/1.0", delay=1.0):
-        self.user_agent = user_agent
-        self.delay = delay
-        self.robots_cache = {}
-        self.session = requests.Session()
-        self.session.headers.update({'User-Agent': self.user_agent})
-        
-        # Ethical scraping guidelines
-        self.guidelines = """
-        ETHICAL SCRAPING GUIDELINES:
-        1. Always check and respect robots.txt
-        2. Identify yourself with a descriptive User-Agent
-        3. Respect rate limits and add delays between requests
-        4. Don't scrape personal data without consent
-        5. Check and follow the website's Terms of Service
-        6. Cache responses to avoid repeated requests
-        7. Scrape during off-peak hours when possible
-        8. Stop immediately if asked by the website owner
-        9. Don't circumvent authentication or paywalls
-        10. Give credit and respect copyright
-        """
-    
-    def check_robots_txt(self, url):
-        """Check if URL is allowed by robots.txt"""
-        parsed_url = urlparse(url)
-        base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
-        
-        # Cache robots.txt per domain
-        if base_url not in self.robots_cache:
-            rp = RobotFileParser()
-            rp.set_url(f"{base_url}/robots.txt")
-            
-            try:
-                rp.read()
-                self.robots_cache[base_url] = rp
-            except:
-                # If robots.txt doesn't exist or can't be read, allow by default
-                print(f"Could not read robots.txt for {base_url}")
-                self.robots_cache[base_url] = None
-        
-        rp = self.robots_cache[base_url]
-        
-        if rp is None:
-            return True, None
-        
-        # Check if URL is allowed
-        can_fetch = rp.can_fetch(self.user_agent, url)
-        
-        # Get crawl delay if specified
-        crawl_delay = rp.crawl_delay(self.user_agent)
-        
-        return can_fetch, crawl_delay
-    
-    def scrape(self, url, force=False):
-        """Scrape URL following ethical guidelines"""
-        # Check robots.txt
-        allowed, crawl_delay = self.check_robots_txt(url)
-        
-        if not allowed and not force:
-            print(f"Scraping {url} is not allowed by robots.txt")
-            return None
-        
-        if not allowed and force:
-            print(f"WARNING: Scraping {url} despite robots.txt (forced)")
-        
-        # Use crawl delay if specified
-        if crawl_delay:
-            print(f"Using crawl delay of {crawl_delay} seconds from robots.txt")
-            time.sleep(crawl_delay)
+import pandas as pd
+import requests
+
+API = "http://127.0.0.1:8000"
+HEADERS = {"User-Agent": "pinecrest-course-bot/1.0 (learning project; contact: you@example.com)"}
+LIMIT, PER = 10, 5           # this server allows 10 requests every 5 seconds
+
+
+class ApiError(Exception):
+    """An error response from the API, with its status, code and message."""
+
+    def __init__(self, status, code, message):
+        super().__init__(f"{status} {code}: {message}")
+        self.status, self.code, self.message = status, code, message
+
+
+def check(resp):
+    """Return the response if it succeeded. Otherwise raise ApiError."""
+    if resp.ok:
+        return resp
+    try:
+        error = resp.json()["error"]
+        code, message = error["code"], error["message"]
+    except (requests.exceptions.JSONDecodeError, KeyError, TypeError):
+        code, message = "http_error", resp.reason
+    raise ApiError(resp.status_code, code, message)
+
+
+def fresh_window():
+    """Wait out the current rate-limit window so that a demonstration starts from zero."""
+    time.sleep(PER)
+
+
+print(requests.get(f"{API}/", headers=HEADERS, timeout=10).json()["rate_limit"])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>10 requests per 5 seconds per client</code></pre>
+                </div>
+
+                <div class="card card-success">
+                    <h4>✅ A Safe Place to Get Rate Limited</h4>
+                    <p>You are about to trip a rate limit on purpose, several times. On a real service that would be rude. Here the server is yours, the limit exists to be explored, and seeing a <code>429</code> with your own eyes is the fastest way to stop being afraid of one.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="limits" class="lesson-section">
+                <h2>📏 Reading the Limit</h2>
+
+                <p>Well-behaved APIs tell you where you stand on every response, in headers. The names vary a little between services; these three are the most common.</p>
+
+                <pre><code class="language-python">def limit_headers(resp):
+    return {k: v for k, v in resp.headers.items() if k.startswith("X-RateLimit")}
+
+r = requests.get(f"{API}/products", params={"per_page": 1}, headers=HEADERS, timeout=10)
+print(r.status_code, limit_headers(r))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>200 {'X-RateLimit-Limit': '10', 'X-RateLimit-Remaining': '9', 'X-RateLimit-Reset': '5'}</code></pre>
+                </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Header</th><th>Meaning</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>X-RateLimit-Limit</code></td><td>Requests allowed per window</td></tr>
+                            <tr><td><code>X-RateLimit-Remaining</code></td><td>Requests you have left in the current window</td></tr>
+                            <tr><td><code>X-RateLimit-Reset</code></td><td>Seconds until the window starts over (some APIs send a clock time instead: read the documentation)</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>This API counts in <strong>fixed windows</strong>: your first request starts a 5-second window, you may make 10 requests inside it, and then the count starts again. Now see what happens when you ignore all that and send 13 requests as fast as Python can.</p>
+
+                <pre><code class="language-python">fresh_window()
+
+statuses = []
+for i in range(13):
+    r = requests.get(f"{API}/products", params={"per_page": 1}, headers=HEADERS, timeout=10)
+    statuses.append(r.status_code)
+
+print(statuses)
+print("Retry-After:", r.headers["Retry-After"])
+print(r.json()["error"]["message"])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>[200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 429, 429, 429]
+Retry-After: 5
+Too many requests. Try again in 5 second(s).</code></pre>
+                </div>
+
+                <p>Ten answers, then a wall. <code>429 Too Many Requests</code> is the server holding up a hand, and it comes with an instruction: the <code>Retry-After</code> header says how many seconds to wait before asking again. The three refused requests were pure waste. They returned no data, they still cost the server work, and on a real service a client that keeps doing this gets its key suspended.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="pacing" class="lesson-section">
+                <h2>🐢 Pacing Yourself</h2>
+
+                <p>The best way to handle a 429 is not to cause it. If the limit is 10 requests per 5 seconds, then one request every half second never exceeds it. Add a small margin, because your clock and the server's never agree exactly.</p>
+
+                <p>A plain <code>time.sleep(0.55)</code> after each request would do. A tiny class does it better (classes as in Lesson 6.4: <code>__init__</code> stores the settings and a method uses them): it remembers when the last request went out and sleeps only for whatever is left of the interval. Time your code spends parsing or saving counts toward the wait, so you are never slower than you need to be.</p>
+
+                <pre><code class="language-python">class Throttle:
+    """Keep calls at least `interval` seconds apart."""
+
+    def __init__(self, interval):
+        self.interval = interval
+        self.last = None
+
+    def wait(self):
+        if self.last is not None:
+            remaining = self.interval - (time.monotonic() - self.last)
+            if remaining &gt; 0:
+                time.sleep(remaining)
+        self.last = time.monotonic()
+
+
+interval = PER / LIMIT * 1.1
+print(f"one request every {interval:.2f} s")
+
+fresh_window()
+throttle = Throttle(interval)
+statuses = []
+started = time.monotonic()
+for i in range(13):
+    throttle.wait()
+    r = requests.get(f"{API}/products", params={"per_page": 1}, headers=HEADERS, timeout=10)
+    statuses.append(r.status_code)
+
+print(statuses)
+print(f"took about {time.monotonic() - started:.0f} s")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>one request every 0.55 s
+[200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200]
+took about 7 s</code></pre>
+                </div>
+
+                <p>The same 13 requests, thirteen successes, about seven seconds. Compare that with the burst: it got ten answers instantly and then would have had to wait five seconds for the rest anyway. <strong>Pacing costs you almost nothing and costs the server much less.</strong> Over a long job the steady client and the bursty client finish at nearly the same time. Only one of them was a nuisance.</p>
+
+                <div class="card card-info">
+                    <h4>💡 When You Do Not Know the Limit</h4>
+                    <p>Websites rarely publish one. Use the <code>Crawl-delay</code> from <code>robots.txt</code> if there is one. If not, one request per second is a widely used default for small jobs, and slower is kinder for large ones. If responses start getting slower or you see 429 or 503, you are going too fast whatever the rules say.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="retry-after" class="lesson-section">
+                <h2>✋ 429 and Retry-After</h2>
+
+                <p>Pacing is plan A. You still need plan B, because limits change, other programs may be sharing your key, and some APIs do not tell you the limit in advance. Plan B is simple: <strong>when the server says 429, wait as long as it asks, then try again.</strong></p>
+
+                <pre><code class="language-python">def get_polite(url, max_tries=5, **kwargs):
+    """GET that waits and retries when the server answers 429."""
+    kwargs.setdefault("headers", HEADERS)
+    kwargs.setdefault("timeout", 10)
+    for attempt in range(1, max_tries + 1):
+        resp = requests.get(url, **kwargs)
+        if resp.status_code != 429:
+            return resp
+        wait = float(resp.headers.get("Retry-After", 1))
+        print(f"  429 (try {attempt}): waiting {wait:.0f} s, as asked")
+        time.sleep(wait)
+    return resp
+
+
+fresh_window()
+statuses = [get_polite(f"{API}/products", params={"per_page": 1}).status_code for i in range(25)]
+print(statuses.count(200), "of", len(statuses), "succeeded")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>  429 (try 1): waiting 5 s, as asked
+  429 (try 1): waiting 5 s, as asked
+25 of 25 succeeded</code></pre>
+                </div>
+
+                <p>Twenty-five requests with no pacing at all, and every one succeeded in the end. The function ran into the limit twice, read the header, waited, and carried on. Three details make it trustworthy:</p>
+                <ul>
+                    <li><code>resp.headers.get("Retry-After", 1)</code> has a default. Not every 429 carries the header, and code that assumes it does will crash exactly when things are already going badly.</li>
+                    <li><code>max_tries</code> bounds the loop. If the server keeps refusing, the function returns the last 429 instead of waiting forever.</li>
+                    <li>It retries <strong>only</strong> on 429. Every other response goes straight back to the caller.</li>
+                </ul>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Retry-After Can Also Be a Date</h4>
+                    <p>The standard allows two forms: a number of seconds, as here, or a full date such as <code>Wed, 21 Oct 2026 07:28:00 GMT</code>. Seconds are far more common for rate limits. If an API you use sends dates, <code>email.utils.parsedate_to_datetime()</code> from the standard library converts one.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="backoff" class="lesson-section">
+                <h2>📈 Exponential Backoff with Jitter</h2>
+
+                <p>A 429 comes with instructions. Other failures do not. A server that is overloaded or restarting answers <code>503 Service Unavailable</code>, or <code>500</code>, or nothing at all until your timeout fires. These are usually temporary, so trying again is reasonable. The question is <em>when</em>.</p>
+
+                <p>Retrying immediately is the worst choice: if the server is struggling, an instant retry from every client is exactly the extra load that keeps it down. The standard answer is <strong>exponential backoff</strong>: wait a little after the first failure, twice as long after the second, twice as long again after the third, up to a ceiling.</p>
+
+                <pre><code class="language-python">def backoff_delay(attempt, base=0.5, cap=8.0):
+    """Seconds to wait after failed attempt number `attempt` (counting from 0)."""
+    return min(cap, base * 2 ** attempt)
+
+print([backoff_delay(n) for n in range(6)])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>[0.5, 1.0, 2.0, 4.0, 8.0, 8.0]</code></pre>
+                </div>
+
+                <p>Half a second, one, two, four, then capped at eight. A brief hiccup is retried quickly, and a longer outage gets more and more room.</p>
+
+                <p>One problem remains. Imagine a hundred clients that all failed at the same moment. With the schedule above they all retry at 0.5 seconds, all again at 1.5, all again at 3.5: the server is hit by synchronized waves. The cure is <strong>jitter</strong>, a random amount of spread. A common recipe, "full jitter", waits a random time between zero and the backoff value.</p>
+
+                <pre><code class="language-python">rng = random.Random(42)
+print([round(rng.uniform(0, backoff_delay(n)), 2) for n in range(6)])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>[0.32, 0.03, 0.55, 0.89, 5.89, 5.41]</code></pre>
+                </div>
+
+                <p>The waits still grow on average, but no two clients share a schedule, so the retries arrive as a trickle instead of a wave. (The seeded <code>Random(42)</code> is only so that this page shows the same numbers as your screen; real code uses <code>random.uniform()</code> directly.)</p>
+
+                <h3>A Flaky Endpoint to Practice On</h3>
+
+                <p>The practice API's <code>/flaky</code> endpoint fails twice with a 503 and succeeds on the third request, over and over.</p>
+
+                <pre><code class="language-python">fresh_window()
+for i in range(3):
+    r = requests.get(f"{API}/flaky", headers=HEADERS, timeout=10)
+    print(r.status_code, "| Retry-After:", r.headers.get("Retry-After"), "|", r.json().get("status", "failed"))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>503 | Retry-After: 1 | failed
+503 | Retry-After: 1 | failed
+200 | Retry-After: None | ok</code></pre>
+                </div>
+
+                <p>Now the function that brings the pieces together. It decides, for each failure, whether a retry can help, and how long to wait first.</p>
+
+                <pre><code class="language-python">RETRY_STATUSES = {429, 500, 502, 503, 504}
+
+
+def get_with_backoff(url, max_tries=5, base=0.5, **kwargs):
+    """GET with retries: obeys Retry-After, otherwise backs off exponentially with jitter."""
+    kwargs.setdefault("headers", HEADERS)
+    kwargs.setdefault("timeout", 10)
+    for attempt in range(max_tries):
+        try:
+            resp = requests.get(url, **kwargs)
+            if resp.status_code not in RETRY_STATUSES:
+                return resp                         # success, or an error a retry cannot fix
+            problem, asked = f"HTTP {resp.status_code}", resp.headers.get("Retry-After")
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as err:
+            problem, asked = type(err).__name__, None
+        if attempt == max_tries - 1:
+            break
+        delay = float(asked) if asked else random.uniform(0, backoff_delay(attempt, base))
+        print(f"  try {attempt + 1}: {problem}; next try in {delay:.1f} s")
+        time.sleep(delay)
+    raise RuntimeError(f"gave up after {max_tries} tries (last problem: {problem})")
+
+
+resp = get_with_backoff(f"{API}/flaky")
+print(resp.status_code, resp.json())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>  try 1: HTTP 503; next try in 1.0 s
+  try 2: HTTP 503; next try in 1.0 s
+200 {'status': 'ok', 'attempts_needed': 3}</code></pre>
+                </div>
+
+                <p>Two failures, two short waits, success. The caller saw one clean response. (This server sent <code>Retry-After: 1</code> with its 503, so the function obeyed that instead of rolling its own delay. An instruction from the server always beats your guess.)</p>
+
+                <div class="mermaid">
+graph TD
+    A["Send request"] --> B{"Success?"}
+    B -->|yes| C["Use it"]
+    B -->|no| D{"Temporary?"}
+    D -->|no| E["Stop, fix it"]
+    D -->|yes| F{"Tries left?"}
+    F -->|no| G["Give up clearly"]
+    F -->|yes| H["Wait, retry"]
+    H --> A
+                </div>
+
+                <p>"Temporary" means 429, a 5xx status, a timeout or a dropped connection. The wait is whatever <code>Retry-After</code> says, or a backoff delay when the server gives no instruction.</p>
+
+                <h3>What Not to Retry</h3>
+
+                <p>A retry only helps when the <em>same request</em> might succeed <em>later</em>. A missing product will still be missing in two seconds. The function returns such answers at once:</p>
+
+                <pre><code class="language-python">resp = get_with_backoff(f"{API}/products/TNT-9999")
+print(resp.status_code, resp.json()["error"]["code"])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>404 not_found</code></pre>
+                </div>
+
+                <p>And when the trouble does not pass, it stops. Ask the slow endpoint for a 3-second answer with a 1-second timeout, and allow three tries:</p>
+
+                <pre><code class="language-python">try:
+    get_with_backoff(f"{API}/slow", params={"seconds": 3}, timeout=1, max_tries=3)
+except RuntimeError as err:
+    print(err)</code></pre>
+                <div class="card card-output">
+                    <h4>Output (your delays will differ: they are random)</h4>
+                    <pre><code>  try 1: ReadTimeout; next try in 0.4 s
+  try 2: ReadTimeout; next try in 0.3 s
+gave up after 3 tries (last problem: ReadTimeout)</code></pre>
+                </div>
+
+                <p>Each wait was drawn at random, below a ceiling that doubled. After the third timeout the function raised an error that says what it tried and what went wrong. <strong>Giving up clearly is part of retrying well.</strong> A job that fails at 2 a.m. with a precise message is far better than one that is still "retrying" at 9.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="adapter" class="lesson-section">
+                <h2>🧩 Retries Built into a Session</h2>
+
+                <p>You wrote <code>get_with_backoff()</code> to understand what a retry policy is made of. For everyday work you do not have to maintain your own. <code>requests</code> is built on a library called <strong>urllib3</strong>, which has a well-tested <code>Retry</code> class. You attach it to a <code>Session</code> through an <code>HTTPAdapter</code>, and from then on every request made with that session is retried according to your policy.</p>
+
+                <pre><code class="language-python">from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+
+def make_session(total=5, backoff_factor=0.5):
+    """A Session that identifies itself and retries temporary failures."""
+    retry = Retry(
+        total=total,                                   # at most this many retries per request
+        backoff_factor=backoff_factor,                 # exponential backoff between them
+        status_forcelist=[429, 500, 502, 503, 504],    # retry on these statuses
+        allowed_methods=["GET", "HEAD"],               # only for requests that are safe to repeat
+        respect_retry_after_header=True,               # obey Retry-After when the server sends it
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session = requests.Session()
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    session.headers.update(HEADERS)
+    return session
+
+
+session = make_session()
+
+resp = session.get(f"{API}/flaky", timeout=10)
+print(resp.status_code, resp.json())
+print("retried after:", [attempt.status for attempt in resp.raw.retries.history])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>200 {'status': 'ok', 'attempts_needed': 3}
+retried after: [503, 503]</code></pre>
+                </div>
+
+                <p>One call, one good response. The history shows that urllib3 quietly absorbed two 503s on the way. Every argument maps onto something you built by hand in the last section:</p>
+                <ul>
+                    <li><code>total</code> is your <code>max_tries</code>, counted as retries after the first attempt.</li>
+                    <li><code>backoff_factor</code> sets the exponential schedule. Connection errors and timeouts on connecting are retried as well.</li>
+                    <li><code>status_forcelist</code> is your <code>RETRY_STATUSES</code>.</li>
+                    <li><code>allowed_methods</code> keeps retries to requests that only read. Repeating a <code>POST</code> that places an order could place it twice.</li>
+                    <li><code>session.mount()</code> says which addresses the adapter handles: everything starting with <code>https://</code> or <code>http://</code>.</li>
+                </ul>
+
+                <p>The same session shrugs off the rate limit, because 429 is in the list and <code>Retry-After</code> is respected:</p>
+
+                <pre><code class="language-python">fresh_window()
+started = time.monotonic()
+statuses = [session.get(f"{API}/products", params={"per_page": 1}, timeout=10).status_code
+            for i in range(14)]
+
+print(statuses.count(200), "of", len(statuses), "succeeded")
+print(f"took about {time.monotonic() - started:.0f} s")</code></pre>
+                <div class="card card-output">
+                    <h4>Output (your time may differ by a second)</h4>
+                    <pre><code>14 of 14 succeeded
+took about 6 s</code></pre>
+                </div>
+
+                <p>Fourteen requests into a ten-request window: the eleventh was refused, urllib3 waited the five seconds the server asked for, and the rest went through. When retries run out, you get an exception to catch:</p>
+
+                <pre><code class="language-python">impatient = make_session(total=1)
+
+try:
+    impatient.get(f"{API}/flaky", timeout=10)
+except requests.exceptions.RetryError as err:
+    print(type(err).__name__)
+    print(err)
+
+print(impatient.get(f"{API}/flaky", timeout=10).status_code)
+impatient.close()</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>RetryError
+HTTPConnectionPool(host='127.0.0.1', port=8000): Max retries exceeded with url: /flaky (Caused by ResponseError('too many 503 error responses'))
+200</code></pre>
+                </div>
+
+                <p>One retry was not enough for an endpoint that fails twice, so <code>requests</code> raised <code>RetryError</code>. (The final line makes the third request of the cycle, which succeeds, so that <code>/flaky</code> is back at the start of its pattern for your next cell.)</p>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Retries Are a Safety Net, Not a Pace</h4>
+                    <p>A session that retries 429s will get a burst through eventually, but it does so by hitting the limit again and again. Keep pacing with a <code>Throttle</code> as plan A and let the retry policy catch the rare miss. You still pass <code>timeout=</code> on every call: a retry policy does not set one for you.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="cache" class="lesson-section">
+                <h2>🗄️ Caching Responses on Disk</h2>
+
+                <p>The politest request is the one you never send. While you develop an analysis you run the same cells again and again, and each run asks the server for data it already gave you. A <strong>cache</strong> ends that: save each response the first time, and read the saved copy from then on. You met the idea in Lesson 6.1 as "save raw responses". Here it becomes automatic.</p>
+
+                <p>The only design decision is the file name. It must be the same for the same request and different for a different one, so build it from the URL and the parameters. A hash turns that text into a short, safe name.</p>
+
+                <pre><code class="language-python">CACHE_DIR = Path("cache")
+
+
+def cache_path(url, params=None):
+    key = url + "?" + json.dumps(params or {}, sort_keys=True)
+    return CACHE_DIR / (hashlib.sha256(key.encode("utf-8")).hexdigest()[:16] + ".json")
+
+
+def cached_get_json(session, url, params=None):
+    """Return (data, source). Reads the cache when it can; asks the network when it must."""
+    path = cache_path(url, params)
+    if path.exists():
+        return json.loads(path.read_text(encoding="utf-8")), "cache"
+    resp = check(session.get(url, params=params, timeout=10))
+    CACHE_DIR.mkdir(exist_ok=True)
+    path.write_text(resp.text, encoding="utf-8")
+    return resp.json(), "network"
+
+
+for category in ["Tents", "Snow", "Tents", "Tents"]:
+    data, source = cached_get_json(session, f"{API}/products", {"category": category, "per_page": 5})
+    print(category, data["total"], "from", source)
+
+print(len(list(CACHE_DIR.glob("*.json"))), "files in the cache")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>Tents 24 from network
+Snow 22 from network
+Tents 24 from cache
+Tents 24 from cache
+2 files in the cache</code></pre>
+                </div>
+
+                <p>Four questions, two requests. (If you run that cell a second time, all four will say "cache": the files are still there. Delete the <code>cache</code> folder to start over.) Two things about the function are deliberate:</p>
+                <ul>
+                    <li><code>sort_keys=True</code> makes <code>{"a": 1, "b": 2}</code> and <code>{"b": 2, "a": 1}</code> produce the same file name. They are the same request.</li>
+                    <li><code>check()</code> runs <em>before</em> anything is written, so an error response is never saved. A cache that stores a 429 or a 500 will faithfully serve you that failure forever.</li>
+                </ul>
+
+                <div class="card card-warning">
+                    <h4>⚠️ A Cache Answers "What Was", Not "What Is"</h4>
+                    <p>Cached data is as old as the day you fetched it. That is perfect while developing, and for data that never changes, such as last year's orders. It is wrong for anything current. Decide how old is too old for each job (Exercise 4 adds a maximum age), and never put credentials or other people's personal data in a cache folder that might be shared.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="logging" class="lesson-section">
+                <h2>📋 Logging</h2>
+
+                <p>Your functions have been reporting with <code>print()</code>. That is fine in a notebook you are watching. A job that runs for twenty minutes, or overnight, needs a record you can read afterward: what was requested, when, what failed, what was retried. Python's standard <code>logging</code> module is made for this. It stamps each message with a time and a <strong>level</strong>, and it lets you choose where messages go and how much detail you want, without touching the code that emits them.</p>
+
+                <pre><code class="language-python">log = logging.getLogger("pinecrest")
+log.setLevel(logging.INFO)
+
+handler = logging.StreamHandler(sys.stdout)
+handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)-7s %(message)s", datefmt="%H:%M:%S"))
+log.handlers = [handler]
+
+log.debug("fetched page 3")                       # too detailed for the INFO level: not shown
+log.info("starting download: %s pages", 21)
+log.warning("rate limited; waiting %s s", 5)
+log.error("gave up on page 7 after 5 tries")</code></pre>
+                <div class="card card-output">
+                    <h4>Output (your times will differ)</h4>
+                    <pre><code>15:19:30 INFO    starting download: 21 pages
+15:19:30 WARNING rate limited; waiting 5 s
+15:19:30 ERROR   gave up on page 7 after 5 tries</code></pre>
+                </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Level</th><th>Use it for</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>DEBUG</code></td><td>Step-by-step detail you want only when investigating: every page fetched, every cache hit</td></tr>
+                            <tr><td><code>INFO</code></td><td>Milestones: job started, job finished, how many rows</td></tr>
+                            <tr><td><code>WARNING</code></td><td>Something went wrong and was handled: a retry, a rate limit</td></tr>
+                            <tr><td><code>ERROR</code></td><td>Something failed and was not recovered</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>The logger's level is a filter: at <code>INFO</code>, the <code>debug()</code> call above was skipped. A <strong>handler</strong> decides where messages go. This one writes to the notebook; a <code>logging.FileHandler("job.log")</code> writes to a file, and a logger can have both. (Setting <code>log.handlers</code> to a fresh list, instead of calling <code>addHandler()</code>, keeps a rerun cell from attaching a second copy and printing everything twice.)</p>
+
+                <div class="card card-danger">
+                    <h4>🛑 Never Log a Secret</h4>
+                    <p>Log files get attached to bug reports and emailed to colleagues. Log URLs, status codes, counts and timings. Never log an API key, a token, a password or an <code>Authorization</code> header. If a URL contains a key as a query parameter, that is one more reason Lesson 6.4 told you to prefer headers.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="resume" class="lesson-section">
+                <h2>⏯️ Resumable Jobs</h2>
+
+                <p>Long downloads get interrupted. Your laptop sleeps, the Wi-Fi drops, a page fails on its fifth retry, you press the stop button by mistake. If the job keeps everything in memory until the end, an interruption at page 180 of 204 loses 180 pages, and the rerun sends all those requests again.</p>
+
+                <p>A <strong>resumable</strong> job saves each piece of work as it is completed and, when started, first looks at what is already done. The technique is the cache again, applied to the pages of one job: one file per page, and a page whose file exists is not requested.</p>
+
+                <pre><code class="language-python">def download_pages(session, path, params, out_dir, throttle, max_new=None):
+    """Save every page of a paginated endpoint as a JSON file, skipping pages already saved.
+
+    max_new stops the job after that many new pages (used here to imitate an interruption).
+    """
+    out_dir = Path(out_dir)
+    out_dir.mkdir(exist_ok=True)
+    page, fetched, skipped = 1, 0, 0
+    while True:
+        file = out_dir / f"page_{page:04d}.json"
+        if file.exists():
+            data = json.loads(file.read_text(encoding="utf-8"))
+            skipped += 1
         else:
-            time.sleep(self.delay)
-        
-        # Make request
-        try:
-            response = self.session.get(url, timeout=30)
-            response.raise_for_status()
-            
-            # Check for signs that we're not welcome
-            if self._check_blocking_signs(response):
-                print(f"Warning: Possible blocking detected for {url}")
-            
-            return response
-            
-        except requests.RequestException as e:
-            print(f"Error scraping {url}: {e}")
-            return None
-    
-    def _check_blocking_signs(self, response):
-        """Check for signs of blocking or rate limiting"""
-        signs = [
-            'captcha',
-            'blocked',
-            'denied',
-            'forbidden',
-            'rate limit',
-            'too many requests'
-        ]
-        
-        content = response.text.lower()
-        
-        for sign in signs:
-            if sign in content:
-                return True
-        
-        return False
-    
-    def print_guidelines(self):
-        """Print ethical scraping guidelines"""
-        print(self.guidelines)
+            if max_new is not None and fetched &gt;= max_new:
+                log.warning("stopped before page %s", page)
+                return {"complete": False, "fetched": fetched, "skipped": skipped}
+            throttle.wait()
+            resp = check(session.get(f"{API}{path}", params={**params, "page": page}, timeout=10))
+            partial = file.with_suffix(".part")
+            partial.write_text(resp.text, encoding="utf-8")
+            partial.replace(file)                      # the file appears only when it is whole
+            data = resp.json()
+            fetched += 1
+            log.debug("fetched page %s of %s", page, data["total_pages"])
+        if page &gt;= data["total_pages"]:
+            return {"complete": True, "fetched": fetched, "skipped": skipped}
+        page += 1</code></pre>
 
-# Responsible API usage
-class ResponsibleAPIClient:
-    """API client with built-in ethical practices"""
-    
-    def __init__(self, api_key, rate_limit=60, rate_window=60):
-        self.api_key = api_key
-        self.rate_limiter = SlidingWindowRateLimiter(rate_limit, rate_window)
-        self.session = requests.Session()
-        self.session.headers.update({
-            'User-Agent': 'ResponsibleAPIClient/1.0',
-            'X-API-Key': api_key
-        })
-        
-        # Track API usage
-        self.usage_stats = {
-            'requests': 0,
-            'errors': 0,
-            'rate_limits': 0,
-            'data_retrieved': 0
-        }
-    
-    def request(self, url, **kwargs):
-        """Make responsible API request"""
-        # Check rate limit
-        self.rate_limiter.wait_if_needed()
-        
-        # Make request
-        try:
-            response = self.session.get(url, **kwargs)
-            self.usage_stats['requests'] += 1
-            
-            # Track data usage
-            if response.content:
-                self.usage_stats['data_retrieved'] += len(response.content)
-            
-            # Handle rate limiting
-            if response.status_code == 429:
-                self.usage_stats['rate_limits'] += 1
-                self._handle_rate_limit(response)
-            
-            response.raise_for_status()
-            return response
-            
-        except requests.RequestException as e:
-            self.usage_stats['errors'] += 1
-            raise
-    
-    def _handle_rate_limit(self, response):
-        """Handle rate limit response"""
-        retry_after = response.headers.get('Retry-After', 60)
-        
-        if isinstance(retry_after, str) and retry_after.isdigit():
-            wait_time = int(retry_after)
-        else:
-            wait_time = 60
-        
-        print(f"Rate limited. Waiting {wait_time} seconds...")
-        time.sleep(wait_time)
-    
-    def get_usage_report(self):
-        """Get usage statistics"""
-        return {
-            'total_requests': self.usage_stats['requests'],
-            'error_rate': self.usage_stats['errors'] / max(self.usage_stats['requests'], 1),
-            'rate_limit_hits': self.usage_stats['rate_limits'],
-            'data_retrieved_mb': self.usage_stats['data_retrieved'] / (1024 * 1024)
-        }</code></pre>
+                <p>Read it as a loop over page numbers with one question at the top: <em>do I already have this page?</em> If so, read the file. If not, wait for the throttle, fetch, and save. Each response says how many pages there are, so the loop knows when it has reached the last one.</p>
 
-    <h2>Legal and Compliance</h2>
-    
-    <h3>Terms of Service Checker</h3>
-    <pre class="language-python"><code>import re
-from bs4 import BeautifulSoup
+                <p>The two lines with <code>.part</code> matter more than they look. If the program dies halfway through writing a file, a half-written <code>page_0007.json</code> would be mistaken for a finished page on the next run. Writing to a temporary name and then renaming means a page file either exists completely or does not exist.</p>
 
-class TermsOfServiceChecker:
-    """Check website terms of service for scraping restrictions"""
-    
-    def __init__(self):
-        self.restriction_keywords = [
-            'no scraping',
-            'no crawling',
-            'no automated',
-            'no robots',
-            'no data mining',
-            'no harvesting',
-            'prohibited',
-            'not permitted',
-            'written consent',
-            'prior permission'
-        ]
-        
-        self.api_keywords = [
-            'api available',
-            'developer api',
-            'data api',
-            'rest api',
-            'graphql'
-        ]
-    
-    def find_terms_url(self, homepage_url):
-        """Find Terms of Service URL from homepage"""
-        try:
-            response = requests.get(homepage_url, timeout=10)
-            soup = BeautifulSoup(response.content, 'html.parser')
-            
-            # Common patterns for ToS links
-            patterns = [
-                'terms', 'tos', 'legal', 'terms-of-service',
-                'terms-of-use', 'terms-and-conditions'
-            ]
-            
-            for link in soup.find_all('a'):
-                href = link.get('href', '').lower()
-                text = link.text.lower()
-                
-                for pattern in patterns:
-                    if pattern in href or pattern in text:
-                        return urljoin(homepage_url, link.get('href'))
-            
-            return None
-            
-        except Exception as e:
-            print(f"Error finding ToS: {e}")
-            return None
-    
-    def check_terms(self, terms_url):
-        """Check terms of service for restrictions"""
-        try:
-            response = requests.get(terms_url, timeout=10)
-            soup = BeautifulSoup(response.content, 'html.parser')
-            text = soup.get_text().lower()
-            
-            results = {
-                'scraping_prohibited': False,
-                'api_available': False,
-                'restrictions': [],
-                'api_mentions': []
-            }
-            
-            # Check for scraping restrictions
-            for keyword in self.restriction_keywords:
-                if keyword in text:
-                    results['scraping_prohibited'] = True
-                    
-                    # Find context
-                    sentences = text.split('.')
-                    for sentence in sentences:
-                        if keyword in sentence:
-                            results['restrictions'].append(sentence.strip())
-            
-            # Check for API availability
-            for keyword in self.api_keywords:
-                if keyword in text:
-                    results['api_available'] = True
-                    
-                    # Find context
-                    sentences = text.split('.')
-                    for sentence in sentences:
-                        if keyword in sentence:
-                            results['api_mentions'].append(sentence.strip())
-            
-            return results
-            
-        except Exception as e:
-            print(f"Error checking ToS: {e}")
-            return None
-    
-    def generate_compliance_report(self, website_url):
-        """Generate compliance report for website"""
-        report = {
-            'website': website_url,
-            'timestamp': datetime.now().isoformat(),
-            'robots_txt': None,
-            'terms_of_service': None,
-            'recommendations': []
-        }
-        
-        # Check robots.txt
-        scraper = EthicalScraper()
-        allowed, crawl_delay = scraper.check_robots_txt(website_url)
-        
-        report['robots_txt'] = {
-            'allowed': allowed,
-            'crawl_delay': crawl_delay
-        }
-        
-        if not allowed:
-            report['recommendations'].append("Robots.txt prohibits scraping")
-        
-        # Check Terms of Service
-        terms_url = self.find_terms_url(website_url)
-        
-        if terms_url:
-            terms_check = self.check_terms(terms_url)
-            report['terms_of_service'] = terms_check
-            
-            if terms_check and terms_check['scraping_prohibited']:
-                report['recommendations'].append("Terms of Service may prohibit scraping")
-            
-            if terms_check and terms_check['api_available']:
-                report['recommendations'].append("API is available - consider using it instead")
-        
-        # General recommendations
-        report['recommendations'].extend([
-            "Always respect rate limits",
-            "Use descriptive User-Agent",
-            "Cache responses when possible",
-            "Consider contacting website owner for permission",
-            "Document your data source and respect copyright"
-        ])
-        
-        return report
+                <p>Try it on the product catalog, 40 per page, and interrupt it after three pages.</p>
 
-# GDPR Compliance
-class GDPRCompliantScraper:
-    """Scraper that follows GDPR guidelines"""
-    
-    def __init__(self):
-        self.personal_data_patterns = [
-            r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',  # Email
-            r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b',  # Phone (US)
-            r'\b\d{9,}\b',  # SSN-like numbers
-            r'\b(?:\d{4}[-\s]?){3}\d{4}\b',  # Credit card
-        ]
-        
-        self.session = requests.Session()
-    
-    def contains_personal_data(self, text):
-        """Check if text contains personal data"""
-        for pattern in self.personal_data_patterns:
-            if re.search(pattern, text):
-                return True
-        return False
-    
-    def anonymize_data(self, text):
-        """Anonymize personal data in text"""
-        # Replace emails
-        text = re.sub(
-            r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
-            '[EMAIL_REDACTED]',
-            text
-        )
-        
-        # Replace phone numbers
-        text = re.sub(
-            r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b',
-            '[PHONE_REDACTED]',
-            text
-        )
-        
-        # Replace potential SSN
-        text = re.sub(
-            r'\b\d{9}\b',
-            '[ID_REDACTED]',
-            text
-        )
-        
-        # Replace credit card-like numbers
-        text = re.sub(
-            r'\b(?:\d{4}[-\s]?){3}\d{4}\b',
-            '[CC_REDACTED]',
-            text
-        )
-        
-        return text
-    
-    def scrape_with_privacy(self, url, anonymize=True):
-        """Scrape with privacy protection"""
-        response = self.session.get(url)
-        
-        if response.status_code == 200:
-            content = response.text
-            
-            # Check for personal data
-            if self.contains_personal_data(content):
-                print("Warning: Personal data detected in content")
-                
-                if anonymize:
-                    content = self.anonymize_data(content)
-                    print("Personal data has been anonymized")
-                else:
-                    print("Consider anonymizing or not storing this data")
-            
-            return content
-        
-        return None</code></pre>
+                <pre><code class="language-python">log.setLevel(logging.ERROR)                # keep this demonstration quiet
+throttle = Throttle(interval)
+job = {"per_page": 40}
 
-    <h2>Distributed and Polite Scraping</h2>
-    
-    <h3>Polite Scraping Architecture</h3>
-    <pre class="language-python"><code>import queue
-import threading
-from datetime import datetime, timedelta
-import hashlib
+print(download_pages(session, "/products", job, "product_pages", throttle, max_new=3))
+print(sorted(p.name for p in Path("product_pages").iterdir()))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>{'complete': False, 'fetched': 3, 'skipped': 0}
+['page_0001.json', 'page_0002.json', 'page_0003.json']</code></pre>
+                </div>
 
-class PoliteScrapeQueue:
-    """Polite scraping queue with per-domain rate limiting"""
-    
-    def __init__(self, default_delay=1.0, max_workers=5):
-        self.default_delay = default_delay
-        self.max_workers = max_workers
-        self.domain_queues = {}
-        self.domain_last_access = {}
-        self.domain_delays = {}
-        self.lock = threading.Lock()
-        self.workers = []
-        self.running = True
-    
-    def add_url(self, url, priority=5, delay=None):
-        """Add URL to appropriate domain queue"""
-        domain = urlparse(url).netloc
-        
-        with self.lock:
-            if domain not in self.domain_queues:
-                self.domain_queues[domain] = queue.PriorityQueue()
-                self.domain_delays[domain] = delay or self.default_delay
-                self.domain_last_access[domain] = 0
-            
-            # Add to queue with priority
-            self.domain_queues[domain].put((priority, url))
-    
-    def get_next_url(self):
-        """Get next URL respecting per-domain delays"""
-        with self.lock:
-            current_time = time.time()
-            best_domain = None
-            min_wait = float('inf')
-            
-            # Find domain that can be accessed soonest
-            for domain, q in self.domain_queues.items():
-                if q.empty():
-                    continue
-                
-                last_access = self.domain_last_access[domain]
-                delay = self.domain_delays[domain]
-                time_since_access = current_time - last_access
-                
-                if time_since_access >= delay:
-                    # Can access now
-                    best_domain = domain
-                    break
-                else:
-                    # Calculate wait time
-                    wait_time = delay - time_since_access
-                    if wait_time < min_wait:
-                        min_wait = wait_time
-                        best_domain = domain
-            
-            if best_domain:
-                # Check if we need to wait
-                last_access = self.domain_last_access[best_domain]
-                delay = self.domain_delays[best_domain]
-                time_since_access = current_time - last_access
-                
-                if time_since_access < delay:
-                    wait_time = delay - time_since_access
-                    time.sleep(wait_time)
-                
-                # Get URL from queue
-                priority, url = self.domain_queues[best_domain].get()
-                self.domain_last_access[best_domain] = time.time()
-                
-                return url
-            
-            return None
+                <p>The job stopped with three pages on disk. Run it again, with no limit this time, exactly as you would after a real interruption.</p>
 
-class DistributedScraper:
-    """Distributed scraping with coordination"""
-    
-    def __init__(self, num_workers=5, cache_dir='cache'):
-        self.num_workers = num_workers
-        self.cache_dir = cache_dir
-        self.task_queue = queue.Queue()
-        self.result_queue = queue.Queue()
-        self.seen_urls = set()
-        self.lock = threading.Lock()
-        
-        # Create cache directory
-        import os
-        os.makedirs(cache_dir, exist_ok=True)
-    
-    def _get_cache_path(self, url):
-        """Get cache file path for URL"""
-        url_hash = hashlib.md5(url.encode()).hexdigest()
-        return f"{self.cache_dir}/{url_hash}.cache"
-    
-    def _is_cached(self, url, max_age_hours=24):
-        """Check if URL is cached and fresh"""
-        cache_path = self._get_cache_path(url)
-        
-        if os.path.exists(cache_path):
-            # Check age
-            file_time = datetime.fromtimestamp(os.path.getmtime(cache_path))
-            age = datetime.now() - file_time
-            
-            if age < timedelta(hours=max_age_hours):
-                return True
-        
-        return False
-    
-    def _get_from_cache(self, url):
-        """Get content from cache"""
-        cache_path = self._get_cache_path(url)
-        
-        try:
-            with open(cache_path, 'r', encoding='utf-8') as f:
-                return f.read()
-        except:
-            return None
-    
-    def _save_to_cache(self, url, content):
-        """Save content to cache"""
-        cache_path = self._get_cache_path(url)
-        
-        try:
-            with open(cache_path, 'w', encoding='utf-8') as f:
-                f.write(content)
-        except:
-            pass
-    
-    def worker(self, worker_id):
-        """Worker thread for scraping"""
-        session = requests.Session()
-        session.headers.update({
-            'User-Agent': f'DistributedScraper/1.0 (Worker-{worker_id})'
-        })
-        
-        while True:
-            try:
-                # Get task from queue
-                task = self.task_queue.get(timeout=5)
-                
-                if task is None:
-                    break
-                
-                url = task['url']
-                
-                # Check cache first
-                if self._is_cached(url):
-                    content = self._get_from_cache(url)
-                    if content:
-                        print(f"Worker {worker_id}: Using cached {url}")
-                        self.result_queue.put({
-                            'url': url,
-                            'content': content,
-                            'from_cache': True
-                        })
-                        continue
-                
-                # Scrape URL
-                print(f"Worker {worker_id}: Scraping {url}")
-                
-                try:
-                    response = session.get(url, timeout=30)
-                    response.raise_for_status()
-                    
-                    content = response.text
-                    
-                    # Save to cache
-                    self._save_to_cache(url, content)
-                    
-                    # Add to results
-                    self.result_queue.put({
-                        'url': url,
-                        'content': content,
-                        'from_cache': False
-                    })
-                    
-                except Exception as e:
-                    print(f"Worker {worker_id}: Error scraping {url}: {e}")
-                    self.result_queue.put({
-                        'url': url,
-                        'error': str(e)
-                    })
-                
-                # Be polite
-                time.sleep(1)
-                
-            except queue.Empty:
-                continue
-            except Exception as e:
-                print(f"Worker {worker_id}: Unexpected error: {e}")
-    
-    def scrape_urls(self, urls):
-        """Scrape multiple URLs with workers"""
-        # Add URLs to task queue
-        for url in urls:
-            with self.lock:
-                if url not in self.seen_urls:
-                    self.seen_urls.add(url)
-                    self.task_queue.put({'url': url})
-        
-        # Start workers
-        workers = []
-        for i in range(self.num_workers):
-            t = threading.Thread(target=self.worker, args=(i,))
-            t.start()
-            workers.append(t)
-        
-        # Wait for completion
-        self.task_queue.join()
-        
-        # Stop workers
-        for _ in range(self.num_workers):
-            self.task_queue.put(None)
-        
-        for t in workers:
-            t.join()
-        
-        # Collect results
-        results = []
-        while not self.result_queue.empty():
-            results.append(self.result_queue.get())
-        
-        return results</code></pre>
+                <pre><code class="language-python">print(download_pages(session, "/products", job, "product_pages", throttle))
+print(download_pages(session, "/products", job, "product_pages", throttle))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>{'complete': True, 'fetched': 4, 'skipped': 3}
+{'complete': True, 'fetched': 0, 'skipped': 7}</code></pre>
+                </div>
 
-    <h2>Monitoring and Alerts</h2>
-    
-    <pre class="language-python"><code>import logging
-from datetime import datetime, timedelta
-import smtplib
-from email.mime.text import MIMEText
+                <p>The second run skipped the three saved pages and fetched the remaining four. The third run fetched nothing at all: the job is complete, and running it again is free. Building the DataFrame is now a separate step that reads only files.</p>
 
-class ScrapingMonitor:
-    """Monitor scraping activities and send alerts"""
-    
-    def __init__(self, alert_email=None):
-        self.alert_email = alert_email
-        self.stats = {
-            'total_requests': 0,
-            'successful_requests': 0,
-            'failed_requests': 0,
-            'rate_limits_hit': 0,
-            'robots_txt_blocks': 0,
-            'total_data_mb': 0,
-            'start_time': datetime.now()
-        }
-        self.alerts = []
-        
-        # Set up logging
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler('scraping.log'),
-                logging.StreamHandler()
-            ]
-        )
-        self.logger = logging.getLogger(__name__)
-    
-    def log_request(self, url, success=True, data_size=0, rate_limited=False, robots_blocked=False):
-        """Log scraping request"""
-        self.stats['total_requests'] += 1
-        
-        if success:
-            self.stats['successful_requests'] += 1
-        else:
-            self.stats['failed_requests'] += 1
-        
-        if rate_limited:
-            self.stats['rate_limits_hit'] += 1
-            self.check_rate_limit_alert()
-        
-        if robots_blocked:
-            self.stats['robots_txt_blocks'] += 1
-        
-        self.stats['total_data_mb'] += data_size / (1024 * 1024)
-        
-        # Log
-        status = 'SUCCESS' if success else 'FAILED'
-        self.logger.info(f"{status}: {url} - Size: {data_size} bytes")
-    
-    def check_rate_limit_alert(self):
-        """Check if rate limit alerts should be sent"""
-        # Alert if hit rate limits too frequently
-        if self.stats['rate_limits_hit'] >= 10:
-            self.send_alert(
-                "High Rate Limit Hits",
-                f"Hit rate limits {self.stats['rate_limits_hit']} times"
-            )
-            self.stats['rate_limits_hit'] = 0  # Reset counter
-    
-    def send_alert(self, subject, message):
-        """Send alert email"""
-        alert = {
-            'timestamp': datetime.now(),
-            'subject': subject,
-            'message': message
-        }
-        self.alerts.append(alert)
-        
-        self.logger.warning(f"ALERT: {subject} - {message}")
-        
-        if self.alert_email:
-            # Send email alert
-            try:
-                msg = MIMEText(message)
-                msg['Subject'] = f"Scraping Alert: {subject}"
-                msg['From'] = 'scraper@example.com'
-                msg['To'] = self.alert_email
-                
-                # Configure SMTP server
-                # smtp = smtplib.SMTP('localhost')
-                # smtp.send_message(msg)
-                # smtp.quit()
-            except Exception as e:
-                self.logger.error(f"Failed to send email alert: {e}")
-    
-    def get_report(self):
-        """Generate scraping report"""
-        runtime = datetime.now() - self.stats['start_time']
-        
-        report = {
-            'runtime': str(runtime),
-            'total_requests': self.stats['total_requests'],
-            'success_rate': self.stats['successful_requests'] / max(self.stats['total_requests'], 1),
-            'failed_requests': self.stats['failed_requests'],
-            'rate_limits_hit': self.stats['rate_limits_hit'],
-            'robots_blocks': self.stats['robots_txt_blocks'],
-            'data_scraped_mb': self.stats['total_data_mb'],
-            'requests_per_minute': self.stats['total_requests'] / max(runtime.total_seconds() / 60, 1),
-            'alerts': self.alerts
-        }
-        
-        return report
-    
-    def print_summary(self):
-        """Print summary statistics"""
-        report = self.get_report()
-        
-        print("\n" + "="*50)
-        print("SCRAPING SUMMARY")
-        print("="*50)
-        print(f"Runtime: {report['runtime']}")
-        print(f"Total Requests: {report['total_requests']}")
-        print(f"Success Rate: {report['success_rate']:.2%}")
-        print(f"Failed Requests: {report['failed_requests']}")
-        print(f"Rate Limits Hit: {report['rate_limits_hit']}")
-        print(f"Robots.txt Blocks: {report['robots_blocks']}")
-        print(f"Data Scraped: {report['data_scraped_mb']:.2f} MB")
-        print(f"Requests/Minute: {report['requests_per_minute']:.2f}")
-        
-        if report['alerts']:
-            print(f"\nAlerts: {len(report['alerts'])}")
-            for alert in report['alerts'][-5:]:  # Show last 5 alerts
-                print(f"  - {alert['timestamp']}: {alert['subject']}")
-        
-        print("="*50)</code></pre>
+                <pre><code class="language-python">def load_pages(out_dir):
+    """Combine the saved pages of a finished job into one DataFrame."""
+    items = []
+    for file in sorted(Path(out_dir).glob("page_*.json")):
+        items.extend(json.loads(file.read_text(encoding="utf-8"))["items"])
+    return pd.DataFrame(items)
 
-    <h2>Best Practices Summary</h2>
-    
-    <pre class="language-python"><code># Complete ethical scraping template
 
-class BestPracticesScraper:
-    """Template for ethical and responsible web scraping"""
-    
-    def __init__(self, name="EthicalScraper", version="1.0"):
-        self.user_agent = f"{name}/{version} (Contact: your-email@example.com)"
-        self.session = requests.Session()
-        self.session.headers.update({'User-Agent': self.user_agent})
-        
-        # Rate limiting
-        self.rate_limiter = TokenBucketRateLimiter(tokens_per_second=1)
-        
-        # Retry strategy
-        self.retry_strategy = RetryStrategy(
-            max_retries=3,
-            backoff_type='exponential',
-            initial_delay=1.0
-        )
-        
-        # Monitoring
-        self.monitor = ScrapingMonitor()
-        
-        # Cache
-        self.cache = {}
-        
-        # Best practices checklist
-        self.checklist = {
-            'robots_txt_checked': False,
-            'terms_of_service_reviewed': False,
-            'rate_limiting_enabled': True,
-            'user_agent_set': True,
-            'caching_enabled': True,
-            'monitoring_enabled': True,
-            'gdpr_compliant': False,
-            'error_handling': True
-        }
-    
-    def pre_scrape_checklist(self, url):
-        """Run pre-scraping checklist"""
-        print("Pre-Scraping Checklist:")
-        print("-" * 30)
-        
-        # Check robots.txt
-        allowed, delay = self.check_robots_txt(url)
-        self.checklist['robots_txt_checked'] = True
-        print(f"✓ Robots.txt checked: {'Allowed' if allowed else 'Blocked'}")
-        
-        # Check rate limiting
-        print(f"✓ Rate limiting: {self.rate_limiter.tokens_per_second} req/sec")
-        
-        # User agent
-        print(f"✓ User-Agent: {self.user_agent}")
-        
-        # Recommendations
-        if not allowed:
-            print("\n⚠️ WARNING: Robots.txt prohibits scraping this URL")
-            print("Consider:")
-            print("  - Looking for an official API")
-            print("  - Contacting the website owner")
-            print("  - Finding alternative data sources")
-        
-        return allowed
-    
-    def scrape_responsibly(self, urls):
-        """Main scraping method with all best practices"""
-        results = []
-        
-        for url in urls:
-            # Pre-scrape checks
-            if not self.pre_scrape_checklist(url):
-                continue
-            
-            # Check cache
-            if url in self.cache:
-                print(f"Using cached result for {url}")
-                results.append(self.cache[url])
-                continue
-            
-            # Rate limiting
-            self.rate_limiter.wait_if_needed()
-            
-            # Scrape with retry
-            try:
-                response = self.retry_strategy.execute(
-                    self._make_request, url
-                )
-                
-                # Cache result
-                self.cache[url] = response
-                results.append(response)
-                
-                # Monitor
-                self.monitor.log_request(
-                    url, 
-                    success=True,
-                    data_size=len(response.content)
-                )
-                
-            except Exception as e:
-                print(f"Failed to scrape {url}: {e}")
-                self.monitor.log_request(url, success=False)
-        
-        # Print summary
-        self.monitor.print_summary()
-        
-        return results
-    
-    def _make_request(self, url):
-        """Make HTTP request"""
-        response = self.session.get(url, timeout=30)
-        response.raise_for_status()
-        return response
+catalog = load_pages("product_pages")
+print(catalog.shape, "| unique SKUs:", catalog["sku"].is_unique)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>(242, 13) | unique SKUs: True</code></pre>
+                </div>
 
-# Usage
-scraper = BestPracticesScraper()
-urls = ['https://example.com/page1', 'https://example.com/page2']
-results = scraper.scrape_responsibly(urls)</code></pre>
+                <div class="card card-info">
+                    <h4>💡 Collect, Then Analyze</h4>
+                    <p>This is the pattern from the whole module in its final form: one step talks to the network and writes raw files; a second step reads the files and builds the table. The slow, fragile, rate-limited part runs once. The part you will rewrite ten times runs in milliseconds and never bothers the server.</p>
+                </div>
+            </section>
 
-    <h2>Practice Exercises</h2>
-    
-    <h3>Exercise 1: Build a Rate-Limited API Client</h3>
-    <p>Create a comprehensive API client that:</p>
-    <ol>
-        <li>Implements adaptive rate limiting</li>
-        <li>Handles all rate limit response headers</li>
-        <li>Uses exponential backoff with jitter</li>
-        <li>Monitors and reports API usage</li>
-        <li>Caches responses appropriately</li>
-    </ol>
+            <!-- ============================================================ -->
+            <section id="mistakes" class="lesson-section">
+                <h2>⚠️ Common Mistakes</h2>
 
-    <h3>Exercise 2: Ethical Scraper Framework</h3>
-    <p>Build a framework that:</p>
-    <ol>
-        <li>Checks robots.txt and ToS automatically</li>
-        <li>Implements per-domain rate limiting</li>
-        <li>Detects and handles blocking</li>
-        <li>Anonymizes personal data</li>
-        <li>Generates compliance reports</li>
-    </ol>
+                <h3>1. Assuming Retry-After Is Always There</h3>
 
-    <h3>Exercise 3: Distributed Scraping System</h3>
-    <p>Create a distributed scraper that:</p>
-    <ol>
-        <li>Coordinates multiple workers</li>
-        <li>Implements domain-based queuing</li>
-        <li>Handles failures gracefully</li>
-        <li>Provides real-time monitoring</li>
-        <li>Respects rate limits across workers</li>
-    </ol>
+                <pre data-raises="TypeError"><code class="language-python">resp = session.get(f"{API}/health", timeout=10)
+wait = int(resp.headers.get("Retry-After"))</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>TypeError: int() argument must be a string, a bytes-like object or a real number, not 'NoneType'</code></pre>
+                </div>
+                <p><strong>What it means:</strong> this response had no <code>Retry-After</code> header, so <code>.get()</code> returned <code>None</code>, and <code>int(None)</code> fails. In real code this line sits inside an error handler, so it crashes at the worst moment. <strong>Fix:</strong> give a default, <code>resp.headers.get("Retry-After", 1)</code>, and fall back to backoff.</p>
 
-    <h2>Key Takeaways</h2>
-    <ul>
-        <li>⏱️ Always implement rate limiting to avoid overwhelming servers</li>
-        <li>📋 Check and respect robots.txt and Terms of Service</li>
-        <li>🔄 Use exponential backoff with jitter for retries</li>
-        <li>🤖 Set descriptive User-Agent headers</li>
-        <li>💾 Cache responses to minimize requests</li>
-        <li>📊 Monitor and log scraping activities</li>
-        <li>🔒 Handle personal data responsibly (GDPR compliance)</li>
-        <li>⚖️ Consider legal and ethical implications</li>
-        <li>🎯 Look for official APIs before scraping</li>
-        <li>🤝 Be a good citizen of the web</li>
-    </ul>
+                <h3>2. Retrying Without Waiting, or Without a Limit</h3>
+                <pre data-norun><code class="language-python">while True:                                  # do not run this
+    resp = requests.get(url, headers=HEADERS, timeout=10)
+    if resp.ok:
+        break</code></pre>
+                <p><strong>What happens:</strong> against a server that is down or refusing you, this loop sends requests as fast as your machine can, forever. To the server it is indistinguishable from an attack, and it is the quickest way to get an IP address or key banned. <strong>Fix:</strong> every retry loop needs a wait that grows and a maximum number of tries.</p>
 
-    <h2>Further Resources</h2>
-    <ul>
-        <li><a href="https://www.robotstxt.org/">Robots.txt Specification</a></li>
-        <li><a href="https://www.eff.org/issues/coders/computer-fraud-and-abuse-act">CFAA and Legal Considerations</a></li>
-        <li><a href="https://gdpr.eu/">GDPR Official Website</a></li>
-        <li><a href="https://www.scrapehero.com/how-to-prevent-getting-blacklisted-while-scraping/">Avoiding Blacklists</a></li>
-        <li><a href="https://blog.apify.com/web-scraping-ethics/">Web Scraping Ethics Guide</a></li>
-        <li><a href="https://docs.scrapy.org/en/latest/topics/practices.html">Scrapy Best Practices</a></li>
-    </ul>
+                <h3>3. Retrying Errors That Cannot Change</h3>
+                <p>A 400, 401, 403 or 404 describes your request, not the server's mood. Retrying one five times with backoff produces the same answer five times, slowly, and hides the real bug behind a wall of retry messages. <strong>Fix:</strong> retry only 429, 5xx, timeouts and connection errors, as <code>RETRY_STATUSES</code> and the <code>status_forcelist</code> do.</p>
 
-    <!-- Learning Journal (REQUIRED per the Courseware Authoring Standard) -->
-    <section id="journal" class="lesson-section">
-        <h2>📓 Learning Journal</h2>
-        <div class="card card-info">
-            <p>Keep a learning journal — digital or physical. After this lesson, take a few minutes to write down:</p>
-            <ul>
-                <li><strong>Key concepts</strong> you learned</li>
-                <li><strong>Techniques that clicked</strong> for you</li>
-                <li><strong>Questions or confusion points</strong> to revisit</li>
-                <li><strong>Ideas you want to try</strong></li>
-                <li><strong>Your progress and feelings</strong> about learning this</li>
-            </ul>
-            <p><strong>✍️ This lesson's prompt:</strong> This lesson frames scraping as an ethical act, not just a technical one.
-            Where is the line for you between fair data collection and taking advantage of a service — and how will that line
-            shape the scrapers you choose to build?</p>
+                <h3>4. Going Parallel to Go Faster</h3>
+                <p>When a job feels slow, it is tempting to split it across several threads or to run three copies of the script. A rate limit applies to you, not to each of your threads: you will hit the same wall three times as often, and on a public website you have tripled your load on someone else's server. <strong>Fix:</strong> respect the pace, cache, filter on the server, and let the job take the time it takes.</p>
+
+                <h3>5. Caching Failures</h3>
+                <p>If your cache writes the body before checking the status, one bad moment (a 429, a 500, an HTML error page) is saved and served on every later run, and your "data" quietly becomes an error message. <strong>Fix:</strong> check first, write second, as <code>cached_get_json()</code> does. If results ever look strange, delete the cache folder and compare.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="project" class="lesson-section">
+                <h2>🛠️ Project: The Resumable Order Pull</h2>
+
+                <p>Finance needs every order from November 1, 2025 onward for a year-end reconciliation: about two thousand records, behind an API key, on a server that allows 10 requests every 5 seconds. You will plan the job, run it with pacing, retries and a log file, survive an interruption, and prove that the result is complete. Continue in your lesson notebook with the practice API running. The API key comes from the environment variable you set in Lesson 6.4 (<code>PINECREST_API_KEY</code>; set it again and restart Jupyter if you have opened a new terminal since). Allow about 35 minutes.</p>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 1: Plan before you pull <span class="step-time">(5 min)</span></h3>
+                    <p>Build the session, ask for one record to learn the size of the job, and work out how many requests and how much time it needs at a polite pace.</p>
+                    <pre><code class="language-python">job_session = make_session()
+job_session.headers["X-API-Key"] = os.environ["PINECREST_API_KEY"]
+
+job = {"since": "2025-11-01", "per_page": 100}
+probe = check(job_session.get(f"{API}/orders", params={**job, "per_page": 1}, timeout=10)).json()
+
+total = probe["total"]
+pages = -(-total // job["per_page"])
+print(f"{total:,} orders = {pages} requests")
+print(f"at one request every {interval:.2f} s: about {pages * interval:.0f} s")</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>2,056 orders = 21 requests
+at one request every 0.55 s: about 12 s</code></pre>
+                    </div>
+                    <p>Twelve seconds is nothing. The same arithmetic for a job of 50,000 requests tells you to run it overnight, which is exactly why you do it first.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 2: Send the log to a file <span class="step-time">(5 min)</span></h3>
+                    <p>Keep the notebook quiet (warnings and errors only) and write full detail to <code>pull.log</code>. Each handler has its own level, so one logger can serve both.</p>
+                    <pre><code class="language-python">log.setLevel(logging.DEBUG)
+
+screen = logging.StreamHandler(sys.stdout)
+screen.setLevel(logging.WARNING)
+screen.setFormatter(logging.Formatter("%(levelname)s %(message)s"))
+
+logfile = logging.FileHandler("pull.log", mode="w", encoding="utf-8")
+logfile.setLevel(logging.DEBUG)
+logfile.setFormatter(logging.Formatter("%(asctime)s %(levelname)-7s %(message)s"))
+
+log.handlers = [screen, logfile]
+log.info("job planned: %s orders, %s pages", total, pages)
+print("logging to pull.log")</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>logging to pull.log</code></pre>
+                    </div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 3: Start the job, and lose the connection <span class="step-time">(8 min)</span></h3>
+                    <p>Run the download with a throttle. To rehearse a failure, let it stop after 8 new pages, as if your laptop had gone to sleep.</p>
+                    <pre><code class="language-python">job_throttle = Throttle(interval)
+
+result = download_pages(job_session, "/orders", job, "order_pages", job_throttle, max_new=8)
+print(result)
+print(len(list(Path("order_pages").glob("page_*.json"))), "pages on disk")</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>WARNING stopped before page 9
+{'complete': False, 'fetched': 8, 'skipped': 0}
+8 pages on disk</code></pre>
+                    </div>
+                    <p>The warning came from <code>download_pages()</code> through the logger, at a level the screen handler lets through. Eight pages are safe on disk.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 4: Resume <span class="step-time">(5 min)</span></h3>
+                    <p>Run the very same call without the limit. Nothing about the code needs to know there was an interruption.</p>
+                    <pre><code class="language-python">result = download_pages(job_session, "/orders", job, "order_pages", job_throttle)
+print(result)
+log.info("job finished: %s", result)</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>{'complete': True, 'fetched': 13, 'skipped': 8}</code></pre>
+                    </div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 5: Assemble and prove it <span class="step-time">(7 min)</span></h3>
+                    <p>Build the DataFrame from the saved pages and check it against the total the API promised and against the source file.</p>
+                    <pre><code class="language-python">orders = load_pages("order_pages")
+orders["order_date"] = pd.to_datetime(orders["order_date"])
+
+source = pd.read_csv("data/orders.csv", parse_dates=["order_date"])
+expected = source[source["order_date"] &gt;= "2025-11-01"]
+
+print(orders.shape)
+print("matches the promised total:", len(orders) == total)
+print("unique order ids:", orders["order_id"].is_unique)
+print("same ids as orders.csv:", orders["order_id"].tolist() == expected["order_id"].tolist())
+print("total value:", f"${orders['order_total'].sum():,.2f}",
+      "| in orders.csv:", f"${expected['order_total'].sum():,.2f}")
+
+orders.to_csv("orders_since_november.csv", index=False)</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>(2056, 11)
+matches the promised total: True
+unique order ids: True
+same ids as orders.csv: True
+total value: $367,810.59 | in orders.csv: $367,810.59</code></pre>
+                    </div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 6: Read your own log <span class="step-time">(5 min)</span></h3>
+                    <p>Close the session and the log file, then look at what the job recorded about itself.</p>
+                    <pre><code class="language-python">job_session.close()
+logfile.close()
+log.handlers = [screen]
+
+lines = Path("pull.log").read_text(encoding="utf-8").splitlines()
+print(len(lines), "log lines")
+print(sum("fetched page" in line for line in lines), "pages fetched")
+print(sum("WARNING" in line for line in lines), "warning")
+print(lines[0][24:])
+print(lines[-1][24:])</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>24 log lines
+21 pages fetched
+1 warning
+INFO    job planned: 2056 orders, 21 pages
+INFO    job finished: {'complete': True, 'fetched': 13, 'skipped': 8}</code></pre>
+                    </div>
+                    <p>Twenty-one fetches for twenty-one pages: not one request was repeated across the interruption. The log holds the timestamps too (the slice <code>[24:]</code> only trims them off so that this page matches your screen). Open <code>pull.log</code> in your editor and read the story of the job from top to bottom.</p>
+                </div>
+
+                <div class="card card-success">
+                    <h3>✅ Project Completion Checklist</h3>
+                    <ul class="checklist">
+                        <li>You computed the number of requests and the expected duration before downloading</li>
+                        <li>The session identifies itself, sends the API key from the environment, and has a retry policy</li>
+                        <li>Requests are paced by a <code>Throttle</code> set a little under the limit</li>
+                        <li>After the simulated interruption, the resumed run fetched only the 13 missing pages</li>
+                        <li>The final DataFrame has 2,056 unique orders and matches <code>data/orders.csv</code></li>
+                        <li><code>pull.log</code> records 21 page fetches and one warning, and contains no key</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="exercises" class="lesson-section">
+                <h2>🏋️ Hands-on Exercises</h2>
+
+                <p>Work in your lesson notebook with the practice API still running with <code>--rate 10 --per 5</code>.</p>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 1: Watch the Allowance Shrink</h3>
+                    <p>Start from a fresh window, then send four requests to <code>/products</code> (use <code>per_page=1</code>) and print <code>X-RateLimit-Remaining</code> after each one. What will the fifth show? Predict before you check.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Call <code>fresh_window()</code> first. Use plain <code>requests.get()</code> with <code>HEADERS</code> and a timeout, and read <code>r.headers["X-RateLimit-Remaining"]</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">fresh_window()
+for i in range(4):
+    r = requests.get(f"{API}/products", params={"per_page": 1}, headers=HEADERS, timeout=10)
+    print("after request", i + 1, "remaining:", r.headers["X-RateLimit-Remaining"])</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>after request 1 remaining: 9
+after request 2 remaining: 8
+after request 3 remaining: 7
+after request 4 remaining: 6</code></pre>
+                        </div>
+                        <p>The fifth would show 5. Some clients use this header to slow down as the allowance runs low, which is a nice refinement of a fixed pace.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 2: Pick a Pace</h3>
+                    <p>Write <code>polite_interval(limit, per, margin=1.1)</code> that returns the number of seconds to leave between requests. Use it for three services: 10 requests per 5 seconds, 30 per 10 seconds, and 5,000 per hour. For the last one, how many hours would 100,000 requests take?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>The interval is the window length divided by the number of requests allowed, times the margin. An hour is 3,600 seconds.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">def polite_interval(limit, per, margin=1.1):
+    return per / limit * margin
+
+for limit, per in [(10, 5), (30, 10), (5000, 3600)]:
+    print(f"{limit:&gt;5} per {per:&gt;5} s: one request every {polite_interval(limit, per):.3f} s")
+
+hours = 100_000 * polite_interval(5000, 3600) / 3600
+print(f"100,000 requests: {hours:.0f} hours")</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>   10 per     5 s: one request every 0.550 s
+   30 per    10 s: one request every 0.367 s
+ 5000 per  3600 s: one request every 0.792 s
+100,000 requests: 22 hours</code></pre>
+                        </div>
+                        <p>Twenty-two hours. Knowing that before you start is the difference between a planned overnight job and a surprised analyst.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 3: A Retry Policy of Your Own</h3>
+                    <p>Create a session with <code>make_session(total=3, backoff_factor=0.2)</code>. Call <code>/flaky</code> with it twice and, for each call, print the status and the list of statuses that were retried. Then explain why the two lines are the same.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>The retry history is in <code>resp.raw.retries.history</code>; each entry has a <code>.status</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">fresh_window()
+patient = make_session(total=3, backoff_factor=0.2)
+for i in range(2):
+    resp = patient.get(f"{API}/flaky", timeout=10)
+    print(resp.status_code, [attempt.status for attempt in resp.raw.retries.history])
+patient.close()</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>200 [503, 503]
+200 [503, 503]</code></pre>
+                        </div>
+                        <p>Each call used three requests: two failures absorbed by the policy and one success. That is one full turn of the endpoint's fail-fail-succeed cycle, so the next call starts at the beginning of the cycle again.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 4: A Cache That Forgets (Stretch)</h3>
+                    <p>Add a <code>max_age</code> argument (in seconds) to the caching function: a cached file older than that is ignored and fetched again. Test it with a maximum age of 2 seconds: call it, call it again at once, wait 3 seconds, call it a third time. Print the source each time.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>A file's age is <code>time.time() - path.stat().st_mtime</code>. Use a different <code>per_page</code> from the lesson's example so that you start with no cached file.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">def cached_get_json_fresh(session, url, params=None, max_age=None):
+    """Like cached_get_json, but a cached copy older than max_age seconds is fetched again."""
+    path = cache_path(url, params)
+    if path.exists():
+        age = time.time() - path.stat().st_mtime
+        if max_age is None or age &lt;= max_age:
+            return json.loads(path.read_text(encoding="utf-8")), "cache"
+    resp = check(session.get(url, params=params, timeout=10))
+    CACHE_DIR.mkdir(exist_ok=True)
+    path.write_text(resp.text, encoding="utf-8")
+    return resp.json(), "network"
+
+
+question = {"category": "Footwear", "per_page": 3}
+for pause in [0, 0, 3]:
+    time.sleep(pause)
+    data, source = cached_get_json_fresh(session, f"{API}/products", question, max_age=2)
+    print(data["total"], "from", source)</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>28 from network
+28 from cache
+28 from network</code></pre>
+                        </div>
+                        <p>Fresh enough the second time, too old the third. The right maximum age depends on the data: seconds for stock prices, a day for a product catalog, forever for last year's orders.</p>
+                    </details>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="quiz" class="lesson-section">
+                <h2>🎯 Quick Quiz</h2>
+                <div class="card quiz-container">
+                    <h3>🎯 Check Your Understanding</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> A response arrives with status <code>429</code> and the header <code>Retry-After: 4</code>. What should your client do?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="Retry-After is the server telling you exactly how long to stay away. Honoring it is both the polite response and the fastest route to a successful request.">
+                                A) Wait at least 4 seconds, then send the request again
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="The request was fine, but the answer was about timing. What does an instant retry do to your count in the current window?">
+                                B) Retry immediately, since the request itself was valid
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="That rule holds for errors that describe a broken request, such as 400 or 404. Which 4xx code is about pace, and comes with instructions for when to return?">
+                                C) Stop the job: 4xx errors must never be retried
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> What does this print?</p>
+                        <pre><code class="language-python">print([min(8.0, 0.5 * 2 ** n) for n in range(6)])</code></pre>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="That schedule grows by adding half a second each time. Look at the operator: 2 ** n doubles with every step.">
+                                A) <code>[0.5, 1.0, 1.5, 2.0, 2.5, 3.0]</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="The doubling is right. Now look at what min does to the last value.">
+                                B) <code>[0.5, 1.0, 2.0, 4.0, 8.0, 16.0]</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Each wait is double the one before, which is exponential backoff, and min caps the wait at 8 seconds so that it cannot grow without bound.">
+                                C) <code>[0.5, 1.0, 2.0, 4.0, 8.0, 8.0]</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> Why add random jitter to backoff delays?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Speed is not the purpose. Picture many clients that all failed in the same second and all follow the same fixed schedule.">
+                                A) Random waits are shorter on average, so the job finishes sooner
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Without jitter, every client retries on the same schedule and the server is hit by synchronized waves just as it tries to recover. Randomness spreads the retries out.">
+                                B) So that many clients that failed together do not all retry at the same instants
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Jitter is not a disguise, and hiding automation is against the ground rules of this module. Think about load on a recovering server instead.">
+                                C) So that the server cannot detect that the requests are automated
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 4:</strong> Which of these failures should a retry policy <strong>not</strong> retry?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="A 503 says the server is temporarily unable to answer, which is the classic case for waiting and trying again.">
+                                A) <code>503 Service Unavailable</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="A timeout usually means a slow or busy moment on the network or the server. The same request may well succeed shortly.">
+                                B) A read timeout
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="A 404 describes the request: there is nothing at that address. Asking again will give the same answer, so retrying only wastes requests and hides the real problem.">
+                                C) <code>404 Not Found</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 5:</strong> What makes the lesson's <code>download_pages()</code> job resumable?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="The work already done lives on disk, not in memory, so a restart loses nothing and repeats nothing. Writing to a temporary name first guarantees that a file is either complete or absent.">
+                                A) Each page is saved to its own file as soon as it arrives, and pages whose files exist are skipped
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Retries help a single request survive a brief failure. What lets the whole job survive the program being stopped and started again?">
+                                B) It uses a Session with a retry policy
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Pacing keeps the job inside the rate limit. It does not record which pages have already been collected.">
+                                C) It waits between requests with a Throttle
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="faq" class="lesson-section">
+                <h2>❓ Common Questions at This Stage</h2>
+
+                <details>
+                    <summary>Should I write my own retry loop or use urllib3's <code>Retry</code>?</summary>
+                    <p>Use <code>Retry</code> on a session for ordinary work: it is well tested and handles details you have not thought of. Write your own when you need behavior it does not offer, such as refreshing a token between tries, or when you want to log every attempt in your own format. Either way, you now know what a good policy contains, so you can read and judge someone else's.</p>
+                </details>
+                <details>
+                    <summary>Are there libraries that do caching and retrying for me?</summary>
+                    <p>Yes. <code>requests-cache</code> adds a transparent cache to a session, and <code>tenacity</code> provides retry decorators for any function. They are worth learning when a project grows. They are not installed in the course environment, and everything in this lesson works with <code>requests</code> and the standard library alone.</p>
+                </details>
+                <details>
+                    <summary>The API I use counts requests per day, not per second. Does this still apply?</summary>
+                    <p>The ideas do; the numbers change. With a daily quota, the scarce thing is the total, so caching and filtering on the server matter most, and a resumable job lets you spread the work across days. Read the provider's documentation for which headers report the quota and when it resets.</p>
+                </details>
+                <details>
+                    <summary>A website I am scraping sends no rate-limit headers at all. How do I know I am being polite?</summary>
+                    <p>Follow <code>robots.txt</code>, including any <code>Crawl-delay</code>. Without one, keep to about one request per second or slower, run large jobs at quiet hours, cache everything, and watch for signs of strain: slower responses, 429, 503. Those mean slow down now. And ask yourself again whether an API or a data download exists.</p>
+                </details>
+                <details>
+                    <summary>Is it safe to retry a <code>POST</code>?</summary>
+                    <p>Not automatically. <code>GET</code> only reads, so repeating it is harmless. A <code>POST</code> may create or change something, and a retry after a timeout can do it twice, because you cannot tell whether the first attempt reached the server. That is why <code>allowed_methods</code> in this lesson lists only <code>GET</code> and <code>HEAD</code>. Some APIs offer an "idempotency key" to make repeated <code>POST</code>s safe; follow their documentation.</p>
+                </details>
+
+                <div class="card card-accent">
+                    <h3>🌟 Going Further: Bonus Challenge</h3>
+                    <p>Bring the module together. Take <code>PinecrestClient</code> from Lesson 6.4 and give it everything from this lesson: a session built by <code>make_session()</code>, a <code>Throttle</code> that every request passes through, a logger instead of prints, and an optional page cache so that <code>client.orders(since=...)</code> is resumable. Then download all 20,302 orders. Before you start, predict how long it will take; afterward, read your log and compare. You will have written, in about a hundred lines, the kind of client that data teams rely on every day.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="journal" class="lesson-section">
+                <h2>📓 Learning Journal</h2>
+                <div class="card card-accent">
+                    <p>Take five minutes to write in your learning journal (the <code>journal.md</code> file you started in Lesson 0.1, or a paper notebook). Jot down:</p>
+                    <ul>
+                        <li><strong>Key concepts</strong> you learned today</li>
+                        <li><strong>Techniques that clicked</strong> (and the ones that have not, yet)</li>
+                        <li><strong>Questions or confusion</strong> to come back to</li>
+                        <li><strong>Ideas to try</strong> on your own</li>
+                        <li><strong>Progress and feelings</strong>: how did this lesson go for you?</li>
+                    </ul>
+                    <p><strong>✍️ This lesson's prompt:</strong> You have finished Module 6. Describe the difference between a polite client and a resilient one, and name one habit from each half that you want to become automatic. Then look back across the five lessons: write the six ground rules from Lesson 6.1 from memory, and next to each, the technique you now have for following it.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="summary" class="lesson-section">
+                <h2>📝 Lesson Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎓 Key Takeaways</h3>
+                    <ul>
+                        <li>A <strong>rate limit</strong> shares a server fairly; <code>X-RateLimit-*</code> headers tell you where you stand</li>
+                        <li><strong>Pace first</strong>: spacing requests a little under the limit avoids nearly every 429</li>
+                        <li>On <code>429</code>, wait as long as <code>Retry-After</code> says, with a default for when it is missing</li>
+                        <li>Retry temporary failures (429, 5xx, timeouts) with <strong>exponential backoff and jitter</strong>, a maximum number of tries and a clear final error</li>
+                        <li>Never retry what cannot change: 400, 401, 403, 404</li>
+                        <li>urllib3's <code>Retry</code> on an <code>HTTPAdapter</code> gives a session this behavior in a few lines</li>
+                        <li><strong>Cache</strong> successful responses so that nothing is fetched twice, and decide how old is too old</li>
+                        <li>Make long jobs <strong>resumable</strong>: one file per unit of work, written completely or not at all</li>
+                        <li><strong>Log</strong> what the job did, at sensible levels, and never log a secret</li>
+                    </ul>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🏆 What You've Accomplished</h3>
+                    <ul>
+                        <li>You tripped a rate limit on purpose and read exactly what the server told you</li>
+                        <li>You built a throttle, a Retry-After handler and a backoff function from first principles</li>
+                        <li>You configured a session that retries by itself and saw its history</li>
+                        <li>You wrote a disk cache and a download that picks up where it stopped</li>
+                        <li>You pulled 2,056 protected orders through an interruption without repeating one request, and proved the result complete</li>
+                        <li>You completed <strong>Module 6</strong>: you can now collect data from web pages, dynamic pages and authenticated APIs, carefully and within the rules</li>
+                    </ul>
+                </div>
+
+                <h3>🔭 Looking Ahead</h3>
+                <p>You have spent five lessons getting data. Module 7 is about showing it. In <a href="visualization_seaborn.html"><strong>Lesson 7.1: Statistical Graphics with Seaborn</strong></a> you will return to the Pinecrest datasets and draw distributions, relationships and comparisons in a few lines each, with the statistics from Module 4 built into the charts.</p>
+
+                <h3>📋 Before the Next Lesson</h3>
+                <ul>
+                    <li>Stop the practice API with <kbd>Ctrl</kbd>+<kbd>C</kbd>. You will not need it in Module 7.</li>
+                    <li>Keep <code>orders_since_november.csv</code> and your notebooks from this module: together they are a small portfolio of responsible data collection.</li>
+                    <li>Reopen a Matplotlib notebook from Module 3 and remind yourself how <code>fig, ax = plt.subplots()</code> works. Seaborn builds on it.</li>
+                </ul>
+
+                <div class="card card-accent">
+                    <h3>🌱 Encouragement for the Journey</h3>
+                    <p>Look at how far this module took you. Five lessons ago, data was something that arrived in a file. Now you can ask a web server for it, take a page apart, drive a browser, sign in to an API, and run a long job that keeps its manners and its footing when things go wrong. Just as important, you know when not to: when the rules say no, when an API is the better door, when a cached copy will do. That judgment is what people mean when they call someone a professional. Take a moment to be pleased with it. Then go and make some charts.</p>
+                </div>
+            </section>
+
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="webscraping_api_authentication.html" class="prev-lesson">← Previous: API Authentication</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="visualization_seaborn.html" class="next-lesson">Next: Statistical Graphics with Seaborn →</a>
+            </nav>
         </div>
-    </section>
-
-    <!-- Lesson Summary (full standard block) -->
-    <section id="summary" class="lesson-section">
-        <h2>📝 Lesson Summary</h2>
-        <div class="card card-success">
-            <h3>🎓 Key Takeaways</h3>
-            <ul>
-                <li>Rate limiting protects the servers you rely on; token-bucket and sliding-window limiters give you smooth, controllable request rates.</li>
-                <li>Servers announce their limits through <code>429</code> status codes, <code>Retry-After</code>, and <code>X-RateLimit-*</code> headers — read them and adapt rather than hammering blindly.</li>
-                <li>Exponential backoff with jitter is the standard retry pattern; it recovers from transient failures without creating a thundering herd.</li>
-                <li>Ethical scraping means checking robots.txt and Terms of Service, identifying yourself, caching, handling personal data carefully, and preferring an official API when one exists.</li>
-            </ul>
-        </div>
-        <h3>🎉 What You've Accomplished</h3>
-        <p>You can now build scrapers and API clients that are not just effective but sustainable and responsible — throttling
-        themselves, backing off gracefully, respecting site rules, and protecting personal data. That is the difference between
-        a tool that gets banned and one that keeps working.</p>
-        <h3>❓ Common Questions at This Stage</h3>
-        <details>
-            <summary>Why add random jitter to backoff instead of a clean exponential delay?</summary>
-            <p>If many clients fail at the same moment and all wait the exact same interval, they retry in sync and hammer the
-            server together — the "thundering herd." Adding a small random offset spreads the retries out so the server can recover.</p>
-        </details>
-        <details>
-            <summary>Is scraping legal?</summary>
-            <p>It depends on jurisdiction, the site's Terms of Service, and what data you collect. Public, non-personal data is
-            generally safer, but you should always check robots.txt and ToS, avoid personal data without consent, and prefer an
-            official API. When in doubt, seek permission or legal advice.</p>
-        </details>
-        <details>
-            <summary>What should I do when I hit a 429 response?</summary>
-            <p>Stop and read the response: honor the <code>Retry-After</code> header if present, otherwise back off exponentially.
-            Also watch <code>X-RateLimit-Remaining</code> and slow down <em>before</em> you hit zero rather than after.</p>
-        </details>
-        <h3>🔭 Looking Ahead</h3>
-        <p>Next you'll tackle JavaScript-heavy sites with browser automation, where the same ethical and rate-limiting
-        discipline you learned here applies to a fully rendered page.</p>
-        <h3>✅ Before the Next Lesson</h3>
-        <ul>
-            <li>Add a token-bucket or sliding-window rate limiter to a scraper you've already written and observe how it paces requests.</li>
-            <li>Wrap a request function with an exponential-backoff-with-jitter decorator and test it against an endpoint that sometimes fails.</li>
-            <li>Write your Learning Journal entry for this lesson.</li>
-        </ul>
-        <div class="card card-accent" style="text-align: center; padding: 2rem;">
-            <h3>🌟 Encouragement for the Journey</h3>
-            <p>Being a good citizen of the web isn't a constraint on your skills — it's part of what makes you a professional.
-            The scrapers you build with care will outlast the ones built in haste. Keep doing it right.</p>
-        </div>
-    </section>
-
-    <!-- Navigation at the bottom -->
-    <nav class="lesson-nav" aria-label="Lesson navigation">
-        <a href="webscraping_api_authentication.html" class="prev-lesson" aria-label="Previous lesson">Previous: API Authentication</a>
-        <a href="index.html" class="home-link" aria-label="Course home">Course Home</a>
-        <a href="webscraping_selenium.html" class="next-lesson" aria-label="Next lesson">Next: Selenium for Dynamic Content</a>
-    </nav>
-    
     </main>
 
-    <!-- Footer -->
     <footer class="site-footer">
         <p>&copy; 2026 Ray de la Paz. Python Data Science. All rights reserved.</p>
         <div class="footer-links">
@@ -1629,6 +1214,10 @@ results = scraper.scrape_responsibly(urls)</code></pre>
             <a href="https://rays-home.netlify.app/contact">Contact</a>
             <a href="#" id="print-button">Print Page</a>
         </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
     </footer>
+
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
 </body>
 </html>

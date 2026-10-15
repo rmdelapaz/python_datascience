@@ -1,1277 +1,1169 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Why NumPy arrays are smaller and faster than Python lists, and how to create, inspect, index, slice and copy them. Python Data Science Lesson 1.1.">
+    <meta name="author" content="Ray de la Paz">
     <title>Arrays vs Lists - Python Data Science</title>
-    <link href="styles/main.css" rel="stylesheet"/>
-    <link href="/styles/enhanced.css" rel="stylesheet"/>
-    <link href="/favicon.png" rel="icon" type="image/png"/>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid: rendered (and re-rendered on theme change) by js/course-enhancements.js -->
     <script type="module">
         import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({ startOnLoad: true });
+        window.__mermaid = mermaid;
+        mermaid.initialize({ startOnLoad: false });
+        document.dispatchEvent(new Event('mermaid-ready'));
     </script>
-    <style>
-        .breadcrumb {
-            background: #f8f9fa;
-            padding: 1rem;
-            border-radius: 5px;
-            margin-bottom: 2rem;
-            font-size: 0.9rem;
-        }
-        
-        .breadcrumb a {
-            color: #667eea;
-            text-decoration: none;
-        }
-        
-        .breadcrumb a:hover {
-            text-decoration: underline;
-        }
-        
-        .navigation-links {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 2rem 0;
-            margin-top: 3rem;
-            border-top: 2px solid #e0e0e0;
-        }
-        
-        .navigation-links a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 500;
-            padding: 0.5rem 1rem;
-            border-radius: 5px;
-            transition: all 0.3s ease;
-        }
-        
-        .navigation-links a:hover {
-            background: #f0f0f0;
-        }
-        
-        .nav-prev, .nav-next {
-            flex: 1;
-        }
-        
-        .nav-next {
-            text-align: right;
-        }
-        
-        .nav-home {
-            text-align: center;
-        }
-        
-        canvas {
-            display: block;
-            margin: 20px auto;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        
-        .performance-table {
-            margin: 20px auto;
-            max-width: 800px;
-        }
-        
-        .performance-table td, .performance-table th {
-            padding: 10px;
-            text-align: center;
-        }
-        
-        .performance-table th {
-            background: #667eea;
-            color: white;
-        }
-        
-        .memory-visual {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin: 20px 0;
-            gap: 20px;
-        }
-        
-        .memory-block {
-            padding: 10px;
-            border: 2px solid #333;
-            background: #f8f9fa;
-            text-align: center;
-        }
-    </style>
-    <script src="/js/course-enhancements.js" defer></script>
-    <link rel="stylesheet" href="styles/standard.css">
 </head>
 <body>
-    <!-- Skip to main content for accessibility -->
     <a href="#main-content" class="skip-to-main">Skip to main content</a>
-    
-    <!-- Progress indicator -->
+
     <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
         <div class="progress-bar"></div>
     </div>
-    <nav class="breadcrumb">
-        <a href="index.html">Home</a> &gt; 
-        <a href="index.html#foundation">Foundation Module</a> &gt; 
-        <a href="index.html#numpy-fundamentals">NumPy Fundamentals</a> &gt;
-        <span>Arrays vs Lists</span>
+
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">📊 Python Data Science</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">☰</button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
     </nav>
 
-
     <main id="main-content">
-    <h1>🎯 Arrays vs Lists: The Foundation of Data Science in Python</h1>
-
-    <!-- What You'll Learn (learning objectives) -->
-    <div class="card card-info">
-        <h2>📚 What You'll Learn</h2>
-        <p>By the end of this lesson, you will be able to:</p>
-        <ul>
-            <li>Explain the core differences between Python lists and NumPy arrays (types, size, and memory layout)</li>
-            <li>Describe why arrays use contiguous memory and how that makes them faster and smaller than lists</li>
-            <li>Measure and compare memory usage with <code>sys.getsizeof()</code> and <code>ndarray.nbytes</code></li>
-            <li>Explain why vectorized array operations outperform Python loops on numerical data</li>
-            <li>Decide when a list is the right choice (mixed types, flexibility) versus when an array is (numeric, large, math-heavy)</li>
-            <li>Avoid common pitfalls such as views vs. copies, ragged arrays, and unintended type coercion</li>
-        </ul>
-        <p><strong>⏱️ Estimated Time:</strong> 45–60 minutes</p>
-        <p><strong>🎯 Project:</strong> Benchmark the same numerical operation on a Python list and a NumPy array, then report the speedup and memory savings you measured.</p>
-    </div>
-
-    <p>Imagine you're a data scientist at a streaming service, analyzing billions of song plays. Would you use Python lists to store all that data? That's like trying to transport an ocean of water one cup at a time! 🌊 This is where NumPy arrays become your superhero cape. Let's dive into why arrays are the backbone of data science and how they differ from regular Python lists.</p>
-
-    <h2>The Tale of Two Data Structures 📚</h2>
-    
-    <p>Python lists are like Swiss Army knives - versatile, flexible, and can handle anything you throw at them. NumPy arrays, on the other hand, are like Formula 1 race cars - built for speed, optimized for performance, but requiring specific conditions to operate. Let's explore this fundamental difference that shapes everything in data science!</p>
-
-    <div class="mermaid">
-    graph TB
-        A[Data Storage in Python] --> B[Python List]
-        A --> C[NumPy Array]
-        
-        B --> D[Flexible Types]
-        B --> E[Dynamic Size]
-        B --> F[Python Objects]
-        
-        C --> G[Fixed Type]
-        C --> H[Fixed Size*]
-        C --> I[C Arrays]
-        
-        D --> J[&quot;Can mix strings, numbers, objects&quot;]
-        E --> K[&quot;Can grow/shrink anytime&quot;]
-        F --> L[&quot;Each element is a Python object&quot;]
-        
-        G --> M[&quot;All elements same type&quot;]
-        H --> N[&quot;Size set at creation&quot;]
-        I --> O[&quot;Stored in contiguous memory&quot;]
-        
-        style B fill:#ff9999
-        style C fill:#99ff99
-        style J fill:#ffeeee
-        style K fill:#ffeeee
-        style L fill:#ffeeee
-        style M fill:#eeffee
-        style N fill:#eeffee
-        style O fill:#eeffee
-    </div>
-
-    <h3>Real-World Analogy: The Parking Lot vs The Race Track 🏁</h3>
-    
-    <p>Think of a <strong>Python list</strong> as a public parking lot. Cars of different sizes (motorcycles, sedans, trucks) can park anywhere. Each car (element) needs its own parking space with extra room for maneuvering. New cars can arrive, old cars can leave, and the lot adjusts dynamically.</p>
-    
-    <p>A <strong>NumPy array</strong> is like a Formula 1 starting grid. All cars are the same class, perfectly aligned, with minimal space between them. Every position is predetermined, and the entire grid operates as one synchronized unit. This organization enables blazing-fast operations!</p>
-
-    <pre><code>import numpy as np
-import sys
-import time
-from typing import List, Any
-import matplotlib.pyplot as plt
-
-# Let's explore the fundamental differences!
-
-# Python List: The Flexible Friend
-python_list = [1, 'hello', 3.14, [1, 2, 3], {'key': 'value'}, True]
-print("Python List Contents:")
-print(f"  Elements: {python_list}")
-print(f"  Types: {[type(x).__name__ for x in python_list]}")
-print(f"  Can mix types? ✅ Absolutely!")
-
-# NumPy Array: The Speed Demon
-try:
-    # This will coerce everything to strings!
-    mixed_array = np.array([1, 'hello', 3.14])
-    print("\nNumPy Array with mixed types:")
-    print(f"  Array: {mixed_array}")
-    print(f"  Dtype: {mixed_array.dtype}")
-    print(f"  Notice: Everything became strings! 🎭")
-except Exception as e:
-    print(f"Error: {e}")
-
-# Proper NumPy usage: homogeneous data
-numbers_array = np.array([1, 2, 3, 4, 5], dtype=np.float32)
-print(f"\nProper NumPy Array:")
-print(f"  Array: {numbers_array}")
-print(f"  Dtype: {numbers_array.dtype}")
-print(f"  All same type? ✅ Required!")</code></pre>
-
-    <h2>Memory Layout: The Secret Sauce 🧪</h2>
-    
-    <p>The real magic happens under the hood. Python lists store references to objects scattered throughout memory, like houses in a suburban neighborhood connected by roads. NumPy arrays store actual values in contiguous memory blocks, like apartments in a single building - much more efficient to traverse!</p>
-
-    <canvas id="memoryCanvas" width="800" height="300"></canvas>
-    <script>
-        const canvas = document.getElementById('memoryCanvas');
-        const ctx = canvas.getContext('2d');
-        
-        // Draw Python List Memory Layout
-        ctx.fillStyle = '#ff6b6b';
-        ctx.font = 'bold 14px Arial';
-        ctx.fillText('Python List Memory Layout', 50, 30);
-        
-        // List container
-        ctx.strokeStyle = '#333';
-        ctx.strokeRect(50, 50, 300, 40);
-        
-        // Pointers in list
-        for(let i = 0; i < 5; i++) {
-            ctx.fillStyle = '#ffd93d';
-            ctx.fillRect(60 + i*55, 60, 45, 20);
-            ctx.fillStyle = '#333';
-            ctx.font = '12px Arial';
-            ctx.fillText('ptr' + i, 70 + i*55, 75);
-            
-            // Draw arrows to actual objects
-            ctx.beginPath();
-            ctx.moveTo(82 + i*55, 90);
-            ctx.lineTo(100 + i*70, 130);
-            ctx.strokeStyle = '#666';
-            ctx.stroke();
-            
-            // Draw actual objects at random positions
-            ctx.fillStyle = '#6bcf7f';
-            ctx.fillRect(80 + i*70, 130, 40, 30);
-            ctx.fillStyle = '#333';
-            ctx.fillText('Obj' + i, 90 + i*70, 150);
-        }
-        
-        // Draw NumPy Array Memory Layout
-        ctx.fillStyle = '#4ecdc4';
-        ctx.font = 'bold 14px Arial';
-        ctx.fillText('NumPy Array Memory Layout', 450, 30);
-        
-        // Contiguous memory block
-        ctx.fillStyle = '#95e1d3';
-        ctx.fillRect(450, 50, 300, 40);
-        
-        // Values directly in memory
-        for(let i = 0; i < 5; i++) {
-            ctx.strokeStyle = '#333';
-            ctx.strokeRect(450 + i*60, 50, 60, 40);
-            ctx.fillStyle = '#333';
-            ctx.font = '12px Arial';
-            ctx.fillText('Val' + i, 465 + i*60, 75);
-        }
-        
-        // Label the difference
-        ctx.fillStyle = '#ff6b6b';
-        ctx.font = 'italic 12px Arial';
-        ctx.fillText('Scattered in memory (slower access)', 100, 200);
-        
-        ctx.fillStyle = '#4ecdc4';
-        ctx.fillText('Contiguous block (faster access)', 480, 200);
-        
-        // Memory usage comparison
-        ctx.fillStyle = '#333';
-        ctx.font = 'bold 14px Arial';
-        ctx.fillText('Memory Overhead:', 50, 250);
-        ctx.font = '12px Arial';
-        ctx.fillText('List: ~28 bytes per integer', 50, 270);
-        ctx.fillText('Array: ~4 bytes per integer', 450, 270);
-    </script>
-
-    <pre><code>import numpy as np
-import sys
-
-# Memory Footprint Comparison: The Shocking Truth! 😱
-
-# Create identical data
-size = 1000000  # 1 million elements
-python_list = list(range(size))
-numpy_array = np.arange(size)
-
-# Measure memory usage
-list_memory = sys.getsizeof(python_list)
-array_memory = numpy_array.nbytes
-
-print(f"Memory Usage for {size:,} integers:")
-print(f"  Python List: {list_memory:,} bytes")
-print(f"  NumPy Array: {array_memory:,} bytes")
-print(f"  Ratio: {list_memory/array_memory:.2f}x more memory for lists!")
-print(f"  Savings: {(list_memory - array_memory)/1024/1024:.2f} MB saved with NumPy!")
-
-# Let's look at individual element overhead
-single_int_list = [42]
-single_int_array = np.array([42])
-
-print(f"\nSingle Integer Storage:")
-print(f"  Python int object: {sys.getsizeof(42)} bytes")
-print(f"  In Python list: {sys.getsizeof(single_int_list)} bytes total")
-print(f"  In NumPy array: {single_int_array.nbytes} bytes")
-print(f"  Overhead factor: {sys.getsizeof(42)/single_int_array.nbytes:.1f}x")
-
-# Deep dive into memory layout
-def analyze_memory_structure(data_structure):
-    """Analyze memory characteristics of data structures"""
-    
-    if isinstance(data_structure, list):
-        # Python list analysis
-        total_size = sys.getsizeof(data_structure)
-        element_sizes = sum(sys.getsizeof(item) for item in data_structure)
-        container_overhead = total_size - element_sizes
-        
-        return {
-            'type': 'Python List',
-            'total_size': total_size,
-            'container_overhead': max(0, container_overhead),
-            'element_storage': element_sizes,
-            'references': len(data_structure) * 8  # 8 bytes per reference on 64-bit
-        }
-    else:
-        # NumPy array analysis
-        return {
-            'type': 'NumPy Array',
-            'total_size': data_structure.nbytes,
-            'container_overhead': 0,
-            'element_storage': data_structure.nbytes,
-            'references': 0  # No references, direct storage!
-        }
-
-# Compare structures
-list_1000 = list(range(1000))
-array_1000 = np.arange(1000)
-
-list_analysis = analyze_memory_structure(list_1000)
-array_analysis = analyze_memory_structure(array_1000)
-
-print("\nMemory Structure Analysis (1000 elements):")
-print(f"\n{list_analysis['type']}:")
-for key, value in list_analysis.items():
-    if key != 'type':
-        print(f"  {key}: {value:,} bytes")
-
-print(f"\n{array_analysis['type']}:")
-for key, value in array_analysis.items():
-    if key != 'type':
-        print(f"  {key}: {value:,} bytes")</code></pre>
-
-    <h2>Performance Showdown: The Race is On! 🏃‍♂️</h2>
-    
-    <p>When it comes to numerical operations, NumPy arrays leave Python lists in the dust. It's like comparing a sports car to a bicycle in a drag race. The secret? NumPy operations are implemented in C and operate on entire arrays at once (vectorization), while Python lists require slow Python loops.</p>
-
-    <div class="mermaid">
-    graph LR
-        A[Operation on 1M numbers] --> B{Data Structure?}
-        
-        B -->|Python List| C[Python Loop]
-        C --> D[1M Python Function Calls]
-        D --> E[1M Type Checks]
-        E --> F[1M Object Accesses]
-        F --> G[Slow: ~100ms]
-        
-        B -->|NumPy Array| H[C Implementation]
-        H --> I[Single Vectorized Call]
-        I --> J[SIMD Instructions]
-        J --> K[Cache Optimization]
-        K --> L[Fast: ~1ms]
-        
-        style G fill:#ff9999
-        style L fill:#99ff99
-    </div>
-
-    <pre><code>import numpy as np
-import time
-import matplotlib.pyplot as plt
-
-class PerformanceBenchmark:
-    """
-    Comprehensive performance comparison between Lists and Arrays.
-    Like a scientific speed test for your data structures!
-    """
-    
-    def __init__(self, sizes=[1000, 10000, 100000, 1000000]):
-        self.sizes = sizes
-        self.results = {'list': {}, 'array': {}}
-    
-    def time_operation(self, func, *args, iterations=3):
-        """Time an operation with multiple iterations for accuracy"""
-        times = []
-        for _ in range(iterations):
-            start = time.perf_counter()
-            result = func(*args)
-            end = time.perf_counter()
-            times.append(end - start)
-        return min(times)  # Return best time to avoid system noise
-    
-    def benchmark_mathematical_ops(self):
-        """Benchmark common mathematical operations"""
-        print("🏁 Mathematical Operations Benchmark")
-        print("=" * 50)
-        
-        operations = {
-            'Square': lambda x: x ** 2 if isinstance(x, np.ndarray) else [i**2 for i in x],
-            'Square Root': lambda x: np.sqrt(x) if isinstance(x, np.ndarray) else [i**0.5 for i in x],
-            'Add 10': lambda x: x + 10 if isinstance(x, np.ndarray) else [i + 10 for i in x],
-            'Multiply by 2': lambda x: x * 2 if isinstance(x, np.ndarray) else [i * 2 for i in x],
-            'Sum All': lambda x: np.sum(x) if isinstance(x, np.ndarray) else sum(x)
-        }
-        
-        for size in self.sizes:
-            print(f"\nSize: {size:,} elements")
-            print("-" * 40)
-            
-            # Create test data
-            py_list = list(range(size))
-            np_array = np.arange(size, dtype=np.float64)
-            
-            for op_name, operation in operations.items():
-                # Time Python list
-                list_time = self.time_operation(operation, py_list)
-                
-                # Time NumPy array
-                array_time = self.time_operation(operation, np_array)
-                
-                # Calculate speedup
-                speedup = list_time / array_time
-                
-                print(f"  {op_name:15} | List: {list_time*1000:8.3f}ms | Array: {array_time*1000:8.3f}ms | Speedup: {speedup:6.1f}x")
-                
-                # Store results
-                if op_name not in self.results['list']:
-                    self.results['list'][op_name] = []
-                    self.results['array'][op_name] = []
-                
-                self.results['list'][op_name].append(list_time * 1000)
-                self.results['array'][op_name].append(array_time * 1000)
-    
-    def benchmark_memory_access_patterns(self):
-        """Benchmark different memory access patterns"""
-        print("\n🧠 Memory Access Pattern Benchmark")
-        print("=" * 50)
-        
-        size = 100000
-        py_list = list(range(size))
-        np_array = np.arange(size)
-        
-        # Sequential access
-        def sequential_sum_list(lst):
-            total = 0
-            for val in lst:
-                total += val
-            return total
-        
-        def sequential_sum_array(arr):
-            return np.sum(arr)
-        
-        # Random access
-        import random
-        indices = [random.randint(0, size-1) for _ in range(10000)]
-        
-        def random_access_list(lst, idx):
-            return [lst[i] for i in idx]
-        
-        def random_access_array(arr, idx):
-            return arr[idx]
-        
-        # Slicing
-        def slice_list(lst):
-            return lst[1000:9000]
-        
-        def slice_array(arr):
-            return arr[1000:9000]
-        
-        patterns = [
-            ("Sequential Access", sequential_sum_list, sequential_sum_array, None),
-            ("Random Access", random_access_list, random_access_array, indices),
-            ("Slicing", slice_list, slice_array, None)
-        ]
-        
-        print(f"Testing with {size:,} elements")
-        print("-" * 40)
-        
-        for pattern_name, list_func, array_func, extra_arg in patterns:
-            if extra_arg is not None:
-                list_time = self.time_operation(list_func, py_list, extra_arg)
-                array_time = self.time_operation(array_func, np_array, extra_arg)
-            else:
-                list_time = self.time_operation(list_func, py_list)
-                array_time = self.time_operation(array_func, np_array)
-            
-            speedup = list_time / array_time
-            print(f"  {pattern_name:20} | List: {list_time*1000:8.3f}ms | Array: {array_time*1000:8.3f}ms | Speedup: {speedup:6.1f}x")
-    
-    def benchmark_vectorization_power(self):
-        """Demonstrate the power of vectorization"""
-        print("\n⚡ Vectorization Power Demo")
-        print("=" * 50)
-        
-        size = 1000000
-        
-        # Create data
-        list_a = list(range(size))
-        list_b = list(range(size, size * 2))
-        array_a = np.arange(size)
-        array_b = np.arange(size, size * 2)
-        
-        # Complex operation: (a + b) * 2 - a/2 + b**0.5
-        
-        # List implementation (Pythonic)
-        def complex_operation_list(a, b):
-            result = []
-            for i in range(len(a)):
-                result.append((a[i] + b[i]) * 2 - a[i]/2 + b[i]**0.5)
-            return result
-        
-        # NumPy implementation (Vectorized)
-        def complex_operation_array(a, b):
-            return (a + b) * 2 - a/2 + np.sqrt(b)
-        
-        print(f"Complex operation on {size:,} element pairs:")
-        print("Formula: (a + b) * 2 - a/2 + sqrt(b)")
-        print("-" * 40)
-        
-        list_time = self.time_operation(complex_operation_list, list_a, list_b)
-        array_time = self.time_operation(complex_operation_array, array_a, array_b)
-        
-        speedup = list_time / array_time
-        
-        print(f"  Python List: {list_time*1000:8.3f}ms")
-        print(f"  NumPy Array: {array_time*1000:8.3f}ms")
-        print(f"  Speedup:     {speedup:8.1f}x faster!")
-        print(f"\n  💡 Insight: Vectorization eliminates Python loops entirely!")
-
-# Run the benchmark
-benchmark = PerformanceBenchmark(sizes=[1000, 10000, 100000])
-benchmark.benchmark_mathematical_ops()
-benchmark.benchmark_memory_access_patterns()
-benchmark.benchmark_vectorization_power()
-
-# Visualize the results
-def plot_performance_comparison(benchmark):
-    """Create beautiful performance comparison charts"""
-    
-    operations_to_plot = ['Square', 'Sum All', 'Add 10']
-    
-    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
-    fig.suptitle('Performance Comparison: Lists vs NumPy Arrays', fontsize=16)
-    
-    for idx, op in enumerate(operations_to_plot):
-        ax = axes[idx]
-        
-        sizes = benchmark.sizes
-        list_times = benchmark.results['list'][op]
-        array_times = benchmark.results['array'][op]
-        
-        x = np.arange(len(sizes))
-        width = 0.35
-        
-        bars1 = ax.bar(x - width/2, list_times, width, label='Python List', color='#ff6b6b')
-        bars2 = ax.bar(x + width/2, array_times, width, label='NumPy Array', color='#4ecdc4')
-        
-        ax.set_xlabel('Data Size')
-        ax.set_ylabel('Time (ms)')
-        ax.set_title(f'{op} Operation')
-        ax.set_xticks(x)
-        ax.set_xticklabels([f'{s//1000}K' for s in sizes])
-        ax.legend()
-        ax.set_yscale('log')  # Log scale to see both clearly
-        
-        # Add speedup annotations
-        for i in range(len(sizes)):
-            speedup = list_times[i] / array_times[i]
-            ax.text(i, max(list_times[i], array_times[i]) * 1.1, 
-                   f'{speedup:.1f}x', ha='center', fontsize=9)
-    
-    plt.tight_layout()
-    return fig
-
-# Note: In a real environment, you would call:
-# fig = plot_performance_comparison(benchmark)
-# plt.show()</code></pre>
-
-    <table class="performance-table">
-        <thead>
-            <tr>
-                <th>Operation</th>
-                <th>Python List (1M elements)</th>
-                <th>NumPy Array (1M elements)</th>
-                <th>Speedup Factor</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>Element-wise Addition</td>
-                <td>~80 ms</td>
-                <td>~1.2 ms</td>
-                <td>67x</td>
-            </tr>
-            <tr>
-                <td>Sum All Elements</td>
-                <td>~35 ms</td>
-                <td>~0.8 ms</td>
-                <td>44x</td>
-            </tr>
-            <tr>
-                <td>Square All Elements</td>
-                <td>~120 ms</td>
-                <td>~2.1 ms</td>
-                <td>57x</td>
-            </tr>
-            <tr>
-                <td>Find Maximum</td>
-                <td>~25 ms</td>
-                <td>~0.7 ms</td>
-                <td>36x</td>
-            </tr>
-            <tr>
-                <td>Conditional Filter</td>
-                <td>~95 ms</td>
-                <td>~3.5 ms</td>
-                <td>27x</td>
-            </tr>
-        </tbody>
-    </table>
-
-    <h2>Broadcasting: NumPy's Superpower 🚀</h2>
-    
-    <p>Here's where NumPy truly shines! Broadcasting allows you to perform operations on arrays of different shapes without explicit loops. It's like having a magic wand that automatically knows how to combine different sized arrays. Python lists? They'll just throw an error and give up!</p>
-
-    <pre><code>import numpy as np
-
-# Broadcasting: The Magic of NumPy 🎩✨
-print("Broadcasting Demo - The NumPy Superpower!")
-print("=" * 50)
-
-# Simple broadcasting: scalar with array
-arr = np.array([1, 2, 3, 4, 5])
-print(f"Array: {arr}")
-print(f"Array * 10: {arr * 10}")  # Broadcasting scalar to all elements
-print(f"Array + 100: {arr + 100}")
-
-# Python list attempt (the hard way)
-lst = [1, 2, 3, 4, 5]
-print(f"\nPython List: {lst}")
-print(f"List * 10: {lst * 10}")  # Oops! This repeats the list!
-print(f"Correct way: {[x * 10 for x in lst]}")  # Need explicit loop
-
-# Advanced Broadcasting: Different shaped arrays
-print("\n🎯 Advanced Broadcasting:")
-
-# 2D array (think of it as a spreadsheet)
-grades = np.array([
-    [85, 90, 88],  # Student 1's grades
-    [92, 87, 94],  # Student 2's grades
-    [78, 85, 80],  # Student 3's grades
-])
-
-# 1D array (curve adjustment per test)
-curve = np.array([5, 3, 7])  # Points to add to each test
-
-print("Original Grades (3 students × 3 tests):")
-print(grades)
-print(f"\nCurve to Apply: {curve}")
-
-# Broadcasting magic! Adds curve to each student's grades
-curved_grades = grades + curve
-print("\nCurved Grades (automatic broadcasting):")
-print(curved_grades)
-
-# Try with Python lists (painful!)
-grades_list = [
-    [85, 90, 88],
-    [92, 87, 94],
-    [78, 85, 80],
-]
-curve_list = [5, 3, 7]
-
-# Manual broadcasting with lists (yuck!)
-curved_list = []
-for student_grades in grades_list:
-    curved_student = []
-    for i, grade in enumerate(student_grades):
-        curved_student.append(grade + curve_list[i])
-    curved_list.append(curved_student)
-
-print("\nPython List Version (so much code!):")
-print(curved_list)
-
-# Broadcasting Rules Visualized
-print("\n📐 Broadcasting Rules:")
-
-# Rule 1: Dimensions are aligned from the right
-a = np.array([[1, 2, 3]])  # Shape: (1, 3)
-b = np.array([[1], [2], [3]])  # Shape: (3, 1)
-result = a + b  # Result shape: (3, 3)
-
-print(f"Shape (1,3) + Shape (3,1) = Shape (3,3)")
-print("Matrix A (1×3):", a)
-print("Matrix B (3×1):", b)
-print("Result (3×3):")
-print(result)
-
-# Real-world example: Image processing
-print("\n🖼️ Real-World: Image Brightness Adjustment")
-
-# Simulate a small grayscale image (5x5 pixels)
-image = np.random.randint(0, 256, size=(5, 5))
-print("Original Image (pixel values):")
-print(image)
-
-# Brightness adjustment (broadcasting a scalar)
-brightened = np.clip(image + 50, 0, 255)  # Add 50 to all pixels, cap at 255
-print("\nBrightened Image (+50 to all pixels):")
-print(brightened)
-
-# Gradient effect (broadcasting a 1D array)
-gradient = np.array([0, 25, 50, 75, 100])  # Increasing brightness left to right
-gradient_image = np.clip(image + gradient, 0, 255)
-print("\nGradient Effect (different adjustment per column):")
-print(gradient_image)</code></pre>
-
-    <h2>When to Use Which? The Decision Matrix 🤔</h2>
-    
-    <p>Choosing between lists and arrays isn't always black and white. It's like choosing between a sedan and a truck - it depends on what you're hauling! Here's your decision guide:</p>
-
-    <div class="mermaid">
-    graph TD
-        A[Choose Data Structure] --> B{What's your data?}
-        
-        B -->|Mixed types| C[Python List]
-        B -->|Numbers only| D{How much data?}
-        
-        D -->|Small &lt;1000| E{Need math ops?}
-        D -->|Large &gt;1000| F[NumPy Array]
-        
-        E -->|Yes| F
-        E -->|No| G{Need flexibility?}
-        
-        G -->|Yes| C
-        G -->|No| F
-        
-        C --> H[Use Cases:<br/>- Web data<br/>- JSON/Dict storage<br/>- Mixed collections<br/>- Dynamic structures]
-        
-        F --> I[Use Cases:<br/>- Scientific computing<br/>- Image processing<br/>- Machine learning<br/>- Signal processing]
-        
-        style C fill:#ff9999
-        style F fill:#99ff99
-        style H fill:#ffeeee
-        style I fill:#eeffee
-    </div>
-
-    <pre><code>import numpy as np
-from typing import List, Union, Any
-import json
-
-class DataStructureAdvisor:
-    """
-    Your friendly neighborhood advisor for choosing between Lists and Arrays!
-    Like a GPS for your data structure decisions.
-    """
-    
-    @staticmethod
-    def analyze_use_case(data_sample: List[Any], operations: List[str]) -> dict:
-        """Analyze your use case and recommend the best structure"""
-        
-        recommendation = {
-            'structure': None,
-            'reasons': [],
-            'warnings': [],
-            'performance_impact': None
-        }
-        
-        # Check data homogeneity
-        types = set(type(x).__name__ for x in data_sample)
-        is_homogeneous = len(types) == 1
-        is_numeric = all(isinstance(x, (int, float)) for x in data_sample)
-        
-        # Check operations
-        math_ops = ['sum', 'mean', 'multiply', 'dot', 'fft', 'convolve']
-        needs_math = any(op in operations for op in math_ops)
-        
-        needs_flexibility = 'append' in operations or 'insert' in operations
-        needs_mixed_types = not is_homogeneous
-        
-        # Decision logic
-        if needs_mixed_types:
-            recommendation['structure'] = 'Python List'
-            recommendation['reasons'].append("Data contains mixed types")
-            recommendation['reasons'].append("NumPy would coerce to single type")
-            
-        elif not is_numeric:
-            recommendation['structure'] = 'Python List'
-            recommendation['reasons'].append("Data is non-numeric")
-            recommendation['reasons'].append("NumPy optimized for numbers")
-            
-        elif needs_flexibility and len(data_sample) < 1000:
-            recommendation['structure'] = 'Python List'
-            recommendation['reasons'].append("Need dynamic size operations")
-            recommendation['reasons'].append("Small dataset doesn't need NumPy speed")
-            
-        elif needs_math or len(data_sample) > 10000:
-            recommendation['structure'] = 'NumPy Array'
-            recommendation['reasons'].append("Mathematical operations required" if needs_math else "Large dataset")
-            recommendation['reasons'].append("Significant performance benefits")
-            recommendation['performance_impact'] = "10-100x faster for math operations"
-            
-        else:
-            recommendation['structure'] = 'Either (List preferred for simplicity)'
-            recommendation['reasons'].append("Small, simple dataset")
-            recommendation['reasons'].append("No significant performance difference")
-        
-        return recommendation
-
-# Real-world scenarios
-print("🎯 Real-World Scenario Analysis")
-print("=" * 50)
-
-# Scenario 1: Web scraping results
-web_data = ['Product A', 29.99, 'Available', {'reviews': 142}, True]
-web_ops = ['append', 'filter', 'save_json']
-
-advisor = DataStructureAdvisor()
-result = advisor.analyze_use_case(web_data, web_ops)
-print("\nScenario 1: Web Scraping Data")
-print(f"  Sample: {web_data[:3]}...")
-print(f"  Recommendation: {result['structure']}")
-print(f"  Reasons: {', '.join(result['reasons'])}")
-
-# Scenario 2: Sensor readings
-sensor_data = [23.5, 23.7, 23.6, 23.8, 24.0, 24.1] * 1000  # 6000 readings
-sensor_ops = ['mean', 'std', 'fft', 'filter']
-
-result = advisor.analyze_use_case(sensor_data, sensor_ops)
-print("\nScenario 2: IoT Sensor Data")
-print(f"  Sample: {sensor_data[:6]}")
-print(f"  Data size: {len(sensor_data)} readings")
-print(f"  Recommendation: {result['structure']}")
-print(f"  Reasons: {', '.join(result['reasons'])}")
-if result['performance_impact']:
-    print(f"  Performance: {result['performance_impact']}")
-
-# Scenario 3: User database
-user_data = [
-    {'id': 1, 'name': 'Alice', 'age': 30},
-    {'id': 2, 'name': 'Bob', 'age': 25},
-]
-user_ops = ['append', 'filter', 'sort']
-
-result = advisor.analyze_use_case(user_data, user_ops)
-print("\nScenario 3: User Database")
-print(f"  Sample: {user_data[0]}")
-print(f"  Recommendation: {result['structure']}")
-print(f"  Reasons: {', '.join(result['reasons'])}")
-
-# Scenario 4: Image processing
-image_data = list(range(256)) * 1024  # Grayscale image pixels
-image_ops = ['convolve', 'fft', 'multiply', 'threshold']
-
-result = advisor.analyze_use_case(image_data, image_ops)
-print("\nScenario 4: Image Processing")
-print(f"  Data size: {len(image_data)} pixels")
-print(f"  Operations: {', '.join(image_ops)}")
-print(f"  Recommendation: {result['structure']}")
-print(f"  Reasons: {', '.join(result['reasons'])}")
-if result['performance_impact']:
-    print(f"  Performance: {result['performance_impact']}")</code></pre>
-
-    <h2>Common Pitfalls and How to Avoid Them 🕳️</h2>
-    
-    <p>Even experienced developers stumble over these gotchas! Let's explore the common traps and learn how to dodge them like a pro.</p>
-
-    <pre><code>import numpy as np
-import copy
-
-print("⚠️ Common Pitfalls and Solutions")
-print("=" * 50)
-
-# Pitfall 1: The View vs Copy Trap
-print("\n🔍 Pitfall 1: Views vs Copies")
-print("-" * 40)
-
-# NumPy arrays create views by default
-arr = np.array([1, 2, 3, 4, 5])
-arr_slice = arr[1:4]  # This is a VIEW, not a copy!
-print(f"Original array: {arr}")
-print(f"Slice (view): {arr_slice}")
-
-arr_slice[0] = 999  # Modifying the view...
-print(f"After modifying slice: Original = {arr}")  # Original changed!
-print("💡 Solution: Use .copy() when you need independence")
-
-arr_slice_copy = arr[1:4].copy()
-arr_slice_copy[0] = 111
-print(f"With .copy(): Original = {arr}")  # Original unchanged
-
-# Python lists create copies
-lst = [1, 2, 3, 4, 5]
-lst_slice = lst[1:4]  # This IS a copy
-lst_slice[0] = 999
-print(f"\nPython list after slice modification: {lst}")  # Unchanged!
-
-# Pitfall 2: Integer Division Changes
-print("\n🔢 Pitfall 2: Integer Division Behavior")
-print("-" * 40)
-
-# NumPy preserves integer type
-np_arr = np.array([5, 10, 15])
-result = np_arr / 2
-print(f"NumPy: {np_arr} / 2 = {result}")
-print(f"Dtype after division: {result.dtype}")
-
-# Python 3 always returns float
-py_list = [5, 10, 15]
-result = [x / 2 for x in py_list]
-print(f"Python: {py_list} / 2 = {result}")
-
-# Pitfall 3: Shape Mismatches
-print("\n📐 Pitfall 3: Shape Mismatches")
-print("-" * 40)
-
-# Creating 2D arrays - common mistake
-data = [[1, 2, 3], [4, 5, 6], [7, 8]]  # Oops! Ragged array
-try:
-    arr_2d = np.array(data)
-    print(f"Ragged array dtype: {arr_2d.dtype}")  # Becomes object array!
-    print(f"Array: {arr_2d}")
-    # Math operations won't work as expected
-    # result = arr_2d * 2  # This would fail!
-except Exception as e:
-    print(f"Error: {e}")
-
-print("💡 Solution: Ensure consistent shapes")
-data_fixed = [[1, 2, 3], [4, 5, 6], [7, 8, 0]]  # Padded with 0
-arr_2d_fixed = np.array(data_fixed)
-print(f"Fixed array:\n{arr_2d_fixed}")
-print(f"Math works now: \n{arr_2d_fixed * 2}")
-
-# Pitfall 4: Memory Aliasing
-print("\n🔗 Pitfall 4: Memory Aliasing")
-print("-" * 40)
-
-# Dangerous with NumPy
-arr1 = np.array([1, 2, 3])
-arr2 = arr1  # This is NOT a copy!
-arr2[0] = 999
-print(f"arr1: {arr1}")  # Changed!
-print(f"arr2: {arr2}")
-print("These are the SAME object!")
-
-# Safe approach
-arr3 = arr1.copy()
-arr3[0] = 111
-print(f"With .copy(): arr1 = {arr1}, arr3 = {arr3}")
-
-# Python lists have the same issue!
-list1 = [[1, 2], [3, 4]]
-list2 = list1  # Shallow copy of reference
-list2[0][0] = 999
-print(f"\nPython list aliasing: list1 = {list1}")  # Also changed!
-
-# Solution for lists: deep copy
-list3 = [[1, 2], [3, 4]]
-list4 = copy.deepcopy(list3)
-list4[0][0] = 999
-print(f"With deepcopy: list3 = {list3}, list4 = {list4}")
-
-# Pitfall 5: Unexpected Type Coercion
-print("\n🎭 Pitfall 5: Type Coercion Surprises")
-print("-" * 40)
-
-# Mixing types in NumPy
-mixed = np.array([1, 2, 3.14, 4])
-print(f"Mixed int and float: {mixed}")
-print(f"All became: {mixed.dtype}")
-
-# Adding string ruins everything
-mixed_with_str = np.array([1, 2, 'three', 4])
-print(f"With string: {mixed_with_str}")
-print(f"All became: {mixed_with_str.dtype}")
-# Now math operations won't work!
-
-# Best Practices Summary
-print("\n✅ Best Practices:")
-print("-" * 40)
-practices = [
-    "Always use .copy() when you need independent arrays",
-    "Check dtype after array creation",
-    "Ensure consistent shapes in multi-dimensional arrays",
-    "Be explicit about data types with dtype parameter",
-    "Use np.asarray() for safe conversion from lists",
-    "Remember: slicing creates views in NumPy, copies in lists",
-    "Test your assumptions with small examples first"
-]
-
-for i, practice in enumerate(practices, 1):
-    print(f"{i}. {practice}")</code></pre>
-
-    <h2>Practical Applications: Where Each Shines ✨</h2>
-    
-    <p>Let's see these concepts in action with real-world examples from data science!</p>
-
-    <pre><code>import numpy as np
-import time
-from typing import List, Dict, Any
-
-# Example 1: Stock Market Analysis (NumPy Arrays Win!)
-print("📈 Example 1: Stock Market Analysis")
-print("-" * 50)
-
-# Simulate 1 year of stock prices (252 trading days)
-np.random.seed(42)
-days = 252
-stocks = ['AAPL', 'GOOGL', 'MSFT', 'AMZN']
-
-# NumPy approach - Lightning fast!
-stock_prices = np.random.randn(days, len(stocks)) * 2 + 100  # (days x stocks)
-stock_prices = np.abs(stock_prices)  # Ensure positive
-
-# Calculate daily returns
-returns = (stock_prices[1:] - stock_prices[:-1]) / stock_prices[:-1]
-
-# Portfolio calculations
-portfolio_weights = np.array([0.3, 0.3, 0.2, 0.2])
-portfolio_returns = returns @ portfolio_weights  # Matrix multiplication!
-
-print(f"Stock prices shape: {stock_prices.shape}")
-print(f"Average returns per stock: {returns.mean(axis=0)}")
-print(f"Portfolio volatility: {portfolio_returns.std():.4f}")
-print(f"Sharpe ratio: {portfolio_returns.mean() / portfolio_returns.std():.4f}")
-
-# Example 2: Web API Data (Python Lists Win!)
-print("\n🌐 Example 2: Web API Response Processing")
-print("-" * 50)
-
-# Simulating API response with mixed data types
-api_response = [
-    {
-        'user_id': 1001,
-        'name': 'Alice Smith',
-        'transactions': [
-            {'date': '2024-01-15', 'amount': 150.50, 'category': 'food'},
-            {'date': '2024-01-16', 'amount': 2000.00, 'category': 'rent'},
-        ],
-        'premium': True,
-        'metadata': {'last_login': '2024-01-20', 'device': 'mobile'}
-    },
-    {
-        'user_id': 1002,
-        'name': 'Bob Jones',
-        'transactions': [
-            {'date': '2024-01-14', 'amount': 89.99, 'category': 'entertainment'},
-        ],
-        'premium': False,
-        'metadata': {'last_login': '2024-01-19', 'device': 'desktop'}
-    }
-]
-
-# Process with Python lists - natural and easy!
-premium_users = [user for user in api_response if user['premium']]
-total_transactions = sum(len(user['transactions']) for user in api_response)
-categories = set()
-for user in api_response:
-    for trans in user['transactions']:
-        categories.add(trans['category'])
-
-print(f"Premium users: {len(premium_users)}")
-print(f"Total transactions: {total_transactions}")
-print(f"Unique categories: {categories}")
-
-# Example 3: Image Processing (NumPy Arrays Essential!)
-print("\n🖼️ Example 3: Image Filter Application")
-print("-" * 50)
-
-# Create a small "image" (normally would load with cv2 or PIL)
-image = np.random.randint(0, 256, (10, 10), dtype=np.uint8)
-
-# Apply Gaussian blur kernel (simplified)
-kernel = np.array([[1, 2, 1],
-                   [2, 4, 2],
-                   [1, 2, 1]]) / 16
-
-# Convolution (simplified for demonstration)
-filtered = np.zeros_like(image, dtype=float)
-for i in range(1, image.shape[0]-1):
-    for j in range(1, image.shape[1]-1):
-        region = image[i-1:i+2, j-1:j+2]
-        filtered[i, j] = np.sum(region * kernel)
-
-print(f"Original image shape: {image.shape}")
-print(f"Pixel value range: [{image.min()}, {image.max()}]")
-print(f"Filtered image smoothness: {filtered.std():.2f} (lower = smoother)")
-
-# Example 4: Natural Language Processing (Mixed Approach!)
-print("\n💬 Example 4: Text Processing Pipeline")
-print("-" * 50)
-
-# Initial data as Python list (flexible for text)
-documents = [
-    "The quick brown fox jumps over the lazy dog",
-    "Machine learning is transforming data science",
-    "Python is the best language for data analysis",
-    "NumPy makes numerical computing fast and easy"
-]
-
-# Tokenization with lists
-tokenized = [doc.lower().split() for doc in documents]
-vocab = sorted(set(word for doc in tokenized for word in doc))
-word_to_idx = {word: i for i, word in enumerate(vocab)}
-
-print(f"Documents: {len(documents)}")
-print(f"Vocabulary size: {len(vocab)}")
-
-# Convert to NumPy for mathematical operations
-# Create document-term matrix
-doc_term_matrix = np.zeros((len(documents), len(vocab)))
-for doc_idx, doc in enumerate(tokenized):
-    for word in doc:
-        word_idx = word_to_idx[word]
-        doc_term_matrix[doc_idx, word_idx] += 1
-
-# TF-IDF calculation (simplified)
-tf = doc_term_matrix
-idf = np.log(len(documents) / (np.sum(doc_term_matrix > 0, axis=0) + 1))
-tfidf = tf * idf
-
-print(f"Document-term matrix shape: {doc_term_matrix.shape}")
-print(f"Most important words (highest TF-IDF):")
-top_words_idx = np.argsort(tfidf.sum(axis=0))[-3:]
-for idx in top_words_idx:
-    print(f"  - {vocab[idx]}: {tfidf.sum(axis=0)[idx]:.2f}")</code></pre>
-
-    <h2>Summary: Your Data Structure Cheat Sheet 📋</h2>
-    
-    <div class="comment-block">
-        <p><strong>🎯 Key Takeaways:</strong></p>
-        <ul>
-            <li><strong>Python Lists:</strong> Use when you need flexibility, mixed types, or are dealing with non-numerical data like JSON, web scraping results, or complex nested structures.</li>
-            <li><strong>NumPy Arrays:</strong> Use for numerical computations, scientific computing, image processing, or any scenario requiring fast mathematical operations on homogeneous data.</li>
-            <li><strong>Memory:</strong> Arrays use 3-8x less memory than lists for numerical data due to contiguous storage and no Python object overhead.</li>
-            <li><strong>Performance:</strong> Arrays are 10-100x faster for mathematical operations thanks to vectorization and C implementation.</li>
-            <li><strong>Broadcasting:</strong> NumPy's killer feature - perform operations on different shaped arrays without explicit loops.</li>
-        </ul>
-    </div>
-
-    <pre><code># Quick Reference Card
+        <div class="container">
+            <header>
+                <h1>🔢 Lesson 1.1: Arrays vs Lists</h1>
+                <p class="lead">Meet the NumPy array, the data structure underneath almost every tool in this course, and see for yourself why it beats a Python list for numbers.</p>
+
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Explain how a NumPy array stores numbers differently from a Python list, and why that makes it smaller and faster</li>
+                        <li>Create arrays from lists, from scratch, and from a CSV file, and read their <code>dtype</code>, <code>shape</code>, <code>ndim</code> and <code>size</code></li>
+                        <li>Select elements, rows and columns with indexing and slicing in one and two dimensions</li>
+                        <li>Predict whether an operation gives you a view or a copy, and make a copy when you need one</li>
+                        <li>Measure memory and speed yourself and choose between a list and an array for a task</li>
+                    </ul>
+                </div>
+
+                <ul class="lesson-meta">
+                    <li><span class="meta-label">⏱️ Time</span> 80 minutes</li>
+                    <li><span class="meta-label">📋 Prerequisites</span> <a href="getting_started.html">Lesson 0.1: Your Data Science Toolkit</a> (working environment, course data unzipped)</li>
+                    <li><span class="meta-label">🛠️ You will build</span> A list-versus-array benchmark report on two years of Pinecrest store revenue</li>
+                    <li><span class="meta-label">📂 Data</span> <code>data/daily_sales.csv</code></li>
+                </ul>
+            </header>
+
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#why" class="toc-link">Two Containers, Two Jobs</a></li>
+                        <li><a href="#first-array" class="toc-link">Your First Array</a></li>
+                        <li><a href="#memory" class="toc-link">How They Are Stored</a></li>
+                        <li><a href="#speed" class="toc-link">Why Arrays Are Fast</a></li>
+                        <li><a href="#dtypes" class="toc-link">Data Types</a></li>
+                        <li><a href="#creating" class="toc-link">Creating Arrays</a></li>
+                        <li><a href="#indexing" class="toc-link">Indexing and Slicing</a></li>
+                        <li><a href="#views" class="toc-link">Views and Copies</a></li>
+                        <li><a href="#choosing" class="toc-link">Choosing: List or Array?</a></li>
+                        <li><a href="#mistakes" class="toc-link">Common Mistakes</a></li>
+                        <li><a href="#project" class="toc-link">Project: The Benchmark Report</a></li>
+                        <li><a href="#exercises" class="toc-link">Hands-on Exercises</a></li>
+                        <li><a href="#quiz" class="toc-link">Quick Quiz</a></li>
+                        <li><a href="#faq" class="toc-link">Common Questions</a></li>
+                        <li><a href="#journal" class="toc-link">Learning Journal</a></li>
+                        <li><a href="#summary" class="toc-link">Lesson Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
+
+            <!-- ============================================================ -->
+            <section id="why" class="lesson-section">
+                <h2>🧰 Two Containers, Two Jobs</h2>
+
+                <p>You already know the Python list. It is the Swiss Army knife of containers: it holds anything, it grows and shrinks, and it is always in your pocket. A <strong>NumPy array</strong> is closer to a race car. It does one job, holding many values of the <em>same type</em>, and it does that job far faster and in far less memory than a list can.</p>
+
+                <p>That one job happens to be the heart of data analysis. Pinecrest Outfitters, the fictional outdoor-gear retailer whose data you will use throughout this course, has four stores. Two years of daily sales is 2,903 store-days of revenue. A column of 2,903 numbers of the same kind is exactly what an array is for, and real datasets run to millions of rows.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Mental Model: The Parking Lot and the Starting Grid</h4>
+                    <p>A <strong>list</strong> is a public parking lot. Motorcycles, sedans and delivery trucks all park there, each in a space with room to spare. Vehicles come and go all day, and the attendant keeps a clipboard saying which vehicle is in which space.</p>
+                    <p>An <strong>array</strong> is the starting grid of a race. Every car is the same class, lined up bumper to bumper in numbered positions. Nobody needs a clipboard: position 5 is exactly five car-lengths from the front. Because the grid is uniform, the whole field can move as one.</p>
+                </div>
+
+                <h3>🤔 Why This Matters</h3>
+                <p>pandas stores each column in an array. Matplotlib plots arrays. SciPy and statsmodels compute on arrays. When you understand how an array behaves (one type, fixed size, operations on the whole thing at once), the rest of this course stops feeling like a collection of magic spells. Time spent here pays off in every later module.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="first-array" class="lesson-section">
+                <h2>🚀 Your First Array</h2>
+
+                <p>Open a new notebook (or a script) in the project folder you set up in Lesson 0.1. NumPy is imported under the short name <code>np</code>. Everyone does this, so every example you find elsewhere will look the same.</p>
+
+                <pre><code class="language-python">import numpy as np
+
+print(np.__version__)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>2.5.4</code></pre>
+                </div>
+
+                <p>The simplest way to make an array is to hand a list to <code>np.array()</code>. These seven numbers are the Boise store's revenue for the first week of January 2024, Monday to Sunday.</p>
+
+                <pre><code class="language-python">week_list = [5962.00, 6583.13, 3866.59, 7667.88, 9570.46, 12388.57, 9361.59]
+week = np.array(week_list)
+
+print(week)
+print(type(week))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>[ 5962.    6583.13  3866.59  7667.88  9570.46 12388.57  9361.59]
+&lt;class 'numpy.ndarray'&gt;</code></pre>
+                </div>
+
+                <p>Two things to notice. The printed array has no commas, which is a quick way to tell an array from a list on screen. And its type is <code>ndarray</code>, short for "N-dimensional array".</p>
+
+                <h3>Four Facts Every Array Knows About Itself</h3>
+
+                <pre><code class="language-python">print(week.dtype)   # the type of every element
+print(week.shape)   # the length along each dimension
+print(week.ndim)    # how many dimensions
+print(week.size)    # how many elements in total</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>float64
+(7,)
+1
+7</code></pre>
+                </div>
+
+                <p><code>float64</code> means each element is a 64-bit floating-point number (8 bytes). The shape <code>(7,)</code> is a tuple with one entry because the array has one dimension. Get in the habit of printing <code>.shape</code> and <code>.dtype</code> whenever something surprises you. They answer most questions.</p>
+
+                <h3>The First Big Difference: Math on Everything at Once</h3>
+
+                <p>Suppose you want every day's revenue doubled. Watch what the same <code>* 2</code> does to each container.</p>
+
+                <pre><code class="language-python">print(week_list * 2)
+print(week * 2)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>[5962.0, 6583.13, 3866.59, 7667.88, 9570.46, 12388.57, 9361.59, 5962.0, 6583.13, 3866.59, 7667.88, 9570.46, 12388.57, 9361.59]
+[11924.   13166.26  7733.18 15335.76 19140.92 24777.14 18723.18]</code></pre>
+                </div>
+
+                <p>For a list, <code>*</code> means "repeat": you get fourteen items. For an array, <code>*</code> means arithmetic on <strong>every element</strong>. The same is true of <code>+</code>, <code>-</code>, <code>/</code> and the rest. No loop, no comprehension. You will use this constantly, and <a href="numpy_vectorized_operations.html">Lesson 1.2</a> explores it in depth.</p>
+
+                <h3>The Second Big Difference: One Type Only</h3>
+
+                <pre><code class="language-python">mixed_list = [42, "tent", 3.5, True]
+print([type(x).__name__ for x in mixed_list])
+
+mixed = np.array([42, "tent", 3.5])
+print(mixed)
+print(mixed.dtype)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>['int', 'str', 'float', 'bool']
+['42' 'tent' '3.5']
+&lt;U32</code></pre>
+                </div>
+
+                <p>The list keeps four different types side by side. The array cannot, so NumPy quietly converted everything to the one type that can represent all three values: text. (<code>&lt;U32</code> means "Unicode strings of up to 32 characters".) Your numbers are now strings, and arithmetic on them will fail.</p>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Silent Conversion</h4>
+                    <p>NumPy did not raise an error here. If one stray text value sneaks into a column of numbers, the whole array becomes text. When an array misbehaves, check <code>.dtype</code> first.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="memory" class="lesson-section">
+                <h2>🧱 How They Are Stored</h2>
+
+                <p>The differences you just saw are not arbitrary design choices. They follow from how each container lays its data out in memory.</p>
+
+                <div class="diagram">
+                    <svg viewBox="0 0 440 330" width="440" height="330" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A Python list is a row of addresses that point to number objects scattered around memory. A NumPy array is one block of raw numbers stored side by side.">
+                        <defs>
+                            <marker id="arrow-mem" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                                <path d="M0,0 L8,4 L0,8 Z" class="svg-arrow"/>
+                            </marker>
+                        </defs>
+                        <text x="20" y="20" class="svg-text" font-size="14" font-weight="bold">Python list: a row of addresses</text>
+                        <rect x="20" y="34" width="46" height="30" class="svg-box-1"/>
+                        <rect x="66" y="34" width="46" height="30" class="svg-box-1"/>
+                        <rect x="112" y="34" width="46" height="30" class="svg-box-1"/>
+                        <rect x="158" y="34" width="46" height="30" class="svg-box-1"/>
+                        <circle cx="43" cy="49" r="4" class="svg-arrow"/>
+                        <circle cx="89" cy="49" r="4" class="svg-arrow"/>
+                        <circle cx="135" cy="49" r="4" class="svg-arrow"/>
+                        <circle cx="181" cy="49" r="4" class="svg-arrow"/>
+                        <path d="M43,49 L43,150 L196,150" class="svg-line" marker-end="url(#arrow-mem)"/>
+                        <path d="M89,49 L89,104 L246,104" class="svg-line" marker-end="url(#arrow-mem)"/>
+                        <path d="M135,49 L135,78 L286,78 L286,56 L296,56" class="svg-line" marker-end="url(#arrow-mem)"/>
+                        <path d="M181,49 L226,49 L226,126 L286,126 L286,146 L296,146" class="svg-line" marker-end="url(#arrow-mem)"/>
+                        <rect x="200" y="136" width="84" height="28" rx="4" class="svg-box-3"/>
+                        <text x="242" y="155" text-anchor="middle" class="svg-text svg-mono" font-size="12">5962.0</text>
+                        <rect x="250" y="90" width="84" height="28" rx="4" class="svg-box-3"/>
+                        <text x="292" y="109" text-anchor="middle" class="svg-text svg-mono" font-size="12">6583.13</text>
+                        <rect x="300" y="42" width="84" height="28" rx="4" class="svg-box-3"/>
+                        <text x="342" y="61" text-anchor="middle" class="svg-text svg-mono" font-size="12">3866.59</text>
+                        <rect x="300" y="132" width="84" height="28" rx="4" class="svg-box-3"/>
+                        <text x="342" y="151" text-anchor="middle" class="svg-text svg-mono" font-size="12">7667.88</text>
+                        <text x="20" y="190" class="svg-muted" font-size="12">Each number is a separate Python object, somewhere else</text>
+                        <text x="20" y="206" class="svg-muted" font-size="12">in memory. The list holds only their 8-byte addresses.</text>
+
+                        <text x="20" y="244" class="svg-text" font-size="14" font-weight="bold">NumPy array: one block of raw numbers</text>
+                        <rect x="20" y="256" width="104" height="32" rx="4" class="svg-box-2"/>
+                        <text x="72" y="277" text-anchor="middle" class="svg-text" font-size="12">dtype float64</text>
+                        <rect x="136" y="256" width="72" height="32" class="svg-box-1"/>
+                        <rect x="208" y="256" width="72" height="32" class="svg-box-1"/>
+                        <rect x="280" y="256" width="72" height="32" class="svg-box-1"/>
+                        <rect x="352" y="256" width="72" height="32" class="svg-box-1"/>
+                        <text x="172" y="277" text-anchor="middle" class="svg-text svg-mono" font-size="12">5962.0</text>
+                        <text x="244" y="277" text-anchor="middle" class="svg-text svg-mono" font-size="12">6583.13</text>
+                        <text x="316" y="277" text-anchor="middle" class="svg-text svg-mono" font-size="12">3866.59</text>
+                        <text x="388" y="277" text-anchor="middle" class="svg-text svg-mono" font-size="12">7667.88</text>
+                        <text x="20" y="310" class="svg-muted" font-size="12">Same type, side by side, 8 bytes each. The type is written once.</text>
+                    </svg>
+                </div>
+
+                <p>Think of the list as a suburb: each value is a house on its own street, and the list is an address book. To add up the values, Python looks up an address, travels to the house, checks what kind of thing lives there, and reads the value. Then it does it all again for the next one.</p>
+
+                <p>The array is an apartment building with identical units along one hallway. There is nothing to look up and nothing to check. You walk the hallway.</p>
+
+                <h3>Measure It</h3>
+
+                <p>You do not have to take this on faith. <code>sys.getsizeof()</code> reports the size of a Python object, and every array has an <code>nbytes</code> attribute. Compare one million integers stored both ways.</p>
+
+                <pre><code class="language-python">import sys
+
+n = 1_000_000
+numbers_list = list(range(n))
+numbers = np.arange(n)          # the array version of range()
+
+list_container = sys.getsizeof(numbers_list)                  # the address book
+list_objects = sum(sys.getsizeof(x) for x in numbers_list)    # the houses
+
+print(f"list container : {list_container:&gt;12,} bytes")
+print(f"int objects    : {list_objects:&gt;12,} bytes")
+print(f"list total     : {list_container + list_objects:&gt;12,} bytes")
+print(f"array data     : {numbers.nbytes:&gt;12,} bytes  ({numbers.dtype})")
+print(f"the list needs {(list_container + list_objects) / numbers.nbytes:.1f} times the memory")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>list container :    8,000,056 bytes
+int objects    :   28,000,000 bytes
+list total     :   36,000,056 bytes
+array data     :    8,000,000 bytes  (int64)
+the list needs 4.5 times the memory</code></pre>
+                </div>
+
+                <p>The list's address book alone is as big as the entire array. On top of that, each Python <code>int</code> object costs 28 bytes, because it carries its own type information and bookkeeping along with the value. The array stores the type once and then nothing but values.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Two Honest Footnotes</h4>
+                    <p><code>sys.getsizeof(numbers_list)</code> by itself reports only the address book, which is why we added the objects separately. And the array object has a small fixed header (about 100 bytes) on top of <code>nbytes</code>. For a million elements that is a rounding error; for a five-element array it is most of the size. Arrays pay off when the data is large.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="speed" class="lesson-section">
+                <h2>⚡ Why Arrays Are Fast</h2>
+
+                <p>The same layout that saves memory also saves time. Here is the job "raise one million prices by 8%" done both ways and timed with the standard library's <code>timeit</code>. Taking the best of five runs reduces noise from whatever else your computer is doing.</p>
+
+                <pre><code class="language-python">import timeit
+
+prices_list = [float(x) for x in range(n)]
+prices = np.array(prices_list)
+
+t_list = min(timeit.repeat(lambda: [p * 1.08 for p in prices_list], number=1, repeat=5))
+t_array = min(timeit.repeat(lambda: prices * 1.08, number=1, repeat=5))
+
+print(f"list comprehension : {t_list * 1000:7.2f} ms")
+print(f"NumPy array        : {t_array * 1000:7.2f} ms")
+print(f"speedup            : {t_list / t_array:5.0f}x")</code></pre>
+                <div class="card card-output">
+                    <h4>Output (your numbers will differ)</h4>
+                    <pre><code>list comprehension :   22.94 ms
+NumPy array        :    0.32 ms
+speedup            :    72x</code></pre>
+                </div>
+
+                <p>The exact figures depend on your computer, and they change a little from run to run. The gap does not go away. For simple arithmetic on a large array, expect NumPy to be somewhere between ten and a hundred times faster than a Python loop.</p>
+
+                <div class="mermaid">
+graph TD
+    A["Raise 1,000,000 prices by 8%"] --> B{"Stored as?"}
+    B -->|list| C["Python runs the loop"]
+    C --> D["Per item: check type, multiply"]
+    D --> E["1,000,000 interpreter steps"]
+    B -->|array| F["One call to compiled code"]
+    F --> G["Tight loop over raw numbers"]
+                </div>
+
+                <p>The list version is slow because Python has to treat every element as an unknown object. It cannot assume the next item is a number, so it checks, every time. The array version makes one call to NumPy, and NumPy runs a loop written in C over a block of memory it already knows contains nothing but 64-bit floats. Working on a whole array in one operation like this is called <strong>vectorization</strong>.</p>
+
+                <div class="card card-success">
+                    <h4>✅ You Already Have the Key Idea</h4>
+                    <p>If you find yourself writing <code>for</code> over the elements of an array, pause and ask whether one array expression could do it. Usually it can. You do not need to know every NumPy function yet. Knowing that the question is worth asking is most of the skill.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="dtypes" class="lesson-section">
+                <h2>🏷️ Data Types</h2>
+
+                <p>Since an array has exactly one element type, that type matters. NumPy picks one for you from the values you supply.</p>
+
+                <pre><code class="language-python">counts = np.array([3, 1, 4, 1, 5])
+print(counts.dtype)
+print(np.array([1.5, 2, 3]).dtype)
+print(np.array([True, False, True]).dtype)
+print(np.array(["Boise", "Bend"]).dtype)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>int64
+float64
+bool
+&lt;U5</code></pre>
+                </div>
+
+                <p>All integers give <code>int64</code>. One decimal point anywhere promotes the whole array to <code>float64</code>, because a float can hold <code>2</code> but an integer cannot hold <code>1.5</code>.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>dtype</th><th>Holds</th><th>Bytes each</th><th>Typical use</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>int64</code></td><td>Whole numbers, huge range</td><td class="num">8</td><td>Counts, ids (the default for integers)</td></tr>
+                            <tr><td><code>float64</code></td><td>Decimals, about 15 to 17 significant digits</td><td class="num">8</td><td>Money, measurements (the default for decimals)</td></tr>
+                            <tr><td><code>int32</code>, <code>float32</code></td><td>Smaller range or precision</td><td class="num">4</td><td>Very large arrays where memory is tight</td></tr>
+                            <tr><td><code>int8</code></td><td>Whole numbers from -128 to 127</td><td class="num">1</td><td>Small codes and flags</td></tr>
+                            <tr><td><code>bool</code></td><td><code>True</code> / <code>False</code></td><td class="num">1</td><td>Filters (Lesson 1.2)</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>You can ask for a type when you create an array, or convert afterward with <code>.astype()</code>, which always returns a new array.</p>
+
+                <pre><code class="language-python">small = np.array([3, 1, 4, 1, 5], dtype=np.int8)
+print(small.dtype, small.nbytes, "bytes")
+print(counts.dtype, counts.nbytes, "bytes")
+
+print(counts.astype(np.float64))
+print(np.array([2.9, -2.9, 7.5]).astype(np.int64))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>int8 5 bytes
+int64 40 bytes
+[3. 1. 4. 1. 5.]
+[ 2 -2  7]</code></pre>
+                </div>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Converting to an Integer Type Chops, It Does Not Round</h4>
+                    <p><code>2.9</code> became <code>2</code> and <code>-2.9</code> became <code>-2</code>: the decimal part is simply dropped. If you want rounding, call <code>.round()</code> first.</p>
+                </div>
+
+                <p>Stay with the defaults (<code>int64</code> and <code>float64</code>) unless you have a measured reason to change. Smaller types save memory, but they have limits that bite, as you will see in <a href="#mistakes">Common Mistakes</a>.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="creating" class="lesson-section">
+                <h2>🏗️ Creating Arrays</h2>
+
+                <p>Typing values into a list is fine for seven numbers. For anything larger you will build arrays with functions or load them from files.</p>
+
+                <h3>From Scratch</h3>
+
+                <pre><code class="language-python">print(np.zeros(5))
+print(np.ones(3, dtype=np.int64))
+print(np.full(4, 9.95))
+print(np.arange(0, 10, 2))      # start, stop (not included), step
+print(np.linspace(0, 1, 5))     # 5 evenly spaced values, both ends included</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>[0. 0. 0. 0. 0.]
+[1 1 1]
+[9.95 9.95 9.95 9.95]
+[0 2 4 6 8]
+[0.   0.25 0.5  0.75 1.  ]</code></pre>
+                </div>
+
+                <p><code>np.arange()</code> works like <code>range()</code> but returns an array. <code>np.linspace()</code> is the one to reach for when you care about <em>how many</em> points you get, which is common when drawing a smooth curve.</p>
+
+                <h3>From a File</h3>
+
+                <p><code>data/daily_sales.csv</code> has one row per store per day. Its sixth column (index 5, because counting starts at 0) is <code>revenue</code>. <code>np.genfromtxt()</code> can read one numeric column straight into an array.</p>
+
+                <pre><code class="language-python">revenue = np.genfromtxt("data/daily_sales.csv", delimiter=",", skip_header=1, usecols=5)
+
+print(revenue.shape, revenue.dtype)
+print(revenue[:5])
+print(revenue.mean())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>(2903,) float64
+[5017.07 4132.92 5962.   3061.66 3605.81]
+nan</code></pre>
+                </div>
+
+                <p>2,903 values, loaded in one line. But the mean is <code>nan</code>, "not a number". That is not a bug in your code. Six store-days in this file have no revenue recorded, <code>genfromtxt</code> stored each of them as <code>nan</code>, and any arithmetic that touches a <code>nan</code> produces <code>nan</code>.</p>
+
+                <pre><code class="language-python">print(np.isnan(revenue).sum())     # how many are missing?
+print(np.nanmean(revenue))         # the mean of the ones that are present</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>6
+7435.043106662065</code></pre>
+                </div>
+
+                <p>An average store-day at Pinecrest brings in about $7,435. NumPy has <code>nan</code>-aware versions of the common summaries: <code>np.nanmean</code>, <code>np.nansum</code>, <code>np.nanmax</code>, <code>np.nanmin</code>. Real data always has holes, and you will learn much better tools for them when you reach pandas. For now, remember the symptom: <strong>a <code>nan</code> result means a missing value got into the calculation.</strong></p>
+
+                <div class="card card-info">
+                    <h4>💡 Why Not Read the Whole File?</h4>
+                    <p>The file also has a date column and a store-name column. An array holds one type, so text and numbers cannot share one. That limitation is exactly what pandas was built to remove: a DataFrame is a set of arrays, one per column, each with its own type. Module 2 starts there.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="indexing" class="lesson-section">
+                <h2>🎯 Indexing and Slicing</h2>
+
+                <p>In one dimension, an array is indexed exactly like a list: positions start at 0, negative numbers count from the end, and <code>start:stop:step</code> slices leave out the stop position.</p>
+
+                <pre><code class="language-python">print(week[0], week[-1])   # Monday, Sunday
+print(week[1:4])           # Tuesday to Thursday
+print(week[5:])            # the weekend
+print(week[::2])           # every other day</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>5962.0 9361.59
+[6583.13 3866.59 7667.88]
+[12388.57  9361.59]
+[5962.   3866.59 9570.46 9361.59]</code></pre>
+                </div>
+
+                <h3>Two Dimensions: Rows and Columns</h3>
+
+                <p>Arrays really pull ahead of lists when data has more than one dimension. Here are units sold on the first three days of 2024 (rows) at each store (columns: Asheville, Bend, Boise, Flagstaff).</p>
+
+                <pre><code class="language-python">units = np.array([[110, 105, 148,  69],
+                  [ 88,  84, 152,  82],
+                  [103, 133,  90,  92]])
+
+print(units.shape, units.ndim, units.size)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>(3, 4) 2 12</code></pre>
+                </div>
+
+                <p>The shape reads <strong>rows first, then columns</strong>: 3 rows, 4 columns. Indexing follows the same order, with a comma between the two positions.</p>
+
+                <pre><code class="language-python">print(units[0, 2])        # row 0, column 2: Boise on day 1
+print(units[1])           # all of row 1: every store on day 2
+print(units[:, 2])        # all rows, column 2: Boise on every day
+print(units[0:2, 1:3])    # rows 0-1, columns 1-2</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>148
+[ 88  84 152  82]
+[148 152  90]
+[[105 148]
+ [ 84 152]]</code></pre>
+                </div>
+
+                <p>A lone colon means "everything along this dimension", so <code>units[:, 2]</code> reads as "every row, column 2". Getting a column out of a list of lists needs a loop: <code>[row[2] for row in nested]</code>. With an array it is one expression, and it is fast.</p>
+
+                <div class="card card-success">
+                    <h4>✅ Read the Comma Out Loud</h4>
+                    <p>If two-dimensional indexing feels slippery, say it as "rows, comma, columns" each time. <code>units[0:2, 1:3]</code> is "rows zero up to two, columns one up to three". Everyone mixes up rows and columns at first. Printing <code>.shape</code> settles it.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="views" class="lesson-section">
+                <h2>🪟 Views and Copies</h2>
+
+                <p>Here is the behavior that surprises almost everyone coming from lists. Slicing a <strong>list</strong> gives you a new, independent list. Slicing an <strong>array</strong> gives you a <strong>view</strong>: a window onto the same memory.</p>
+
+                <pre><code class="language-python">a_list = [10, 20, 30, 40, 50]
+piece = a_list[1:4]
+piece[0] = 999
+print(a_list)            # the original list is untouched
+
+a = np.array([10, 20, 30, 40, 50])
+window = a[1:4]
+window[0] = 999
+print(a)                 # the original array changed!
+print(np.shares_memory(a, window))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>[10, 20, 30, 40, 50]
+[ 10 999  30  40  50]
+True</code></pre>
+                </div>
+
+                <div class="card card-info">
+                    <h4>💡 Mental Model: A Window, Not a Photocopy</h4>
+                    <p>A list slice is a photocopy: scribble on it and the original is fine. An array slice is a window cut into the wall of the same room: reach through it and move the furniture, and the furniture has moved for everyone.</p>
+                </div>
+
+                <p>Why would NumPy work this way? Because copying is expensive. If slicing a 2 GB array made a 1 GB copy every time, you would run out of memory quickly. Views make slicing nearly free. When you do want an independent array, say so with <code>.copy()</code>.</p>
+
+                <pre><code class="language-python">a = np.array([10, 20, 30, 40, 50])
+safe = a[1:4].copy()
+safe[0] = 999
+print(a)
+print(np.shares_memory(a, safe))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>[10 20 30 40 50]
+False</code></pre>
+                </div>
+
+                <p>A good rule while you are learning: <strong>if you plan to change a slice and still need the original, copy first.</strong> <code>np.shares_memory()</code> is there whenever you are unsure.</p>
+
+                <h3>Arrays Do Not Grow</h3>
+
+                <p>A parking lot can take one more car. A starting grid cannot. An array's size is fixed when it is created, so "appending" really means building a whole new array and copying everything across. <code>np.append()</code> exists, but look at what it costs inside a loop.</p>
+
+                <pre><code class="language-python">def grow_list(k):
+    out = []
+    for i in range(k):
+        out.append(i)
+    return out
+
+def grow_array(k):
+    out = np.array([], dtype=np.int64)
+    for i in range(k):
+        out = np.append(out, i)     # builds a brand-new array every time
+    return out
+
+k = 20_000
+t_l = min(timeit.repeat(lambda: grow_list(k), number=1, repeat=3))
+t_a = min(timeit.repeat(lambda: grow_array(k), number=1, repeat=3))
+print(f"list.append : {t_l * 1000:8.2f} ms")
+print(f"np.append   : {t_a * 1000:8.2f} ms")</code></pre>
+                <div class="card card-output">
+                    <h4>Output (your numbers will differ)</h4>
+                    <pre><code>list.append :     0.25 ms
+np.append   :    45.20 ms</code></pre>
+                </div>
+
+                <p>Here the list wins by a wide margin. This is the right job for a list. The standard pattern is: <strong>collect values in a list while the size is unknown, then convert to an array once</strong> with <code>np.array(the_list)</code> and do the math there.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="choosing" class="lesson-section">
+                <h2>⚖️ Choosing: List or Array?</h2>
+
+                <p>Neither container is "better". They are built for different jobs, and good code uses both.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Question</th><th>Python list</th><th>NumPy array</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Element types</td><td>Anything, mixed freely</td><td>One <code>dtype</code> for the whole array</td></tr>
+                            <tr><td>Size</td><td>Grows and shrinks cheaply</td><td>Fixed; "appending" copies everything</td></tr>
+                            <tr><td>Memory per number</td><td>About 32 to 36 bytes</td><td>8 bytes (or fewer, by choosing a dtype)</td></tr>
+                            <tr><td>Math on every element</td><td>Loop or comprehension</td><td>One expression, runs in compiled code</td></tr>
+                            <tr><td><code>* 2</code> means</td><td>Repeat the list</td><td>Double every element</td></tr>
+                            <tr><td>A slice is</td><td>An independent copy</td><td>A view of the same data</td></tr>
+                            <tr><td>Rows and columns</td><td>Lists of lists, loops for columns</td><td>Built in: <code>arr[row, col]</code></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p><strong>Reach for a list</strong> when items are of mixed kinds, when you are collecting results one at a time, or when there are only a handful of values. <strong>Reach for an array</strong> when you have many numbers of one kind and you want to compute with them.</p>
+
+                <div class="card card-info">
+                    <h4>💡 A Preview of Broadcasting</h4>
+                    <p>When you wrote <code>week * 2</code>, NumPy combined a 7-element array with a single number by stretching the <code>2</code> across every position. That stretching has a name, <strong>broadcasting</strong>, and it also works between arrays of different shapes: a 3×4 table and one row of 4 adjustments, for example. It has its own rules, and <a href="numpy_broadcasting.html">Lesson 1.3</a> covers them.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="mistakes" class="lesson-section">
+                <h2>⚠️ Common Mistakes</h2>
+
+                <p>Every one of these has caught experienced people. An error message is the computer telling you precisely what it could not do, which makes it a gift. Here are the messages you are most likely to meet this week, and what each one is really saying.</p>
+
+                <h3>1. Rows of Different Lengths</h3>
+
+                <pre data-raises="ValueError"><code class="language-python">ragged = np.array([[1, 2, 3], [4, 5]])</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>ValueError: setting an array element with a sequence. The requested array has an inhomogeneous shape after 1 dimensions. The detected shape was (2,) + inhomogeneous part.</code></pre>
+                </div>
+                <p><strong>What it means:</strong> a 2-D array is a rectangle. The first row has three values and the second has two, so there is no shape that fits. <strong>Fix:</strong> find the short row. A value is missing from your data, and you need to decide what belongs there.</p>
+
+                <h3>2. Using an Array Where Python Wants One True or False</h3>
+
+                <pre data-raises="ValueError"><code class="language-python">if week &gt; 6000:
+    print("A good week")</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>ValueError: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()</code></pre>
+                </div>
+                <p><strong>What it means:</strong> <code>week &gt; 6000</code> compares every element, so it produces seven answers, and <code>if</code> needs one. <strong>Fix:</strong> say which question you are asking.</p>
+
+                <pre><code class="language-python">print(week &gt; 6000)
+print((week &gt; 6000).any())    # was any day above 6000?
+print((week &gt; 6000).all())    # was every day above 6000?</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>[False  True False  True  True  True  True]
+True
+False</code></pre>
+                </div>
+
+                <h3>3. A Number Too Big for a Small dtype</h3>
+
+                <pre data-raises="OverflowError"><code class="language-python">tiny = np.array([200, 300], dtype=np.int8)</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>OverflowError: Python integer 200 out of bounds for int8</code></pre>
+                </div>
+                <p><strong>What it means:</strong> <code>int8</code> holds -128 to 127, and NumPy refuses to store 200 in it. That refusal is helpful. The dangerous case is when the overflow happens <em>during arithmetic</em>, because then there is no error at all:</p>
+
+                <pre><code class="language-python">stock = np.array([100, 120], dtype=np.int8)
+print(stock + stock)</code></pre>
+                <div class="card card-output">
+                    <h4>Output (wrong, and silent)</h4>
+                    <pre><code>[-56 -16]</code></pre>
+                </div>
+                <p>200 does not fit, so the value wrapped around to a negative number. <strong>Fix:</strong> keep the default <code>int64</code> unless you are certain every result fits the smaller type.</p>
+
+                <h3>4. Putting a Decimal into an Integer Array</h3>
+
+                <pre><code class="language-python">on_hand = np.array([10, 20, 30])
+on_hand[0] = 3.7
+print(on_hand)</code></pre>
+                <div class="card card-output">
+                    <h4>Output (the .7 is gone)</h4>
+                    <pre><code>[ 3 20 30]</code></pre>
+                </div>
+                <p><strong>What happened:</strong> the array's dtype is <code>int64</code> and it cannot change, so <code>3.7</code> was chopped to <code>3</code> without a word. <strong>Fix:</strong> if decimals are possible, create the array as floats: <code>np.array([10, 20, 30], dtype=np.float64)</code>.</p>
+
+                <h3>5. Changing a Slice and Losing the Original</h3>
+                <p>You saw this in <a href="#views">Views and Copies</a>: writing into <code>window = a[1:4]</code> changes <code>a</code>. There is no error message, which is what makes it hard to spot. <strong>Fix:</strong> <code>a[1:4].copy()</code> whenever you intend to modify the piece and keep the original.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="project" class="lesson-section">
+                <h2>🛠️ Project: The Benchmark Report</h2>
+
+                <p>Claims about speed and memory are easy to repeat and worth checking. In this project you will load two years of Pinecrest store data, do the same analysis with lists and with arrays, and write a short report from <em>your own</em> measurements. Work in a new notebook called <code>lesson_1_1_project</code>, or a script called <code>benchmark.py</code>. Allow about 35 minutes.</p>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 1: Load two columns <span class="step-time">(5 min)</span></h3>
+                    <p>Column 2 of <code>daily_sales.csv</code> is <code>visitors</code> (people through the door) and column 5 is <code>revenue</code>. Load each into its own array and check what you got.</p>
+                    <pre><code class="language-python">import sys
+import math
+import timeit
 import numpy as np
 
-# CONVERSIONS
-# -----------
-list_data = [1, 2, 3, 4, 5]
-array_data = np.array(list_data)  # List to Array
-back_to_list = array_data.tolist()  # Array to List
+visitors = np.genfromtxt("data/daily_sales.csv", delimiter=",", skip_header=1, usecols=2)
+revenue = np.genfromtxt("data/daily_sales.csv", delimiter=",", skip_header=1, usecols=5)
 
-# WHEN TO USE WHAT
-# ----------------
-# Python List:
-# ✅ Mixed data types
-# ✅ Frequent append/insert/remove
-# ✅ Small datasets (&lt;1000 elements)
-# ✅ Complex nested structures
-# ✅ JSON/Dictionary data
+print(visitors.shape, visitors.dtype)
+print(revenue.shape, revenue.dtype)
+print(visitors[:4])
+print(revenue[:4])</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>(2903,) float64
+(2903,) float64
+[201. 200. 333. 144.]
+[5017.07 4132.92 5962.   3061.66]</code></pre>
+                    </div>
+                    <p><code>genfromtxt</code> reads everything as <code>float64</code> unless told otherwise, which is why the visitor counts print as <code>201.</code> with a trailing dot.</p>
+                </div>
 
-# NumPy Array:
-# ✅ Numerical computations
-# ✅ Large datasets (&gt;10000 elements)
-# ✅ Matrix operations
-# ✅ Scientific computing
-# ✅ Image/Signal processing
-# ✅ Machine learning
+                <div class="card card-info">
+                    <h3>🛠️ Step 2: Make list twins and compare memory <span class="step-time">(5 min)</span></h3>
+                    <p><code>.tolist()</code> converts an array into a plain list of Python numbers. Measure both versions of <code>revenue</code>, remembering to count the list's objects as well as its container.</p>
+                    <pre><code class="language-python">revenue_list = revenue.tolist()
+visitors_list = visitors.tolist()
 
-# PERFORMANCE RULES OF THUMB
-# --------------------------
-# If you're using a for loop on numbers → Use NumPy
-# If you're calling math functions repeatedly → Use NumPy  
-# If you're storing mixed types → Use List
-# If you're building data incrementally → Use List (then convert)
+list_bytes = sys.getsizeof(revenue_list) + sum(sys.getsizeof(x) for x in revenue_list)
+print(f"list : {list_bytes:,} bytes")
+print(f"array: {revenue.nbytes:,} bytes")
+print(f"ratio: {list_bytes / revenue.nbytes:.1f}x")</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>list : 92,952 bytes
+array: 23,224 bytes
+ratio: 4.0x</code></pre>
+                    </div>
+                </div>
 
-# MEMORY RULES OF THUMB
-# --------------------
-# 1 million integers:
-#   Python List: ~8.5 MB
-#   NumPy Array: ~4 MB
-# 
-# 1 million floats:
-#   Python List: ~24 MB
-#   NumPy Array: ~8 MB
+                <div class="card card-info">
+                    <h3>🛠️ Step 3: Time the same calculation both ways <span class="step-time">(10 min)</span></h3>
+                    <p>A useful retail measure is <strong>spend per visitor</strong>: revenue divided by visitors, for every store-day. Write it once with lists and once with arrays. Each function is run 100 times per measurement so the timer has something substantial to measure.</p>
+                    <pre><code class="language-python">def per_visitor_list():
+    return [r / v for r, v in zip(revenue_list, visitors_list)]
 
-print("🎉 You're now equipped to choose the right tool for the job!")</code></pre>    </main>
+def per_visitor_array():
+    return revenue / visitors
 
+t_list = min(timeit.repeat(per_visitor_list, number=100, repeat=5)) / 100
+t_array = min(timeit.repeat(per_visitor_array, number=100, repeat=5)) / 100
 
-    <footer>
-        <!-- Learning Journal (REQUIRED per the Courseware Authoring Standard) -->
-        <section id="journal" class="lesson-section">
-            <h2>📓 Learning Journal</h2>
-            <div class="card card-info">
-                <p>Keep a learning journal — digital or physical. After this lesson, take a few minutes to write down:</p>
+print(f"list : {t_list * 1e6:8.1f} microseconds")
+print(f"array: {t_array * 1e6:8.1f} microseconds")
+print(f"speedup: {t_list / t_array:.0f}x")</code></pre>
+                    <div class="card card-output">
+                        <h4>Output (your numbers will differ)</h4>
+                        <pre><code>list :     58.2 microseconds
+array:      1.5 microseconds
+speedup: 39x</code></pre>
+                    </div>
+                    <p>Notice that <code>revenue / visitors</code> divides two arrays element by element: the first revenue by the first visitor count, the second by the second, and so on.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 4: Deal with the missing days <span class="step-time">(5 min)</span></h3>
+                    <p>Six revenue values are missing, so six spend-per-visitor values are <code>nan</code>. Count them, then summarize with the <code>nan</code>-aware functions. For comparison, do the mean the list way too.</p>
+                    <pre><code class="language-python">spend = revenue / visitors
+
+print(spend[:4].round(2))
+print("missing days:", np.isnan(spend).sum())
+print("mean spend per visitor:", round(np.nanmean(spend), 2))
+print("best day:", round(np.nanmax(spend), 2), " worst day:", round(np.nanmin(spend), 2))
+
+clean_list = [x for x in per_visitor_list() if not math.isnan(x)]
+print("list version of the mean:", round(sum(clean_list) / len(clean_list), 2))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>[24.96 20.66 17.9  21.26]
+missing days: 6
+mean spend per visitor: 20.87
+best day: 33.56  worst day: 11.84
+list version of the mean: 20.87</code></pre>
+                    </div>
+                    <p>Both routes agree on $20.87. Getting the same answer two different ways is one of the best checks you have.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 5: Slice out the first week as a table <span class="step-time">(5 min)</span></h3>
+                    <p>The file is sorted by date, then by store name, and no days are missing in early January. So the first 28 values are 7 days × 4 stores. <code>.reshape(7, 4)</code> arranges them as 7 rows and 4 columns without copying anything. Then total each store's column.</p>
+                    <pre><code class="language-python">week1 = revenue[:28].reshape(7, 4)
+print(week1)
+
+stores = ["Asheville", "Bend", "Boise", "Flagstaff"]
+for col, name in enumerate(stores):
+    print(f"{name:&lt;10} {week1[:, col].sum():&gt;10,.2f}")
+
+print(np.shares_memory(week1, revenue))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>[[ 5017.07  4132.92  5962.    3061.66]
+ [ 3605.81  3675.57  6583.13  3575.24]
+ [ 4265.55  6275.05  3866.59  3974.93]
+ [ 4531.48  5487.11  7667.88  4329.55]
+ [ 7359.82  4755.15  9570.46  5606.62]
+ [ 6802.53  7083.36 12388.57  6257.02]
+ [ 4114.59  6719.33  9361.59  5964.  ]]
+Asheville   35,696.85
+Bend        38,128.49
+Boise       55,400.22
+Flagstaff   32,769.02
+True</code></pre>
+                    </div>
+                    <p>Column 2 is the Boise week you have been using all lesson. The final <code>True</code> confirms that <code>week1</code> is a view of <code>revenue</code>: a new shape over the same memory.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 6: Write the report <span class="step-time">(5 min)</span></h3>
+                    <p>Pull your measurements into one printed summary. An f-string inside triple quotes keeps it readable.</p>
+                    <pre><code class="language-python">report = f"""Pinecrest store-days analyzed : {revenue.size:,}
+Days with missing revenue     : {np.isnan(revenue).sum()}
+Total revenue                 : ${np.nansum(revenue):,.2f}
+Mean spend per visitor        : ${np.nanmean(spend):.2f}
+Memory, list vs array         : {list_bytes:,} vs {revenue.nbytes:,} bytes ({list_bytes / revenue.nbytes:.1f}x)
+Speed, list vs array          : {t_list * 1e6:.0f} vs {t_array * 1e6:.1f} microseconds ({t_list / t_array:.0f}x)"""
+print(report)</code></pre>
+                    <div class="card card-output">
+                        <h4>Output (your timing line will differ)</h4>
+                        <pre><code>Pinecrest store-days analyzed : 2,903
+Days with missing revenue     : 6
+Total revenue                 : $21,539,319.88
+Mean spend per visitor        : $20.87
+Memory, list vs array         : 92,952 vs 23,224 bytes (4.0x)
+Speed, list vs array          : 58 vs 1.5 microseconds (39x)</code></pre>
+                    </div>
+                </div>
+
+                <div class="card card-success">
+                    <h3>✅ Project Completion Checklist</h3>
+                    <ul class="checklist">
+                        <li><code>visitors</code> and <code>revenue</code> both load with shape <code>(2903,)</code></li>
+                        <li>Your memory comparison counts the list's number objects, not only its container</li>
+                        <li>Both timing functions compute the same thing, and you report the best of several runs</li>
+                        <li>You found 6 missing days and a mean spend per visitor of $20.87 by two methods</li>
+                        <li><code>week1</code> has shape <code>(7, 4)</code> and Boise's column totals $55,400.22</li>
+                        <li>Your report prints your own numbers, with no figures typed in by hand</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="exercises" class="lesson-section">
+                <h2>🏋️ Hands-on Exercises</h2>
+
+                <p>Try each one before opening the solution. Getting stuck for a few minutes is part of how this sticks.</p>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 1: Inspect and Convert</h3>
+                    <p>These are Boise's daily high temperatures (°F) for the first week of January 2024: <code>[37, 44, 30, 26, 29, 27, 32]</code>.</p>
+                    <ol>
+                        <li>Make an array called <code>temps</code> and print its <code>dtype</code>, <code>shape</code> and <code>size</code>.</li>
+                        <li>Print the first value, the last value, and the three middle values (positions 2 to 4).</li>
+                        <li>Convert every temperature to Celsius with <code>(F - 32) × 5 / 9</code>, rounded to one decimal place.</li>
+                    </ol>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Arithmetic applies to the whole array, so the conversion is a single expression. Arrays have a <code>.round()</code> method that takes the number of decimals.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">temps = np.array([37, 44, 30, 26, 29, 27, 32])
+print(temps.dtype, temps.shape, temps.size)
+print(temps[0], temps[-1], temps[2:5])
+
+celsius = ((temps - 32) * 5 / 9).round(1)
+print(celsius)
+print(celsius.dtype)</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>int64 (7,) 7
+37 32 [30 26 29]
+[ 2.8  6.7 -1.1 -3.3 -1.7 -2.8  0. ]
+float64</code></pre>
+                        </div>
+                        <p>The integers became floats as soon as the division happened. NumPy created a new <code>float64</code> array for the result; <code>temps</code> itself is still <code>int64</code>.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 2: Find Your Way Around a Grid</h3>
+                    <p>Build this 3×4 array with <code>np.arange(1, 13).reshape(3, 4)</code>, then select each of the following with a single indexing expression: (a) the number 7, (b) the whole last row, (c) the whole last column, (d) the top-left 2×2 block.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Print the grid first. Rows come before the comma, columns after. <code>-1</code> means "last" in either position.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">grid = np.arange(1, 13).reshape(3, 4)
+print(grid)
+print(grid[1, 2])      # (a)
+print(grid[-1])        # (b)
+print(grid[:, -1])     # (c)
+print(grid[:2, :2])    # (d)</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>[[ 1  2  3  4]
+ [ 5  6  7  8]
+ [ 9 10 11 12]]
+7
+[ 9 10 11 12]
+[ 4  8 12]
+[[1 2]
+ [5 6]]</code></pre>
+                        </div>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 3: Shrink a Column Safely</h3>
+                    <p>Column 6 of <code>daily_sales.csv</code> is <code>staff_on_duty</code>, a small whole number. Load it with <code>genfromtxt</code>. How many bytes does it use as loaded? Convert it to <code>int8</code> and measure again. Then <strong>prove</strong> the conversion lost nothing: check the largest value fits in <code>int8</code>, and confirm the two arrays are equal with <code>np.array_equal()</code>.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>int8</code> holds values up to 127. Use <code>.max()</code> before converting, not after: once a value has wrapped around, the evidence is gone.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">staff = np.genfromtxt("data/daily_sales.csv", delimiter=",", skip_header=1, usecols=6)
+print(staff.dtype, staff.nbytes, "bytes")
+print("largest:", staff.max(), " missing:", np.isnan(staff).sum())
+
+staff_small = staff.astype(np.int8)
+print(staff_small.dtype, staff_small.nbytes, "bytes")
+print(np.array_equal(staff, staff_small))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>float64 23224 bytes
+largest: 20.0  missing: 0
+int8 2903 bytes
+True</code></pre>
+                        </div>
+                        <p>One eighth of the memory, and provably the same values. The check for missing values matters too: <code>nan</code> cannot be stored in an integer array, so a column with gaps has to stay as floats.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 4: View or Copy? (Stretch)</h3>
+                    <p>Predict the output of each <code>print</code> <em>before</em> you run it. Then explain the difference in one sentence in your journal.</p>
+                    <pre data-norun><code class="language-python">a = np.arange(10)
+first = a[:5]
+first[:] = 0
+print(a)
+
+a = np.arange(10)
+first = a[:5].copy()
+first[:] = 0
+print(a)</code></pre>
+                    <p>Then go one step further: time <code>np.cumsum(clean)</code> (a running total) against a Python loop that builds the same running total in a list, where <code>clean = revenue[~np.isnan(revenue)]</code> is the revenue array with the six missing days removed. (<code>~</code> flips each <code>True</code>/<code>False</code>; you will meet it properly in Lesson 1.2.) Is the speedup as large as it was for multiplication?</p>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">a = np.arange(10)
+first = a[:5]            # a view
+first[:] = 0             # writes through to a
+print(a)
+
+a = np.arange(10)
+first = a[:5].copy()     # an independent array
+first[:] = 0
+print(a)
+
+def running_total_list(values):
+    total, out = 0.0, []
+    for v in values:
+        total += v
+        out.append(total)
+    return out
+
+clean = revenue[~np.isnan(revenue)]
+clean_as_list = clean.tolist()
+t_loop = min(timeit.repeat(lambda: running_total_list(clean_as_list), number=50, repeat=5)) / 50
+t_numpy = min(timeit.repeat(lambda: np.cumsum(clean), number=50, repeat=5)) / 50
+print(f"loop {t_loop * 1e6:.0f} microseconds, cumsum {t_numpy * 1e6:.0f} microseconds, {t_loop / t_numpy:.0f}x")</code></pre>
+                        <div class="card card-output">
+                            <h4>Output (your timing line will differ)</h4>
+                            <pre><code>[0 0 0 0 0 5 6 7 8 9]
+[0 1 2 3 4 5 6 7 8 9]
+loop 46 microseconds, cumsum 6 microseconds, 8x</code></pre>
+                        </div>
+                        <p>The speedup is real but smaller. A running total has to be computed in order, one element after another, so there is less for NumPy to gain. Speedups are not a fixed number, which is why you measure.</p>
+                    </details>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="quiz" class="lesson-section">
+                <h2>🎯 Quick Quiz</h2>
+                <div class="card quiz-container">
+                    <h3>🎯 Check Your Understanding</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> What does this print?</p>
+                        <pre><code class="language-python">x = np.array([1, 2, 3])
+y = x[:2]
+y[0] = 99
+print(x)</code></pre>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="That would be true for a list, where a slice is an independent copy. What is a slice of an array?">
+                                A) <code>[1 2 3]</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Slicing an array gives a view of the same memory, so writing to y[0] changes x[0] as well. Use x[:2].copy() when you need an independent array.">
+                                B) <code>[99  2  3]</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="y is only two elements long, and assigning to y[0] touches a single position. Which position of x shares that memory?">
+                                C) <code>[99 99  3]</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> One million whole numbers take about 36 MB as a Python list and 8 MB as an <code>int64</code> array. What is the main reason?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="A list stores an 8-byte address for each item, and each item is a full Python object of about 28 bytes carrying its own type information. The array stores the type once and then only the 8-byte values.">
+                                A) The list stores an address plus a full Python object for every number; the array stores only the raw values
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Nothing was compressed. The array holds exactly 8 bytes per number, 8,000,000 bytes in total. Think about what the list holds besides the values.">
+                                B) NumPy compresses the numbers when it stores them
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="A list has some spare room for growth, but that is a small effect. The big cost is paid once per element. What does each element of a list point to?">
+                                C) Lists reserve a large amount of empty space in case they need to grow
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> What does this print?</p>
+                        <pre><code class="language-python">z = np.array([7, 8, 9])
+z[1] = 4.9
+print(z)</code></pre>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="An existing array never changes its dtype. z was created from whole numbers, so what type is it, and what can that type hold?">
+                                A) <code>[7.  4.9 9. ]</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Storing a float into an integer array drops the decimal part. It does not round to the nearest whole number.">
+                                B) <code>[7 5 9]</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="z has dtype int64 and keeps it. Assigning 4.9 chops off the decimal part, leaving 4, with no warning. Create the array as float64 if decimals are possible.">
+                                C) <code>[7 4 9]</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 4:</strong> <code>sales</code> has shape <code>(3, 4)</code>: three days as rows, four stores as columns. Which expression gives every day's value for the store in column 1?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="A single index selects along the first dimension, which is rows. This gives all four stores on day 1.">
+                                A) <code>sales[1]</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Rows come before the comma and columns after. A lone colon means every row, and 1 picks column 1, so the result has three values, one per day.">
+                                B) <code>sales[:, 1]</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="The position before the comma is the row. This selects row 1 and then every column of it, which is one day across all stores.">
+                                C) <code>sales[1, :]</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 5:</strong> You are reading sensor values one at a time from a device and do not know how many there will be. Afterward you want their mean and maximum. What is the best approach?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="np.append builds a brand-new array and copies every existing value on each call. In this lesson that was far slower than list.append for 20,000 items.">
+                                A) Start with an empty array and call <code>np.append()</code> for each new value
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Arrays cannot grow, so you would have to guess a size, and unused zeros would distort the mean. Is there a container that is good at growing?">
+                                B) Create <code>np.zeros(1_000_000)</code> and fill in as many positions as you need
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Lists are built for cheap appends and arrays are built for math. Collect in a list while the size is unknown, convert once with np.array(), and compute on the array.">
+                                C) Append each value to a list, then convert the list to an array once and compute there
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="faq" class="lesson-section">
+                <h2>❓ Common Questions at This Stage</h2>
+
+                <details>
+                    <summary>Should I stop using lists now?</summary>
+                    <p>No. Lists are the right tool for mixed items, for small collections, and for gathering results when you do not know how many there will be. Arrays are the right tool for computing with many numbers of one type. You will often use a list to collect and an array to calculate, in the same program.</p>
+                </details>
+                <details>
+                    <summary>Why does a number from an array print as <code>np.float64(5962.0)</code>?</summary>
+                    <p>A single element taken from an array is a NumPy scalar, not a plain Python float. In a notebook, the value of the last line of a cell is shown in its "repr" form, which names the type: <code>np.float64(5962.0)</code>. <code>print()</code> shows the friendlier <code>5962.0</code>. They behave the same in arithmetic, and <code>float(x)</code> converts one to a plain Python float if you ever need that.</p>
+                </details>
+                <details>
+                    <summary>How do I know whether I have a view or a copy?</summary>
+                    <p>Basic slicing with <code>start:stop:step</code> gives a view. <code>.copy()</code>, <code>.astype()</code> and arithmetic give new arrays. When you are not sure, <code>np.shares_memory(a, b)</code> tells you. You will meet other kinds of indexing in Lesson 1.2 that return copies, so the habit of checking is worth building now.</p>
+                </details>
+                <details>
+                    <summary>My timings are nothing like the ones on this page. Did I do something wrong?</summary>
+                    <p>Almost certainly not. Timings depend on your processor, on what else is running, and on the versions installed. What should hold on any machine is the pattern: the array version of whole-array arithmetic is many times faster than the loop. If the two are close, check that you are timing an array expression and not a loop over an array.</p>
+                </details>
+
+                <div class="card card-accent">
+                    <h3>🌟 Going Further: Bonus Challenge</h3>
+                    <p>How does the speedup change with size? Write a loop over <code>sizes = [10, 100, 1_000, 10_000, 100_000, 1_000_000]</code> that, for each size, times <code>[p * 1.08 for p in a_list]</code> against <code>an_array * 1.08</code> and prints the ratio. At which size does the array start to win? Why might a list be <em>faster</em> for ten elements? Write your explanation in your journal before you look anything up: think about the fixed cost of calling into NumPy.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="journal" class="lesson-section">
+                <h2>📓 Learning Journal</h2>
+                <div class="card card-accent">
+                    <p>Take five minutes to write in your learning journal (the <code>journal.md</code> file you started in Lesson 0.1, or a paper notebook). Jot down:</p>
+                    <ul>
+                        <li><strong>Key concepts</strong> you learned today</li>
+                        <li><strong>Techniques that clicked</strong> (and the ones that have not, yet)</li>
+                        <li><strong>Questions or confusion</strong> to come back to</li>
+                        <li><strong>Ideas to try</strong> on your own</li>
+                        <li><strong>Progress and feelings</strong>: how did this lesson go for you?</li>
+                    </ul>
+                    <p><strong>✍️ This lesson's prompt:</strong> Explain the parking lot and the starting grid in your own words to someone who has never programmed. Then record the memory ratio and the speedup <em>you</em> measured in the project. Did either number surprise you?</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="summary" class="lesson-section">
+                <h2>📝 Lesson Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎓 Key Takeaways</h3>
+                    <ul>
+                        <li>A <strong>list</strong> is a row of addresses pointing to separate Python objects; an <strong>array</strong> is one block of raw values that all share a <code>dtype</code></li>
+                        <li>That layout makes arrays several times <strong>smaller</strong> and, for whole-array arithmetic, tens of times <strong>faster</strong></li>
+                        <li><code>dtype</code>, <code>shape</code>, <code>ndim</code> and <code>size</code> describe any array; print them when something surprises you</li>
+                        <li>Arithmetic applies to every element: <code>week * 2</code> doubles, where a list would repeat</li>
+                        <li>Mixed values are silently converted to one type; storing a decimal in an integer array silently chops it</li>
+                        <li>Two-dimensional indexing is <code>arr[row, col]</code>, and <code>:</code> means "all of them"</li>
+                        <li>A slice of an array is a <strong>view</strong>; use <code>.copy()</code> for an independent array</li>
+                        <li>Arrays do not grow: collect in a list, convert once, compute on the array</li>
+                        <li>A <code>nan</code> result means a missing value entered the calculation; <code>np.nanmean</code> and friends skip them</li>
+                    </ul>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🏆 What You've Accomplished</h3>
+                    <ul>
+                        <li>You created arrays from a list, from scratch, and from a real CSV column of 2,903 values</li>
+                        <li>You measured, on your own machine, how much memory and time an array saves</li>
+                        <li>You sliced rows, columns and blocks out of a two-dimensional array</li>
+                        <li>You met five classic NumPy mistakes and can read what each error message is telling you</li>
+                        <li>You wrote a benchmark report built entirely from your own measurements</li>
+                    </ul>
+                </div>
+
+                <h3>🔭 Looking Ahead</h3>
+                <p>In <a href="numpy_vectorized_operations.html"><strong>Lesson 1.2: Vectorized Operations</strong></a> you will take the idea behind <code>week * 2</code> much further: arithmetic between arrays, comparisons that produce <code>True</code>/<code>False</code> arrays, filtering with those "boolean masks" (so "which days beat $9,000?" becomes one line), and summaries such as <code>sum</code>, <code>mean</code> and <code>max</code> along rows or columns.</p>
+
+                <h3>📋 Before the Next Lesson</h3>
                 <ul>
-                    <li><strong>Key concepts</strong> you learned</li>
-                    <li><strong>Techniques that clicked</strong> for you</li>
-                    <li><strong>Questions or confusion points</strong> to revisit</li>
-                    <li><strong>Ideas you want to try</strong></li>
-                    <li><strong>Your progress and feelings</strong> about learning this</li>
+                    <li>Keep your project notebook. Lesson 1.2 picks up the <code>revenue</code> and <code>visitors</code> arrays again.</li>
+                    <li>Load one more column from <code>daily_sales.csv</code> on your own (<code>transactions</code> is column 3) and print its shape, dtype, minimum and maximum.</li>
+                    <li>Without running it, predict what <code>np.array([1, 2, 3]) + np.array([10, 20, 30])</code> gives. Then check.</li>
                 </ul>
-                <p><strong>✍️ This lesson's prompt:</strong> Think of data you have worked with recently. Would a Python list or a NumPy array have served it better, and what specifically — mixed types, size, or the math you needed — drives that choice?</p>
-            </div>
-        </section>
 
-        <!-- Lesson Summary (full standard block) -->
-        <section id="summary" class="lesson-section">
-            <h2>📝 Lesson Summary</h2>
-            <div class="card card-success">
-                <h3>🎓 Key Takeaways</h3>
-                <ul>
-                    <li>Python lists are flexible containers of references to arbitrary objects; NumPy arrays store one fixed type in contiguous memory.</li>
-                    <li>That contiguous, typed layout is why arrays use far less memory and run 10–100× faster on numerical work.</li>
-                    <li>Vectorization lets you operate on a whole array in one C-level call instead of a slow Python loop.</li>
-                    <li>Use lists for mixed types and flexible, incremental data; use arrays for large, homogeneous, math-heavy data.</li>
-                </ul>
-            </div>
-            <h3>🎉 What You've Accomplished</h3>
-            <p>You now understand the single most important data-structure decision in Python data science — and you can justify it with real numbers for both memory and speed.</p>
-            <h3>❓ Common Questions at This Stage</h3>
-            <details>
-                <summary>If arrays are so much faster, why does Python even have lists?</summary>
-                <p>Lists are general-purpose: they hold any mix of types, grow and shrink freely, and nest arbitrarily. That flexibility is perfect for JSON, web data, and small collections. Arrays trade flexibility for the speed and compactness that numerical computing needs.</p>
-            </details>
-            <details>
-                <summary>Why did my array of mixed values all turn into strings?</summary>
-                <p>NumPy arrays are homogeneous, so when you mix types it upcasts everything to a single type that can hold them all — often a string. Keep arrays to one numeric type, and use lists (or structured arrays) when you truly need mixed data.</p>
-            </details>
-            <details>
-                <summary>Does slicing an array copy the data like it does with a list?</summary>
-                <p>No — a NumPy slice returns a <em>view</em> that shares memory with the original, so changing the slice changes the source. Call <code>.copy()</code> when you need an independent array. List slices, by contrast, are shallow copies.</p>
-            </details>
-            <h3>🔭 Looking Ahead</h3>
-            <p>Now that you know why arrays are fast, the next step is putting that speed to work — writing vectorized operations that replace loops entirely.</p>
-            <h3>✅ Before the Next Lesson</h3>
-            <ul>
-                <li>Create a one-million-element list and array of the same numbers and compare their memory footprints.</li>
-                <li>Time the same arithmetic on both and record the speedup you observe.</li>
-                <li>Write your Learning Journal entry for this lesson</li>
-            </ul>
-            <div class="card card-accent" style="text-align: center; padding: 2rem;">
-                <h3>🌟 Encouragement for the Journey</h3>
-                <p>This one idea — contiguous, typed arrays — underpins nearly everything ahead in data science. Grasp it now and every future lesson will click into place faster.</p>
-            </div>
-        </section>
+                <div class="card card-accent">
+                    <h3>🌱 Encouragement for the Journey</h3>
+                    <p>You did not just read that arrays are fast today. You measured it. That habit of checking a claim against your own data is what separates an analyst from someone who repeats what they were told, and you have started it in the first lesson of the first module. If views and copies still feel a little strange, that is normal: run the window example again in a week and notice how much more obvious it has become.</p>
+                </div>
+            </section>
 
-        <div class="navigation-links">
-            <a class="nav-prev" href="index.html">← Course Home</a>
-            <a class="nav-home" href="index.html">🏠 Course Home</a>
-            <a class="nav-next" href="numpy_vectorized_operations.html">Next: Vectorized Operations →</a>
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="getting_started.html" class="prev-lesson">← Previous: Your Data Science Toolkit</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="numpy_vectorized_operations.html" class="next-lesson">Next: Vectorized Operations →</a>
+            </nav>
         </div>
-    </footer>
-    
-    <!-- Footer -->
+    </main>
+
     <footer class="site-footer">
         <p>&copy; 2026 Ray de la Paz. Python Data Science. All rights reserved.</p>
         <div class="footer-links">
@@ -1279,9 +1171,10 @@ print("🎉 You're now equipped to choose the right tool for the job!")</code></
             <a href="https://rays-home.netlify.app/contact">Contact</a>
             <a href="#" id="print-button">Print Page</a>
         </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
     </footer>
 
-    <!-- Copy to Clipboard functionality -->
-    <script src="scripts/clipboard.js"></script>
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
 </body>
 </html>

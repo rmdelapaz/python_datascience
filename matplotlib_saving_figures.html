@@ -3,1472 +3,1049 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Saving Publication-Quality Figures - Python Data Science Path</title>
-    <link rel="icon" href="/favicon.png" type="image/png">
+    <meta name="description" content="Save Matplotlib figures for the screen, slides and print: savefig formats, figure size and dpi, vector versus raster, bounding boxes and transparency, a reusable house-style save function, saving many charts in a loop and closing figures. Python Data Science Lesson 3.4.">
+    <meta name="author" content="Ray de la Paz">
+    <title>Saving Figures - Python Data Science</title>
     <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/enhanced.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid: rendered (and re-rendered on theme change) by js/course-enhancements.js -->
     <script type="module">
         import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({ startOnLoad: true });
+        window.__mermaid = mermaid;
+        mermaid.initialize({ startOnLoad: false });
+        document.dispatchEvent(new Event('mermaid-ready'));
     </script>
-    <style>
-        :root {
-            --primary-color: #2563eb;
-            --secondary-color: #1e40af;
-            --accent-color: #10b981;
-            --bg-dark: #1e293b;
-            --bg-light: #f8fafc;
-            --text-dark: #0f172a;
-            --text-light: #64748b;
-            --border-color: #e2e8f0;
-            --code-bg: #f1f5f9;
-            --format-pdf: #dc2626;
-            --format-svg: #7c3aed;
-            --format-png: #2563eb;
-            --format-eps: #059669;
-            --format-jpg: #ea580c;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.6;
-            color: var(--text-dark);
-            background: linear-gradient(135deg, var(--bg-light) 0%, #e0f2fe 100%);
-            min-height: 100vh;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 1rem;
-        }
-
-        header {
-            background: white;
-            border-radius: 1rem;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            border-left: 5px solid var(--accent-color);
-        }
-
-        h1 {
-            color: var(--primary-color);
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .breadcrumb {
-            color: var(--text-light);
-            font-size: 0.9rem;
-            margin-bottom: 1rem;
-        }
-
-        .breadcrumb a {
-            color: var(--primary-color);
-            text-decoration: none;
-            transition: color 0.3s ease;
-        }
-
-        .breadcrumb a:hover {
-            color: var(--secondary-color);
-            text-decoration: underline;
-        }
-
-        .intro {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 2rem;
-            border-radius: 1rem;
-            margin-bottom: 2rem;
-            animation: slideIn 0.6s ease;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .format-overview {
-            background: white;
-            border-radius: 1rem;
-            padding: 2rem;
-            margin: 2rem 0;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .format-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin: 1.5rem 0;
-        }
-
-        .format-card {
-            background: var(--bg-light);
-            border-radius: 0.5rem;
-            padding: 1.5rem;
-            text-align: center;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            border: 2px solid transparent;
-        }
-
-        .format-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .format-card.selected {
-            border-color: var(--primary-color);
-            background: white;
-        }
-
-        .format-icon {
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .format-name {
-            font-weight: bold;
-            color: var(--text-dark);
-            margin-bottom: 0.25rem;
-        }
-
-        .format-desc {
-            font-size: 0.85rem;
-            color: var(--text-light);
-        }
-
-        .pdf-format { color: var(--format-pdf); }
-        .svg-format { color: var(--format-svg); }
-        .png-format { color: var(--format-png); }
-        .eps-format { color: var(--format-eps); }
-        .jpg-format { color: var(--format-jpg); }
-
-        .concept-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .concept-card {
-            background: white;
-            border-radius: 1rem;
-            padding: 1.5rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            border-top: 4px solid var(--accent-color);
-        }
-
-        .concept-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-        }
-
-        .concept-card h3 {
-            color: var(--primary-color);
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .code-example {
-            background: var(--code-bg);
-            border-radius: 0.5rem;
-            padding: 1rem;
-            margin: 1rem 0;
-            border-left: 4px solid var(--primary-color);
-            overflow-x: auto;
-        }
-
-        pre {
-            margin: 0;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 0.9rem;
-        }
-
-        code {
-            background: var(--code-bg);
-            padding: 0.2rem 0.4rem;
-            border-radius: 0.25rem;
-            font-family: 'Courier New', Courier, monospace;
-            color: var(--secondary-color);
-        }
-
-        .interactive-demo {
-            background: white;
-            border-radius: 1rem;
-            padding: 2rem;
-            margin: 2rem 0;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        canvas {
-            border: 2px solid var(--border-color);
-            border-radius: 0.5rem;
-            margin: 1rem 0;
-            display: block;
-            width: 100%;
-            max-width: 800px;
-        }
-
-        .dpi-calculator {
-            background: var(--bg-light);
-            border-radius: 0.5rem;
-            padding: 1.5rem;
-            margin: 1rem 0;
-        }
-
-        .calculator-row {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin: 0.5rem 0;
-            flex-wrap: wrap;
-        }
-
-        .calculator-row label {
-            min-width: 150px;
-            font-weight: bold;
-        }
-
-        .calculator-row input {
-            padding: 0.5rem;
-            border: 1px solid var(--border-color);
-            border-radius: 0.25rem;
-            width: 100px;
-        }
-
-        .calculator-row select {
-            padding: 0.5rem;
-            border: 1px solid var(--border-color);
-            border-radius: 0.25rem;
-            background: white;
-            cursor: pointer;
-        }
-
-        .result-box {
-            background: white;
-            border: 2px solid var(--accent-color);
-            border-radius: 0.5rem;
-            padding: 1rem;
-            margin-top: 1rem;
-        }
-
-        .result-box h4 {
-            color: var(--primary-color);
-            margin-bottom: 0.5rem;
-        }
-
-        .comparison-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 1rem 0;
-        }
-
-        .comparison-table th {
-            background: var(--primary-color);
-            color: white;
-            padding: 0.75rem;
-            text-align: left;
-            font-weight: bold;
-        }
-
-        .comparison-table td {
-            padding: 0.75rem;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .comparison-table tr:nth-child(even) {
-            background: var(--bg-light);
-        }
-
-        .comparison-table .good {
-            color: var(--accent-color);
-            font-weight: bold;
-        }
-
-        .comparison-table .bad {
-            color: #ef4444;
-            font-weight: bold;
-        }
-
-        .comparison-table .neutral {
-            color: var(--text-light);
-        }
-
-        .workflow-diagram {
-            background: white;
-            border-radius: 1rem;
-            padding: 2rem;
-            margin: 2rem 0;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .size-preview {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 1rem;
-            margin: 1rem 0;
-        }
-
-        .size-box {
-            background: white;
-            border: 2px solid var(--border-color);
-            padding: 1rem;
-            text-align: center;
-            border-radius: 0.5rem;
-            position: relative;
-        }
-
-        .size-box.active {
-            border-color: var(--accent-color);
-            background: linear-gradient(135deg, #10b98120, #06b67420);
-        }
-
-        .size-label {
-            font-weight: bold;
-            color: var(--primary-color);
-            margin-bottom: 0.25rem;
-        }
-
-        .size-dims {
-            font-size: 0.9rem;
-            color: var(--text-light);
-        }
-
-        .tip-box {
-            background: linear-gradient(135deg, #10b98120, #06b67420);
-            border-left: 4px solid var(--accent-color);
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin: 1rem 0;
-        }
-
-        .warning-box {
-            background: linear-gradient(135deg, #f5922020, #ef444420);
-            border-left: 4px solid #ef4444;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin: 1rem 0;
-        }
-
-        .navigation {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 3rem;
-            padding: 1rem;
-            background: white;
-            border-radius: 1rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .nav-button {
-            padding: 0.75rem 1.5rem;
-            background: var(--primary-color);
-            color: white;
-            text-decoration: none;
-            border-radius: 0.5rem;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .nav-button:hover {
-            background: var(--secondary-color);
-            transform: translateX(5px);
-        }
-
-        .nav-button.prev:hover {
-            transform: translateX(-5px);
-        }
-
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 1.8rem;
-            }
-
-            .concept-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .format-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .navigation {
-                flex-direction: column;
-                gap: 1rem;
-            }
-
-            .nav-button {
-                width: 100%;
-                justify-content: center;
-            }
-        }
-    </style>
-    <script src="/js/course-enhancements.js" defer></script>
-    <script src="/js/clipboard.js" defer></script>
-    <link rel="stylesheet" href="styles/standard.css">
 </head>
 <body>
-    <!-- Skip to main content for accessibility -->
     <a href="#main-content" class="skip-to-main">Skip to main content</a>
-    
-    <!-- Progress indicator -->
+
     <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
         <div class="progress-bar"></div>
     </div>
-    <div class="container">
-        <header>
-            <div class="breadcrumb">
-                <a href="index.html">Home</a> / 
-                <a href="foundation.html">Foundation Module</a> / 
-                <a href="matplotlib_visualization.html">Data Visualization</a> / 
-                Saving Figures
-            </div>
-            <h1>💾 Saving Publication-Quality Figures</h1>
-            <p>Export your visualizations for papers, presentations, and professional reports</p>
-        </header>
 
-    <!-- What You'll Learn (learning objectives) -->
-    <div class="card card-info">
-        <h2>📚 What You'll Learn</h2>
-        <p>By the end of this lesson, you will be able to:</p>
-        <ul>
-            <li>Save figures with <code>plt.savefig()</code> / <code>fig.savefig()</code> in PNG, JPG, PDF, SVG, and EPS formats</li>
-            <li>Explain the difference between vector and raster formats and choose the right one for print, web, or editing</li>
-            <li>Control output quality with <code>dpi</code>, <code>bbox_inches='tight'</code>, transparency, and padding</li>
-            <li>Calculate pixel dimensions and file size from figure size and DPI</li>
-            <li>Use advanced options such as multi-page PDFs, embedded metadata, and rasterizing complex elements to shrink files</li>
-            <li>Prepare figures to meet journal, presentation, and web specifications</li>
-        </ul>
-        <p><strong>⏱️ Estimated Time:</strong> 45–60 minutes</p>
-        <p><strong>🎯 Project:</strong> Take one finished figure and export it as a print-ready 300 DPI PDF, a web-optimized PNG, and a compressed JPG, verifying the dimensions of each.</p>
-    </div>
-
-        <div class="intro">
-            <h2>🎯 From Screen to Publication</h2>
-            <p>Creating a beautiful plot is only half the battle - you need to save it in the right format, at the right resolution, with the right settings for your intended use. Whether it's for a scientific journal, a web article, or a high-stakes presentation, the way you export your figures can make or break their impact!</p>
-            <p>Think of this as the final polish on a masterpiece. The wrong file format or resolution can turn crisp, professional visualizations into pixelated or oversized files. Master these techniques to ensure your data stories look stunning everywhere they appear!</p>
-        </div>
-
-        <div class="format-overview">
-            <h2>📁 File Format Selection Guide</h2>
-            <div class="mermaid">
-                graph TD
-                    A[Choose Format] --> B{Purpose?}
-                    B --> C[Publication/Print]
-                    B --> D[Web/Screen]
-                    B --> E[Further Editing]
-                    
-                    C --> F[PDF<br/>Vector, Scalable]
-                    C --> G[EPS<br/>Legacy Publishing]
-                    
-                    D --> H[PNG<br/>Lossless, Transparent]
-                    D --> I[JPG<br/>Photos, Compressed]
-                    
-                    E --> J[SVG<br/>Editable Vector]
-                    E --> K[PDF<br/>Illustrator Compatible]
-                    
-                    style A fill:#f9f,stroke:#333,stroke-width:2px
-                    style F fill:#dc2626,stroke:#333,stroke-width:2px,color:#fff
-                    style H fill:#2563eb,stroke:#333,stroke-width:2px,color:#fff
-                    style J fill:#7c3aed,stroke:#333,stroke-width:2px,color:#fff
-            </div>
-            
-            <div class="format-grid">
-                <div class="format-card" onclick="selectFormat('pdf')">
-                    <div class="format-icon pdf-format">📄</div>
-                    <div class="format-name">PDF</div>
-                    <div class="format-desc">Vector, perfect for publications</div>
-                </div>
-                <div class="format-card" onclick="selectFormat('svg')">
-                    <div class="format-icon svg-format">🎨</div>
-                    <div class="format-name">SVG</div>
-                    <div class="format-desc">Web-ready vector graphics</div>
-                </div>
-                <div class="format-card selected" onclick="selectFormat('png')">
-                    <div class="format-icon png-format">🖼️</div>
-                    <div class="format-name">PNG</div>
-                    <div class="format-desc">Lossless raster, transparency</div>
-                </div>
-                <div class="format-card" onclick="selectFormat('eps')">
-                    <div class="format-icon eps-format">📐</div>
-                    <div class="format-name">EPS</div>
-                    <div class="format-desc">Legacy vector format</div>
-                </div>
-                <div class="format-card" onclick="selectFormat('jpg')">
-                    <div class="format-icon jpg-format">📷</div>
-                    <div class="format-name">JPG</div>
-                    <div class="format-desc">Compressed, no transparency</div>
-                </div>
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">📊 Python Data Science</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">☰</button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
             </div>
         </div>
+    </nav>
 
-        <div class="interactive-demo">
-            <h2>🔬 DPI & Resolution Calculator</h2>
-            <p>Calculate the optimal settings for your figure export:</p>
-            
-            <div class="dpi-calculator">
-                <div class="calculator-row">
-                    <label>Target Use:</label>
-                    <select id="targetUse" onchange="calculateDPI()">
-                        <option value="screen">Screen/Web (72-96 DPI)</option>
-                        <option value="print">Print (300 DPI)</option>
-                        <option value="journal">Journal (600+ DPI)</option>
-                        <option value="poster">Poster (150-300 DPI)</option>
-                    </select>
-                </div>
-                <div class="calculator-row">
-                    <label>Figure Size (inches):</label>
-                    <input type="number" id="figWidth" value="8" onchange="calculateDPI()"> ×
-                    <input type="number" id="figHeight" value="6" onchange="calculateDPI()">
-                </div>
-                <div class="calculator-row">
-                    <label>DPI Setting:</label>
-                    <input type="number" id="dpiSetting" value="300" onchange="calculateDPI()">
-                </div>
-                
-                <div class="result-box">
-                    <h4>📊 Export Specifications:</h4>
-                    <p><strong>Pixel Dimensions:</strong> <span id="pixelDims">2400 × 1800</span></p>
-                    <p><strong>Estimated File Size:</strong> <span id="fileSize">~1.5 MB</span></p>
-                    <p><strong>Recommended Format:</strong> <span id="recFormat">PNG</span></p>
-                </div>
-            </div>
-            
-            <canvas id="resolutionCanvas" width="800" height="300"></canvas>
-        </div>
+        <main id="main-content">
+        <div class="container">
+            <header>
+                <h1>💾 Lesson 3.4: Saving Figures</h1>
+                <p class="lead">Get your charts out of the notebook and into a web page, a slide deck or a printed report, at the right size, in the right format, looking the way you intended.</p>
 
-        <div class="concept-grid">
-            <div class="concept-card">
-                <h3>💾 Basic Saving</h3>
-                <p>Essential commands for saving figures in different formats</p>
-                <div class="code-example">
-                    <pre><code>import matplotlib.pyplot as plt
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Save a figure with <code>fig.savefig()</code> and predict its size in pixels from <code>figsize</code> and <code>dpi</code></li>
+                        <li>Choose between raster formats (PNG) and vector formats (SVG, PDF) for a given destination</li>
+                        <li>Explain why text looks tiny or huge in a saved chart, and fix it with the figure size</li>
+                        <li>Control the saved area and background with <code>bbox_inches</code>, <code>facecolor</code> and <code>transparent</code></li>
+                        <li>Write one function that applies a house style and saves for web, slides or print, then use it in a loop that closes each figure</li>
+                    </ul>
+                </div>
+
+                <ul class="lesson-meta">
+                    <li><span class="meta-label">⏱️ Time</span> 75 minutes</li>
+                    <li><span class="meta-label">📋 Prerequisites</span> <a href="matplotlib_customizing_plots.html">Lesson 3.3: Customizing Plots</a> (formatters, <code>rc_context</code>, the house style)</li>
+                    <li><span class="meta-label">🛠️ You will build</span> A chart pack: one styled revenue chart per store, saved for the web and for print, plus a single multi-page PDF</li>
+                    <li><span class="meta-label">📂 Data</span> <code>data/daily_sales.csv</code></li>
+                </ul>
+            </header>
+
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#why" class="toc-link">The Last Step Is Part of the Work</a></li>
+                        <li><a href="#savefig" class="toc-link">savefig Basics</a></li>
+                        <li><a href="#pixels" class="toc-link">Inches, dpi and Pixels</a></li>
+                        <li><a href="#text" class="toc-link">Why the Text Came Out Tiny</a></li>
+                        <li><a href="#formats" class="toc-link">Raster or Vector</a></li>
+                        <li><a href="#bbox" class="toc-link">Edges and Backgrounds</a></li>
+                        <li><a href="#house" class="toc-link">A House-Style Save Function</a></li>
+                        <li><a href="#loop" class="toc-link">Many Charts, and Closing Them</a></li>
+                        <li><a href="#mistakes" class="toc-link">Common Mistakes</a></li>
+                        <li><a href="#project" class="toc-link">Project: The Pinecrest Chart Pack</a></li>
+                        <li><a href="#exercises" class="toc-link">Hands-on Exercises</a></li>
+                        <li><a href="#quiz" class="toc-link">Quick Quiz</a></li>
+                        <li><a href="#faq" class="toc-link">Common Questions</a></li>
+                        <li><a href="#journal" class="toc-link">Learning Journal</a></li>
+                        <li><a href="#summary" class="toc-link">Lesson Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
+
+            <!-- ============================================================ -->
+            <section id="why" class="lesson-section">
+                <h2>📦 The Last Step Is Part of the Work</h2>
+
+                <p>A chart that lives only in your notebook has an audience of one. The charts that matter end up somewhere else: pasted into a slide, embedded in a web page, printed in a report. Each of those places has its own demands, and a chart that looked perfect in the notebook can arrive blurry, cut off at the edge, or with text too small to read. Almost always the cause is the same handful of settings, and they are simple once you see how they fit together.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Mental Model: A Sheet of Paper and a Scanner</h4>
+                    <p>A Matplotlib Figure is a sheet of paper with a size in <strong>inches</strong>. Everything on it, including the text, is laid out on that sheet. Saving to an image is like scanning the sheet: the scanner's resolution, in <strong>dots per inch (dpi)</strong>, decides how many pixels you get. A bigger sheet or a finer scan both give more pixels, but they are not the same thing: a finer scan makes everything sharper, while a bigger sheet makes the text smaller <em>relative to the page</em>. Keep those two knobs apart in your head and most export problems solve themselves.</p>
+                </div>
+
+                <div class="mermaid">
+graph TD
+    A{"Will it be printed or resized?"}
+    A -->|yes| P["PDF or SVG"]
+    A -->|no, a screen| B{"A slide?"}
+    B -->|yes| S["PNG, slide size, 200 dpi"]
+    B -->|no, web or email| W["PNG, about 110 dpi"]
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="savefig" class="lesson-section">
+                <h2>💾 savefig Basics</h2>
+
+                <p>Start a new notebook. You need the monthly revenue table again, and one function that draws a finished chart for any store, using what you learned in Lesson 3.3.</p>
+
+                <pre><code class="language-python">from pathlib import Path
+
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+from matplotlib.ticker import FuncFormatter
 
-# Create a sample figure
-fig, ax = plt.subplots(figsize=(8, 6))
-x = np.linspace(0, 10, 100)
-ax.plot(x, np.sin(x), label='sin(x)')
-ax.plot(x, np.cos(x), label='cos(x)')
-ax.legend()
-ax.set_title('Trigonometric Functions')
+daily = pd.read_csv("data/daily_sales.csv", parse_dates=["date"])
+daily["month"] = daily["date"].dt.to_period("M").dt.to_timestamp()
+monthly = daily.pivot_table(index="month", columns="store", values="revenue", aggfunc="sum")
+stores = list(monthly.columns)
 
-# Basic save - PNG format
-plt.savefig('figure.png')
+def thousands(x, pos):
+    return f"${x / 1000:,.0f}K"
 
-# Specify format explicitly
-plt.savefig('figure.pdf', format='pdf')
-plt.savefig('figure.svg', format='svg')
-plt.savefig('figure.eps', format='eps')
-plt.savefig('figure.jpg', format='jpg')
+def revenue_chart(store, figsize=(8, 4)):
+    """Draw one store's monthly revenue. Returns the figure and its Axes."""
+    fig, ax = plt.subplots(figsize=figsize, layout="constrained")
+    ax.plot(monthly.index, monthly[store], color="#667eea", marker="o", markersize=3)
+    ax.set_title(f"{store}: monthly in-store revenue", loc="left", fontweight="bold")
+    ax.yaxis.set_major_formatter(FuncFormatter(thousands))
+    ax.set_ylim(bottom=0)
+    ax.spines[["top", "right"]].set_visible(False)
+    return fig, ax
 
-# Control quality and resolution
-plt.savefig('high_quality.png', dpi=300)  # 300 DPI for print
-plt.savefig('web_quality.png', dpi=72)    # 72 DPI for web
+fig, ax = revenue_chart("Boise")
+plt.show()</code></pre>
 
-# JPEG with quality setting (0-100)
-plt.savefig('compressed.jpg', quality=95, dpi=150)
+                <p>Saving is one method call on the figure. Put your output in its own folder, and create that folder from code so the notebook works on any computer.</p>
 
-# Save with tight bounding box (removes excess whitespace)
-plt.savefig('tight.png', bbox_inches='tight')
+                <pre><code class="language-python">out = Path("charts")
+out.mkdir(exist_ok=True)
 
-# Save with transparent background
-plt.savefig('transparent.png', transparent=True)
+fig.savefig(out / "boise.png")
 
-# Save with custom padding
-plt.savefig('padded.png', bbox_inches='tight', pad_inches=0.5)
-
-# Save specific figure (when you have multiple)
-fig.savefig('specific_figure.png')
-
-# Always good practice
-plt.close()  # Free up memory</code></pre>
+saved = out / "boise.png"
+print(saved.exists(), f"{saved.stat().st_size / 1024:.0f} KB")
+print(plt.imread(saved).shape)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>True 35 KB
+(400, 800, 4)</code></pre>
                 </div>
-            </div>
+                <figure>
+                    <img src="images/matplotlib_saving_figures_boise.png" alt="A saved line chart of Boise's monthly in-store revenue for 2024 and 2025, with a bold left-aligned title, a y axis in thousands of dollars starting at zero, and no top or right border." width="800" height="400" loading="lazy">
+                    <figcaption>The file <code>charts/boise.png</code>, exactly as saved: 800 by 400 pixels.</figcaption>
+                </figure>
 
-            <div class="concept-card">
-                <h3>📐 Vector vs Raster</h3>
-                <p>Understanding when to use vector or raster formats</p>
-                <div class="comparison-table">
+                <p><code>plt.imread()</code> reads an image file back as a NumPy array, which makes it a handy way to check what you actually saved. The shape is <strong>(rows, columns, channels)</strong>: 400 pixels high, 800 wide, and 4 values per pixel (red, green, blue, and alpha, the opacity).</p>
+
+                <p>Matplotlib chooses the file format from the extension you give.</p>
+
+                <pre><code class="language-python">print(sorted(fig.canvas.get_supported_filetypes()))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>['avif', 'eps', 'gif', 'jpeg', 'jpg', 'pdf', 'pgf', 'png', 'ps', 'raw', 'rgba', 'svg', 'svgz', 'tif', 'tiff', 'webp']</code></pre>
+                </div>
+
+                <p>You will use three of these almost all the time: <code>png</code>, <code>svg</code> and <code>pdf</code>. The rest of the lesson explains which, when, and with what settings.</p>
+
+                <div class="card card-warning">
+                    <h4>⚠️ <code>fig.savefig()</code>, Not <code>plt.savefig()</code></h4>
+                    <p><code>plt.savefig()</code> saves whatever pyplot considers the "current" figure, which is not always the one you mean. You are holding the figure in a variable, so say which one: <code>fig.savefig(...)</code>. <a href="#mistakes">Common Mistakes</a> shows what goes wrong otherwise.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="pixels" class="lesson-section">
+                <h2>📐 Inches, dpi and Pixels</h2>
+
+                <p>The whole relationship is one multiplication:</p>
+
+                <p class="text-center"><strong>pixels = inches × dpi</strong></p>
+
+                <p>The figure above is 8 by 4 inches. Saved without a <code>dpi</code> argument it used the figure's own setting, 100, which gives 800 by 400 pixels. Ask for other values and check.</p>
+
+                <pre><code class="language-python">print("figure size in inches:", fig.get_size_inches(), " figure dpi:", fig.dpi)
+
+for dpi in (72, 150, 300):
+    path = out / f"boise_{dpi}dpi.png"
+    fig.savefig(path, dpi=dpi)
+    height, width, channels = plt.imread(path).shape
+    print(f"dpi={dpi:&gt;3}: {width} x {height} pixels, {path.stat().st_size / 1024:&gt;4.0f} KB")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>figure size in inches: [8. 4.]  figure dpi: 100.0
+dpi= 72: 576 x 288 pixels,   24 KB
+dpi=150: 1200 x 600 pixels,   57 KB
+dpi=300: 2400 x 1200 pixels,  128 KB</code></pre>
+                </div>
+
+                <p>Same sheet of paper, scanned at three resolutions. The picture is identical in every file; only the number of pixels describing it changes, and with it the file size. So how many pixels do you need? That depends on where the chart is going.</p>
+
+                <div class="table-wrap">
                     <table>
                         <thead>
-                            <tr>
-                                <th>Aspect</th>
-                                <th>Vector (PDF/SVG/EPS)</th>
-                                <th>Raster (PNG/JPG)</th>
-                            </tr>
+                            <tr><th>Destination</th><th>What it needs</th><th>A good recipe</th><th>Pixels</th></tr>
                         </thead>
                         <tbody>
-                            <tr>
-                                <td>Scalability</td>
-                                <td class="good">✅ Infinite</td>
-                                <td class="bad">❌ Fixed pixels</td>
-                            </tr>
-                            <tr>
-                                <td>File Size</td>
-                                <td class="good">✅ Small for simple</td>
-                                <td class="bad">❌ Large for high-res</td>
-                            </tr>
-                            <tr>
-                                <td>Complex Images</td>
-                                <td class="bad">❌ Can be huge</td>
-                                <td class="good">✅ Consistent size</td>
-                            </tr>
-                            <tr>
-                                <td>Editing</td>
-                                <td class="good">✅ Fully editable</td>
-                                <td class="neutral">⚠️ Limited</td>
-                            </tr>
-                            <tr>
-                                <td>Compatibility</td>
-                                <td class="neutral">⚠️ Varies</td>
-                                <td class="good">✅ Universal</td>
-                            </tr>
+                            <tr><td>Web page, notebook, email</td><td>About 800 to 1,200 px wide; small file</td><td><code>figsize=(9, 4.5)</code>, <code>dpi=110</code>, PNG</td><td class="num">990 × 495</td></tr>
+                            <tr><td>Slide (16:9, full width)</td><td>The slide's own pixel size</td><td><code>figsize=(9.6, 5.4)</code>, <code>dpi=200</code>, PNG</td><td class="num">1920 × 1080</td></tr>
+                            <tr><td>Printed report (6.5 in text width)</td><td>300 dots per printed inch, or vector</td><td><code>figsize=(6.5, 3.5)</code>, PDF (or PNG at <code>dpi=300</code>)</td><td class="num">1950 × 1050</td></tr>
                         </tbody>
                     </table>
                 </div>
-                <div class="code-example">
-                    <pre><code># Vector format advantages
-# PDF - Best for publications
-plt.savefig('publication.pdf', 
-           format='pdf',
-           bbox_inches='tight')
 
-# SVG - Best for web and editing
-plt.savefig('web_figure.svg', 
-           format='svg',
-           bbox_inches='tight')
+                <p>For print, set <code>figsize</code> to the size the chart will physically occupy on the page, and the dpi follows from the printer's needs (300 is the usual standard). For screens, think in pixels and work backward: a slide is 1,920 pixels wide, so 9.6 inches at 200 dpi.</p>
 
-# EPS - Legacy format for older journals
-plt.savefig('legacy.eps', 
-           format='eps',
-           bbox_inches='tight')
-
-# Raster format advantages
-# PNG - Lossless compression, transparency
-plt.savefig('detailed_plot.png', 
-           dpi=300,
-           transparent=True,
-           bbox_inches='tight')
-
-# JPG - Smallest file size, no transparency
-plt.savefig('photo_quality.jpg', 
-           dpi=150,
-           quality=90,
-           bbox_inches='tight')</code></pre>
+                <div class="card card-info">
+                    <h4>💡 Why Does My Saved File Look Different from the Notebook?</h4>
+                    <p>A notebook displays figures at its own resolution, which is not the resolution <code>savefig</code> uses, and it trims the white margins around them. Neither affects your file. Judge a saved chart by opening the saved file, at the size it will really be shown. That one habit prevents most surprises.</p>
                 </div>
-            </div>
+            </section>
 
-            <div class="concept-card">
-                <h3>🎯 DPI & Resolution</h3>
-                <p>Master the relationship between DPI, figure size, and output quality</p>
-                <div class="code-example">
-                    <pre><code># Understanding DPI (Dots Per Inch)
-import matplotlib.pyplot as plt
-import numpy as np
+            <!-- ============================================================ -->
+            <section id="text" class="lesson-section">
+                <h2>🔎 Why the Text Came Out Tiny</h2>
 
-# Figure size in inches × DPI = pixel dimensions
-fig_width = 8  # inches
-fig_height = 6  # inches
+                <p>Here is the problem that brings most people to a lesson like this. You need a 1,200-pixel-wide image. There are many ways to get 1,200 pixels: 12 inches at 100 dpi, or 6 inches at 200 dpi. The pixel counts are identical. The charts are not.</p>
 
-# Different DPI settings for different uses
-dpi_settings = {
-    'screen': 72,      # Web display
-    'print': 300,      # Standard print
-    'poster': 150,     # Large format print
-    'journal': 600,    # High-quality publication
+                <pre><code class="language-python">big_canvas, _ = revenue_chart("Boise", figsize=(12, 6))
+big_canvas.savefig(out / "canvas_12in.png", dpi=100)
+
+small_canvas, _ = revenue_chart("Boise", figsize=(6, 3))
+small_canvas.savefig(out / "canvas_6in.png", dpi=200)
+
+for name in ("canvas_12in.png", "canvas_6in.png"):
+    print(name, plt.imread(out / name).shape[:2])
+plt.close(big_canvas)
+plt.close(small_canvas)
+
+fig2, axs = plt.subplots(1, 2, figsize=(10, 2.9), layout="constrained")
+labels = ["12 x 6 inches at 100 dpi", "6 x 3 inches at 200 dpi"]
+for ax, name, label in zip(axs, ("canvas_12in.png", "canvas_6in.png"), labels):
+    ax.imshow(plt.imread(out / name))
+    ax.set_title(label, fontsize=10)
+    ax.set_axis_off()
+plt.show()</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>canvas_12in.png (600, 1200)
+canvas_6in.png (600, 1200)</code></pre>
+                </div>
+                <figure>
+                    <img src="images/matplotlib_saving_figures_text_size.png" alt="Two versions of the Boise chart side by side, both 1200 by 600 pixels. In the left one, drawn on a 12 by 6 inch figure, the title and tick labels are small. In the right one, drawn on a 6 by 3 inch figure at twice the dpi, the title, labels, line and markers are all twice as large." width="1100" height="319" loading="lazy">
+                    <figcaption>Both files are 1,200 by 600 pixels. On the right, the text, the line and the markers are twice the size.</figcaption>
+                </figure>
+
+                <p>(<code>ax.imshow()</code>, which drew a heatmap from a table of numbers in Lesson 3.3, shows a picture as it is when the array holds red, green and blue values for every pixel, which is what <code>plt.imread()</code> returns.)</p>
+
+                <p>The reason is the mental model. Font sizes and line widths are measured in <strong>points</strong>, and a point is a physical length: 1/72 of an inch. A 10-point label is the same fraction of an inch on any sheet, so on a 12-inch-wide sheet it is a small part of the page, and on a 6-inch sheet it is twice as prominent. The dpi then scales the whole sheet, text included, into pixels.</p>
+
+                <div class="card card-success">
+                    <h4>✅ The Rule That Fixes It</h4>
+                    <p><strong>Use <code>figsize</code> to control how big the text is relative to the chart, and <code>dpi</code> to control how many pixels you get.</strong> Text too small? Make the figure smaller in inches and raise the dpi to keep the pixel count. Text too large or the chart cramped? Larger figure, lower dpi. You can also raise <code>font.size</code> in your style, but changing the canvas scales the lines and markers along with the text, which usually looks better.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="formats" class="lesson-section">
+                <h2>🖼️ Raster or Vector</h2>
+
+                <p>Image formats come in two families, and they store a chart in completely different ways.</p>
+
+                <ul>
+                    <li>A <strong>raster</strong> image (PNG, JPEG) is a grid of colored pixels. It has a fixed resolution: enlarge it and you see the squares.</li>
+                    <li>A <strong>vector</strong> image (SVG, PDF) is a list of drawing instructions: "a line from here to there, this text in this font". It has no resolution. It is redrawn sharply at any size, and in a PDF the text stays real text that can be selected and searched.</li>
+                </ul>
+
+                <pre><code class="language-python">for extension in ("png", "svg", "pdf"):
+    path = out / f"boise_formats.{extension}"
+    fig.savefig(path)
+    print(f"{path.name:&lt;20} {path.stat().st_size / 1024:&gt;5.1f} KB")
+
+svg_text = (out / "boise_formats.svg").read_text()
+print("The SVG is text. It contains the title as a comment:", "Boise: monthly in-store revenue" in svg_text)</code></pre>
+                <div class="card card-output">
+                    <h4>Output (your sizes may differ slightly)</h4>
+                    <pre><code>boise_formats.png     35.0 KB
+boise_formats.svg     31.6 KB
+boise_formats.pdf     13.3 KB
+The SVG is text. It contains the title as a comment: True</code></pre>
+                </div>
+
+                <p>To see what "fixed resolution" means, save the chart as a low-resolution and a high-resolution PNG and enlarge the same corner of each. A vector file would look like the right-hand panel at <em>every</em> zoom level.</p>
+
+                <pre><code class="language-python">fig.savefig(out / "zoom_low.png", dpi=50)
+fig.savefig(out / "zoom_high.png", dpi=300)
+
+fig3, axs = plt.subplots(1, 2, figsize=(10, 2.6), layout="constrained")
+for ax, name, label in zip(axs, ("zoom_low.png", "zoom_high.png"), ("PNG at 50 dpi, enlarged", "PNG at 300 dpi, same area")):
+    image = plt.imread(out / name)
+    rows, cols = image.shape[:2]
+    ax.imshow(image[: rows // 3, : cols // 2], interpolation="nearest")     # the top-left corner
+    ax.set_title(label, fontsize=10)
+    ax.set_axis_off()
+plt.show()</code></pre>
+                <figure>
+                    <img src="images/matplotlib_saving_figures_zoom.png" alt="The top-left corner of the Boise chart enlarged twice. On the left, from a 50 dpi file, the title and tick labels are blocky and blurred. On the right, from a 300 dpi file, the same area is crisp." width="1100" height="286" loading="lazy">
+                    <figcaption>A raster image only has the pixels it was saved with. Too few, and enlarging it shows the squares.</figcaption>
+                </figure>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Format</th><th>Family</th><th>Best for</th><th>Watch out for</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>PNG</td><td>Raster</td><td>Web pages, slides, email, documents: works everywhere</td><td>Must be saved at the right pixel size for its destination</td></tr>
+                            <tr><td>SVG</td><td>Vector</td><td>Web pages that must stay sharp at any zoom; handing to a designer</td><td>Not accepted by every slide or office program; huge with many points</td></tr>
+                            <tr><td>PDF</td><td>Vector</td><td>Print, reports, multi-page chart packs</td><td>Does not display inline on a web page</td></tr>
+                            <tr><td>JPEG</td><td>Raster, lossy</td><td>Photographs</td><td>Smears sharp edges and text; no transparency. Avoid for charts</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>When Vector Gets Heavy</h3>
+
+                <p>A vector file stores every mark. For a line chart that is tiny. For a scatter plot it means one instruction per dot, and files balloon. The fix is <code>rasterized=True</code> on the heavy layer: the dots become an embedded image while the axes, text and title stay vector.</p>
+
+                <pre><code class="language-python">rng = np.random.default_rng(42)
+x = rng.normal(size=50_000)                       # 50,000 simulated points
+y = x + rng.normal(size=50_000)
+
+scatter_fig, ax = plt.subplots(figsize=(7, 4), layout="constrained")
+ax.scatter(x, y, s=4, alpha=0.2, color="#667eea")
+ax.set_title("50,000 points")
+scatter_fig.savefig(out / "scatter_vector.pdf")
+
+ax.collections[0].set_rasterized(True)            # same as passing rasterized=True to ax.scatter
+scatter_fig.savefig(out / "scatter_mixed.pdf", dpi=200)
+plt.close(scatter_fig)
+
+for name in ("scatter_vector.pdf", "scatter_mixed.pdf"):
+    print(f"{name:&lt;20} {(out / name).stat().st_size / 1024:&gt;7.1f} KB")</code></pre>
+                <div class="card card-output">
+                    <h4>Output (your sizes may differ slightly)</h4>
+                    <pre><code>scatter_vector.pdf     759.7 KB
+scatter_mixed.pdf      131.8 KB</code></pre>
+                </div>
+
+                <p>The mixed file is a fraction of the size and opens instantly, and its title and axes are still vector. Rasterizing only pays off when there are many marks: for a chart with a few thousand dots, plain vector is smaller, so measure before you decide.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="bbox" class="lesson-section">
+                <h2>✂️ Edges and Backgrounds</h2>
+
+                <h3>The Bounding Box</h3>
+
+                <p>By default <code>savefig</code> saves the whole sheet, exactly <code>figsize</code> in size. <code>bbox_inches="tight"</code> instead crops (or grows) the saved area to fit what is drawn, with a small margin set by <code>pad_inches</code>. You will see it in nearly every tutorial, because without a layout engine it rescues labels that would otherwise be cut off. Notice what it does to the size.</p>
+
+                <pre><code class="language-python">fig.savefig(out / "boise_default.png", dpi=100)
+fig.savefig(out / "boise_tight.png", dpi=100, bbox_inches="tight")
+fig.savefig(out / "boise_tight_nopad.png", dpi=100, bbox_inches="tight", pad_inches=0)
+
+for name in ("boise_default.png", "boise_tight.png", "boise_tight_nopad.png"):
+    rows, cols = plt.imread(out / name).shape[:2]
+    print(f"{name:&lt;24} {cols} x {rows}")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>boise_default.png        800 x 400
+boise_tight.png          811 x 411
+boise_tight_nopad.png    791 x 391</code></pre>
+                </div>
+
+                <p>The tight versions are no longer 800 by 400. That is the trade: <code>bbox_inches="tight"</code> guarantees nothing is cut off, and gives up control of the exact size. Since your figures use <code>layout="constrained"</code>, everything already fits on the sheet, so you rarely need it. When a destination demands exact pixel dimensions (a slide, a web layout), leave it off.</p>
+
+                <h3>Backgrounds</h3>
+
+                <p>A figure has a background color, white by default, called its <strong>facecolor</strong>. <code>transparent=True</code> saves with no background at all, so whatever is behind the image shows through. That sounds ideal for slides. It is, as long as the slide is light.</p>
+
+                <pre><code class="language-python">fig.savefig(out / "boise_transparent.png", transparent=True)
+corner = plt.imread(out / "boise_transparent.png")[0, 0]
+print("top-left pixel (red, green, blue, alpha):", corner)
+
+with plt.style.context("dark_background"):
+    dark_fig, _ = revenue_chart("Boise")
+    dark_fig.savefig(out / "boise_dark.png")
+    plt.close(dark_fig)
+
+fig4, axs = plt.subplots(1, 3, figsize=(10, 2.2), layout="constrained")
+panels = [("boise_transparent.png", "white", "Transparent, on a white page"),
+          ("boise_transparent.png", "#0f172a", "Transparent, on a dark slide"),
+          ("boise_dark.png", "#0f172a", "Drawn with a dark style")]
+for ax, (name, background, label) in zip(axs, panels):
+    ax.set_facecolor(background)
+    ax.imshow(plt.imread(out / name))
+    ax.set_title(label, fontsize=10)
+    ax.set_xticks([])
+    ax.set_yticks([])
+plt.show()</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>top-left pixel (red, green, blue, alpha): [1. 1. 1. 0.]</code></pre>
+                </div>
+                <figure>
+                    <img src="images/matplotlib_saving_figures_backgrounds.png" alt="Three small versions of the Boise chart. The transparent chart on a white page looks normal. The same transparent chart on a dark navy background has black title and tick labels that are almost invisible. The third, drawn with a dark style, has light text that reads clearly on the dark background." width="1100" height="242" loading="lazy">
+                    <figcaption>A transparent background does not change the color of the text. Black labels on a dark slide disappear; a chart for a dark background has to be drawn for one.</figcaption>
+                </figure>
+
+                <p>An alpha of 0 in the corner pixel confirms the background is fully transparent. The middle panel is the trap: the title and tick labels are still black. For a dark destination, draw the chart in a dark style (and check every color you set by hand). For anything else, the safest choice is an explicit solid background: <code>fig.savefig(path, facecolor="white")</code>, which also protects you from programs that show transparency as black.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="house" class="lesson-section">
+                <h2>🏠 A House-Style Save Function</h2>
+
+                <p>You now know the settings. Typing them correctly, every time, for every chart, is how mistakes creep in. Put the decisions in one place: a table of <strong>presets</strong>, one per destination, and two small functions that use it. The style dictionary is the one from Lesson 3.3.</p>
+
+                <pre><code class="language-python">pinecrest_style = {
+    "font.size": 11,
+    "axes.titlelocation": "left",
+    "axes.titleweight": "bold",
+    "axes.spines.top": False,
+    "axes.spines.right": False,
+    "axes.grid": True,
+    "axes.grid.axis": "y",
+    "grid.color": "0.9",
+    "axes.axisbelow": True,
+    "xtick.major.size": 0,
+    "ytick.major.size": 0,
 }
 
-# Create figure with specific size
-fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+PRESETS = {
+    "web":   {"figsize": (9, 4.5),   "dpi": 110, "extension": "png"},
+    "slide": {"figsize": (9.6, 5.4), "dpi": 200, "extension": "png"},
+    "print": {"figsize": (6.5, 3.5), "dpi": 300, "extension": "pdf"},
+}
 
-# Your plot here
-x = np.linspace(0, 10, 1000)
-ax.plot(x, np.sin(x) * np.exp(-x/10))
+def new_figure(kind="web"):
+    """Create a figure sized for its destination: 'web', 'slide' or 'print'."""
+    return plt.subplots(figsize=PRESETS[kind]["figsize"], layout="constrained")
 
-# Save at different resolutions
-for use, dpi in dpi_settings.items():
-    filename = f'figure_{use}_{dpi}dpi.png'
-    fig.savefig(filename, dpi=dpi, bbox_inches='tight')
-    
-    # Calculate pixel dimensions
-    width_px = fig_width * dpi
-    height_px = fig_height * dpi
-    print(f'{use}: {width_px:.0f}×{height_px:.0f} pixels')
+def save_chart(fig, name, kind="web", folder="charts"):
+    """Save fig as folder/name_kind.ext with the preset's dpi and a white background. Returns the path."""
+    preset = PRESETS[kind]
+    folder = Path(folder)
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder / f"{name}_{kind}.{preset['extension']}"
+    fig.savefig(path, dpi=preset["dpi"], facecolor="white")
+    return path</code></pre>
 
-# Journal submission requirements example
-def save_for_journal(fig, journal_name='nature'):
-    """Save figure according to journal specifications"""
-    
-    journal_specs = {
-        'nature': {
-            'single_column': 3.5,  # inches
-            'double_column': 7.0,  # inches
-            'dpi': 300,
-            'format': 'pdf'
-        },
-        'science': {
-            'single_column': 3.4,
-            'double_column': 6.8,
-            'dpi': 300,
-            'format': 'eps'
-        },
-        'ieee': {
-            'single_column': 3.5,
-            'double_column': 7.16,
-            'dpi': 600,
-            'format': 'pdf'
-        }
-    }
-    
-    specs = journal_specs[journal_name]
-    
-    # Resize figure
-    fig.set_size_inches(specs['single_column'], 
-                       specs['single_column'] * 0.75)
-    
-    # Save with specifications
-    fig.savefig(f'{journal_name}_figure.{specs["format"]}',
-               format=specs['format'],
-               dpi=specs['dpi'],
-               bbox_inches='tight')
+                <p>The figure is created at the right size <em>before</em> drawing, because, as you saw, the size decides how the text relates to the chart. Then the same drawing code produces all three versions.</p>
 
-# Example usage
-save_for_journal(fig, 'nature')</code></pre>
-                </div>
-            </div>
+                <pre><code class="language-python">def draw_revenue(ax, store):
+    ax.plot(monthly.index, monthly[store], color="#667eea", marker="o", markersize=3)
+    ax.set_title(f"{store}: monthly in-store revenue")
+    ax.yaxis.set_major_formatter(FuncFormatter(thousands))
+    ax.set_ylim(bottom=0)
 
-            <div class="concept-card">
-                <h3>🎨 Advanced Export Options</h3>
-                <p>Professional techniques for perfect exports</p>
-                <div class="code-example">
-                    <pre><code># Advanced savefig options
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_pdf import PdfPages
-import numpy as np
-
-# 1. Multi-page PDF
-with PdfPages('multipage.pdf') as pdf:
-    for i in range(4):
-        fig, ax = plt.subplots()
-        ax.plot(np.random.randn(100).cumsum())
-        ax.set_title(f'Page {i+1}')
-        
-        pdf.savefig(fig, bbox_inches='tight')
-        plt.close(fig)
-    
-    # Add metadata
-    d = pdf.infodict()
-    d['Title'] = 'Multipage Report'
-    d['Author'] = 'Data Science Team'
-    d['Subject'] = 'Quarterly Analysis'
-    d['Keywords'] = 'Data, Analysis, Report'
-
-# 2. Save with specific backend
-from matplotlib.backends.backend_agg import FigureCanvasAgg
-fig, ax = plt.subplots()
-ax.plot([1, 2, 3], [1, 4, 9])
-canvas = FigureCanvasAgg(fig)
-canvas.print_png('backend_specific.png')
-
-# 3. Save figure and data together
-fig, ax = plt.subplots()
-x = np.linspace(0, 10, 100)
-y = np.sin(x)
-ax.plot(x, y)
-
-# Save figure
-fig.savefig('figure_with_data.png')
-
-# Save data
-import pickle
-with open('figure_data.pkl', 'wb') as f:
-    pickle.dump({'figure': fig, 'x': x, 'y': y}, f)
-
-# 4. Custom metadata in PNG
-from PIL import Image
-from PIL.PngImagePlugin import PngInfo
-
-# Save figure first
-fig.savefig('temp.png', dpi=300)
-
-# Add metadata
-img = Image.open('temp.png')
-metadata = PngInfo()
-metadata.add_text('Author', 'Your Name')
-metadata.add_text('Title', 'Figure Title')
-metadata.add_text('Description', 'Detailed description')
-metadata.add_text('Copyright', '2024 Your Organization')
-img.save('figure_with_metadata.png', pnginfo=metadata)
-
-# 5. Save for dark/light mode
-def save_both_themes(fig, filename_base):
-    """Save figure in both light and dark themes"""
-    
-    # Light theme
-    with plt.style.context('seaborn-v0_8-whitegrid'):
-        fig.savefig(f'{filename_base}_light.png', 
-                   facecolor='white', 
-                   edgecolor='none')
-    
-    # Dark theme
-    with plt.style.context('dark_background'):
-        fig.patch.set_facecolor('#1a1a1a')
-        fig.savefig(f'{filename_base}_dark.png', 
-                   facecolor='#1a1a1a', 
-                   edgecolor='none')
-
-# 6. Batch export in multiple formats
-def export_all_formats(fig, basename, dpi=300):
-    """Export figure in all common formats"""
-    formats = {
-        'png': {'dpi': dpi, 'transparent': True},
-        'pdf': {'bbox_inches': 'tight'},
-        'svg': {'bbox_inches': 'tight'},
-        'jpg': {'dpi': dpi//2, 'quality': 95}
-    }
-    
-    for fmt, kwargs in formats.items():
-        filename = f'{basename}.{fmt}'
-        fig.savefig(filename, format=fmt, **kwargs)
-        print(f'Saved: {filename}')</code></pre>
-                </div>
-            </div>
-
-            <div class="concept-card">
-                <h3>📏 Size & Layout Control</h3>
-                <p>Precise control over figure dimensions and spacing</p>
-                <div class="code-example">
-                    <pre><code># Controlling figure size and layout for export
-import matplotlib.pyplot as plt
-import numpy as np
-
-# 1. Set figure size for specific publication width
-def set_size(width, fraction=1, subplots=(1, 1)):
-    """Set figure dimensions to avoid scaling in LaTeX.
-    
-    Parameters:
-        width: float - Document width in points
-        fraction: float - Fraction of the width for figure
-        subplots: tuple - Number of rows and columns
-    """
-    # Width of figure (in pts)
-    fig_width_pt = width * fraction
-    # Convert from pt to inches
-    inches_per_pt = 1 / 72.27
-    # Golden ratio
-    golden_ratio = (5**.5 - 1) / 2
-    # Figure width in inches
-    fig_width_in = fig_width_pt * inches_per_pt
-    # Figure height in inches
-    fig_height_in = fig_width_in * golden_ratio * (subplots[0] / subplots[1])
-    
-    return (fig_width_in, fig_height_in)
-
-# LaTeX column width (get from \the\columnwidth)
-width_pts = 469.75  # Example for two-column article
-
-fig_size = set_size(width_pts)
-fig, ax = plt.subplots(figsize=fig_size)
-
-# 2. Tight layout with padding control
-fig, axes = plt.subplots(2, 2, figsize=(10, 8))
-
-# Automatic spacing
-fig.tight_layout(pad=3.0,       # Padding around figure
-                w_pad=2.0,      # Width padding between subplots
-                h_pad=2.0)      # Height padding between subplots
-
-# 3. Manual spacing control
-fig, axes = plt.subplots(2, 2, figsize=(10, 8))
-plt.subplots_adjust(left=0.1,    # Left margin
-                   right=0.95,   # Right margin
-                   top=0.95,     # Top margin
-                   bottom=0.1,   # Bottom margin
-                   wspace=0.2,   # Width spacing
-                   hspace=0.25)  # Height spacing
-
-# 4. Constrained layout (newer, better)
-fig, axes = plt.subplots(2, 2, figsize=(10, 8),
-                        constrained_layout=True)
-# Set padding in inches
-fig.set_constrained_layout_pads(w_pad=0.1, h_pad=0.1)
-
-# 5. Remove all margins for seamless integration
-fig, ax = plt.subplots(figsize=(8, 6))
-ax.plot(np.random.randn(100))
-
-# Remove all white space
-ax.set_position([0, 0, 1, 1])
-ax.axis('off')
-fig.savefig('no_margins.png', bbox_inches='tight', pad_inches=0)
-
-# 6. Save with exact pixel dimensions
-def save_exact_size(fig, filename, width_px, height_px):
-    """Save figure with exact pixel dimensions"""
-    # Calculate required DPI
-    fig_width_in, fig_height_in = fig.get_size_inches()
-    dpi_w = width_px / fig_width_in
-    dpi_h = height_px / fig_height_in
-    dpi = max(dpi_w, dpi_h)
-    
-    # Adjust figure size to match exactly
-    fig.set_size_inches(width_px/dpi, height_px/dpi)
-    
-    # Save with calculated DPI
-    fig.savefig(filename, dpi=dpi, bbox_inches='tight', 
-               pad_inches=0)
-    
-    print(f'Saved {filename}: {width_px}×{height_px}px at {dpi:.1f} DPI')
-
-# Example: Save for specific pixel dimensions
-save_exact_size(fig, 'exact_1920x1080.png', 1920, 1080)</code></pre>
-                </div>
-            </div>
-
-            <div class="concept-card">
-                <h3>⚙️ Optimization & Performance</h3>
-                <p>Optimize file size and rendering performance</p>
-                <div class="code-example">
-                    <pre><code># Optimization techniques for different scenarios
-import matplotlib.pyplot as plt
-import numpy as np
-from matplotlib.patches import Rectangle
-import matplotlib.patches as mpatches
-
-# 1. Rasterization for complex vector elements
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
-
-# Complex scatter plot (many points)
-x = np.random.randn(10000)
-y = np.random.randn(10000)
-
-# Without rasterization (huge PDF)
-ax1.scatter(x, y, alpha=0.5, s=1)
-ax1.set_title('Vector (Large File)')
-
-# With rasterization (small PDF)
-ax2.scatter(x, y, alpha=0.5, s=1, rasterized=True)
-ax2.set_title('Rasterized (Small File)')
-
-# Save with mixed vector/raster
-fig.savefig('optimized.pdf', dpi=150)
-
-# 2. Simplify paths for web
-from matplotlib.path import Path
-import matplotlib.pyplot as plt
-
-fig, ax = plt.subplots()
-x = np.linspace(0, 10, 10000)  # Many points
-y = np.sin(x) + np.random.randn(10000) * 0.1
-
-# Simplify the path
-line, = ax.plot(x, y)
-line.set_path_effects([path_effects.SimpleLineShadow(),
-                       path_effects.Normal()])
-line.set_simplify(True)
-line.set_simplify_threshold(1.0)  # Adjust threshold
-
-# 3. Reduce file size for web
-def optimize_for_web(fig, filename):
-    """Optimize figure for web display"""
-    
-    # Set reasonable DPI (screens are typically 72-96 DPI)
-    web_dpi = 96
-    
-    # Use tight layout to remove whitespace
-    fig.tight_layout()
-    
-    # Save as PNG with optimization
-    fig.savefig(filename, 
-               format='png',
-               dpi=web_dpi,
-               bbox_inches='tight',
-               pad_inches=0.1,
-               facecolor='white',
-               edgecolor='none',
-               optimize=True)  # PNG optimization
-    
-    # Alternative: Save as compressed JPG
-    jpg_name = filename.replace('.png', '.jpg')
-    fig.savefig(jpg_name,
-               format='jpg',
-               dpi=web_dpi,
-               bbox_inches='tight',
-               quality=85,  # Balance quality/size
-               optimize=True)
-
-# 4. Batch processing for consistency
-def batch_process_figures(figures, prefix='fig', 
-                         dpi=300, format='png'):
-    """Process multiple figures with consistent settings"""
-    
-    for i, fig in enumerate(figures):
-        # Apply consistent style
-        fig.tight_layout()
-        
-        # Generate filename
-        filename = f'{prefix}_{i+1:03d}.{format}'
-        
-        # Save with consistent settings
-        fig.savefig(filename,
-                   format=format,
-                   dpi=dpi,
-                   bbox_inches='tight',
-                   facecolor='white',
-                   edgecolor='none')
-        
-        print(f'Saved: {filename}')
-        
-        # Close to free memory
-        plt.close(fig)
-
-# 5. Memory management for large exports
-def save_large_figure(create_figure_func, filename, 
-                      chunk_size=1000):
-    """Save large figure with memory management"""
-    
-    import gc
-    
-    # Create figure
-    fig = create_figure_func()
-    
-    # Force garbage collection before save
-    gc.collect()
-    
-    # Save with memory-efficient backend
-    from matplotlib.backends.backend_agg import FigureCanvasAgg
-    canvas = FigureCanvasAgg(fig)
-    
-    # Render and save
-    canvas.print_png(filename)
-    
-    # Clean up
-    plt.close(fig)
-    del fig
-    gc.collect()
-    
-    print(f'Saved large figure: {filename}')</code></pre>
-                </div>
-            </div>
-        </div>
-
-        <div class="workflow-diagram">
-            <h2>🔄 Complete Export Workflow</h2>
-            <div class="mermaid">
-                graph TB
-                    A[Create Figure] --> B{Check Display}
-                    B --> C[Adjust Size/Layout]
-                    C --> D{Choose Format}
-                    
-                    D --> E[Vector<br/>PDF/SVG]
-                    D --> F[Raster<br/>PNG/JPG]
-                    
-                    E --> G[Set bbox_inches]
-                    F --> H[Set DPI]
-                    
-                    G --> I[Check File Size]
-                    H --> I
-                    
-                    I -->|Too Large| J[Optimize]
-                    I -->|OK| K[Save]
-                    
-                    J --> L[Rasterize Complex]
-                    J --> M[Reduce DPI]
-                    J --> N[Compress]
-                    
-                    L --> K
-                    M --> K
-                    N --> K
-                    
-                    K --> O[Verify Output]
-                    O -->|Issues| C
-                    O -->|Good| P[Done]
-                    
-                    style A fill:#f9f,stroke:#333,stroke-width:2px
-                    style P fill:#9f9,stroke:#333,stroke-width:2px
-                    style D fill:#ff9,stroke:#333,stroke-width:2px
-            </div>
-        </div>
-
-        <div class="format-overview">
-            <h2>🌍 Real-World Example: Complete Publication Pipeline</h2>
-            <p>Professional workflow for preparing figures for publication:</p>
-            
-            <div class="code-example">
-                <pre><code>import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-from pathlib import Path
-import json
-
-class PublicationFigure:
-    """Class for managing publication-quality figures"""
-    
-    def __init__(self, fig, metadata=None):
-        self.fig = fig
-        self.metadata = metadata or {}
-        self.export_dir = Path('exports')
-        self.export_dir.mkdir(exist_ok=True)
-    
-    def set_journal_style(self, journal='nature'):
-        """Apply journal-specific styling"""
-        
-        journal_styles = {
-            'nature': {
-                'font.size': 7,
-                'axes.labelsize': 7,
-                'axes.titlesize': 7,
-                'xtick.labelsize': 6,
-                'ytick.labelsize': 6,
-                'legend.fontsize': 6,
-                'font.family': 'sans-serif',
-                'font.sans-serif': ['Arial', 'Helvetica']
-            },
-            'science': {
-                'font.size': 8,
-                'axes.labelsize': 8,
-                'axes.titlesize': 8,
-                'xtick.labelsize': 7,
-                'ytick.labelsize': 7,
-                'legend.fontsize': 7,
-                'font.family': 'sans-serif',
-                'font.sans-serif': ['Helvetica', 'Arial']
-            },
-            'ieee': {
-                'font.size': 8,
-                'axes.labelsize': 8,
-                'axes.titlesize': 9,
-                'xtick.labelsize': 8,
-                'ytick.labelsize': 8,
-                'legend.fontsize': 8,
-                'font.family': 'serif',
-                'font.serif': ['Times', 'Times New Roman']
-            }
-        }
-        
-        if journal in journal_styles:
-            for key, value in journal_styles[journal].items():
-                plt.rcParams[key] = value
-    
-    def check_requirements(self, journal='nature'):
-        """Check if figure meets journal requirements"""
-        
-        requirements = {
-            'nature': {
-                'max_width_single': 89,  # mm
-                'max_width_double': 183,  # mm
-                'max_height': 247,  # mm
-                'min_dpi': 300,
-                'formats': ['pdf', 'eps', 'tiff'],
-                'color_mode': 'RGB'
-            }
-        }
-        
-        req = requirements.get(journal, {})
-        width_inch, height_inch = self.fig.get_size_inches()
-        width_mm = width_inch * 25.4
-        height_mm = height_inch * 25.4
-        
-        checks = {
-            'width_ok': width_mm <= req.get('max_width_double', float('inf')),
-            'height_ok': height_mm <= req.get('max_height', float('inf')),
-            'size_mm': (width_mm, height_mm)
-        }
-        
-        return checks
-    
-    def export_all_formats(self, base_name, formats=None, dpi=300):
-        """Export in multiple formats for different uses"""
-        
-        if formats is None:
-            formats = ['pdf', 'svg', 'png', 'jpg']
-        
-        exports = {}
-        
-        for fmt in formats:
-            filename = self.export_dir / f'{base_name}.{fmt}'
-            
-            if fmt in ['pdf', 'svg', 'eps']:
-                # Vector formats
-                self.fig.savefig(filename, 
-                               format=fmt,
-                               bbox_inches='tight')
-            elif fmt == 'png':
-                # PNG with transparency
-                self.fig.savefig(filename,
-                               format=fmt,
-                               dpi=dpi,
-                               bbox_inches='tight',
-                               transparent=True)
-            elif fmt == 'jpg':
-                # JPEG for presentations
-                self.fig.savefig(filename,
-                               format=fmt,
-                               dpi=dpi//2,  # Lower DPI for JPG
-                               bbox_inches='tight',
-                               quality=95)
-            elif fmt == 'tiff':
-                # TIFF for some journals
-                self.fig.savefig(filename,
-                               format=fmt,
-                               dpi=dpi,
-                               bbox_inches='tight',
-                               compression='lzw')
-            
-            exports[fmt] = filename
-            file_size = filename.stat().st_size / 1024  # KB
-            print(f'Exported {fmt}: {filename.name} ({file_size:.1f} KB)')
-        
-        # Save metadata
-        metadata_file = self.export_dir / f'{base_name}_metadata.json'
-        with open(metadata_file, 'w') as f:
-            json.dump({
-                'base_name': base_name,
-                'formats': list(exports.keys()),
-                'dpi': dpi,
-                'size_inches': self.fig.get_size_inches(),
-                'metadata': self.metadata
-            }, f, indent=2)
-        
-        return exports
-    
-    def create_submission_package(self, journal='nature'):
-        """Create complete submission package"""
-        
-        base_name = self.metadata.get('figure_number', 'figure')
-        
-        # Check requirements
-        checks = self.check_requirements(journal)
-        print(f'Size check: {checks["size_mm"][0]:.1f}×{checks["size_mm"][1]:.1f} mm')
-        print(f'Width OK: {checks["width_ok"]}, Height OK: {checks["height_ok"]}')
-        
-        # Export in required formats
-        if journal == 'nature':
-            formats = ['pdf', 'eps', 'png']
-            dpi = 600
-        elif journal == 'science':
-            formats = ['pdf', 'tiff']
-            dpi = 600
+with plt.rc_context(pinecrest_style):
+    for kind in PRESETS:
+        chart, ax = new_figure(kind)
+        draw_revenue(ax, "Flagstaff")
+        path = save_chart(chart, "flagstaff", kind)
+        plt.close(chart)
+        if path.suffix == ".png":
+            rows, cols = plt.imread(path).shape[:2]
+            print(f"{path.name:&lt;22} {cols} x {rows} pixels")
         else:
-            formats = ['pdf', 'png']
-            dpi = 300
-        
-        exports = self.export_all_formats(base_name, formats, dpi)
-        
-        # Create README
-        readme_path = self.export_dir / f'{base_name}_README.txt'
-        with open(readme_path, 'w') as f:
-            f.write(f'Figure: {base_name}\n')
-            f.write(f'Journal: {journal}\n')
-            f.write(f'Formats: {", ".join(formats)}\n')
-            f.write(f'DPI: {dpi}\n')
-            f.write(f'Size: {checks["size_mm"][0]:.1f}×{checks["size_mm"][1]:.1f} mm\n')
-            if self.metadata:
-                f.write('\nMetadata:\n')
-                for key, value in self.metadata.items():
-                    f.write(f'  {key}: {value}\n')
-        
-        print(f'\nSubmission package created in: {self.export_dir}')
-        return exports
+            print(f"{path.name:&lt;22} vector, {PRESETS[kind]['figsize'][0]} x {PRESETS[kind]['figsize'][1]} inches")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>flagstaff_web.png      990 x 495 pixels
+flagstaff_slide.png    1920 x 1080 pixels
+flagstaff_print.pdf    vector, 6.5 x 3.5 inches</code></pre>
+                </div>
+                <figure>
+                    <img src="images/matplotlib_saving_figures_flagstaff_web.png" alt="The saved web version of the Flagstaff chart in the house style: bold left-aligned title, faint horizontal grid, no top or right border, y axis in thousands of dollars from zero. Revenue rises from about 135 thousand dollars to about 287 thousand over two years." width="990" height="495" loading="lazy">
+                    <figcaption><code>charts/flagstaff_web.png</code>: 990 by 495 pixels, styled and sized by the two functions.</figcaption>
+                </figure>
 
-# Example usage
-def create_publication_figure():
-    """Create a publication-ready figure"""
-    
-    # Generate sample data
-    np.random.seed(42)
-    x = np.linspace(0, 10, 100)
-    y1 = np.sin(x) * np.exp(-x/10)
-    y2 = np.cos(x) * np.exp(-x/10)
-    
-    # Create figure with specific size (Nature single column)
-    width_mm = 89  # Single column width
-    width_inch = width_mm / 25.4
-    height_inch = width_inch * 0.75  # Aspect ratio
-    
-    fig, (ax1, ax2) = plt.subplots(2, 1, 
-                                   figsize=(width_inch, height_inch),
-                                   sharex=True)
-    
-    # Top panel
-    ax1.plot(x, y1, 'b-', linewidth=1, label='Signal A')
-    ax1.plot(x, y2, 'r--', linewidth=1, label='Signal B')
-    ax1.set_ylabel('Amplitude (a.u.)')
-    ax1.legend(loc='upper right', frameon=False)
-    ax1.set_title('Figure 1: Experimental Results', fontweight='bold', pad=10)
-    
-    # Bottom panel
-    ax2.fill_between(x, y1, y2, alpha=0.3, color='gray')
-    ax2.set_xlabel('Time (s)')
-    ax2.set_ylabel('Difference (a.u.)')
-    
-    # Remove top and right spines (Nature style)
-    for ax in [ax1, ax2]:
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-    
-    # Tight layout
-    fig.tight_layout()
-    
-    # Create publication figure object
-    metadata = {
-        'figure_number': 'Fig1',
-        'title': 'Experimental Results',
-        'author': 'Research Team',
-        'date': '2024-01-01',
-        'description': 'Time-series analysis of experimental signals'
-    }
-    
-    pub_fig = PublicationFigure(fig, metadata)
-    
-    # Apply journal style
-    pub_fig.set_journal_style('nature')
-    
-    # Create submission package
-    pub_fig.create_submission_package('nature')
-    
-    return pub_fig
+                <p>Three files, three destinations, and not one size or dpi typed by hand at the point of use. If the company later wants slides at a different size, you change one line of <code>PRESETS</code>. The pattern (settings in a dictionary, a function that reads them) is worth more than the particular numbers.</p>
+            </section>
 
-# Run the complete pipeline
-pub_fig = create_publication_figure()
+            <!-- ============================================================ -->
+            <section id="loop" class="lesson-section">
+                <h2>🔁 Many Charts, and Closing Them</h2>
 
-# Additional specialized exports
-fig = pub_fig.fig
+                <p>One chart per store, per category or per month is a loop around what you just wrote. There is one thing to know first: <strong>pyplot keeps every figure you create alive until you close it.</strong> In a notebook this is hidden, because figures are closed for you after each cell is displayed. In a script, or a loop that makes many figures inside one cell, they pile up in memory.</p>
 
-# For presentations (16:9 aspect ratio)
-fig_presentation = plt.figure(figsize=(16, 9))
-# Copy content to presentation figure...
-fig_presentation.savefig('presentation_slide.png', dpi=150)
+                <pre><code class="language-python">plt.close("all")
+print("open figures:", len(plt.get_fignums()))
 
-# For social media (square format)
-fig_social = plt.figure(figsize=(6, 6))
-# Copy/adapt content for social...
-fig_social.savefig('social_media.jpg', dpi=150, quality=90)
+for store in stores:
+    leak, ax = new_figure("web")
+    draw_revenue(ax, store)
+    save_chart(leak, f"{store.lower()}_leak")          # saved, but never closed
+print("after a loop without close:", len(plt.get_fignums()))
 
-# For print poster (high resolution)
-fig_poster = plt.figure(figsize=(24, 36))  # inches
-# Scale up content for poster...
-fig_poster.savefig('poster.pdf', format='pdf')
+plt.close("all")
+print("after plt.close('all'):", len(plt.get_fignums()))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>open figures: 0
+after a loop without close: 4
+after plt.close('all'): 0</code></pre>
+                </div>
 
-plt.show()</code></pre>
-            </div>
-        </div>
+                <p>Four figures is harmless. Four hundred is a memory problem, and after the twentieth Matplotlib starts printing <code>RuntimeWarning: More than 20 figures have been opened</code>. The habit is simple: <strong>create, draw, save, close</strong>.</p>
 
-        <div class="tip-box">
-            <h3>💡 Pro Tips for Publication-Quality Exports</h3>
-            <ul>
-                <li><strong>Always use vector formats for publications:</strong> PDF or EPS for journals</li>
-                <li><strong>Check journal guidelines:</strong> Each journal has specific requirements</li>
-                <li><strong>Use bbox_inches='tight':</strong> Removes unnecessary whitespace</li>
-                <li><strong>Test at actual size:</strong> Print or view at 100% zoom</li>
-                <li><strong>Keep original figures:</strong> Save the Python script or pickle the figure</li>
-                <li><strong>Use consistent naming:</strong> fig1a.pdf, fig1b.pdf, etc.</li>
-                <li><strong>Include metadata:</strong> Author, date, version in the file</li>
-                <li><strong>Create a style template:</strong> Ensure consistency across all figures</li>
-            </ul>
-        </div>
+                <pre><code class="language-python">with plt.rc_context(pinecrest_style):
+    for store in stores:
+        chart, ax = new_figure("web")
+        draw_revenue(ax, store)
+        path = save_chart(chart, store.lower())
+        plt.close(chart)
+        print(path, f"{path.stat().st_size / 1024:.0f} KB")
 
-        <div class="warning-box">
-            <h3>⚠️ Common Export Mistakes</h3>
-            <ul>
-                <li><strong>Wrong DPI:</strong> Using screen DPI (72) for print (needs 300+)</li>
-                <li><strong>Raster for line art:</strong> Using PNG/JPG when PDF would be better</li>
-                <li><strong>Oversized files:</strong> Not optimizing complex plots with rasterization</li>
-                <li><strong>Lost transparency:</strong> JPG doesn't support transparency</li>
-                <li><strong>Scaling issues:</strong> Figure size changes after export</li>
-                <li><strong>Font problems:</strong> Fonts not embedded or substituted</li>
-                <li><strong>Color space issues:</strong> RGB vs CMYK for print</li>
-            </ul>
-        </div>
+print("open figures:", len(plt.get_fignums()))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>charts/asheville_web.png 46 KB
+charts/bend_web.png 42 KB
+charts/boise_web.png 45 KB
+charts/flagstaff_web.png 40 KB
+open figures: 0</code></pre>
+                </div>
 
-        <!-- Learning Journal (REQUIRED per the Courseware Authoring Standard) -->
-        <section id="journal" class="lesson-section">
-            <h2>📓 Learning Journal</h2>
-            <div class="card card-info">
-                <p>Keep a learning journal — digital or physical. After this lesson, take a few minutes to write down:</p>
+                <h3>One File, Many Pages</h3>
+
+                <p>When the charts belong together, a single PDF with one chart per page is easier to send than a folder of images. <code>PdfPages</code> collects figures into one file; the <code>with</code> block makes sure the file is finished properly.</p>
+
+                <pre><code class="language-python">from matplotlib.backends.backend_pdf import PdfPages
+
+report = out / "store_report.pdf"
+with plt.rc_context(pinecrest_style), PdfPages(report) as pdf:
+    for store in stores:
+        page, ax = new_figure("print")
+        draw_revenue(ax, store)
+        pdf.savefig(page)
+        plt.close(page)
+    print("pages:", pdf.get_pagecount())
+
+print(report.exists(), "open figures:", len(plt.get_fignums()))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>pages: 4
+True open figures: 0</code></pre>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="mistakes" class="lesson-section">
+                <h2>⚠️ Common Mistakes</h2>
+
+                <p>Export mistakes are frustrating because they show up late: after the meeting has started, or when the printer's proof comes back. Each one here has a quick check that catches it early.</p>
+
+                <h3>1. Saving into a Folder That Does Not Exist</h3>
+                <pre data-raises="FileNotFoundError"><code class="language-python">fig.savefig("exports/boise.png")</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>FileNotFoundError: [Errno 2] No such file or directory: 'exports/boise.png'</code></pre>
+                </div>
+                <p><strong>What it means:</strong> <code>savefig</code> creates files, not folders. <strong>Fix:</strong> <code>Path("exports").mkdir(parents=True, exist_ok=True)</code> first, as <code>save_chart()</code> does.</p>
+
+                <h3>2. An Extension Matplotlib Cannot Write</h3>
+                <pre data-raises="ValueError"><code class="language-python">fig.savefig(out / "boise.xlsx")</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>ValueError: Format 'xlsx' is not supported (supported formats: avif, eps, gif, jpeg, jpg, pdf, pgf, png, ps, raw, rgba, svg, svgz, tif, tiff, webp)</code></pre>
+                </div>
+                <p><strong>What it means:</strong> the format comes from the extension, and this one is not an image format. The same error appears for a typo such as <code>.pgn</code>. <strong>Fix:</strong> use one of the listed extensions.</p>
+
+                <h3>3. <code>plt.savefig()</code> Saves the Wrong Figure</h3>
+                <pre><code class="language-python">chart, ax = revenue_chart("Bend")       # the chart you care about
+scratch = plt.figure()                  # later, some other figure is created
+plt.savefig(out / "bend_oops.png")      # pyplot style: saves the *current* figure
+
+image = plt.imread(out / "bend_oops.png")
+print("every pixel is white:", bool((image[..., :3] == 1).all()))
+plt.close(scratch)
+plt.close(chart)</code></pre>
+                <div class="card card-output">
+                    <h4>Output (a file is written, and it is blank)</h4>
+                    <pre><code>every pixel is white: True</code></pre>
+                </div>
+                <p><strong>What happened:</strong> the "current" figure was the empty one created last, so that is what was saved. The classic script version of this bug is calling <code>plt.savefig()</code> after <code>plt.show()</code>: closing the chart window destroys the figure, and pyplot saves a fresh empty one. <strong>Fix:</strong> <code>chart.savefig(...)</code>, and save before you show.</p>
+
+                <h3>4. Expecting an Exact Size with <code>bbox_inches="tight"</code></h3>
+                <p>You asked for 1,920 by 1,080 and got 1,893 by 1,041, and the slide program stretched it. As you saw in <a href="#bbox">Edges and Backgrounds</a>, a tight bounding box changes the saved size. <strong>Fix:</strong> use <code>layout="constrained"</code> so nothing needs cropping, leave <code>bbox_inches</code> off, and confirm with <code>plt.imread(path).shape</code>.</p>
+
+                <h3>5. Raising dpi to Fix Small Text</h3>
+                <p>The text on a slide is too small, so you save again at <code>dpi=600</code>. The file is nine times larger and the text is exactly as small as before, because dpi scales everything together. <strong>Fix:</strong> a smaller <code>figsize</code> (with a higher dpi to keep the pixel count), as in <a href="#text">Why the Text Came Out Tiny</a>.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="project" class="lesson-section">
+                <h2>🛠️ Project: The Pinecrest Chart Pack</h2>
+
+                <p>The regional manager wants a chart for each store: a web version for the intranet page, a print version for the quarterly binder, and one PDF with all four to email. You will produce the whole pack from one script-like cell, then verify it without opening a single file by hand. Continue in your lesson notebook (the project reuses <code>PRESETS</code>, <code>new_figure()</code> and <code>save_chart()</code>). Allow about 30 minutes.</p>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 1: A better panel <span class="step-time">(8 min)</span></h3>
+                    <p>Make the chart worth sending. Draw the store's line in color over the other three stores in gray (the small-multiples idea from Lesson 3.2), and put the store's 2025 growth in the title so each chart states its own finding.</p>
+                    <pre><code class="language-python">yearly = daily.pivot_table(index="store", columns=daily["date"].dt.year, values="revenue", aggfunc="sum")
+growth = (yearly[2025] / yearly[2024] - 1) * 100
+print(growth.round(1))
+
+def draw_store_page(ax, store):
+    for other in stores:
+        if other != store:
+            ax.plot(monthly.index, monthly[other], color="0.8", linewidth=1)
+    ax.plot(monthly.index, monthly[store], color="#667eea", linewidth=2.5)
+    direction = "up" if growth[store] &gt; 0 else "down"
+    ax.set_title(f"{store}: 2025 revenue {direction} {abs(growth[store]):.1f}% on 2024")
+    ax.yaxis.set_major_formatter(FuncFormatter(thousands))
+    ax.set_ylim(bottom=0)</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>store
+Asheville    -5.0
+Bend          3.8
+Boise         9.3
+Flagstaff    19.7
+dtype: float64</code></pre>
+                    </div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 2: Save every store, two ways <span class="step-time">(8 min)</span></h3>
+                    <p>Loop over the stores and the two kinds. Create, draw, save, close. Collect the paths in a list as you go.</p>
+                    <pre><code class="language-python">pack = Path("chart_pack")
+saved_paths = []
+
+with plt.rc_context(pinecrest_style):
+    for store in stores:
+        for kind in ("web", "print"):
+            chart, ax = new_figure(kind)
+            draw_store_page(ax, store)
+            saved_paths.append(save_chart(chart, store.lower(), kind, folder=pack))
+            plt.close(chart)
+
+print(len(saved_paths), "files;", "open figures:", len(plt.get_fignums()))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>8 files; open figures: 0</code></pre>
+                    </div>
+                    <figure>
+                        <img src="images/matplotlib_saving_figures_project_asheville.png" alt="The saved web chart for Asheville, titled Asheville: 2025 revenue down 5.0% on 2024. Asheville's line is highlighted in color and ends as the lowest of the four, with the other three stores in light gray above it." width="990" height="495" loading="lazy">
+                        <figcaption><code>chart_pack/asheville_web.png</code>. The title is generated from the data, so the one store that shrank says so by itself.</figcaption>
+                    </figure>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 3: One PDF for email <span class="step-time">(5 min)</span></h3>
+                    <pre><code class="language-python">combined = pack / "all_stores.pdf"
+with plt.rc_context(pinecrest_style), PdfPages(combined) as pdf:
+    for store in stores:
+        page, ax = new_figure("print")
+        draw_store_page(ax, store)
+        pdf.savefig(page)
+        plt.close(page)
+    pages = pdf.get_pagecount()
+saved_paths.append(combined)
+print(combined.name, "has", pages, "pages")</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>all_stores.pdf has 4 pages</code></pre>
+                    </div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 4: Verify the pack <span class="step-time">(9 min)</span></h3>
+                    <p>Do not trust, check. Build a small table (a manifest) of every file: its type, its pixel size if it is an image, and whether it is suspiciously small. This is the step that catches a blank chart before the manager does.</p>
+                    <pre><code class="language-python">rows = []
+for path in saved_paths:
+    pixels = ""
+    if path.suffix == ".png":
+        height, width = plt.imread(path).shape[:2]
+        pixels = f"{width} x {height}"
+    rows.append({"file": path.name, "type": path.suffix[1:], "pixels": pixels,
+                 "over_5_kb": path.stat().st_size &gt; 5 * 1024})
+
+manifest = pd.DataFrame(rows)
+print(manifest)
+print("all present:", all(path.exists() for path in saved_paths),
+      "| all web charts 990 x 495:", (manifest.loc[manifest["type"] == "png", "pixels"] == "990 x 495").all())</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>                  file type     pixels  over_5_kb
+0    asheville_web.png  png  990 x 495       True
+1  asheville_print.pdf  pdf                  True
+2         bend_web.png  png  990 x 495       True
+3       bend_print.pdf  pdf                  True
+4        boise_web.png  png  990 x 495       True
+5      boise_print.pdf  pdf                  True
+6    flagstaff_web.png  png  990 x 495       True
+7  flagstaff_print.pdf  pdf                  True
+8       all_stores.pdf  pdf                  True
+all present: True | all web charts 990 x 495: True</code></pre>
+                    </div>
+                </div>
+
+                <div class="card card-success">
+                    <h3>✅ Project Completion Checklist</h3>
+                    <ul class="checklist">
+                        <li>The folder <code>chart_pack</code> holds 9 files: 4 web PNGs, 4 print PDFs and <code>all_stores.pdf</code></li>
+                        <li>Every web PNG is exactly 990 by 495 pixels</li>
+                        <li><code>all_stores.pdf</code> has 4 pages</li>
+                        <li>Each title states that store's own 2025 growth, and Asheville's says "down"</li>
+                        <li><code>len(plt.get_fignums())</code> is 0 after the loops: every figure was closed</li>
+                        <li>You opened at least one PNG and one PDF and looked at them at the size they will be used</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="exercises" class="lesson-section">
+                <h2>🏋️ Hands-on Exercises</h2>
+
+                <p>These continue in the lesson notebook and use its variables and functions.</p>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 1: Predict the Pixels</h3>
+                    <p>Before running anything, write down the pixel width and height of each of these: (a) <code>figsize=(5, 3)</code> at <code>dpi=100</code>; (b) <code>figsize=(5, 3)</code> at <code>dpi=240</code>; (c) <code>figsize=(10, 6)</code> at <code>dpi=120</code>. Then save the Bend chart each way and check. Which two have the same pixel size, and how will they differ?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>pixels = inches × dpi, separately for width and height. <code>revenue_chart("Bend", figsize=...)</code> draws the chart at any size.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">for label, figsize, dpi in [("a", (5, 3), 100), ("b", (5, 3), 240), ("c", (10, 6), 120)]:
+    chart, _ = revenue_chart("Bend", figsize=figsize)
+    path = out / f"bend_{label}.png"
+    chart.savefig(path, dpi=dpi)
+    plt.close(chart)
+    rows, cols = plt.imread(path).shape[:2]
+    print(f"({label}) {figsize} at {dpi} dpi: {cols} x {rows}")</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>(a) (5, 3) at 100 dpi: 500 x 300
+(b) (5, 3) at 240 dpi: 1200 x 720
+(c) (10, 6) at 120 dpi: 1200 x 720</code></pre>
+                        </div>
+                        <p>(b) and (c) are both 1,200 by 720. In (b), drawn on the smaller sheet, the text and line are twice as large relative to the chart.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 2: Add a Preset</h3>
+                    <p>The marketing team posts square images, 1,080 by 1,080 pixels. Add a <code>"square"</code> preset to <code>PRESETS</code> and save the Boise chart with it. Choose the figure size so that the text is comfortably large, and verify the pixel size.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Many combinations give 1,080 pixels: 10.8 inches at 100 dpi, 5.4 at 200, 3.6 at 300. Smaller inches means bigger text.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">PRESETS["square"] = {"figsize": (5.4, 5.4), "dpi": 200, "extension": "png"}
+
+with plt.rc_context(pinecrest_style):
+    chart, ax = new_figure("square")
+    draw_revenue(ax, "Boise")
+    path = save_chart(chart, "boise", "square")
+    plt.close(chart)
+
+print(path.name, plt.imread(path).shape[:2])</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>boise_square.png (1080, 1080)</code></pre>
+                        </div>
+                        <p>Nothing else had to change: <code>new_figure()</code> and <code>save_chart()</code> read whatever is in the table.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 3: A Chart per Weekday Pattern</h3>
+                    <p>For each store, save a bar chart of mean revenue by day of the week as a web PNG named <code>&lt;store&gt;_weekdays_web.png</code> in a folder <code>weekday_charts</code>. Close every figure. Finish by printing the sorted file names and the number of open figures.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Write a <code>draw_weekdays(ax, store)</code> function first and test it on one store. <code>sorted(p.name for p in Path("weekday_charts").glob("*.png"))</code> lists the results.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">def draw_weekdays(ax, store):
+    one = daily[daily["store"] == store]
+    by_day = one.groupby(one["date"].dt.dayofweek)["revenue"].mean()
+    ax.bar(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], by_day.values, color="#667eea")
+    ax.set_title(f"{store}: mean revenue by day of the week")
+    ax.yaxis.set_major_formatter(FuncFormatter(thousands))
+
+with plt.rc_context(pinecrest_style):
+    for store in stores:
+        chart, ax = new_figure("web")
+        draw_weekdays(ax, store)
+        save_chart(chart, f"{store.lower()}_weekdays", "web", folder="weekday_charts")
+        plt.close(chart)
+
+print(sorted(p.name for p in Path("weekday_charts").glob("*.png")))
+print("open figures:", len(plt.get_fignums()))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>['asheville_weekdays_web.png', 'bend_weekdays_web.png', 'boise_weekdays_web.png', 'flagstaff_weekdays_web.png']
+open figures: 0</code></pre>
+                        </div>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 4: Record What Made the Chart (Stretch)</h3>
+                    <p>Six months from now someone will ask where a chart came from. PNG files can carry text metadata. Save the Boise chart with <code>metadata={"Title": ..., "Author": ..., "Description": ...}</code>, putting the data file and date range in the description, then read the metadata back with Pillow (<code>from PIL import Image</code>; it is installed with Matplotlib) and print those three fields.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>Image.open(path).info</code> is a dictionary of the file's metadata. Matplotlib adds a <code>Software</code> entry of its own.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">from PIL import Image
+
+chart, _ = revenue_chart("Boise")
+path = out / "boise_documented.png"
+chart.savefig(path, metadata={
+    "Title": "Boise: monthly in-store revenue",
+    "Author": "Pinecrest analytics",
+    "Description": f"Source: data/daily_sales.csv, {daily['date'].min().date()} to {daily['date'].max().date()}",
+})
+plt.close(chart)
+
+info = Image.open(path).info
+for key in ("Title", "Author", "Description"):
+    print(f"{key}: {info[key]}")</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>Title: Boise: monthly in-store revenue
+Author: Pinecrest analytics
+Description: Source: data/daily_sales.csv, 2024-01-01 to 2025-12-31</code></pre>
+                        </div>
+                        <p>A chart that carries its own source is easier to trust and to reproduce. The same <code>metadata</code> argument works for PDF and SVG, with slightly different field names.</p>
+                    </details>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="quiz" class="lesson-section">
+                <h2>🎯 Quick Quiz</h2>
+                <div class="card quiz-container">
+                    <h3>🎯 Check Your Understanding</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> A figure is created with <code>figsize=(8, 4)</code> and saved with <code>fig.savefig("chart.png", dpi=150)</code>. How large is the image?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="That would be the size at 100 dots per inch. The dpi argument here is 150. Multiply each dimension in inches by the dpi.">
+                                A) 800 by 400 pixels
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="dpi multiplies the size in inches. It does not divide. Eight inches at 150 dots for every inch is how many dots?">
+                                B) 150 by 150 pixels
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Pixels are inches times dpi: 8 times 150 is 1200 wide and 4 times 150 is 600 high.">
+                                C) 1,200 by 600 pixels
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> What does this print?</p>
+                        <pre><code class="language-python">quiz_fig, _ = revenue_chart("Bend", figsize=(6, 3))
+quiz_fig.savefig(out / "quiz.png", dpi=200)
+plt.close(quiz_fig)
+print(plt.imread(out / "quiz.png").shape)</code></pre>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="The pixel counts are right, but check the order. An image array is rows first, then columns, like any 2-D NumPy array. Which is the number of rows: the height or the width?">
+                                A) <code>(1200, 600, 4)</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="The array shape is rows, columns, channels. The image is 3 inches high at 200 dpi, so 600 rows, and 6 inches wide, so 1200 columns, with 4 channels: red, green, blue and alpha.">
+                                B) <code>(600, 1200, 4)</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="imread returns the pixels of the saved image, not the settings used to make it. How many pixels is 6 inches at 200 dots per inch?">
+                                C) <code>(6, 3, 200)</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> A line chart is going into a printed annual report, and the designer may need to resize it during layout. Which format is the best choice?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="A vector file stores drawing instructions instead of pixels, so it stays sharp at any size the designer chooses, and its text remains real text.">
+                                A) PDF or SVG, because vector files stay sharp at any size
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="JPEG compression is designed for photographs. What does it do to thin lines and small text?">
+                                B) JPEG, because it gives the smallest file
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="72 dpi is a screen resolution. Print needs about 300 dots per inch, and a raster image cannot be enlarged without showing its pixels.">
+                                C) PNG at 72 dpi, because print uses the same resolution as screens
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 4:</strong> A chart saved from <code>figsize=(16, 9)</code> at <code>dpi=120</code> fills a slide exactly (1,920 by 1,080), but nobody can read the labels. What is the best fix?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="dpi scales the whole sheet together. The text would be the same fraction of the image as before, in a much larger file.">
+                                A) Save again at <code>dpi=480</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Text is sized in points, a fixed fraction of an inch, so on a smaller sheet it takes up more of the chart. Halving the figure size and doubling the dpi keeps 1920 by 1080 pixels and makes the text twice as large.">
+                                B) Use <code>figsize=(8, 4.5)</code> at <code>dpi=240</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="A tight bounding box trims empty margins and changes the pixel size. It does not change how large the text is compared with the chart.">
+                                C) Add <code>bbox_inches="tight"</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 5:</strong> A script saves 300 charts in a loop and gets slower and slower until it runs out of memory. What is missing?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="pyplot keeps every figure it creates until it is closed. Closing each figure after saving it releases its memory, so the loop uses the same small amount for every chart.">
+                                A) <code>plt.close(fig)</code> after each <code>savefig</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="A lower dpi makes each file smaller on disk. The problem here is what stays in memory while the script runs. What does pyplot keep after a figure is saved?">
+                                B) A lower <code>dpi</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="plt.show() displays figures. In a loop of 300 it would open 300 windows, and it would not release anything until they were closed by hand.">
+                                C) <code>plt.show()</code> after each chart
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="faq" class="lesson-section">
+                <h2>❓ Common Questions at This Stage</h2>
+
+                <details>
+                    <summary>Is a higher dpi always better?</summary>
+                    <p>No. Past what the destination can show, extra pixels only make files bigger and pages slower to load. A 1,920-pixel-wide slide cannot display more than 1,920 pixels. Match the destination: its pixel size for screens, 300 dpi at the printed size for paper, and vector when you do not know.</p>
+                </details>
+                <details>
+                    <summary>What about high-resolution ("Retina") screens?</summary>
+                    <p>Those screens pack two physical pixels into each "layout" pixel, so an image shown 800 layout pixels wide looks sharpest with 1,600 real pixels. For web images, saving at twice the displayed size (double the dpi, same figsize) and letting the page scale it down is a common approach. SVG avoids the question entirely.</p>
+                </details>
+                <details>
+                    <summary>The chart looks fine in my notebook but the saved file has labels cut off. Why?</summary>
+                    <p>The notebook display trims and pads the figure automatically; <code>savefig</code> saves the sheet as it is. If something extends past the edge of the sheet, it is cut. Create figures with <code>layout="constrained"</code> so everything is fitted onto the sheet, or as a quick rescue pass <code>bbox_inches="tight"</code> and accept a slightly different size.</p>
+                </details>
+                <details>
+                    <summary>Can I set the dpi once instead of in every <code>savefig</code> call?</summary>
+                    <p>Yes: <code>"savefig.dpi": 150</code> in your style dictionary (and <code>"savefig.facecolor": "white"</code> for the background). A function with presets, like <code>save_chart()</code>, goes one step further because it also handles the folder, the file name and the format.</p>
+                </details>
+                <details>
+                    <summary>How do I save an interactive chart?</summary>
+                    <p>Matplotlib figures are static pictures, and everything in this lesson is about static files. Interactive charts that respond to the mouse are saved as HTML pages by other libraries. Module 7 covers them.</p>
+                </details>
+
+                <div class="card card-accent">
+                    <h3>🌟 Going Further: Bonus Challenge</h3>
+                    <p>Turn this lesson into a tool you will keep. Put <code>pinecrest_style</code>, <code>PRESETS</code>, <code>new_figure()</code> and <code>save_chart()</code> in a file called <code>charting.py</code> in your project folder, and import them into a fresh notebook with <code>from charting import new_figure, save_chart, pinecrest_style</code>. Then extend <code>save_chart()</code> with an optional <code>formats</code> argument, so that <code>save_chart(fig, "boise", "print", formats=["pdf", "png"])</code> writes both files and returns a list of paths. Finally, rebuild the footwear returns chart from Lesson 3.3 with your module and save it for a slide. Open it full screen and stand two meters back: can you read every label?</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="journal" class="lesson-section">
+                <h2>📓 Learning Journal</h2>
+                <div class="card card-accent">
+                    <p>Take five minutes to write in your learning journal (the <code>journal.md</code> file you started in Lesson 0.1, or a paper notebook). Jot down:</p>
+                    <ul>
+                        <li><strong>Key concepts</strong> you learned today</li>
+                        <li><strong>Techniques that clicked</strong> (and the ones that have not, yet)</li>
+                        <li><strong>Questions or confusion</strong> to come back to</li>
+                        <li><strong>Ideas to try</strong> on your own</li>
+                        <li><strong>Progress and feelings</strong>: how did this lesson go for you?</li>
+                    </ul>
+                    <p><strong>✍️ This lesson's prompt:</strong> Where do your charts usually end up: slides, documents, a web page, chat messages? Write down the preset (figure size, dpi, format) you would use for each of your real destinations. Then explain the sheet of paper and the scanner in your own words, including why a smaller sheet makes the text look bigger. Since this is the end of Module 3, add one line on which of its four lessons changed the way you look at charts the most.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="summary" class="lesson-section">
+                <h2>📝 Lesson Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎓 Key Takeaways</h3>
+                    <ul>
+                        <li><code>fig.savefig(path)</code> saves the figure you name; the format comes from the file extension</li>
+                        <li><strong>pixels = inches × dpi</strong>. <code>figsize</code> is the sheet of paper, <code>dpi</code> is the scanner</li>
+                        <li>Text is sized in points, so <code>figsize</code> controls how big it looks relative to the chart; dpi does not</li>
+                        <li>Raster (PNG) has fixed pixels; vector (SVG, PDF) is sharp at any size. PNG for screens and slides, PDF or SVG for print and resizing, never JPEG for charts</li>
+                        <li><code>rasterized=True</code> keeps vector files small when a layer has very many points</li>
+                        <li><code>bbox_inches="tight"</code> prevents cut-off labels but changes the saved size; <code>layout="constrained"</code> usually makes it unnecessary</li>
+                        <li>A transparent background does not make dark text visible on a dark page; save with a solid <code>facecolor</code> or draw in a dark style</li>
+                        <li>Put sizes, dpi and formats in a table of presets and save through one function</li>
+                        <li>In loops: create, draw, save, <strong>close</strong>. <code>PdfPages</code> gathers many figures into one PDF</li>
+                        <li>Verify what you saved with <code>plt.imread(path).shape</code>, and look at the file at the size it will be used</li>
+                    </ul>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🏆 What You've Accomplished</h3>
+                    <ul>
+                        <li>You predicted and confirmed the pixel size of saved figures</li>
+                        <li>You saw for yourself why the same pixel count can carry tiny or readable text</li>
+                        <li>You compared raster and vector output and watched a transparent chart vanish on a dark background</li>
+                        <li>You built a preset-driven save function and produced a nine-file chart pack with it, verified by a manifest</li>
+                        <li>You finished Module 3: you can go from a table to a chart that states a finding, is honest about its scales, and arrives intact wherever it is sent</li>
+                    </ul>
+                </div>
+
+                <h3>🔭 Looking Ahead</h3>
+                <p>Module 4 turns from pictures to numbers that summarize. In <a href="statistics_descriptive_part1.html"><strong>Lesson 4.1: Descriptive Statistics I: Center and Spread</strong></a> you will measure what you have so far been reading off charts: what "typical" means (mean, median, mode), how spread out values are, and why the mean and the median of Pinecrest's order totals sit almost $50 apart, as you saw on the histogram in Lesson 3.1. The charts you can now make will be how you check that the numbers are telling the truth.</p>
+
+                <h3>📋 Before the Next Lesson</h3>
                 <ul>
-                    <li><strong>Key concepts</strong> you learned</li>
-                    <li><strong>Techniques that clicked</strong> for you</li>
-                    <li><strong>Questions or confusion points</strong> to revisit</li>
-                    <li><strong>Ideas you want to try</strong></li>
-                    <li><strong>Your progress and feelings</strong> about learning this</li>
+                    <li>Keep <code>pinecrest_style</code>, <code>new_figure()</code> and <code>save_chart()</code> somewhere you can copy from. You will be making charts in every remaining module.</li>
+                    <li>Save one chart from an earlier lesson for a slide, put it in a real slide, and view it full screen.</li>
+                    <li>Look again at the histogram of order totals from Lesson 3.1 and write down, in a sentence, what you think "the typical order" is. Lesson 4.1 starts with that question.</li>
                 </ul>
-                <p><strong>✍️ This lesson's prompt:</strong> Think about where your charts usually end up — a slide, a report, a web page, a paper. How would knowing the final destination change the format and resolution you save at, and did anything about vector vs. raster surprise you?</p>
-            </div>
-        </section>
 
-        <!-- Lesson Summary (full standard block) -->
-        <section id="summary" class="lesson-section">
-            <h2>📝 Lesson Summary</h2>
-            <div class="card card-success">
-                <h3>🎓 Key Takeaways</h3>
-                <ul>
-                    <li><code>savefig()</code> is the single command for export, and its keyword arguments (format, <code>dpi</code>, <code>bbox_inches</code>, <code>transparent</code>) control the result.</li>
-                    <li>Vector formats (PDF, SVG, EPS) scale infinitely and suit publications; raster formats (PNG, JPG) are fixed-pixel and suit the web and photos.</li>
-                    <li>Figure size in inches multiplied by DPI gives the output pixel dimensions — the key to hitting print and journal requirements.</li>
-                    <li>Rasterizing dense elements and choosing the right DPI keep files small without sacrificing the quality that matters.</li>
-                </ul>
-            </div>
-            <h3>🎉 What You've Accomplished</h3>
-            <p>You can now take a figure from your screen to a file that looks crisp and correctly sized wherever it lands — a journal, a slide deck, a poster, or a web page.</p>
-            <h3>❓ Common Questions at This Stage</h3>
-            <details>
-                <summary>What DPI should I use?</summary>
-                <p>Use about 72–96 DPI for screen and web, 300 DPI for standard print, and 600 DPI for high-quality journal submissions. DPI only affects raster formats; vector formats stay sharp at any size.</p>
-            </details>
-            <details>
-                <summary>Why does my saved figure look different from what I see in the notebook?</summary>
-                <p>The interactive display and the saved file can use different sizes and bounding boxes. Set the figure size explicitly, use <code>bbox_inches='tight'</code>, and pass an explicit <code>facecolor</code> so the exported file matches what you intend.</p>
-            </details>
-            <details>
-                <summary>My PDF with a huge scatter plot is enormous — how do I shrink it?</summary>
-                <p>Vector formats store every point individually, so dense plots balloon in size. Pass <code>rasterized=True</code> to the heavy plotting call so those elements are saved as a raster layer while text and axes stay vector.</p>
-            </details>
-            <h3>🔭 Looking Ahead</h3>
-            <p>With your visualizations polished and exportable, you're ready to move beyond plotting into the analysis behind the charts — using statistics to quantify the patterns you've been visualizing.</p>
-            <h3>✅ Before the Next Lesson</h3>
-            <ul>
-                <li>Export the same figure as a PDF and a PNG, then compare how each looks when zoomed in.</li>
-                <li>Use the figure-size-times-DPI rule to save a figure at exactly 1920×1080 pixels.</li>
-                <li>Write your Learning Journal entry for this lesson</li>
-            </ul>
-            <div class="card card-accent" style="text-align: center; padding: 2rem;">
-                <h3>🌟 Encouragement for the Journey</h3>
-                <p>A great figure that's saved badly never gets seen at its best. Now that you control the export, your work will look as professional as the thinking behind it.</p>
-            </div>
-        </section>
+                <div class="card card-accent">
+                    <h3>🌱 Encouragement for the Journey</h3>
+                    <p>Four lessons ago you could load and reshape data, and the results stayed in tables only you could read. Now you can choose the right chart for a question, compose several into one figure, edit a draft until it makes its point, and deliver it in the right form for any destination. That is a complete skill, and it is the one other people will see first in your work. If the dpi arithmetic has not quite settled yet, that is fine: you built a function that remembers it for you, which is exactly what experienced people do.</p>
+                </div>
+            </section>
 
-        <div class="navigation">
-            <a href="matplotlib_customizing_plots.html" class="nav-button prev">← Customizing Plots</a>
-            <a href="statistical_analysis.html" class="nav-button">Statistical Analysis with Python →</a>
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="matplotlib_customizing_plots.html" class="prev-lesson">← Previous: Customizing Plots</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="statistics_descriptive_part1.html" class="next-lesson">Next: Descriptive Statistics I: Center and Spread →</a>
+            </nav>
         </div>
-    </div>
+    </main>
 
-    <!-- Footer -->
     <footer class="site-footer">
         <p>&copy; 2026 Ray de la Paz. Python Data Science. All rights reserved.</p>
         <div class="footer-links">
@@ -1476,147 +1053,10 @@ plt.show()</code></pre>
             <a href="https://rays-home.netlify.app/contact">Contact</a>
             <a href="#" id="print-button">Print Page</a>
         </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
     </footer>
 
-    <script>
-        let selectedFormat = 'png';
-
-        function selectFormat(format) {
-            selectedFormat = format;
-            
-            // Update UI
-            document.querySelectorAll('.format-card').forEach(card => {
-                card.classList.remove('selected');
-            });
-            event.currentTarget.classList.add('selected');
-            
-            // Update calculator
-            calculateDPI();
-            
-            // Draw format comparison
-            drawFormatComparison();
-        }
-
-        function calculateDPI() {
-            const targetUse = document.getElementById('targetUse').value;
-            const figWidth = parseFloat(document.getElementById('figWidth').value);
-            const figHeight = parseFloat(document.getElementById('figHeight').value);
-            const dpiSetting = parseInt(document.getElementById('dpiSetting').value);
-            
-            // Calculate pixel dimensions
-            const pixelWidth = figWidth * dpiSetting;
-            const pixelHeight = figHeight * dpiSetting;
-            
-            // Update display
-            document.getElementById('pixelDims').textContent = 
-                `${pixelWidth.toFixed(0)} × ${pixelHeight.toFixed(0)}`;
-            
-            // Estimate file size (rough approximation)
-            let fileSize;
-            const megapixels = (pixelWidth * pixelHeight) / 1000000;
-            
-            if (selectedFormat === 'png') {
-                fileSize = megapixels * 3 * 0.5; // RGB, with compression
-            } else if (selectedFormat === 'jpg') {
-                fileSize = megapixels * 3 * 0.1; // Heavy compression
-            } else if (selectedFormat === 'pdf' || selectedFormat === 'svg') {
-                fileSize = 0.1 + Math.random() * 0.5; // Vector, depends on complexity
-            } else {
-                fileSize = megapixels * 3 * 0.7;
-            }
-            
-            if (fileSize < 1) {
-                document.getElementById('fileSize').textContent = `~${(fileSize * 1000).toFixed(0)} KB`;
-            } else {
-                document.getElementById('fileSize').textContent = `~${fileSize.toFixed(1)} MB`;
-            }
-            
-            // Recommend format
-            let recommended;
-            if (targetUse === 'screen') {
-                recommended = 'PNG or JPG';
-            } else if (targetUse === 'print' || targetUse === 'journal') {
-                recommended = 'PDF or EPS';
-            } else {
-                recommended = 'PDF (vector) or PNG (raster)';
-            }
-            document.getElementById('recFormat').textContent = recommended;
-            
-            // Draw visualization
-            drawResolutionVisualization();
-        }
-
-        function drawResolutionVisualization() {
-            const canvas = document.getElementById('resolutionCanvas');
-            const ctx = canvas.getContext('2d');
-            const width = 800;
-            const height = 300;
-            
-            ctx.clearRect(0, 0, width, height);
-            
-            // Get values
-            const dpiSetting = parseInt(document.getElementById('dpiSetting').value);
-            const figWidth = parseFloat(document.getElementById('figWidth').value);
-            
-            // Draw DPI comparison
-            const dpis = [72, 150, 300, 600];
-            const barWidth = 150;
-            const barSpacing = (width - barWidth * dpis.length) / (dpis.length + 1);
-            
-            dpis.forEach((dpi, index) => {
-                const x = barSpacing + index * (barWidth + barSpacing);
-                const barHeight = (dpi / 600) * 200;
-                const y = height - 50 - barHeight;
-                
-                // Draw bar
-                const gradient = ctx.createLinearGradient(x, y + barHeight, x, y);
-                gradient.addColorStop(0, '#10b981');
-                gradient.addColorStop(1, '#3b82f6');
-                
-                ctx.fillStyle = gradient;
-                ctx.fillRect(x, y, barWidth, barHeight);
-                
-                // Highlight current DPI
-                if (Math.abs(dpi - dpiSetting) < 50) {
-                    ctx.strokeStyle = '#ef4444';
-                    ctx.lineWidth = 3;
-                    ctx.strokeRect(x - 2, y - 2, barWidth + 4, barHeight + 4);
-                }
-                
-                // Labels
-                ctx.fillStyle = '#333';
-                ctx.font = 'bold 14px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText(`${dpi} DPI`, x + barWidth/2, height - 30);
-                
-                // Use case
-                ctx.font = '12px Arial';
-                const uses = ['Web', 'Presentation', 'Print', 'Journal'];
-                ctx.fillText(uses[index], x + barWidth/2, height - 10);
-                
-                // Pixel count
-                const pixels = (figWidth * dpi).toFixed(0);
-                ctx.fillText(`${pixels}px`, x + barWidth/2, y - 10);
-            });
-            
-            // Title
-            ctx.fillStyle = '#333';
-            ctx.font = 'bold 16px Arial';
-            ctx.textAlign = 'left';
-            ctx.fillText('DPI Comparison for ' + figWidth + '" Wide Figure', 20, 30);
-        }
-
-        function drawFormatComparison() {
-            // This would draw a visual comparison of formats
-            // For brevity, using the existing visualization
-            calculateDPI();
-        }
-
-        // Initialize on load
-        window.onload = function() {
-            calculateDPI();
-            drawResolutionVisualization();
-        };
-    </script>
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
 </body>
 </html>

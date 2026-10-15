@@ -1,359 +1,1166 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Scatter plots first, Pearson and Spearman correlation, correlation matrices and heatmaps with Matplotlib, a real confound worked through, why correlation is not causation, and a first regression line. Python Data Science Lesson 4.4.">
+    <meta name="author" content="Ray de la Paz">
     <title>Correlation Analysis - Python Data Science</title>
-    <link href="styles/main.css" rel="stylesheet"/>
-    <link href="/styles/enhanced.css" rel="stylesheet"/>
-    <link href="/favicon.png" rel="icon" type="image/png"/>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid: rendered (and re-rendered on theme change) by js/course-enhancements.js -->
     <script type="module">
         import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({ startOnLoad: true });
+        window.__mermaid = mermaid;
+        mermaid.initialize({ startOnLoad: false });
+        document.dispatchEvent(new Event('mermaid-ready'));
     </script>
-    <style>
-        .breadcrumb {
-            background: #f8f9fa;
-            padding: 1rem;
-            border-radius: 5px;
-            margin-bottom: 2rem;
-            font-size: 0.9rem;
-        }
-        
-        .breadcrumb a {
-            color: #667eea;
-            text-decoration: none;
-        }
-        
-        .breadcrumb a:hover {
-            text-decoration: underline;
-        }
-        
-        .navigation-links {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 2rem 0;
-            margin-top: 3rem;
-            border-top: 2px solid #e0e0e0;
-        }
-        
-        .navigation-links a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 500;
-            padding: 0.5rem 1rem;
-            border-radius: 5px;
-            transition: all 0.3s ease;
-        }
-        
-        .navigation-links a:hover {
-            background: #f0f0f0;
-        }
-        
-        .nav-prev, .nav-next {
-            flex: 1;
-        }
-        
-        .nav-next {
-            text-align: right;
-        }
-        
-        .nav-home {
-            text-align: center;
-        }
-    </style>
-    <script src="/js/course-enhancements.js" defer></script>
-    <link rel="stylesheet" href="styles/standard.css">
 </head>
 <body>
-    <!-- Skip to main content for accessibility -->
     <a href="#main-content" class="skip-to-main">Skip to main content</a>
-    
-    <!-- Progress indicator -->
+
     <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
         <div class="progress-bar"></div>
     </div>
-    <h2>Common Pitfalls and Best Practices 🚧</h2>
 
-    <!-- What You'll Learn (learning objectives) -->
-    <div class="card card-info">
-        <h2>📚 What You'll Learn</h2>
-        <p>By the end of this lesson, you will be able to:</p>
-        <ul>
-            <li>Define correlation as a measure of relationship strength and direction on a -1 to +1 scale</li>
-            <li>Choose the right coefficient — Pearson for linear, Spearman for monotonic, Kendall for small samples and ties, point-biserial for binary-vs-continuous</li>
-            <li>Compute correlations and confidence intervals in Python with SciPy, pandas, and pingouin</li>
-            <li>Use partial correlation to control for confounding variables</li>
-            <li>Visualize relationships with scatter plots, pair plots, and correlation heatmaps before trusting the numbers</li>
-            <li>Avoid classic traps: assuming linearity, outlier influence, restricted range, multiple testing, and confusing correlation with causation</li>
-        </ul>
-        <p><strong>⏱️ Estimated Time:</strong> 45–60 minutes</p>
-        <p><strong>🎯 Project:</strong> Take a multi-column dataset, visualize it, compute Pearson and Spearman correlations with confidence intervals, and write a short, honest interpretation that resists causal claims.</p>
-    </div>
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">📊 Python Data Science</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">☰</button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
+    </nav>
 
-    <div class="code-example">
-        <pre><code>print("⚠️ COMMON CORRELATION PITFALLS")
-print("=" * 60)
+    <main id="main-content">
+        <div class="container">
+            <header>
+                <h1>🔗 Lesson 4.4: Correlation Analysis</h1>
+                <p class="lead">Measure how two columns move together, see the relationship before you trust the number, and learn from a real example in the Pinecrest data why a strong correlation can point to exactly the wrong decision.</p>
 
-# Pitfall 1: Assuming linearity
-print("\n❌ Pitfall 1: Assuming Linear Relationships")
-print("Pearson correlation only captures LINEAR relationships")
-print("✅ Solution: Use Spearman for monotonic, visualize first")
 
-# Pitfall 2: Outliers
-print("\n❌ Pitfall 2: Outlier Influence")
-print("Single outliers can drastically change correlation")
-print("✅ Solution: Check scatter plots, use robust methods")
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Read direction, form and strength from a scatter plot, and explain why the plot comes before the number</li>
+                        <li>Compute Pearson and Spearman correlations with pandas and scipy, and choose between them</li>
+                        <li>Build a correlation matrix and draw it as an annotated heatmap with Matplotlib</li>
+                        <li>Identify a confounding variable and test for it by comparing like with like</li>
+                        <li>Fit and interpret a simple regression line, and state what it does and does not tell you</li>
+                    </ul>
+                </div>
 
-# Pitfall 3: Restriction of range
-print("\n❌ Pitfall 3: Restriction of Range")
-print("Selecting subset of data can hide correlations")
-print("✅ Solution: Analyze full range of data")
+                <ul class="lesson-meta">
+                    <li><span class="meta-label">⏱️ Time</span> 95 minutes</li>
+                    <li><span class="meta-label">📋 Prerequisites</span> <a href="statistics_descriptive.html">Lesson 4.2: Descriptive Statistics II: Shape, Position and Outliers</a> (z-scores, <code>groupby().transform()</code>), <a href="pandas_merging_joining.html">Lesson 2.5: Merging and Joining</a>, <a href="matplotlib_line_scatter_bar.html">Lesson 3.1: Line, Scatter and Bar Charts</a></li>
+                    <li><span class="meta-label">🛠️ You will build</span> A "rain check" analysis: does weather move store traffic, once you compare like with like?</li>
+                    <li><span class="meta-label">📂 Data</span> <code>data/daily_sales.csv</code>, <code>data/store_weather.csv</code>, <code>data/products.csv</code>, <code>data/order_items.csv</code>, <code>data/survey.csv</code></li>
+                </ul>
+            </header>
 
-# Pitfall 4: Sample size
-print("\n❌ Pitfall 4: Small Sample Sizes")
-print("Correlations unstable with n < 30")
-print("✅ Solution: Report confidence intervals, use bootstrap")
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#picture" class="toc-link">The Picture Comes First</a></li>
+                        <li><a href="#pearson" class="toc-link">Pearson's r</a></li>
+                        <li><a href="#spearman" class="toc-link">Spearman: Correlation of Ranks</a></li>
+                        <li><a href="#matrix" class="toc-link">Correlation Matrices and Heatmaps</a></li>
+                        <li><a href="#confound" class="toc-link">The Staffing Puzzle: A Real Confound</a></li>
+                        <li><a href="#simpson" class="toc-link">Can a Confound Flip the Sign?</a></li>
+                        <li><a href="#causation" class="toc-link">Correlation Is Not Causation</a></li>
+                        <li><a href="#regression" class="toc-link">A First Regression Line</a></li>
+                        <li><a href="#mistakes" class="toc-link">Common Mistakes</a></li>
+                        <li><a href="#project" class="toc-link">Project: The Rain Check</a></li>
+                        <li><a href="#exercises" class="toc-link">Hands-on Exercises</a></li>
+                        <li><a href="#quiz" class="toc-link">Quick Quiz</a></li>
+                        <li><a href="#faq" class="toc-link">Common Questions</a></li>
+                        <li><a href="#journal" class="toc-link">Learning Journal</a></li>
+                        <li><a href="#summary" class="toc-link">Lesson Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
 
-# Pitfall 5: Multiple testing
-print("\n❌ Pitfall 5: Multiple Comparisons")
-print("Testing many correlations increases false positives")
-print("✅ Solution: Apply Bonferroni correction")
+            <section id="picture" class="lesson-section">
+                <h2>👀 The Picture Comes First</h2>
 
-# Best Practices
-print("\n✨ CORRELATION BEST PRACTICES")
-print("=" * 60)
+                <p>Every lesson in this module so far has looked at one column at a time. Most interesting questions involve two. Do busier days bring more revenue? Do cheaper products sell more? Do happier customers recommend the store? <strong>Correlation</strong> is the tool for "do these two things move together?", and it is one of the most used and most misused ideas in data analysis.</p>
 
-best_practices = [
-    "1. ALWAYS visualize first (scatter plots)",
-    "2. Check assumptions (linearity, normality for Pearson)",
-    "3. Report confidence intervals, not just point estimates",
-    "4. Consider both Pearson and Spearman",
-    "5. Look for non-linear patterns",
-    "6. Check for outliers and influential points",
-    "7. Be cautious about causation claims",
-    "8. Consider confounding variables",
-    "9. Report effect sizes (R²) not just significance",
-    "10. Validate findings with different datasets"
+                <div class="card card-info">
+                    <h4>💡 Mental Model: Two Dancers</h4>
+                    <p>Watch two people on a dance floor. If they step forward and back together, they are positively correlated. If one steps forward whenever the other steps back, negatively. If each moves with no regard for the other, uncorrelated. Correlation measures how well their movements are synchronized. It says nothing about <em>why</em>: one may be leading, or both may be following the same music.</p>
+                </div>
+
+                <p>The right first move with two numeric columns is always the same: draw a scatter plot. One point per row, one variable on each axis. Then read three things from it.</p>
+                <ul>
+                    <li><strong>Direction</strong>: does the cloud rise to the right (positive), fall (negative), or neither?</li>
+                    <li><strong>Form</strong>: is it a straight band, a curve, or clusters?</li>
+                    <li><strong>Strength</strong>: how tightly do the points hug that form?</li>
+                </ul>
+
+                <p>Load the data and prepare two tables: the daily store sales (dropping the six store-days with no revenue recorded), and a per-product table with the total units each product sold.</p>
+
+<pre><code class="language-python">import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from scipy import stats
+
+pd.set_option("display.width", 150)
+pd.set_option("display.max_columns", 20)
+
+daily = pd.read_csv("data/daily_sales.csv", parse_dates=["date"])
+sales = daily.dropna(subset=["revenue"]).copy()
+
+products = pd.read_csv("data/products.csv")
+items = pd.read_csv("data/order_items.csv")
+units_sold = items.groupby("sku")["quantity"].sum().rename("units_sold")
+catalog = products.merge(units_sold, on="sku")          # the 234 products that have sold
+
+print(sales.shape, catalog.shape)</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>(2897, 8) (234, 14)</code></pre>
+</div>
+
+                <p>Here are four relationships, each with the correlation coefficient <code>r</code> you will learn to compute in the next section. Before reading the numbers, look at the shapes.</p>
+
+<pre><code class="language-python">curve_x = np.linspace(-3, 3, 61)
+curve_y = curve_x ** 2
+
+panels = [
+    (sales["visitors"], sales["revenue"], "Visitors vs revenue (store-days)"),
+    (catalog["price"], catalog["units_sold"], "Price vs units sold (products)"),
+    (catalog["price"], catalog["rating"], "Price vs rating (products)"),
+    (pd.Series(curve_x), pd.Series(curve_y), "A perfect curve: y = x squared"),
 ]
 
-for practice in best_practices:
-    print(f"   {practice}")</code></pre>
-    </div>
+fig, axes = plt.subplots(2, 2, figsize=(10, 7), layout="constrained")
+for ax, (x, y, title) in zip(axes.flat, panels):
+    ax.scatter(x, y, s=8, alpha=0.4, color="#667eea")
+    r = round(x.corr(y), 2) + 0        # adding 0 turns a rounded -0.0 into 0.0
+    ax.set_title(f"{title}\nr = {r:.2f}", fontsize=10)
+plt.show()</code></pre>
+<figure>
+    <img src="images/statistics_correlation_analysis_four_scatters.png" alt="Four scatter plots. Top left: visitors against revenue, a tight straight band rising to the right, r 0.94. Top right: price against units sold, a steep curve falling quickly then flattening, r minus 0.32. Bottom left: price against rating, a shapeless cloud, r 0.00. Bottom right: a perfect U-shaped parabola, r 0.00." width="1100" height="770" loading="lazy">
+    <figcaption>Top left: strong, positive, straight. Top right: clearly related but curved, and r understates it. Bottom left: no relationship. Bottom right: a perfect relationship that r scores as zero.</figcaption>
+</figure>
 
-    <h2>Method Comparison Table 📊</h2>
-    
-    <table class="methods-comparison">
-        <thead>
-            <tr>
-                <th>Method</th>
-                <th>Best For</th>
-                <th>Assumptions</th>
-                <th>Pros</th>
-                <th>Cons</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td><strong>Pearson's r</strong></td>
-                <td>Linear relationships</td>
-                <td>Normal distribution, linear</td>
-                <td>Interpretable, widely used</td>
-                <td>Misses non-linear patterns</td>
-            </tr>
-            <tr>
-                <td><strong>Spearman's ρ</strong></td>
-                <td>Monotonic relationships</td>
-                <td>Ordinal scale sufficient</td>
-                <td>Robust to outliers</td>
-                <td>Less power than Pearson</td>
-            </tr>
-            <tr>
-                <td><strong>Kendall's τ</strong></td>
-                <td>Small samples, ties</td>
-                <td>Ordinal data</td>
-                <td>Handles ties well</td>
-                <td>Computationally intensive</td>
-            </tr>
-            <tr>
-                <td><strong>Point-Biserial</strong></td>
-                <td>Binary vs continuous</td>
-                <td>One dichotomous variable</td>
-                <td>Tests group differences</td>
-                <td>Limited to binary</td>
-            </tr>
-            <tr>
-                <td><strong>Partial Correlation</strong></td>
-                <td>Controlling confounders</td>
-                <td>Linear relationships</td>
-                <td>Removes confounding</td>
-                <td>Complex interpretation</td>
-            </tr>
-        </tbody>
-    </table>
+                <p>Two of these four panels are warnings. The top right shows a clear pattern (cheap products sell in far greater numbers) that earns a feeble -0.32. The bottom right shows a relationship with no scatter at all that earns exactly 0. The number <code>r</code> measures one specific thing, and you need the picture to know whether that thing is what your data is doing.</p>
+            </section>
 
-    <h2>Summary: Your Correlation Toolkit ✅</h2>
-    
-    <div class="insight-box">
-        <h3>🎯 Key Takeaways:</h3>
-        <ul>
-            <li><strong>Correlation measures relationship strength:</strong> -1 to +1</li>
-            <li><strong>Choose the right method:</strong> Pearson for linear, Spearman for monotonic</li>
-            <li><strong>Correlation ≠ Causation:</strong> The golden rule of statistics</li>
-            <li><strong>Always visualize:</strong> Scatter plots reveal patterns numbers miss</li>
-            <li><strong>Check assumptions:</strong> Different methods have different requirements</li>
-            <li><strong>Watch for spurious correlations:</strong> Confounding variables can deceive</li>
-            <li><strong>Report confidence intervals:</strong> Point estimates aren't enough</li>
-            <li><strong>Consider non-linear relationships:</strong> Not everything is a straight line</li>
-        </ul>
-    </div>
+            <section id="pearson" class="lesson-section">
+                <h2>📐 Pearson's r</h2>
 
-    <div class="formula-display">
-        <strong>Quick Formulas:</strong><br>
-        Pearson: r = Σ[(xi - x̄)(yi - ȳ)] / √[Σ(xi - x̄)² × Σ(yi - ȳ)²]<br>
-        R² = r² (proportion of variance explained)<br>
-        t = r√(n-2) / √(1-r²) (significance test)
-    </div>
+                <p>The standard correlation coefficient is <strong>Pearson's r</strong>. It measures the strength and direction of a <strong>straight-line</strong> relationship between two numeric variables, on a scale from -1 to +1.</p>
 
-    <div class="code-example">
-        <pre><code># Quick Reference Card - Correlation Analysis
-import numpy as np
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>r</th><th>Meaning</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="num">+1</td><td>All points on a rising straight line</td></tr>
+                            <tr><td class="num">around +0.9</td><td>A tight rising band</td></tr>
+                            <tr><td class="num">around +0.5</td><td>A loose rising cloud</td></tr>
+                            <tr><td class="num">0</td><td>No straight-line trend (which is not the same as no relationship)</td></tr>
+                            <tr><td class="num">negative</td><td>The same, falling instead of rising</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>What r Is Made Of</h3>
+
+                <p>You already have the ingredients. Convert both columns to z-scores (Lesson 4.2), multiply them row by row, and average. On a day when visitors and revenue are both above their means, both z-scores are positive and the product is positive. Both below: negative times negative, positive again. One above and one below: negative. If the two columns tend to be on the same side of their means together, the products are mostly positive and so is their average.</p>
+
+<pre><code class="language-python">x, y = sales["visitors"], sales["revenue"]
+
+zx = (x - x.mean()) / x.std()
+zy = (y - y.mean()) / y.std()
+r_by_hand = (zx * zy).sum() / (len(x) - 1)
+
+print("by hand        :", round(r_by_hand, 4))
+print("pandas .corr() :", round(x.corr(y), 4))
+print("np.corrcoef    :", round(np.corrcoef(x, y)[0, 1], 4))
+print("scipy pearsonr :", round(stats.pearsonr(x, y).statistic, 4))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>by hand        : 0.9435
+pandas .corr() : 0.9435
+np.corrcoef    : 0.9435
+scipy pearsonr : 0.9435</code></pre>
+</div>
+
+                <p>Four routes, one number: <strong>r = 0.94</strong> between visitors and revenue. In daily work use <code>series.corr(other)</code>. <code>np.corrcoef</code> returns a 2×2 table, of which you want the off-diagonal entry. <code>stats.pearsonr</code> returns a result object; its <code>.statistic</code> is r. (It also carries a <code>.pvalue</code>, which addresses whether an r could plausibly be a chance pattern in data with no real relationship. That question belongs to Lesson 4.5. Here you will describe r and what it means.)</p>
+
+                <p>Because r is built from z-scores, three properties follow at once:</p>
+                <ul>
+                    <li><strong>It has no units.</strong> Measure revenue in dollars, cents or euros and r is the same.</li>
+                    <li><strong>It is symmetric.</strong> The correlation of visitors with revenue equals the correlation of revenue with visitors.</li>
+                    <li><strong>It is not robust.</strong> It is made from means and SDs, so a few extreme points can drag it up or down.</li>
+                </ul>
+
+<pre><code class="language-python">print(round(x.corr(y * 100), 4))       # revenue in cents
+print(round(y.corr(x), 4))             # the other way around</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>0.9435
+0.9435</code></pre>
+</div>
+
+                <div class="card card-warning">
+                    <h4>⚠️ r Is Not a Slope and Not a Percentage</h4>
+                    <p>r = 0.94 does not mean revenue rises 94 cents per visitor, and r = 0.5 does not mean "50% related". It measures how tightly the points cluster around <em>a</em> straight line, not how steep that line is. You will get the slope from a regression line at the end of this lesson.</p>
+                </div>
+            </section>
+
+            <section id="spearman" class="lesson-section">
+                <h2>🪜 Spearman: Correlation of Ranks</h2>
+
+                <p>Back to the puzzling panel: price against units sold, r = -0.32. The relationship is obviously stronger than that. It is just not straight.</p>
+
+                <p><strong>Spearman's rank correlation</strong> (written ρ, "rho", or r<sub>s</sub>) asks a looser question: as one variable goes up, does the other <em>consistently</em> go up (or down), whether or not along a straight line? Such a relationship is called <strong>monotonic</strong>. The method is simple: replace each value by its rank (1 for the smallest, 2 for the next, and so on) and compute Pearson's r on the ranks.</p>
+
+<pre><code class="language-python">price, units = catalog["price"], catalog["units_sold"]
+
+print("Pearson            :", round(price.corr(units), 3))
+print("Spearman           :", round(price.corr(units, method="spearman"), 3))
+print("Pearson on ranks   :", round(price.rank().corr(units.rank()), 3))
+print("scipy spearmanr    :", round(stats.spearmanr(price, units).statistic, 3))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>Pearson            : -0.319
+Spearman           : -0.6
+Pearson on ranks   : -0.6
+scipy spearmanr    : -0.6</code></pre>
+</div>
+
+                <p>Spearman reports -0.60, nearly twice as strong as Pearson's -0.32, and line three confirms that it is nothing more than Pearson on the ranks. When the two disagree like this, the message is: <em>there is a consistent relationship, and it is curved</em>. A plot on logarithmic axes shows the curve straightening out.</p>
+
+<pre><code class="language-python">fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 3.9), layout="constrained")
+ax1.scatter(price, units, s=10, alpha=0.5, color="#667eea")
+ax1.set_title(f"Original scales: Pearson r = {price.corr(units):.2f}")
+ax2.scatter(price, units, s=10, alpha=0.5, color="#667eea")
+ax2.set_xscale("log")
+ax2.set_yscale("log")
+ax2.set_title(f"Log scales: Pearson r of the logs = {np.log(price).corr(np.log(units)):.2f}")
+for ax in (ax1, ax2):
+    ax.set_xlabel("List price ($)")
+    ax.set_ylabel("Units sold, 2024-2025")
+plt.show()</code></pre>
+<figure>
+    <img src="images/statistics_correlation_analysis_spearman.png" alt="Two scatter plots of list price against units sold for 234 products. Left, on ordinary axes: a steep curve hugging both axes, Pearson r minus 0.32. Right, on logarithmic axes: a broad straight band falling to the right, Pearson r of the logs minus 0.63." width="1100" height="429" loading="lazy">
+    <figcaption>The same 234 products. On log axes the curve becomes a straight band, and Pearson on the logs agrees with Spearman on the raw values.</figcaption>
+</figure>
+
+                <h3>Choosing Between Them</h3>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th></th><th>Pearson r</th><th>Spearman ρ</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Measures</td><td>Straight-line association</td><td>Monotonic association (consistently up or down)</td></tr>
+                            <tr><td>Uses</td><td>The values</td><td>The ranks of the values</td></tr>
+                            <tr><td>Extreme values</td><td>Sensitive</td><td>Robust (the largest value is just "rank n")</td></tr>
+                            <tr><td>Ordinal data (1-to-5 scales)</td><td>Assumes equal steps</td><td>Appropriate: needs only order</td></tr>
+                            <tr><td>Reach for it when</td><td>The scatter is a straight band without extreme points</td><td>The scatter is curved, skewed or has outliers, or the data is ordinal</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>Ordinal data is the other natural home for Spearman. In Lesson 4.2 you treated the survey's 1-to-5 answers as ordered categories. Ranks need only order, so Spearman is the honest choice for "do customers who are more satisfied overall also give a higher recommendation score?"</p>
+
+<pre><code class="language-python">survey = pd.read_csv("data/survey.csv")
+both = survey[["sat_overall", "recommend"]].dropna()
+
+print("respondents who answered both:", len(both))
+print("Spearman:", round(both["sat_overall"].corr(both["recommend"], method="spearman"), 3))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>respondents who answered both: 1699
+Spearman: 0.632</code></pre>
+</div>
+
+                <p>A Spearman correlation of 0.63: satisfaction and willingness to recommend rise together, strongly but far from perfectly. (pandas drops rows where either answer is missing, which is why the count is worth printing.)</p>
+
+                <div class="card card-success">
+                    <h4>✅ A Good Habit</h4>
+                    <p>Compute both. If Pearson and Spearman are close, the relationship is roughly linear and either will do. If they differ noticeably, go back to the scatter plot: you have a curve or an influential point, and that is worth knowing either way.</p>
+                </div>
+            </section>
+
+            <section id="matrix" class="lesson-section">
+                <h2>🧮 Correlation Matrices and Heatmaps</h2>
+
+                <p>With more than two columns, compute every pair at once. Calling <code>.corr()</code> on a DataFrame returns a <strong>correlation matrix</strong>: a square table with one row and one column per variable.</p>
+
+<pre><code class="language-python">columns = ["visitors", "transactions", "units", "revenue", "staff_on_duty", "promo_day"]
+corr = sales[columns].corr()
+print(corr.round(2))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>               visitors  transactions  units  revenue  staff_on_duty  promo_day
+visitors           1.00          0.97   0.96     0.94           0.93       0.32
+transactions       0.97          1.00   0.99     0.98           0.90       0.37
+units              0.96          0.99   1.00     0.99           0.89       0.36
+revenue            0.94          0.98   0.99     1.00           0.88       0.37
+staff_on_duty      0.93          0.90   0.89     0.88           1.00       0.32
+promo_day          0.32          0.37   0.36     0.37           0.32       1.00</code></pre>
+</div>
+
+                <p>How to read it: the diagonal is all 1s (everything correlates perfectly with itself), and the table is a mirror image across the diagonal (r is symmetric), so only the lower triangle carries information. Pass <code>method="spearman"</code> for a rank-based matrix.</p>
+
+                <p>A table of 36 numbers is hard on the eyes. A <strong>heatmap</strong> colors each cell by its value. Matplotlib's <code>imshow</code> draws the grid; the two loops write the number in each cell. Two choices matter: a <em>diverging</em> colormap (two colors meeting at a neutral middle), and fixing the color scale at -1 to +1 so that zero is always the neutral color.</p>
+
+<pre><code class="language-python">fig, ax = plt.subplots(figsize=(7.5, 5.8), layout="constrained")
+image = ax.imshow(corr, cmap="RdBu_r", vmin=-1, vmax=1)
+
+ax.set_xticks(range(len(columns)), labels=columns, rotation=30, ha="right", rotation_mode="anchor")
+ax.set_yticks(range(len(columns)), labels=columns)
+for i in range(len(columns)):
+    for j in range(len(columns)):
+        value = corr.iloc[i, j]
+        ax.text(j, i, f"{value:.2f}", ha="center", va="center",
+                color="white" if abs(value) &gt; 0.6 else "black")
+fig.colorbar(image, ax=ax, label="Pearson r")
+ax.set_title("Daily store sales: everything moves together")
+plt.show()</code></pre>
+<figure>
+    <img src="images/statistics_correlation_analysis_heatmap.png" alt="A six by six heatmap of correlations between visitors, transactions, units, revenue, staff on duty and promo day. The first five variables form a block of dark red cells with values from 0.88 to 0.99. The promo day row and column are pale, with values from 0.32 to 0.37." width="825" height="638" loading="lazy">
+    <figcaption>A block of dark red: visitors, transactions, units, revenue and staff are all correlated with each other at 0.88 or more.</figcaption>
+</figure>
+
+                <p>The first five variables form a solid block of very high correlations. That is not five discoveries. It is one fact seen five ways: <strong>some days are busier than others</strong>, and on a busy day everything is higher. Visitors come in, a share of them buy, each purchase has units and dollars. When a whole block of variables rises and falls together, look for the common driver behind them before reading meaning into any single pair. One cell in that block deserves a much closer look.</p>
+            </section>
+
+            <section id="confound" class="lesson-section">
+                <h2>🕵️ The Staffing Puzzle: A Real Confound</h2>
+
+                <p>The correlation between <code>staff_on_duty</code> and <code>revenue</code> is 0.88. Imagine that number arriving on an executive's desk with a chart.</p>
+
+<pre><code class="language-python">staff, revenue = sales["staff_on_duty"], sales["revenue"]
+line = stats.linregress(staff, revenue)
+
+print("r:", round(staff.corr(revenue), 3))
+print("average revenue with 4 staff :", round(revenue[staff == 4].mean()))
+print("average revenue with 8 staff :", round(revenue[staff == 8].mean()))
+print("slope of the trend line      :", round(line.slope), "dollars per extra staff member")</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>r: 0.882
+average revenue with 4 staff : 4759
+average revenue with 8 staff : 9109
+slope of the trend line      : 1154 dollars per extra staff member</code></pre>
+</div>
+
+                <p>Days with eight staff bring in nearly twice the revenue of days with four. The trend line says each additional person on the floor goes with about $1,154 more revenue. A staff member costs far less than that per day. The proposal writes itself: <em>schedule more staff, sell more</em>.</p>
+
+                <p>(If you did the stretch exercise in Lesson 1.5, you have met this number and a first hint that it is not what it seems. Here is the full investigation.)</p>
+
+                <p>Before anyone acts on it, ask the question that should follow every correlation: <strong>how did this data come to be?</strong> The data dictionary gives the answer in five words. <code>staff_on_duty</code> is "scheduled in advance". Managers do not roll dice to staff the store. They look at the calendar, see a Saturday in a sale weekend, and schedule more people <em>because they expect a busy day</em>.</p>
+
+                <div class="mermaid">
+graph TD
+    A["Expected demand"] --> B["More staff scheduled"]
+    A --> C["More visitors arrive"]
+    C --> D["More revenue"]
+    B -.->|"causes? unknown"| D
+                </div>
+
+                <p>Expected demand (the weekday, the season, a promotion, the size of the store) drives the staffing <em>and</em> drives the visitors who produce the revenue. A third variable that influences both of the variables you are correlating is called a <strong>confounder</strong>. It can create a strong correlation between two things even if neither has any effect on the other. Check whether the calendar really moves both:</p>
+
+<pre><code class="language-python">sales["weekday"] = sales["date"].dt.day_name()
+day_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+by_day = sales.groupby("weekday")[["staff_on_duty", "visitors", "revenue"]].mean().loc[day_order]
+print(by_day.round(1))
+print()
+print(sales.groupby("promo_day")[["staff_on_duty", "visitors", "revenue"]].mean().round(1))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>           staff_on_duty  visitors  revenue
+weekday
+Monday               5.3     290.5   6137.7
+Tuesday              5.0     275.8   5716.1
+Wednesday            5.2     285.6   5985.3
+Thursday             5.5     303.6   6321.2
+Friday               6.8     372.1   7713.0
+Saturday             9.6     525.3  10932.9
+Sunday               8.0     437.8   9211.4
+
+           staff_on_duty  visitors  revenue
+promo_day
+0                    6.3     347.5   7211.7
+1                   10.8     604.0  13950.5</code></pre>
+</div>
+
+                <p>Saturdays have the most staff, the most visitors and the most revenue. Tuesdays have the least of all three. Promotion days have 10.8 staff against 6.3 and nearly twice the revenue. The schedule and the sales are both following the calendar.</p>
+
+                <h3>Test 1: Compare Like with Like</h3>
+
+                <p>If staffing itself raises revenue, then <em>among days that were expected to be equally busy</em>, the days that happened to have an extra person should still sell more. So remove what the calendar explains. Group the days by store, month, weekday and promotion status: each group is a handful of days a manager would have expected to be alike (the Saturdays of one month at one store). Within each group, measure every day as a deviation from its group's average, for both staff and revenue. Then correlate the deviations.</p>
+
+<pre><code class="language-python">sales["month"] = sales["date"].dt.to_period("M")
+alike = sales.groupby(["store", "month", "weekday", "promo_day"])
+
+sales["staff_dev"] = sales["staff_on_duty"] - alike["staff_on_duty"].transform("mean")
+sales["revenue_dev"] = sales["revenue"] - alike["revenue"].transform("mean")
+
+print("groups of comparable days:", alike.ngroups, " typical group size:", alike.size().median())
+print("r, all days pooled       :", round(staff.corr(revenue), 3))
+print("r, within comparable days:", round(sales["staff_dev"].corr(sales["revenue_dev"]), 3))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>groups of comparable days: 768  typical group size: 4.0
+r, all days pooled       : 0.882
+r, within comparable days: 0.143</code></pre>
+</div>
+
+                <p>From 0.88 to 0.14. Among comparable days, knowing that a day had more staff than usual tells you very little about whether it had more revenue than usual.</p>
+
+<pre><code class="language-python">fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4), layout="constrained")
+ax1.scatter(staff, revenue, s=8, alpha=0.3, color="#667eea")
+ax1.set_title(f"All days pooled: r = {staff.corr(revenue):.2f}")
+ax1.set_xlabel("Staff on duty")
+ax1.set_ylabel("Revenue ($)")
+
+jitter = np.random.default_rng(42).uniform(-0.08, 0.08, size=len(sales))
+ax2.scatter(sales["staff_dev"] + jitter, sales["revenue_dev"], s=8, alpha=0.3, color="#667eea")
+ax2.set_title(f"Comparable days: r = {sales['staff_dev'].corr(sales['revenue_dev']):.2f}")
+ax2.set_xlabel("Staff, compared with similar days")
+ax2.set_ylabel("Revenue, compared with similar days ($)")
+plt.show()</code></pre>
+<figure>
+    <img src="images/statistics_correlation_analysis_confound.png" alt="Two scatter plots. Left: staff on duty against revenue for all store-days, a clear rising band, r 0.88. Right: the same days after subtracting the average of comparable days from both variables, a nearly shapeless horizontal cloud centered on zero, r 0.14." width="1100" height="440" loading="lazy">
+    <figcaption>Left: the correlation as it would be presented. Right: the same days once each is compared only with days like it. The rising band is gone.</figcaption>
+</figure>
+
+                <h3>Test 2: Hold Visitors Constant</h3>
+
+                <p>A second angle. The diagram says staff and revenue are linked through foot traffic. So ask: among days with the same number of <em>visitors</em>, does more staff go with more revenue? The tool is a <strong>partial correlation</strong>. Fit a straight line predicting staff from visitors and keep the leftovers (the <strong>residuals</strong>: actual minus predicted). Do the same for revenue. Then correlate the two sets of leftovers. What remains is the association between staff and revenue that visitors cannot account for.</p>
+
+<pre><code class="language-python">def residuals(target, predictor):
+    """What is left of target after removing its straight-line relationship with predictor."""
+    fit = stats.linregress(predictor, target)
+    return target - (fit.intercept + fit.slope * predictor)
+
+staff_left = residuals(sales["staff_on_duty"], sales["visitors"])
+revenue_left = residuals(sales["revenue"], sales["visitors"])
+print("partial correlation, controlling for visitors:", round(staff_left.corr(revenue_left), 3))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>partial correlation, controlling for visitors: 0.068</code></pre>
+</div>
+
+                <h3>Test 3: Does Each Visitor Spend More?</h3>
+
+                <p>If extra staff helped sell, you would expect more revenue <em>per visitor</em> on well-staffed days.</p>
+
+<pre><code class="language-python">spend_per_visitor = sales["revenue"] / sales["visitors"]
+print("r between staff and spend per visitor:", round(staff.corr(spend_per_visitor), 3))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>r between staff and spend per visitor: 0.032</code></pre>
+</div>
+
+                <h3>The Verdict</h3>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Comparison</th><th>r</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Staff and revenue, all days pooled</td><td class="num">0.88</td></tr>
+                            <tr><td>Within the same store, month, weekday and promotion status</td><td class="num">0.14</td></tr>
+                            <tr><td>Holding visitors constant (partial correlation)</td><td class="num">0.07</td></tr>
+                            <tr><td>Staff and spend per visitor</td><td class="num">0.03</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>Three different checks agree. Nearly all of the 0.88 is the calendar acting on both variables. "Schedule more staff to sell more" is not supported by this data. A manager who doubled Tuesday's staff on the strength of that chart would get Tuesday's revenue and twice Tuesday's wage bill.</p>
+
+                <div class="card card-warning">
+                    <h4>⚠️ What This Does Not Prove</h4>
+                    <p>It does not prove staffing has <em>no</em> effect. The within-group correlation is small but not zero, and these checks have limits: managers may respond to things the data does not record (a local event, a forecast), and this data never shows a badly understaffed day, so it cannot tell you what one would cost. Observational data can rule a simple story out. To rule one <em>in</em> you need an experiment: deliberately vary staffing on comparable days and measure the result. That is the logic of the A/B test in Lesson 4.6.</p>
+                </div>
+            </section>
+
+            <section id="simpson" class="lesson-section">
+                <h2>🔄 Can a Confound Flip the Sign?</h2>
+
+                <p>In the staffing puzzle the confounder inflated a correlation that mostly vanished on inspection. A confounder can do something stranger: produce a pooled correlation with the <em>opposite sign</em> to the relationship inside every group. This is known as <strong>Simpson's paradox</strong>.</p>
+
+                <p>The Pinecrest data does not contain a clean example. (That was checked: across the store, weather, product and survey tables, no pair of variables reverses sign within stores, months or categories.) So here is a small <strong>simulated</strong> one, clearly labeled as invented, to show the mechanism. Imagine a chain with small, medium and large stores. Larger stores give staff more hours of training, and larger stores also log more customer complaints, simply because they serve more customers. Within any one size of store, more training means fewer complaints.</p>
+
+<pre><code class="language-python">rng = np.random.default_rng(42)
+frames = []
+for size, typical_training, typical_complaints in [("small", 10, 20), ("medium", 20, 40), ("large", 30, 60)]:
+    training = rng.normal(typical_training, 3, size=40)
+    complaints = typical_complaints - 1.0 * (training - typical_training) + rng.normal(0, 3, size=40)
+    frames.append(pd.DataFrame({"size": size, "training": training, "complaints": complaints}))
+chain = pd.concat(frames, ignore_index=True)
+
+print("pooled r:", round(chain["training"].corr(chain["complaints"]), 2))
+for size, group in chain.groupby("size", sort=False):
+    print(f"  {size:&lt;6} stores: r = {group['training'].corr(group['complaints']):.2f}")
+
+fig, ax = plt.subplots(figsize=(9, 4), layout="constrained")
+for (size, group), color in zip(chain.groupby("size", sort=False), ["#667eea", "#15803d", "#b45309"]):
+    ax.scatter(group["training"], group["complaints"], s=18, color=color, label=f"{size} stores")
+ax.set_xlabel("Training hours per employee (simulated)")
+ax.set_ylabel("Complaints per month (simulated)")
+ax.set_title("Simulated data: the trend reverses inside every group")
+ax.legend()
+plt.show()</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>pooled r: 0.87
+  small  stores: r = -0.81
+  medium stores: r = -0.62
+  large  stores: r = -0.75</code></pre>
+</div>
+<figure>
+    <img src="images/statistics_correlation_analysis_simpson.png" alt="Scatter plot of simulated training hours against complaints for small, medium and large stores in three colors. The three clusters step upward to the right, so the overall trend rises, but within each cluster the points slope downward." width="990" height="440" loading="lazy">
+    <figcaption>Simulated data. Taken together the points rise to the right: more training, more complaints. Inside each color they fall. Store size drives both.</figcaption>
+</figure>
+
+                <p>Pooled, training and complaints are strongly <em>positively</em> correlated, and a careless reading says training makes things worse. Inside every size of store the correlation is clearly negative. Neither number is a calculation error. They answer different questions, and only the within-group one is about what training does.</p>
+
+                <p>Pinecrest's weather data shows two milder relatives of the same effect, which you will work through in the project: a correlation between temperature and traffic that shrinks once season is accounted for, and a correlation between rain and traffic that gets <em>stronger</em>. Confounders do not only create false relationships. They can hide real ones.</p>
+            </section>
+
+            <section id="causation" class="lesson-section">
+                <h2>⚖️ Correlation Is Not Causation</h2>
+
+                <p>You have now seen the famous sentence at work. When two variables A and B are correlated, there are always several candidate explanations, and the correlation coefficient cannot choose among them.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Explanation</th><th>What it means</th><th>Example</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>A causes B</td><td>The story you hoped for</td><td>More visitors really do produce more revenue</td></tr>
+                            <tr><td>B causes A</td><td>The arrow points the other way</td><td>Expected revenue "causes" the staffing level, through the manager's schedule</td></tr>
+                            <tr><td>A confounder causes both</td><td>A third variable drives the pair</td><td>The calendar drives staff and revenue</td></tr>
+                            <tr><td>Selection</td><td>The way rows got into the data creates the pattern</td><td>A survey answered mostly by very happy and very unhappy customers</td></tr>
+                            <tr><td>Chance</td><td>With enough pairs of columns, some correlate by luck</td><td>Scanning 100 unrelated columns gives 4,950 pairs to choose from</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>Questions worth asking before you report any correlation:</p>
+                <ol>
+                    <li><strong>How was the data generated?</strong> Was either variable <em>decided by someone</em> using information related to the other?</li>
+                    <li><strong>What else changes when A changes?</strong> List candidate confounders: time, size, season, location.</li>
+                    <li><strong>Does it survive comparing like with like?</strong> Recompute within groups of the confounder.</li>
+                    <li><strong>Could the arrow run backward?</strong></li>
+                    <li><strong>How many pairs did I look at</strong> before finding this one?</li>
+                </ol>
+
+                <p>None of this makes correlation useless. A correlation is real information: it can support prediction (visitor counts predict revenue very well whatever the causal story), and it is often the first clue to a cause. It is where an investigation starts, not where it ends.</p>
+            </section>
+
+            <section id="regression" class="lesson-section">
+                <h2>📈 A First Regression Line</h2>
+
+                <p>Correlation tells you how tightly points follow a line. It does not tell you <em>which</em> line. <strong>Simple linear regression</strong> finds it. You met the machinery in Lesson 1.5, where <code>np.linalg.lstsq</code> fitted a line for the Boise store alone; here is the statistician's view of the same idea, for all four stores: the straight line <code>y = intercept + slope × x</code> that fits the cloud best, where "best" means the smallest total of squared vertical distances from the points to the line (hence its other name, the <strong>least-squares</strong> line).</p>
+
+<pre><code class="language-python">fit = stats.linregress(sales["visitors"], sales["revenue"])
+
+print("slope    :", round(fit.slope, 2))
+print("intercept:", round(fit.intercept, 2))
+print("r        :", round(fit.rvalue, 4))
+print("r squared:", round(fit.rvalue ** 2, 3))
+print("np.polyfit gives the same line:", np.polyfit(sales["visitors"], sales["revenue"], 1).round(2))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>slope    : 21.19
+intercept: -107.93
+r        : 0.9435
+r squared: 0.89
+np.polyfit gives the same line: [  21.19 -107.93]</code></pre>
+</div>
+
+                <p>Read each part in the units of the data:</p>
+                <ul>
+                    <li><strong>Slope, 21.19:</strong> across these store-days, each additional visitor goes with about $21 more revenue, on average. Unlike r, the slope has units (dollars per visitor) and would change if you changed them.</li>
+                    <li><strong>Intercept, -107.93:</strong> where the line crosses zero visitors. A store with no visitors does not lose $108. No day in the data is anywhere near zero visitors, so the intercept is just the number that positions the line. Do not interpret it.</li>
+                    <li><strong>r squared, 0.89:</strong> the square of the correlation is the share of the variance in revenue that the line accounts for. Visitor counts explain 89% of the day-to-day variation in revenue; the other 11% is everything else.</li>
+                </ul>
+
+<pre><code class="language-python">x_line = np.array([sales["visitors"].min(), sales["visitors"].max()])
+
+fig, ax = plt.subplots(figsize=(9, 4.2), layout="constrained")
+ax.scatter(sales["visitors"], sales["revenue"], s=8, alpha=0.3, color="#667eea", label="store-days")
+ax.plot(x_line, fit.intercept + fit.slope * x_line, color="#b91c1c", linewidth=2.5,
+        label=f"revenue = {fit.intercept:.0f} + {fit.slope:.2f} x visitors")
+ax.set_xlabel("Visitors")
+ax.set_ylabel("Revenue ($)")
+ax.set_title("Least-squares line: revenue on visitors")
+ax.legend()
+plt.show()</code></pre>
+<figure>
+    <img src="images/statistics_correlation_analysis_regression.png" alt="Scatter plot of visitors against revenue for all store-days with a straight red regression line running through the middle of the cloud, from about 2,500 dollars at 125 visitors to about 24,500 dollars at 1,164 visitors. The cloud widens slightly as visitors increase." width="990" height="462" loading="lazy">
+    <figcaption>The line passes through the middle of the cloud. Notice that the scatter around it grows on busier days: predictions for big days are less precise.</figcaption>
+</figure>
+
+                <h3>Using the Line, Carefully</h3>
+
+<pre><code class="language-python">predicted_400 = fit.intercept + fit.slope * 400
+leftover = sales["revenue"] - (fit.intercept + fit.slope * sales["visitors"])
+
+print("predicted revenue for a 400-visitor day:", round(predicted_400))
+print("typical miss (SD of the residuals)     :", round(leftover.std()))
+print("visitors in the data range from", sales["visitors"].min(), "to", sales["visitors"].max())</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>predicted revenue for a 400-visitor day: 8367
+typical miss (SD of the residuals)     : 1081
+visitors in the data range from 125 to 1164</code></pre>
+</div>
+
+                <p>A 400-visitor day is predicted to bring in about $8,367, typically give or take about $1,080. Three cautions come with every regression line:</p>
+                <ul>
+                    <li><strong>Do not extrapolate.</strong> The line was fitted on days with 125 to 1,164 visitors. It knows nothing about a 3,000-visitor day.</li>
+                    <li><strong>The line is not symmetric.</strong> Regressing revenue on visitors and visitors on revenue give two different lines, though the same r. Put what you want to predict on the y-axis.</li>
+                    <li><strong>A slope is not a causal effect.</strong> You computed one earlier: $1,154 of revenue per staff member. It is the correct least-squares slope, and you have shown it is almost entirely a confound. A regression line describes how y differs across rows with different x. Whether changing x would <em>change</em> y is a separate question that the line cannot answer.</li>
+                </ul>
+
+                <p>This one line is the seed of a large family of methods. Add more predictors and it becomes multiple regression, which is a principled way of "holding other things constant", as you did by hand in the staffing puzzle. That is the bridge from statistics to predictive modeling.</p>
+            </section>
+
+            <section id="mistakes" class="lesson-section">
+                <h2>⚠️ Common Mistakes</h2>
+
+                <p>The first two announce themselves. The last three give you a clean-looking number, which is what makes them dangerous.</p>
+
+                <h3>1. Asking for the Correlation of Text Columns</h3>
+
+<pre data-raises="ValueError"><code class="language-python">daily.corr()</code></pre>
+<div class="card card-output">
+<h4>Error</h4>
+<pre><code>ValueError: could not convert string to float: 'Asheville'</code></pre>
+</div>
+                <p><strong>What it means:</strong> the table has a <code>store</code> column of text, and pandas will not guess what to do with it. <strong>Fix:</strong> select the numeric columns you care about, or pass <code>daily.corr(numeric_only=True)</code>.</p>
+
+                <h3>2. A nan from NumPy</h3>
+
+<pre><code class="language-python">print(np.corrcoef(daily["visitors"], daily["revenue"])[0, 1])
+print(round(daily["visitors"].corr(daily["revenue"]), 4))</code></pre>
+<div class="card card-output">
+<h4>Output (NumPy gives up; pandas does not)</h4>
+<pre><code>nan
+0.9435</code></pre>
+</div>
+                <p><strong>What happened:</strong> six revenue values are missing. NumPy propagates the <code>nan</code>. pandas quietly drops any row where either value is missing, pair by pair. <strong>Fix:</strong> use pandas, or drop the missing rows yourself, and know that in a pandas correlation <em>matrix</em> different cells may be based on different rows.</p>
+
+                <h3>3. Reading r = 0 as "No Relationship"</h3>
+
+<pre><code class="language-python">u = pd.Series(np.arange(-5, 6))
+print(u.corr(u ** 2))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>0.0</code></pre>
+</div>
+                <p><strong>What happened:</strong> <code>u ** 2</code> is perfectly determined by <code>u</code>, and r is 0, because the relationship is a symmetric curve with no straight-line trend. <strong>Fix:</strong> r near zero means "no <em>linear</em> relationship". Only the scatter plot can tell you there is no relationship.</p>
+
+                <h3>4. Squaring r in Your Head the Wrong Way</h3>
+
+<pre><code class="language-python">for r in (0.3, 0.5, 0.7, 0.9):
+    print(f"r = {r}: the line accounts for {r ** 2:.0%} of the variance")</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>r = 0.3: the line accounts for 9% of the variance
+r = 0.5: the line accounts for 25% of the variance
+r = 0.7: the line accounts for 49% of the variance
+r = 0.9: the line accounts for 81% of the variance</code></pre>
+</div>
+                <p><strong>What to notice:</strong> r = 0.5 sounds like "halfway to perfect" and accounts for a quarter of the variance. Correlations below about 0.3 leave more than 90% unexplained. <strong>Fix:</strong> when deciding how much a relationship matters, think in r squared.</p>
+
+                <h3>5. Pooling Groups That Differ in Level</h3>
+                <p>You have seen both versions: Pinecrest's staff and revenue (0.88 pooled, 0.14 among comparable days), and the simulated stores where pooling reversed the sign. <strong>Fix:</strong> whenever your rows come from different stores, time periods or categories, color the scatter plot by group and compute the correlation within groups before trusting the pooled figure.</p>
+            </section>
+
+            <section id="project" class="lesson-section">
+                <h2>🛠️ Project: The Rain Check</h2>
+
+                <p>Store managers at Pinecrest say rain keeps customers away. The regional manager is not convinced, because the raw numbers look weak. You will merge the weather into the sales data, look first, measure second, compare like with like, and write a finding that says what the data supports. Work in a new notebook called <code>lesson_4_4_project</code>. Allow about 40 minutes.</p>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 1: Merge weather into sales <span class="step-time">(5 min)</span></h3>
+                    <p>The weather file names its location column <code>city</code>, not <code>store</code>, so the merge needs <code>left_on</code> and <code>right_on</code>. Check the row count afterward: a merge that silently multiplies or drops rows will corrupt everything that follows.</p>
+<pre><code class="language-python">import numpy as np
 import pandas as pd
-from scipy import stats
-import seaborn as sns
 import matplotlib.pyplot as plt
+from scipy import stats
 
-# PEARSON CORRELATION
-from scipy.stats import pearsonr
-r, p_value = pearsonr(x, y)
-# CI using Fisher transformation
-z = np.arctanh(r)
-se = 1/np.sqrt(len(x)-3)
-ci = np.tanh([z - 1.96*se, z + 1.96*se])
+daily = pd.read_csv("data/daily_sales.csv", parse_dates=["date"])
+weather = pd.read_csv("data/store_weather.csv", parse_dates=["date"])
 
-# SPEARMAN CORRELATION
-from scipy.stats import spearmanr
-rho, p_value = spearmanr(x, y)
+df = daily.merge(weather, left_on=["date", "store"], right_on=["date", "city"], how="left")
+print("rows before:", len(daily), " after:", len(df), " missing weather:", df["high_f"].isna().sum())
+print(df[["date", "store", "visitors", "high_f", "precip_in"]].head(3))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>rows before: 2903  after: 2903  missing weather: 0
+        date      store  visitors  high_f  precip_in
+0 2024-01-01  Asheville       201      49        0.0
+1 2024-01-01       Bend       200      37        0.0
+2 2024-01-01      Boise       333      37        0.0</code></pre>
+</div>
+                </div>
 
-# KENDALL'S TAU
-from scipy.stats import kendalltau
-tau, p_value = kendalltau(x, y)
+                <div class="card card-info">
+                    <h3>🛠️ Step 2: Look first <span class="step-time">(5 min)</span></h3>
+                    <p>Scatter visitors against each weather variable.</p>
+<pre><code class="language-python">fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 3.9), layout="constrained")
+ax1.scatter(df["precip_in"], df["visitors"], s=8, alpha=0.3, color="#667eea")
+ax1.set_xlabel("Precipitation (inches)")
+ax1.set_ylabel("Visitors")
+ax1.set_title("Rain and traffic")
+ax2.scatter(df["high_f"], df["visitors"], s=8, alpha=0.3, color="#667eea")
+ax2.set_xlabel("Daily high (F)")
+ax2.set_title("Temperature and traffic")
+fig.savefig("rain_check.png", dpi=110)
+plt.show()
 
-# CORRELATION MATRIX
-corr_matrix = df.corr(method='pearson')  # or 'spearman', 'kendall'
+print(f"days with no rain at all: {(df['precip_in'] == 0).mean():.0%}")</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>days with no rain at all: 76%</code></pre>
+</div>
+<figure>
+    <img src="images/statistics_correlation_analysis_project_scatter.png" alt="Two scatter plots of daily visitors. Left: against precipitation in inches, with most points stacked in a tall column at zero rain and a thin scatter of wetter days that sit lower on average. Right: against daily high temperature, a wide cloud rising slightly to the right with a few very busy days in cold weather." width="1100" height="429" loading="lazy">
+    <figcaption>Left: most days are dry, so the points pile up at zero, a skewed variable. Right: a wide cloud with a slight upward drift, and some very busy cold days (December).</figcaption>
+</figure>
+                    <p>Three quarters of days have no rain, and the rest trail off to the right. With a variable this skewed, compute Spearman as well as Pearson.</p>
+                </div>
 
-# PARTIAL CORRELATION
-# Using pingouin library
-import pingouin as pg
-partial_corr = pg.partial_corr(data=df, x='x', y='y', covar='z')
+                <div class="card card-info">
+                    <h3>🛠️ Step 3: Measure, two ways <span class="step-time">(5 min)</span></h3>
+<pre><code class="language-python">weather_cols = ["visitors", "high_f", "precip_in"]
+print("Pearson")
+print(df[weather_cols].corr().round(3))
+print()
+print("Spearman")
+print(df[weather_cols].corr(method="spearman").round(3))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>Pearson
+           visitors  high_f  precip_in
+visitors      1.000   0.268     -0.193
+high_f        0.268   1.000     -0.036
+precip_in    -0.193  -0.036      1.000
 
-# VISUALIZATION
-# Scatter plot matrix
-pd.plotting.scatter_matrix(df, figsize=(10, 10))
+Spearman
+           visitors  high_f  precip_in
+visitors      1.000   0.282     -0.218
+high_f        0.282   1.000     -0.108
+precip_in    -0.218  -0.108      1.000</code></pre>
+</div>
+                    <p>Pooled over all stores and both years: a weak negative correlation between rain and visitors (about -0.2 by either method, so the skew is not distorting Pearson much here), and a weak positive one between temperature and visitors (about 0.27). This is the evidence the regional manager found unconvincing.</p>
+                </div>
 
-# Correlation heatmap
-plt.figure(figsize=(10, 8))
-sns.heatmap(df.corr(), annot=True, cmap='coolwarm', 
-            vmin=-1, vmax=1, center=0, square=True)
+                <div class="card card-info">
+                    <h3>🛠️ Step 4: Compare like with like <span class="step-time">(10 min)</span></h3>
+                    <p>Traffic depends heavily on the store, the season, the weekday and promotions. Those are noise for this question, and season is also tied to the weather. Remove them the way you did in the staffing puzzle: deviations from the average of comparable days.</p>
+<pre><code class="language-python">df["weekday"] = df["date"].dt.day_name()
+df["month"] = df["date"].dt.to_period("M")
+alike = df.groupby(["store", "month", "weekday", "promo_day"])
 
-# Pair plot
-sns.pairplot(df, kind='scatter', diag_kind='kde')
+for col in ["visitors", "high_f", "precip_in"]:
+    df[col + "_dev"] = df[col] - alike[col].transform("mean")
 
-# POINT-BISERIAL (binary vs continuous)
-from scipy.stats import pointbiserialr
-r, p_value = pointbiserialr(binary_var, continuous_var)
+print("rain and visitors:  pooled", round(df["precip_in"].corr(df["visitors"]), 3),
+      "  comparable days", round(df["precip_in_dev"].corr(df["visitors_dev"]), 3))
+print("high and visitors:  pooled", round(df["high_f"].corr(df["visitors"]), 3),
+      "  comparable days", round(df["high_f_dev"].corr(df["visitors_dev"]), 3))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>rain and visitors:  pooled -0.193   comparable days -0.394
+high and visitors:  pooled 0.268   comparable days 0.176</code></pre>
+</div>
+                    <p>The two correlations move in opposite directions. The rain effect <em>doubles</em> in strength once the calendar's noise is removed: comparing a wet Saturday with the dry Saturdays of the same month at the same store, the wet one is reliably quieter. The temperature correlation <em>shrinks</em>: part of it was season (summer is both warm and busy).</p>
+                </div>
 
-# MULTIPLE TESTING CORRECTION
-from statsmodels.stats.multitest import multipletests
-p_values = [...]  # List of p-values from multiple tests
-reject, p_adjusted, _, _ = multipletests(p_values, method='bonferroni')
+                <div class="card card-info">
+                    <h3>🛠️ Step 5: Put it in visitors, not in r <span class="step-time">(10 min)</span></h3>
+                    <p>A manager needs a number of customers, not a correlation. Fit a line to the deviations, and also make the simplest comparison of all: wet days against dry days, within each store.</p>
+<pre><code class="language-python">rain_fit = stats.linregress(df["precip_in_dev"], df["visitors_dev"])
+print("visitors per extra inch of rain, comparable days:", round(rain_fit.slope))
 
-# BOOTSTRAP CONFIDENCE INTERVAL
-def bootstrap_correlation(x, y, n_bootstrap=1000, ci=95):
-    correlations = []
-    n = len(x)
-    for _ in range(n_bootstrap):
-        idx = np.random.choice(n, n, replace=True)
-        correlations.append(pearsonr(x[idx], y[idx])[0])
-    return np.percentile(correlations, [(100-ci)/2, 100-(100-ci)/2])
+df["wet"] = df["precip_in"] &gt;= 0.10
+by_store = df.groupby(["store", "wet"])["visitors"].mean().unstack().round(0)
+by_store.columns = ["dry days", "wet days"]
+by_store["change_pct"] = ((by_store["wet days"] / by_store["dry days"] - 1) * 100).round(0)
+print(by_store)
+print("share of days that are wet:", f"{df['wet'].mean():.0%}")</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>visitors per extra inch of rain, comparable days: -112
+           dry days  wet days  change_pct
+store
+Asheville     287.0     236.0       -18.0
+Bend          339.0     273.0       -19.0
+Boise         497.0     367.0       -26.0
+Flagstaff     338.0     266.0       -21.0
+share of days that are wet: 13%</code></pre>
+</div>
+                </div>
 
-# Remember:
-# • Visualize before correlating
-# • Check assumptions for each method
-# • Report CI and effect size (R²)
-# • Consider confounding variables
-# • Correlation does not imply causation!
+                <div class="card card-info">
+                    <h3>🛠️ Step 6: Write the finding <span class="step-time">(5 min)</span></h3>
+                    <p>State what you found, how strong it is, and what it does not show.</p>
+<pre><code class="language-python">r_pooled = df["precip_in"].corr(df["visitors"])
+r_alike = df["precip_in_dev"].corr(df["visitors_dev"])
 
-print("🔗 Master correlation analysis for better insights!")</code></pre>
-    </div>
+print(f"""RAIN CHECK
+Rain and store traffic are negatively related. Pooled over all days the
+correlation is weak (r = {r_pooled:.2f}) because store, season and weekday
+dominate traffic. Among comparable days (same store, month, weekday and
+promotion status) it is moderate (r = {r_alike:.2f}): about {abs(rain_fit.slope):.0f} fewer visitors
+per inch of rain. Wet days (0.10 in or more) have {abs(by_store['change_pct'].max()):.0f}% to {abs(by_store['change_pct'].min()):.0f}% fewer
+visitors than dry days, depending on the store.
+Limits: observational data; r of {r_alike:.2f} means rain accounts for about {r_alike ** 2:.0%}
+of the variation among comparable days; weather values are daily totals,
+not hour by hour.""")</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>RAIN CHECK
+Rain and store traffic are negatively related. Pooled over all days the
+correlation is weak (r = -0.19) because store, season and weekday
+dominate traffic. Among comparable days (same store, month, weekday and
+promotion status) it is moderate (r = -0.39): about 112 fewer visitors
+per inch of rain. Wet days (0.10 in or more) have 18% to 26% fewer
+visitors than dry days, depending on the store.
+Limits: observational data; r of -0.39 means rain accounts for about 16%
+of the variation among comparable days; weather values are daily totals,
+not hour by hour.</code></pre>
+</div>
+                    <p>Rain is a rare case where a causal reading is reasonable: nobody schedules the weather in response to expected sales, so the reverse arrow and the "decided by a manager" confound are both off the table. Season was the remaining confounder, and you controlled for it.</p>
+                </div>
 
-    <!-- Learning Journal (REQUIRED per the Courseware Authoring Standard) -->
-    <section id="journal" class="lesson-section">
-        <h2>📓 Learning Journal</h2>
-        <div class="card card-info">
-            <p>Keep a learning journal — digital or physical. After this lesson, take a few minutes to write down:</p>
-            <ul>
-                <li><strong>Key concepts</strong> you learned</li>
-                <li><strong>Techniques that clicked</strong> for you</li>
-                <li><strong>Questions or confusion points</strong> to revisit</li>
-                <li><strong>Ideas you want to try</strong></li>
-                <li><strong>Your progress and feelings</strong> about learning this</li>
-            </ul>
-            <p><strong>✍️ This lesson's prompt:</strong> "Correlation does not imply causation" is easy to recite and hard to live by. Recall a headline or chart that implied one variable caused another — what confounding variable might explain the relationship instead?</p>
+                <div class="card card-success">
+                    <h3>✅ Project Completion Checklist</h3>
+                    <ul class="checklist">
+                        <li>Your merge keeps 2,903 rows and no row is missing its weather</li>
+                        <li>You drew both scatter plots before computing any correlation, and saved <code>rain_check.png</code></li>
+                        <li>You reported Pearson and Spearman and can explain why they might differ for rainfall</li>
+                        <li>You recomputed both correlations among comparable days and can explain why one grew and one shrank</li>
+                        <li>Your finding gives the effect in visitors, not only as r</li>
+                        <li>Your finding states its limits and does not claim more than the data shows</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="exercises" class="lesson-section">
+                <h2>🏋️ Hands-on Exercises</h2>
+
+                <p>For each, sketch the scatter plot you expect before you compute anything.</p>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 1: Price, Cost and Weight</h3>
+                    <p>In <code>products.csv</code>, compute the Pearson and Spearman correlations of <code>price</code> with <code>cost</code>, and of <code>price</code> with <code>weight_kg</code>. Which pair is close to a straight line? For which pair do the two methods disagree, and what does that suggest?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>.corr(other, method="spearman")</code>. <code>weight_kg</code> has missing values; pandas handles them pair by pair.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+<pre><code class="language-python">products = pd.read_csv("data/products.csv")
+for other in ["cost", "weight_kg"]:
+    pearson = products["price"].corr(products[other])
+    spearman = products["price"].corr(products[other], method="spearman")
+    print(f"price vs {other:&lt;10} Pearson {pearson:.3f}   Spearman {spearman:.3f}")</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>price vs cost       Pearson 0.985   Spearman 0.992
+price vs weight_kg  Pearson 0.691   Spearman 0.807</code></pre>
+</div>
+                        <p>Price and cost are almost perfectly linear (0.98 and 0.99): cost is a fairly steady fraction of price. Price and weight are positively related, with Spearman (0.81) clearly above Pearson (0.69): heavier products do cost more, consistently, but not along a straight line. Both columns are right-skewed, and a few heavy, expensive items pull the cloud out of shape.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 2: What Goes with Recommending?</h3>
+                    <p>Build a Spearman correlation matrix of the five satisfaction items and <code>recommend</code> in <code>survey.csv</code>. Print just the <code>recommend</code> column, sorted. Which satisfaction item is most strongly associated with willingness to recommend? Write one sentence about it that does not claim causation.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>survey[cols].corr(method="spearman")["recommend"].sort_values(ascending=False)</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+<pre><code class="language-python">survey = pd.read_csv("data/survey.csv")
+cols = ["sat_overall", "sat_selection", "sat_price", "sat_staff", "sat_website", "recommend"]
+rank_corr = survey[cols].corr(method="spearman")
+print(rank_corr["recommend"].drop("recommend").sort_values(ascending=False).round(3))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>sat_overall      0.632
+sat_staff        0.582
+sat_selection    0.546
+sat_price        0.533
+sat_website      0.482
+Name: recommend, dtype: float64</code></pre>
+</div>
+                        <p>"Customers who rate their overall satisfaction higher also tend to give higher recommendation scores (Spearman 0.63); among the specific items, satisfaction with staff has the strongest association (0.58) and the website the weakest (0.48)." Remember from Lesson 4.2 that the staff and website items have many missing answers that are not missing at random, so those two cells describe subsets of the respondents.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 3: A Line for Conversion</h3>
+                    <p>Fit a regression line predicting <code>transactions</code> from <code>visitors</code> in <code>daily_sales.csv</code>. Interpret the slope in plain words. How many transactions does the line predict for a 400-visitor day? What share of the variance in transactions does it account for?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>stats.linregress(x, y)</code> with the predictor first. Neither column has missing values.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+<pre><code class="language-python">conv = stats.linregress(daily["visitors"], daily["transactions"])
+print("slope    :", round(conv.slope, 3))
+print("intercept:", round(conv.intercept, 2))
+print("predicted for 400 visitors:", round(conv.intercept + conv.slope * 400, 1))
+print("r squared:", round(conv.rvalue ** 2, 3))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>slope    : 0.24
+intercept: -1.49
+predicted for 400 visitors: 94.5
+r squared: 0.931</code></pre>
+</div>
+                        <p>The slope of 0.24 says each additional 100 visitors goes with about 24 more transactions: roughly one visitor in four buys. The line predicts about 95 transactions for 400 visitors and accounts for 93% of the variance.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 4: A Reusable Partial Correlation (Stretch)</h3>
+                    <p>Write a function <code>partial_corr(df, x, y, control)</code> that returns the correlation between columns <code>x</code> and <code>y</code> after removing the straight-line effect of <code>control</code> from each. Use it on the daily sales (with missing revenue dropped) to compute: staff and revenue controlling for visitors; visitors and revenue controlling for staff. What do the two results, side by side, tell you about which variable carries the information?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Reuse the residuals idea from the lesson: fit <code>linregress(control, x)</code>, subtract the fitted values, and do the same for <code>y</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+<pre><code class="language-python">def partial_corr(df, x, y, control):
+    """Correlation of x and y after removing the linear effect of control from both."""
+    def leftover(col):
+        fit = stats.linregress(df[control], df[col])
+        return df[col] - (fit.intercept + fit.slope * df[control])
+    return leftover(x).corr(leftover(y))
+
+clean = daily.dropna(subset=["revenue"])
+print("staff and revenue, controlling for visitors:", round(partial_corr(clean, "staff_on_duty", "revenue", "visitors"), 3))
+print("visitors and revenue, controlling for staff:", round(partial_corr(clean, "visitors", "revenue", "staff_on_duty"), 3))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>staff and revenue, controlling for visitors: 0.068
+visitors and revenue, controlling for staff: 0.714</code></pre>
+</div>
+                        <p>Once you know the visitor count, staffing adds almost nothing (0.07). Once you know the staffing level, visitors still tell you a great deal (0.71). Visitors carry the information about revenue; staffing is mostly a noisy echo of expected visitors.</p>
+                    </details>
+                </div>
+            </section>
+
+            <section id="quiz" class="lesson-section">
+                <h2>🎯 Quick Quiz</h2>
+                <div class="card quiz-container">
+                    <h3>🎯 Check Your Understanding</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> Across Pinecrest's store-days, staff on duty and revenue have r = 0.88. Staff are scheduled in advance from expected demand. What is the soundest conclusion?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="That reads the correlation as a cause. Think about what decides how many staff are scheduled, and whether that same thing also affects revenue.">
+                                A) Adding a staff member to any day will raise that day's revenue
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Expected demand drives both the schedule and the visitors who produce revenue, so it is a confounder. Among comparable days the correlation falls to about 0.14.">
+                                B) Staffing and revenue rise and fall together, largely because both follow expected demand
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="The number is computed correctly and is a real feature of the data. The issue is what it means, not whether it exists.">
+                                C) The correlation must be a calculation error, since it is so high
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> For price and units sold, Pearson's r is -0.32 and Spearman's is -0.60. What does the gap suggest?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Both are computed from the same rows. A gap between them is information about the shape of the relationship, not a sign of a mistake.">
+                                A) One of the two was computed on the wrong columns
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Spearman being stronger means the ordering is quite consistent. What kind of pattern is consistent in direction but poorly described by a straight line?">
+                                B) There is almost no relationship, since the two disagree
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Spearman works on ranks and detects any consistently falling pattern. Pearson only credits a straight line. A much stronger Spearman points to a monotonic relationship that is curved or distorted by extreme values.">
+                                C) Units fall consistently as price rises, but along a curve, not a straight line
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> You compute the correlation between daily visitors and daily revenue in dollars. Then you convert revenue to cents and compute it again. What happens to r?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="r is built from z-scores, and multiplying a column by a positive constant does not change its z-scores. Correlation has no units.">
+                                A) Nothing: r is unchanged
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="r can never exceed 1. Think about what happens to the z-scores of a column when every value is multiplied by 100.">
+                                B) It becomes 100 times larger
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="The slope of a regression line would change with the units. Is r a slope?">
+                                C) It becomes 100 times smaller
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 4:</strong> Two columns have a Pearson correlation of 0.00. Which statement is justified?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Remember the U-shaped panel in the first figure: y was completely determined by x, and r was zero.">
+                                A) The two columns are unrelated
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Pearson's r measures only straight-line association. A symmetric curve, or groups with opposite trends, can give r of zero while the variables are strongly related. Look at the scatter plot.">
+                                B) There is no straight-line trend; a curved relationship is still possible
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="A perfect negative relationship would give r of -1, not 0.">
+                                C) One column falls exactly as the other rises
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 5:</strong> A regression of revenue on visitors gives a slope of 21.19 and an intercept of -107.93. What is the best reading?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="The slope is in units of y per unit of x: about 21 dollars of revenue per additional visitor, on average, across the range of days in the data. The intercept only positions the line.">
+                                A) Within the range of the data, each additional visitor goes with about $21 more revenue on average
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="The intercept is the line extended to zero visitors, far outside the data, where the smallest day had 125 visitors. Should a line be trusted there?">
+                                B) A store with no visitors loses about $108 a day
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="The share of variance explained is r squared, a number between 0 and 1. The slope has units of dollars per visitor.">
+                                C) Visitors explain 21% of the variation in revenue
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="faq" class="lesson-section">
+                <h2>❓ Common Questions at This Stage</h2>
+
+                <details>
+                    <summary>What counts as a "strong" correlation?</summary>
+                    <p>It depends on the field and the question. Common rough labels are: below 0.3 weak, 0.3 to 0.7 moderate, above 0.7 strong. But in physical measurement 0.9 can be disappointing, and in survey or behavioral data 0.3 can be a notable finding. Thinking in r squared helps (0.3 accounts for 9% of the variance), and so does asking what the relationship is worth in real units, as you did with visitors per inch of rain.</p>
+                </details>
+                <details>
+                    <summary>How do I know whether a correlation is "real" or just luck?</summary>
+                    <p>With thousands of rows, as in most of this lesson, even small correlations are very unlikely to be pure chance. With a few dozen rows, an r of 0.3 can easily appear between unrelated columns. Quantifying that is exactly what a hypothesis test does, and <code>pearsonr</code> and <code>spearmanr</code> both report the p-value for it. Lesson 4.5 explains what that p-value means and what it does not. Note that "unlikely to be luck" and "causal" are different claims: the staffing correlation is certainly not luck, and it is certainly not a simple cause.</p>
+                </details>
+                <details>
+                    <summary>Can I correlate a yes/no column with a numeric one?</summary>
+                    <p>Yes. Code it as 0 and 1 (as <code>promo_day</code> already is) and Pearson's r works; in that case it has a special name, the point-biserial correlation. Often, though, comparing the two group means says the same thing more clearly: "promotion days average $13,950 against $7,212" is easier to act on than "r = 0.37".</p>
+                </details>
+                <details>
+                    <summary>There is also Kendall's tau. When would I use it?</summary>
+                    <p>Kendall's tau is another rank-based measure (<code>method="kendall"</code>). It counts pairs of rows that are in the same order on both variables against pairs in opposite order. It behaves well with small samples and many tied values, and its values run smaller than Spearman's for the same data. For most exploratory work Spearman is enough. If you report tau, say so, because the numbers are not comparable.</p>
+                </details>
+                <details>
+                    <summary>If I control for the confounders I can think of, have I found the cause?</summary>
+                    <p>You have made the causal story more plausible, not proved it. You can only control for what you measured and thought of. An unmeasured confounder leaves no trace in the data. That is why randomized experiments are so valued: random assignment balances every confounder, including the ones nobody has imagined. Lesson 4.6 is about running one.</p>
+                </details>
+
+                <div class="card card-accent">
+                    <h3>🌟 Going Further: Bonus Challenge</h3>
+                    <p>The staffing analysis compared days within the same store, month, weekday and promotion status. Test how much each ingredient matters. Recompute the within-group correlation of staff and revenue using only <code>["store"]</code>, then <code>["store", "weekday"]</code>, then <code>["store", "weekday", "promo_day"]</code>, then all four keys. Print r at each step. Which single addition removes the most correlation? What does that tell you about what the managers' schedule is mostly responding to? Then color the pooled scatter plot by weekday and see whether the picture agrees.</p>
+                </div>
+            </section>
+
+            <section id="journal" class="lesson-section">
+                <h2>📓 Learning Journal</h2>
+                <div class="card card-accent">
+                    <p>Take five minutes to write in your learning journal (the <code>journal.md</code> file you started in Lesson 0.1, or a paper notebook). Jot down:</p>
+                    <ul>
+                        <li><strong>Key concepts</strong> you learned today</li>
+                        <li><strong>Techniques that clicked</strong> (and the ones that have not, yet)</li>
+                        <li><strong>Questions or confusion</strong> to come back to</li>
+                        <li><strong>Ideas to try</strong> on your own</li>
+                        <li><strong>Progress and feelings</strong>: how did this lesson go for you?</li>
+                    </ul>
+                    <p><strong>✍️ This lesson's prompt:</strong> Recall a claim you have read or heard recently of the form "people who do X have more Y". Name one plausible confounder and one way the arrow could run backward. What comparison of like with like would you want to see before believing it?</p>
+                </div>
+            </section>
+
+            <section id="summary" class="lesson-section">
+                <h2>📝 Lesson Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎓 Key Takeaways</h3>
+                    <ul>
+                        <li><strong>Plot first.</strong> A scatter plot shows direction, form and strength; r summarizes only one kind of pattern</li>
+                        <li><strong>Pearson's r</strong> measures straight-line association from -1 to +1. It is the average product of z-scores: unitless, symmetric, and sensitive to extreme points</li>
+                        <li><strong>Spearman's ρ</strong> is Pearson on ranks. It measures monotonic association, resists outliers, and suits ordinal data. A gap between the two means a curve or an influential point</li>
+                        <li>r = 0 means no <em>linear</em> trend, not no relationship. r squared is the share of variance a line accounts for</li>
+                        <li>A <strong>correlation matrix</strong> and <strong>heatmap</strong> (diverging colormap, scale fixed at -1 to 1) show many pairs at once. A block of high correlations usually has one common driver</li>
+                        <li>A <strong>confounder</strong> drives both variables. Test for it by comparing like with like: correlate deviations from group means, or use a partial correlation</li>
+                        <li>Correlation alone cannot distinguish cause, reverse cause, confounding, selection and chance. Ask how the data was generated</li>
+                        <li>A <strong>regression line</strong> gives the slope in real units for prediction within the range of the data. A slope is not a causal effect</li>
+                    </ul>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🏆 What You've Accomplished</h3>
+                    <ul>
+                        <li>You computed r four ways, including from z-scores by hand, and know what it is made of</li>
+                        <li>You caught Pearson understating a curved relationship and used Spearman and a log plot to see it properly</li>
+                        <li>You drew an annotated correlation heatmap in plain Matplotlib</li>
+                        <li>You took a correlation of 0.88 that pointed to a costly decision and showed, three ways, that it was mostly a confound</li>
+                        <li>You found a real effect (rain on traffic) that was half-hidden in the pooled data, and reported it in visitors with its limits stated</li>
+                    </ul>
+                </div>
+
+                <h3>🔭 Looking Ahead</h3>
+                <p>In <a href="statistics_hypothesis_testing.html"><strong>Lesson 4.5: Hypothesis Testing</strong></a> you will take up the question this lesson kept setting aside: when you see a difference or a correlation in a sample, how do you judge whether chance alone could have produced it? It builds directly on the standard error and confidence interval from Lesson 4.3, and it is where p-values, including the one <code>pearsonr</code> reports (its null hypothesis is "no correlation"), finally get explained.</p>
+
+                <h3>📋 Before the Next Lesson</h3>
+                <ul>
+                    <li>Keep your merged sales-and-weather table. It is a good playground for the tests in Lesson 4.5.</li>
+                    <li>From the survey, compute the share of customers satisfied with staff (4 or 5) at Asheville and at the other stores combined. Write down the two percentages and the two counts. Is that gap bigger than chance would produce? Hold that question.</li>
+                    <li>Reread your Lesson 4.3 notes on the standard error.</li>
+                </ul>
+
+                <div class="card card-accent">
+                    <h3>🌱 Encouragement for the Journey</h3>
+                    <p>Anyone can compute a correlation; it is one method call. What you practiced today is rarer: looking at a strong, clean, convincing number and asking where it came from before believing what it seems to say. That habit will save you, and the people who rely on your work, from confident mistakes for the rest of your career. If the like-with-like technique felt like a lot of moving parts, give it time. You have now used it twice, on staffing and on rain, with opposite outcomes, and each use makes the next one easier.</p>
+                </div>
+            </section>
+
+
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="statistics_probability_distributions.html" class="prev-lesson">← Previous: Probability Distributions</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="statistics_hypothesis_testing.html" class="next-lesson">Next: Hypothesis Testing →</a>
+            </nav>
         </div>
-    </section>
+    </main>
 
-    <!-- Lesson Summary (full standard block) -->
-    <section id="summary" class="lesson-section">
-        <h2>📝 Lesson Summary</h2>
-        <div class="card card-success">
-            <h3>🎓 Key Takeaways</h3>
-            <ul>
-                <li>Correlation quantifies the strength and direction of a relationship from -1 to +1, but it only captures the kind of pattern the chosen method assumes.</li>
-                <li>Match the method to the data: Pearson for linear relationships, Spearman for monotonic ones, Kendall for small samples with ties, point-biserial for a binary variable.</li>
-                <li>Always visualize first — a scatter plot reveals non-linearity, outliers, and restricted range that a single coefficient hides.</li>
-                <li>Report confidence intervals and effect size (R²), correct for multiple comparisons, and never read causation into a correlation.</li>
-            </ul>
-        </div>
-        <h3>🎉 What You've Accomplished</h3>
-        <p>You can now measure relationships between variables with the appropriate method, quantify your uncertainty, and — just as importantly — state clearly what a correlation does and does not prove. That judgment is what makes an analyst trustworthy.</p>
-        <h3>❓ Common Questions at This Stage</h3>
-        <details>
-            <summary>When should I use Spearman instead of Pearson?</summary>
-            <p>Use Spearman when the relationship is monotonic but not linear, when your data are ordinal, or when outliers would distort Pearson. Spearman correlates the ranks rather than the raw values, making it more robust.</p>
-        </details>
-        <details>
-            <summary>A correlation is strong and significant — does that mean one variable causes the other?</summary>
-            <p>No. A strong, significant correlation can arise from a confounding variable, reverse causation, or coincidence. Establishing causation requires a controlled experiment or careful causal-inference methods.</p>
-        </details>
-        <details>
-            <summary>What is a "spurious" correlation?</summary>
-            <p>It's a correlation between two variables that are not directly related but move together because both are driven by a third factor (like ice-cream sales and drowning, both driven by summer). Partial correlation can help expose these.</p>
-        </details>
-        <h3>🔭 Looking Ahead</h3>
-        <p>Correlation tells you two variables move together; next you'll formally test whether an observed difference or effect is real, learning the hypothesis-testing framework behind experiments and comparisons.</p>
-        <h3>✅ Before the Next Lesson</h3>
-        <ul>
-            <li>Build a correlation heatmap for a dataset and identify the strongest pair, then plot that pair to confirm the relationship is really linear.</li>
-            <li>Compute a partial correlation controlling for one variable and note how the coefficient changes.</li>
-            <li>Write your Learning Journal entry for this lesson</li>
-        </ul>
-        <div class="card card-accent" style="text-align: center; padding: 2rem;">
-            <h3>🌟 Encouragement for the Journey</h3>
-            <p>Learning to say "these move together, but I can't yet say why" is a sign of real statistical maturity. That honesty will make every insight you share more valuable. Keep it up.</p>
-        </div>
-    </section>
-
-    <footer>
-        <div class="navigation-links">
-            <a class="nav-prev" href="statistics_hypothesis_testing.html">← Previous: Hypothesis Testing</a>
-            <a class="nav-home" href="index.html">🏠 Course Home</a>
-            <a class="nav-next" href="statistics_ab_testing.html">Next: A/B Testing Basics →</a>
-        </div>
-    </footer>
-    
-    <!-- Footer -->
     <footer class="site-footer">
         <p>&copy; 2026 Ray de la Paz. Python Data Science. All rights reserved.</p>
         <div class="footer-links">
@@ -361,9 +1168,10 @@ print("🔗 Master correlation analysis for better insights!")</code></pre>
             <a href="https://rays-home.netlify.app/contact">Contact</a>
             <a href="#" id="print-button">Print Page</a>
         </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
     </footer>
 
-    <!-- Copy to Clipboard functionality -->
-    <script src="scripts/clipboard.js"></script>
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
 </body>
 </html>

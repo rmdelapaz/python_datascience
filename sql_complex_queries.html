@@ -3,1121 +3,1565 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Master complex SQL queries, joins, subqueries, and CTEs. Learn advanced SQL techniques for data analysis and manipulation.">
-    <title>Complex Queries and Joins - Python Data Science Path</title>
+    <meta name="description" content="Combine tables with every kind of join, nest queries, name steps with CTEs, walk a hierarchy with a recursive CTE, and handle CASE, set operations and NULL in SQLite. Python Data Science Lesson 5.2.">
+    <meta name="author" content="Ray de la Paz">
+    <title>Complex Queries - Python Data Science</title>
     <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/enhanced.css">
-    <link rel="icon" href="/favicon.png" type="image/png">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid: rendered (and re-rendered on theme change) by js/course-enhancements.js -->
     <script type="module">
-      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-      mermaid.initialize({ startOnLoad: true });
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        window.__mermaid = mermaid;
+        mermaid.initialize({ startOnLoad: false });
+        document.dispatchEvent(new Event('mermaid-ready'));
     </script>
-    <script src="js/course-enhancements.js" defer></script>
-    <link rel="stylesheet" href="styles/standard.css">
 </head>
 <body>
-    <!-- Skip to main content for accessibility -->
     <a href="#main-content" class="skip-to-main">Skip to main content</a>
-    
-    <!-- Progress indicator -->
+
     <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
         <div class="progress-bar"></div>
     </div>
-    
+
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">📊 Python Data Science</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">☰</button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
+    </nav>
+
     <main id="main-content">
-    <header role="banner">
-        <h1>Complex Queries and Joins</h1>
+        <div class="container">
+            <header>
+                <h1>🧩 Lesson 5.2: Complex Queries</h1>
+                <p class="lead">One table answers small questions. The interesting ones need several tables at once, and this lesson gives you the tools to combine them without losing or inventing rows.</p>
 
-    <!-- What You'll Learn (learning objectives) -->
-    <div class="card card-info">
-        <h2>📚 What You'll Learn</h2>
-        <p>By the end of this lesson, you will be able to:</p>
-        <ul>
-            <li>Combine multiple tables with INNER, LEFT, FULL OUTER (simulated), and SELF joins to model real relationships</li>
-            <li>Write scalar, correlated, and derived-table (FROM-clause) subqueries</li>
-            <li>Structure complex logic with Common Table Expressions, including chained and recursive CTEs</li>
-            <li>Combine result sets with UNION, INTERSECT, and EXCEPT</li>
-            <li>Rank and partition rows with window functions such as <code>ROW_NUMBER()</code> and <code>DENSE_RANK()</code></li>
-            <li>Read a query plan with <code>EXPLAIN QUERY PLAN</code> and add indexes to make queries faster</li>
-        </ul>
-        <p><strong>⏱️ Estimated Time:</strong> 45–60 minutes</p>
-        <p><strong>🎯 Project:</strong> On an e-commerce SQLite database, build a customer lifetime-value report and a market-basket analysis using CTEs, joins, and window functions.</p>
-    </div>
-        <div class="reading-time" aria-label="Estimated reading time"></div>
-    </header>
-    
-    <!-- Breadcrumb Navigation -->
-    <nav class="breadcrumb" aria-label="Breadcrumb">
-        <a href="index.html">Home</a>
-        <span class="separator">›</span>
-        <a href="#">Intermediate Module</a>
-        <span class="separator">›</span>
-        <a href="#">SQL for Data Scientists</a>
-        <span class="separator">›</span>
-        <span class="current">Complex Queries and Joins</span>
-    </nav>
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Choose between inner, left, right, full outer, cross and self joins, and predict how many rows each returns when keys do not all match</li>
+                        <li>Use subqueries and common table expressions (CTEs) to break a hard question into named steps</li>
+                        <li>Walk a hierarchy of any depth with a recursive CTE</li>
+                        <li>Build categories and side-by-side counts with <code>CASE</code>, and combine results with <code>UNION</code>, <code>INTERSECT</code> and <code>EXCEPT</code></li>
+                        <li>Explain how <code>NULL</code> behaves in comparisons, and avoid the three bugs it causes most often</li>
+                    </ul>
+                </div>
 
-    <h2>Master Advanced SQL for Data Analysis! 🎯</h2>
-    
-    <blockquote>
-        <p>Complex SQL queries are the backbone of data analysis. From multi-table joins to recursive CTEs, mastering these techniques enables you to extract insights from relational databases efficiently. Learn to write queries that would make any database administrator proud!</p>
-    </blockquote>
+                <ul class="lesson-meta">
+                    <li><span class="meta-label">⏱️ Time</span> 110 minutes</li>
+                    <li><span class="meta-label">📋 Prerequisites</span> <a href="sql_database_connections.html">Lesson 5.1: Database Connections</a>; <a href="pandas_merging_joining.html">Lesson 2.5: Merging and Joining</a> for the pandas comparisons</li>
+                    <li><span class="meta-label">🛠️ You will build</span> A returns investigation that joins four tables to find which online orders come back, and why</li>
+                    <li><span class="meta-label">📂 Data</span> <code>data/pinecrest.db</code> (opened read-only), <code>data/orders.csv</code>, <code>data/order_items.csv</code> and <code>data/products.csv</code> for checking</li>
+                </ul>
+            </header>
 
-    <h2>Setting Up Our Practice Database</h2>
-    <p>Let's create a comprehensive e-commerce database for our examples:</p>
-    
-    <pre class="language-python"><code>import sqlite3
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#keys" class="toc-link">How the Tables Connect</a></li>
+                        <li><a href="#inner" class="toc-link">INNER JOIN: Only the Matches</a></li>
+                        <li><a href="#outer" class="toc-link">Outer Joins: Keeping the Unmatched</a></li>
+                        <li><a href="#multi" class="toc-link">Joining Several Tables</a></li>
+                        <li><a href="#self" class="toc-link">Self Joins and Cross Joins</a></li>
+                        <li><a href="#subqueries" class="toc-link">Subqueries</a></li>
+                        <li><a href="#cte" class="toc-link">CTEs: Naming the Steps</a></li>
+                        <li><a href="#recursive" class="toc-link">Recursive CTEs: Walking a Hierarchy</a></li>
+                        <li><a href="#case" class="toc-link">CASE: If-Then Logic</a></li>
+                        <li><a href="#sets" class="toc-link">Set Operations</a></li>
+                        <li><a href="#nulls" class="toc-link">The Logic of NULL</a></li>
+                        <li><a href="#mistakes" class="toc-link">Common Mistakes</a></li>
+                        <li><a href="#project" class="toc-link">Project: The Returns Investigation</a></li>
+                        <li><a href="#exercises" class="toc-link">Hands-on Exercises</a></li>
+                        <li><a href="#quiz" class="toc-link">Quick Quiz</a></li>
+                        <li><a href="#faq" class="toc-link">Common Questions</a></li>
+                        <li><a href="#journal" class="toc-link">Learning Journal</a></li>
+                        <li><a href="#summary" class="toc-link">Lesson Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
+
+            <!-- ============================================================ -->
+            <section id="keys" class="lesson-section">
+                <h2>🗺️ How the Tables Connect</h2>
+
+                <p>A relational database stores each fact once. A customer's city is in <code>customers</code>, not repeated on every order. A product's category is in <code>products</code>, not on every order line. That keeps data consistent, and it means real questions ("revenue by category", "return rate by customer tier") always need more than one table. The tables are linked by <strong>keys</strong>: a column in one table that holds the identifier of a row in another.</p>
+
+                <div class="diagram">
+                    <svg viewBox="0 0 440 250" width="440" height="250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="The six tables of pinecrest.db and the key columns that link them: customers to orders by customer_id, orders to order_items by order_id, order_items to products by sku, products to inventory by sku, and employees to itself by manager_id.">
+                        <rect x="14" y="26" width="118" height="50" rx="6" class="svg-box-1"/>
+                        <text x="73" y="47" text-anchor="middle" class="svg-text" font-size="13" font-weight="bold">customers</text>
+                        <text x="73" y="65" text-anchor="middle" class="svg-muted" font-size="12">4,850 rows</text>
+
+                        <rect x="161" y="26" width="118" height="50" rx="6" class="svg-box-1"/>
+                        <text x="220" y="47" text-anchor="middle" class="svg-text" font-size="13" font-weight="bold">orders</text>
+                        <text x="220" y="65" text-anchor="middle" class="svg-muted" font-size="12">20,302 rows</text>
+
+                        <rect x="308" y="26" width="118" height="50" rx="6" class="svg-box-1"/>
+                        <text x="367" y="47" text-anchor="middle" class="svg-text" font-size="13" font-weight="bold">order_items</text>
+                        <text x="367" y="65" text-anchor="middle" class="svg-muted" font-size="12">45,490 rows</text>
+
+                        <rect x="308" y="150" width="118" height="50" rx="6" class="svg-box-2"/>
+                        <text x="367" y="171" text-anchor="middle" class="svg-text" font-size="13" font-weight="bold">products</text>
+                        <text x="367" y="189" text-anchor="middle" class="svg-muted" font-size="12">242 rows</text>
+
+                        <rect x="161" y="150" width="118" height="50" rx="6" class="svg-box-2"/>
+                        <text x="220" y="171" text-anchor="middle" class="svg-text" font-size="13" font-weight="bold">inventory</text>
+                        <text x="220" y="189" text-anchor="middle" class="svg-muted" font-size="12">1,210 rows</text>
+
+                        <rect x="14" y="150" width="118" height="50" rx="6" class="svg-box-3"/>
+                        <text x="73" y="171" text-anchor="middle" class="svg-text" font-size="13" font-weight="bold">employees</text>
+                        <text x="73" y="189" text-anchor="middle" class="svg-muted" font-size="12">55 rows</text>
+
+                        <path d="M132,51 L161,51" class="svg-line"/>
+                        <path d="M279,51 L308,51" class="svg-line"/>
+                        <path d="M367,76 L367,150" class="svg-line"/>
+                        <path d="M308,175 L279,175" class="svg-line"/>
+                        <path d="M40,200 L40,222 L106,222 L106,200" class="svg-line"/>
+
+                        <text x="146" y="18" text-anchor="middle" class="svg-accent svg-mono" font-size="12">customer_id</text>
+                        <text x="294" y="96" text-anchor="middle" class="svg-accent svg-mono" font-size="12">order_id</text>
+                        <text x="377" y="118" class="svg-accent svg-mono" font-size="12">sku</text>
+                        <text x="294" y="142" text-anchor="middle" class="svg-accent svg-mono" font-size="12">sku</text>
+                        <text x="73" y="240" text-anchor="middle" class="svg-accent svg-mono" font-size="12">manager_id</text>
+                    </svg>
+                </div>
+
+                <div class="card card-info">
+                    <h4>💡 Mental Model: Two Stacks of Index Cards</h4>
+                    <p>Picture a stack of order cards and a stack of customer cards. A <strong>join</strong> goes through the order cards one at a time, finds the customer card with the same <code>customer_id</code>, and staples the two together into one wider card. Every kind of join is the same stapling. They differ only in what happens to a card that finds <strong>no partner</strong>: throw it away, or keep it with a blank where the partner would be.</p>
+                </div>
+
+                <p>Pinecrest's data has cards with no partner on purpose, because real data always does. Keep these four numbers in view. The whole lesson turns on them.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Link</th><th>Unmatched on one side</th><th>Unmatched on the other</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="nowrap">Orders to customers<br>(<code>customer_id</code>)</td><td>739 orders belong to 150 closed accounts that are no longer in <code>customers</code></td><td>1,058 customers have never ordered</td></tr>
+                            <tr><td class="nowrap">Order lines to products<br>(<code>sku</code>)</td><td>609 order lines use 6 discontinued SKUs that are no longer in <code>products</code></td><td>8 products have never sold</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>Setup: A Read-Only Connection</h3>
+                <p>This lesson only reads, so open the database in <strong>read-only mode</strong>. It is a second way, besides working on a copy, to guarantee the shipped file stays as documented: the engine itself refuses any change.</p>
+
+                <pre><code class="language-python">import sqlite3
 import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
-import random
 
-# Create connection
-conn = sqlite3.connect('ecommerce.db')
-cursor = conn.cursor()
+pd.set_option("display.width", 150)
+pd.set_option("display.max_columns", 20)
 
-# Create tables
-cursor.executescript('''
-    -- Customers table
-    CREATE TABLE IF NOT EXISTS customers (
-        customer_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        first_name TEXT NOT NULL,
-        last_name TEXT NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        city TEXT,
-        country TEXT,
-        registration_date DATE,
-        customer_segment TEXT CHECK(customer_segment IN ('Regular', 'Premium', 'VIP'))
-    );
-    
-    -- Products table
-    CREATE TABLE IF NOT EXISTS products (
-        product_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        product_name TEXT NOT NULL,
-        category TEXT,
-        subcategory TEXT,
-        price DECIMAL(10,2),
-        cost DECIMAL(10,2),
-        supplier_id INTEGER,
-        stock_quantity INTEGER DEFAULT 0,
-        discontinued BOOLEAN DEFAULT FALSE
-    );
-    
-    -- Orders table
-    CREATE TABLE IF NOT EXISTS orders (
-        order_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        customer_id INTEGER,
-        order_date DATETIME,
-        ship_date DATETIME,
-        status TEXT CHECK(status IN ('Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled')),
-        total_amount DECIMAL(10,2),
-        FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
-    );
-    
-    -- Order details table
-    CREATE TABLE IF NOT EXISTS order_details (
-        order_detail_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        order_id INTEGER,
-        product_id INTEGER,
-        quantity INTEGER,
-        unit_price DECIMAL(10,2),
-        discount DECIMAL(3,2) DEFAULT 0,
-        FOREIGN KEY (order_id) REFERENCES orders(order_id),
-        FOREIGN KEY (product_id) REFERENCES products(product_id)
-    );
-    
-    -- Suppliers table
-    CREATE TABLE IF NOT EXISTS suppliers (
-        supplier_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        supplier_name TEXT NOT NULL,
-        contact_name TEXT,
-        country TEXT,
-        rating INTEGER CHECK(rating >= 1 AND rating <= 5)
-    );
-    
-    -- Employee table
-    CREATE TABLE IF NOT EXISTS employees (
-        employee_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        first_name TEXT NOT NULL,
-        last_name TEXT NOT NULL,
-        department TEXT,
-        hire_date DATE,
-        salary DECIMAL(10,2),
-        manager_id INTEGER,
-        FOREIGN KEY (manager_id) REFERENCES employees(employee_id)
-    );
-    
-    -- Reviews table
-    CREATE TABLE IF NOT EXISTS reviews (
-        review_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        product_id INTEGER,
-        customer_id INTEGER,
-        rating INTEGER CHECK(rating >= 1 AND rating <= 5),
-        review_text TEXT,
-        review_date DATE,
-        helpful_count INTEGER DEFAULT 0,
-        FOREIGN KEY (product_id) REFERENCES products(product_id),
-        FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
-    );
-''')
+conn = sqlite3.connect("file:data/pinecrest.db?mode=ro", uri=True)
 
-# Generate sample data
-def generate_sample_data():
-    # Sample data generation
-    from faker import Faker
-    fake = Faker()
-    
-    # Generate customers
-    customers = []
-    for _ in range(100):
-        customers.append((
-            fake.first_name(),
-            fake.last_name(),
-            fake.email(),
-            fake.city(),
-            fake.country(),
-            fake.date_between(start_date='-2y', end_date='today'),
-            random.choice(['Regular', 'Premium', 'VIP'])
-        ))
-    
-    cursor.executemany('''
-        INSERT OR IGNORE INTO customers 
-        (first_name, last_name, email, city, country, registration_date, customer_segment)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    ''', customers)
-    
-    conn.commit()
-    print("Sample database created successfully!")
+def show(sql, params=()):
+    """Run a query and print the result as a table."""
+    print(pd.read_sql(sql, conn, params=params).to_string(index=False))
 
-generate_sample_data()</code></pre>
+print(sqlite3.sqlite_version_info &gt;= (3, 39, 0))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>True</code></pre>
+                </div>
 
-    <h2>Understanding Joins</h2>
-    
-    <div class="mermaid">
-    graph LR
-        A[Join Types] --> B[INNER JOIN]
-        A --> C[LEFT JOIN]
-        A --> D[RIGHT JOIN]
-        A --> E[FULL OUTER JOIN]
-        A --> F[CROSS JOIN]
-        A --> G[SELF JOIN]
-        
-        B --> H[Returns matching rows]
-        C --> I[All from left + matches]
-        D --> J[All from right + matches]
-        E --> K[All from both tables]
-        F --> L[Cartesian product]
-        G --> M[Table joined with itself]
-    </div>
+                <p>That <code>True</code> matters for one section: <code>RIGHT JOIN</code> and <code>FULL OUTER JOIN</code> need SQLite 3.39 or later. Everything else here works on much older versions (CTEs since 3.8.3). If you see <code>False</code>, the outer-join section shows a rewrite that works everywhere.</p>
 
-    <h3>INNER JOIN - Finding Matches</h3>
-    <pre class="language-python"><code># Basic INNER JOIN
-query = """
-SELECT 
-    c.first_name || ' ' || c.last_name AS customer_name,
-    c.customer_segment,
-    o.order_id,
-    o.order_date,
-    o.total_amount
-FROM customers c
-INNER JOIN orders o ON c.customer_id = o.customer_id
-WHERE o.total_amount > 100
-ORDER BY o.order_date DESC
-LIMIT 10;
-"""
+                <pre data-raises="sqlite3.OperationalError"><code class="language-python">conn.execute("DELETE FROM orders")</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>OperationalError: attempt to write a readonly database</code></pre>
+                </div>
+                <p>Exactly what you want from a connection you only mean to read with.</p>
+            </section>
 
-df = pd.read_sql_query(query, conn)
-print(df)
+            <!-- ============================================================ -->
+            <section id="inner" class="lesson-section">
+                <h2>🔗 INNER JOIN: Only the Matches</h2>
 
-# Multiple table joins
-query = """
-SELECT 
-    c.first_name || ' ' || c.last_name AS customer_name,
-    p.product_name,
-    od.quantity,
-    od.unit_price,
-    od.quantity * od.unit_price * (1 - od.discount) AS line_total
-FROM customers c
-INNER JOIN orders o ON c.customer_id = o.customer_id
-INNER JOIN order_details od ON o.order_id = od.order_id
-INNER JOIN products p ON od.product_id = p.product_id
-WHERE o.status = 'Delivered'
-ORDER BY line_total DESC;
-"""
+                <p>A join is written in the <code>FROM</code> clause: name the first table, then <code>JOIN</code> the second <code>ON</code> the condition that pairs their rows. Short <strong>aliases</strong> (<code>o</code> for orders, <code>c</code> for customers) save typing, and prefixing each column with its alias says which table it comes from.</p>
 
-df = pd.read_sql_query(query, conn)
-print(df.head())</code></pre>
+                <pre><code class="language-python">show("""
+    SELECT o.order_id, o.order_date, o.order_total,
+           c.first_name, c.last_name, c.city
+    FROM orders AS o
+    JOIN customers AS c ON c.customer_id = o.customer_id
+    ORDER BY o.order_id
+    LIMIT 4
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code> order_id order_date  order_total first_name last_name      city
+   100001 2024-01-01        434.9     Xavier  Madrigal   Phoenix
+   100002 2024-01-01        278.9       Aiko    Larkin      Bend
+   100003 2024-01-01         75.9     Kareem      Pike  Missoula
+   100004 2024-01-01        399.8      Emeka     Kumar Flagstaff</code></pre>
+                </div>
 
-    <h3>LEFT JOIN - Include All from Left Table</h3>
-    <pre class="language-python"><code># Find customers who haven't placed orders
-query = """
-SELECT 
-    c.customer_id,
-    c.first_name || ' ' || c.last_name AS customer_name,
-    c.email,
-    c.registration_date,
-    COUNT(o.order_id) AS order_count,
-    COALESCE(SUM(o.total_amount), 0) AS total_spent
-FROM customers c
-LEFT JOIN orders o ON c.customer_id = o.customer_id
-GROUP BY c.customer_id, c.first_name, c.last_name, c.email, c.registration_date
-HAVING COUNT(o.order_id) = 0
-ORDER BY c.registration_date DESC;
-"""
+                <p>Each order row now carries its customer's name and city. Plain <code>JOIN</code> means <code>INNER JOIN</code>: a row appears in the result only if it found a partner. So how many rows came through?</p>
 
-df = pd.read_sql_query(query, conn)
-print(f"Customers without orders: {len(df)}")
-print(df.head())
+                <pre><code class="language-python">show("""
+    SELECT (SELECT COUNT(*) FROM orders) AS orders_in_table,
+           COUNT(*)                      AS rows_after_inner_join
+    FROM orders AS o
+    JOIN customers AS c ON c.customer_id = o.customer_id
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code> orders_in_table  rows_after_inner_join
+           20302                  19563</code></pre>
+                </div>
 
-# Products that haven't been reviewed
-query = """
-SELECT 
-    p.product_id,
-    p.product_name,
-    p.category,
-    p.price,
-    COUNT(r.review_id) AS review_count,
-    AVG(r.rating) AS avg_rating
-FROM products p
-LEFT JOIN reviews r ON p.product_id = r.product_id
-WHERE p.discontinued = 0
-GROUP BY p.product_id, p.product_name, p.category, p.price
-HAVING COUNT(r.review_id) = 0
-ORDER BY p.price DESC;
-"""
+                <div class="card card-warning">
+                    <h4>⚠️ An Inner Join Drops Rows Without Telling You</h4>
+                    <p>739 orders vanished: the ones whose customer account was closed. No error, no warning. If you now summed revenue you would be short by those orders. <strong>After every join, compare the row count with what you expected.</strong> It is the same habit as checking <code>.shape</code> after a pandas <code>merge</code>.</p>
+                </div>
+            </section>
 
-df = pd.read_sql_query(query, conn)
-print(df)</code></pre>
+            <!-- ============================================================ -->
+            <section id="outer" class="lesson-section">
+                <h2>🧲 Outer Joins: Keeping the Unmatched</h2>
 
-    <h3>FULL OUTER JOIN (Simulated in SQLite)</h3>
-    <pre class="language-python"><code># SQLite doesn't support FULL OUTER JOIN, so we simulate it with UNION
-query = """
--- Get all combinations of customers and products
-WITH customer_product_full AS (
-    SELECT c.customer_id, p.product_id
-    FROM customers c
-    LEFT JOIN products p ON 1=1
-    
-    UNION
-    
-    SELECT c.customer_id, p.product_id
-    FROM products p
-    LEFT JOIN customers c ON 1=1
-)
-SELECT * FROM customer_product_full
-LIMIT 10;
-"""
+                <p>A <code>LEFT JOIN</code> keeps <strong>every row of the left table</strong> (the one named first). Where there is no partner, the right table's columns are filled with <code>NULL</code>.</p>
 
-# More practical: Combine LEFT and RIGHT JOIN behavior
-query = """
-SELECT 
-    COALESCE(c.customer_id, -1) AS customer_id,
-    COALESCE(c.first_name || ' ' || c.last_name, 'No Customer') AS customer_name,
-    COALESCE(o.order_id, -1) AS order_id,
-    CASE 
-        WHEN c.customer_id IS NULL THEN 'Orphaned Order'
-        WHEN o.order_id IS NULL THEN 'No Orders'
-        ELSE 'Has Orders'
-    END AS status
-FROM customers c
-LEFT JOIN orders o ON c.customer_id = o.customer_id
+                <pre><code class="language-python">show("""
+    SELECT COUNT(*)                 AS all_rows,
+           COUNT(c.customer_id)     AS with_customer,
+           SUM(c.customer_id IS NULL) AS without_customer
+    FROM orders AS o
+    LEFT JOIN customers AS c ON c.customer_id = o.customer_id
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code> all_rows  with_customer  without_customer
+    20302          19563               739</code></pre>
+                </div>
 
-UNION
+                <p>All 20,302 orders are back, and 739 of them have an empty customer side. That <code>NULL</code> is useful: filtering for it finds the rows with <em>no</em> partner. This pattern is called an <strong>anti-join</strong>, and it answers "which ones are missing?" questions.</p>
 
-SELECT 
-    COALESCE(c.customer_id, -1) AS customer_id,
-    COALESCE(c.first_name || ' ' || c.last_name, 'No Customer') AS customer_name,
-    o.order_id,
-    'Orphaned Order' AS status
-FROM orders o
-LEFT JOIN customers c ON o.customer_id = c.customer_id
-WHERE c.customer_id IS NULL;
-"""
+                <pre><code class="language-python"># Customers who have never placed an order: start FROM customers, keep those with no order
+show("""
+    SELECT c.loyalty_tier, COUNT(*) AS never_ordered
+    FROM customers AS c
+    LEFT JOIN orders AS o ON o.customer_id = c.customer_id
+    WHERE o.order_id IS NULL
+    GROUP BY c.loyalty_tier
+""")
 
-df = pd.read_sql_query(query, conn)
-print(df)</code></pre>
+# Products that have never sold
+show("""
+    SELECT p.sku, p.name, p.launch_date
+    FROM products AS p
+    LEFT JOIN order_items AS i ON i.sku = p.sku
+    WHERE i.order_item_id IS NULL
+    ORDER BY p.launch_date, p.sku
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>loyalty_tier  never_ordered
+       Basic           1058
+     sku                              name launch_date
+FTW-1022 Granite Fork Cascade Hiking Socks  2025-12-20
+PCK-1002   Pinecrest Headwater 30L Daypack  2025-12-20
+KIT-1018        Tallgrass Foothill Cookset  2025-12-22
+ACC-1011         Wrenfield Skyline Lantern  2025-12-26
+ACC-1009 Wrenfield Wayfinder Trail Map Set  2025-12-27
+FTW-1018    Granite Fork Wayfinder Insoles  2025-12-28
+FTW-1025 Granite Fork Lookout Hiking Boots  2025-12-28
+PCK-1009 Juniper Vane Sawtooth 30L Daypack  2025-12-28</code></pre>
+                </div>
 
-    <h3>SELF JOIN - Hierarchical Relationships</h3>
-    <pre class="language-python"><code># Employee hierarchy
-query = """
-SELECT 
-    e1.employee_id,
-    e1.first_name || ' ' || e1.last_name AS employee_name,
-    e1.department,
-    e1.salary,
-    e2.first_name || ' ' || e2.last_name AS manager_name,
-    e2.salary AS manager_salary,
-    e1.salary - e2.salary AS salary_difference
-FROM employees e1
-LEFT JOIN employees e2 ON e1.manager_id = e2.employee_id
-ORDER BY e1.department, e1.salary DESC;
-"""
+                <p>All 1,058 customers who never ordered are in the Basic tier (as they must be: the higher tiers are earned by spending). The eight unsold products all launched in the last twelve days of 2025, which explains them: not a data error, just new stock.</p>
 
-df = pd.read_sql_query(query, conn)
-print(df)
+                <h3>RIGHT JOIN and FULL OUTER JOIN</h3>
+                <p><code>RIGHT JOIN</code> is the mirror image: keep everything from the table named second. <code>FULL OUTER JOIN</code> keeps the unmatched rows of <strong>both</strong> sides.</p>
 
-# Find products in the same category with similar prices
-query = """
-SELECT 
-    p1.product_name AS product_1,
-    p1.price AS price_1,
-    p2.product_name AS product_2,
-    p2.price AS price_2,
-    ABS(p1.price - p2.price) AS price_difference
-FROM products p1
-INNER JOIN products p2 
-    ON p1.category = p2.category 
-    AND p1.product_id < p2.product_id
-    AND ABS(p1.price - p2.price) < 10
-WHERE p1.discontinued = 0 AND p2.discontinued = 0
-ORDER BY price_difference
-LIMIT 20;
-"""
+                <pre><code class="language-python">show("""
+    SELECT COUNT(*)                   AS all_rows,
+           SUM(o.order_id IS NULL)    AS customers_without_orders,
+           SUM(c.customer_id IS NULL) AS orders_without_customer
+    FROM customers AS c
+    FULL OUTER JOIN orders AS o ON o.customer_id = c.customer_id
+""")
 
-df = pd.read_sql_query(query, conn)
-print(df)</code></pre>
+show("""
+    SELECT COUNT(*) AS rows_from_right_join
+    FROM customers AS c
+    RIGHT JOIN orders AS o ON o.customer_id = c.customer_id
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code> all_rows  customers_without_orders  orders_without_customer
+    21360                      1058                      739
+ rows_from_right_join
+                20302</code></pre>
+                </div>
 
-    <h2>Subqueries</h2>
-    
-    <h3>Scalar Subqueries</h3>
-    <pre class="language-python"><code># Subquery in SELECT clause
-query = """
-SELECT 
-    c.customer_id,
-    c.first_name || ' ' || c.last_name AS customer_name,
-    c.customer_segment,
-    (
-        SELECT COUNT(*)
-        FROM orders o
-        WHERE o.customer_id = c.customer_id
-    ) AS order_count,
-    (
-        SELECT SUM(total_amount)
-        FROM orders o
-        WHERE o.customer_id = c.customer_id
-    ) AS total_spent,
-    (
-        SELECT MAX(order_date)
-        FROM orders o
-        WHERE o.customer_id = c.customer_id
-    ) AS last_order_date
-FROM customers c
-ORDER BY total_spent DESC NULLS LAST
-LIMIT 10;
-"""
+                <p>The arithmetic is worth doing once by hand: 19,563 matched pairs + 1,058 customers alone + 739 orders alone = 21,360. The right join keeps the matched pairs and the orders alone: 20,302, the same rows as <code>orders LEFT JOIN customers</code>.</p>
 
-df = pd.read_sql_query(query, conn)
-print(df)</code></pre>
+                <div class="diagram">
+                    <svg viewBox="0 0 440 232" width="440" height="232" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Three groups of rows when joining customers to orders: 1,058 customers with no order, 19,563 matched pairs, and 739 orders with no customer. An inner join keeps only the matched pairs. A left join from customers adds the 1,058. A right join adds the 739. A full outer join keeps all three groups.">
+                        <rect x="10" y="12" width="120" height="52" rx="4" class="svg-box-3"/>
+                        <text x="70" y="33" text-anchor="middle" class="svg-text" font-size="12">customers only</text>
+                        <text x="70" y="52" text-anchor="middle" class="svg-text" font-size="13" font-weight="bold">1,058</text>
+                        <rect x="130" y="12" width="180" height="52" rx="4" class="svg-box-2"/>
+                        <text x="220" y="33" text-anchor="middle" class="svg-text" font-size="12">matched pairs</text>
+                        <text x="220" y="52" text-anchor="middle" class="svg-text" font-size="13" font-weight="bold">19,563</text>
+                        <rect x="310" y="12" width="120" height="52" rx="4" class="svg-box-4"/>
+                        <text x="370" y="33" text-anchor="middle" class="svg-text" font-size="12">orders only</text>
+                        <text x="370" y="52" text-anchor="middle" class="svg-text" font-size="13" font-weight="bold">739</text>
 
-    <h3>Correlated Subqueries</h3>
-    <pre class="language-python"><code># Find products priced above their category average
-query = """
-SELECT 
-    p1.product_id,
-    p1.product_name,
-    p1.category,
-    p1.price,
-    (
-        SELECT AVG(p2.price)
-        FROM products p2
-        WHERE p2.category = p1.category
-    ) AS category_avg_price,
-    p1.price - (
-        SELECT AVG(p2.price)
-        FROM products p2
-        WHERE p2.category = p1.category
-    ) AS price_above_avg
-FROM products p1
-WHERE p1.price > (
-    SELECT AVG(p2.price)
-    FROM products p2
-    WHERE p2.category = p1.category
-)
-ORDER BY price_above_avg DESC;
-"""
+                        <rect x="130" y="87" width="180" height="6" rx="3" class="svg-solid"/>
+                        <text x="220" y="108" text-anchor="middle" class="svg-text" font-size="12">INNER JOIN: 19,563 rows</text>
 
-df = pd.read_sql_query(query, conn)
-print(df.head())
+                        <rect x="10" y="125" width="300" height="6" rx="3" class="svg-solid"/>
+                        <text x="160" y="146" text-anchor="middle" class="svg-text" font-size="12">customers LEFT JOIN orders: 20,621 rows</text>
 
-# Find customers whose orders are all above average
-query = """
-SELECT 
-    c.customer_id,
-    c.first_name || ' ' || c.last_name AS customer_name,
-    COUNT(o.order_id) AS order_count,
-    AVG(o.total_amount) AS avg_order_value
-FROM customers c
-INNER JOIN orders o ON c.customer_id = o.customer_id
-WHERE NOT EXISTS (
-    SELECT 1
-    FROM orders o2
-    WHERE o2.customer_id = c.customer_id
-    AND o2.total_amount < (
-        SELECT AVG(total_amount)
-        FROM orders
+                        <rect x="130" y="163" width="300" height="6" rx="3" class="svg-solid"/>
+                        <text x="280" y="184" text-anchor="middle" class="svg-text" font-size="12">customers RIGHT JOIN orders: 20,302 rows</text>
+
+                        <rect x="10" y="201" width="420" height="6" rx="3" class="svg-solid"/>
+                        <text x="220" y="222" text-anchor="middle" class="svg-text" font-size="12">FULL OUTER JOIN: 21,360 rows</text>
+                    </svg>
+                </div>
+
+                <p>On a SQLite older than 3.39, build the full outer join from parts: a left join, plus the rows only the other side has, stacked with <code>UNION ALL</code> (covered <a href="#sets">below</a>). It gives the same 21,360 rows.</p>
+
+                <pre><code class="language-python">show("""
+    SELECT COUNT(*) AS all_rows
+    FROM (
+        SELECT c.customer_id, o.order_id
+        FROM customers AS c
+        LEFT JOIN orders AS o ON o.customer_id = c.customer_id
+
+        UNION ALL
+
+        SELECT NULL, o.order_id
+        FROM orders AS o
+        LEFT JOIN customers AS c ON c.customer_id = o.customer_id
+        WHERE c.customer_id IS NULL
     )
-)
-GROUP BY c.customer_id, c.first_name, c.last_name
-HAVING COUNT(o.order_id) > 2
-ORDER BY avg_order_value DESC;
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code> all_rows
+    21360</code></pre>
+                </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>SQL</th><th>Keeps</th><th>pandas <code>merge(..., how=)</code></th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="nowrap"><code>A JOIN B</code></td><td>Matched pairs only</td><td><code>"inner"</code> (the default)</td></tr>
+                            <tr><td class="nowrap"><code>A LEFT JOIN B</code></td><td>All of A</td><td><code>"left"</code></td></tr>
+                            <tr><td class="nowrap"><code>A RIGHT JOIN B</code></td><td>All of B</td><td><code>"right"</code></td></tr>
+                            <tr><td class="nowrap"><code>A FULL OUTER JOIN B</code></td><td>All of both</td><td><code>"outer"</code></td></tr>
+                            <tr><td class="nowrap"><code>A CROSS JOIN B</code></td><td>Every A with every B</td><td><code>"cross"</code></td></tr>
+                            <tr><td><code>LEFT JOIN ... WHERE b.key IS NULL</code></td><td>Rows of A with no partner</td><td><code>indicator=True</code>, then keep <code>"left_only"</code></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="card card-success">
+                    <h4>✅ In Practice You Need Two</h4>
+                    <p>Most working analysts write <code>JOIN</code> and <code>LEFT JOIN</code> all day and the others a few times a year. A right join can always be rewritten as a left join by swapping the table order, and most people do, because "start from the table I care about, then attach things to it" reads naturally.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="multi" class="lesson-section">
+                <h2>⛓️ Joining Several Tables</h2>
+
+                <p>Joins chain. Orders and products have a <strong>many-to-many</strong> relationship (an order holds many products, a product appears on many orders), and <code>order_items</code> is the table in the middle that makes it work. To get revenue by category you travel <code>orders</code> to <code>order_items</code> to <code>products</code>.</p>
+
+                <pre><code class="language-python">show("""
+    SELECT p.category,
+           COUNT(*)                                AS lines,
+           ROUND(SUM(i.quantity * i.unit_price), 2) AS item_revenue
+    FROM orders AS o
+    JOIN order_items AS i ON i.order_id = o.order_id
+    LEFT JOIN products AS p ON p.sku = i.sku
+    WHERE o.status = 'completed'
+    GROUP BY p.category
+    ORDER BY item_revenue DESC
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>    category  lines  item_revenue
+ Accessories  11080     567699.20
+    Sleeping   3386     516302.45
+       Tents   2110     447114.75
+     Apparel   4554     435424.65
+    Footwear   4142     391188.90
+       Packs   3103     387082.35
+Camp Kitchen   7298     367311.60
+    Climbing   3157     272994.05
+        Snow   2391     216940.15
+         NaN    567      34228.25</code></pre>
+                </div>
+
+                <p>Look at the last row. Because the join to <code>products</code> is a <code>LEFT JOIN</code>, the lines for discontinued SKUs stayed, with <code>NULL</code> for a category (pandas prints it as <code>NaN</code>). That is $34,228.25 of real revenue that an inner join would have silently dropped. <code>COALESCE(p.category, 'Discontinued')</code> would give the row a proper label; you will meet <code>COALESCE</code> in the <a href="#nulls">NULL section</a>.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Choosing the Join Type, One Link at a Time</h4>
+                    <p>Ask of each link: "if a row has no partner here, do I still want it?" Every order line has an order (the README says so), so <code>JOIN</code> is safe for that link. Not every line has a product, and you want its revenue anyway, so that link is a <code>LEFT JOIN</code>.</p>
+                </div>
+
+                <h3>The Fan-Out Trap</h3>
+                <p>Joining a table to its "many" side repeats the "one" side. An order with three lines appears three times after joining <code>order_items</code>, and so does its <code>order_total</code>.</p>
+
+                <pre><code class="language-python">show("""
+    SELECT (SELECT ROUND(SUM(order_total), 2) FROM orders WHERE status = 'completed') AS true_revenue,
+           ROUND(SUM(o.order_total), 2)                                              AS after_join,
+           COUNT(*)                                                                  AS rows_summed,
+           COUNT(DISTINCT o.order_id)                                                AS orders
+    FROM orders AS o
+    JOIN order_items AS i ON i.order_id = o.order_id
+    WHERE o.status = 'completed'
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code> true_revenue  after_join  rows_summed  orders
+   3624306.27 10073626.41        41788   18762</code></pre>
+                </div>
+
+                <p>$10.1 million instead of $3.6 million: each order's total was added once per line. The result looks plausible and is nearly three times too large. <strong>Rule:</strong> sum a column at the level where it lives. Sum <code>order_total</code> from <code>orders</code> alone, or sum <code>quantity * unit_price</code> from the lines, but never an order-level amount after joining to lines. When you need both levels, aggregate the lines first in a subquery or CTE, then join the one-row-per-order result.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="self" class="lesson-section">
+                <h2>🪞 Self Joins and Cross Joins</h2>
+
+                <h3>Self Join: A Table Joined to Itself</h3>
+                <p>In <code>employees</code>, the <code>manager_id</code> column holds the <code>employee_id</code> of another row in the same table. To put an employee and their manager on one line, join the table to itself, using two aliases so the engine (and you) can tell the two roles apart.</p>
+
+                <pre><code class="language-python">show("""
+    SELECT e.first_name || ' ' || e.last_name AS employee,
+           e.title,
+           m.first_name || ' ' || m.last_name AS manager
+    FROM employees AS e
+    LEFT JOIN employees AS m ON m.employee_id = e.manager_id
+    ORDER BY e.employee_id
+    LIMIT 7
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>     employee                   title      manager
+   Clara Soto Chief Executive Officer          NaN
+ Tamar Kimura            VP of Retail   Clara Soto
+  Arjun Silva        VP of E-commerce   Clara Soto
+Elise Delgado        VP of Operations   Clara Soto
+ Elena Mistry  Regional Manager, West Tamar Kimura
+ Naoko Acosta  Regional Manager, East Tamar Kimura
+   Helga Shah           Store Manager Elena Mistry</code></pre>
+                </div>
+
+                <p><code>||</code> glues text together. The join is a <code>LEFT JOIN</code> so that the CEO, Clara Soto, whose <code>manager_id</code> is <code>NULL</code>, is not dropped. A self join reaches exactly one level up. For the whole reporting tree you need a <a href="#recursive">recursive CTE</a>.</p>
+
+                <h3>Cross Join: Every Combination</h3>
+                <p>A <code>CROSS JOIN</code> has no <code>ON</code>: it pairs every row of one table with every row of the other. That sounds useless until you need a complete grid, for example every store in every year, so that a combination with no sales shows up as a zero instead of being absent.</p>
+
+                <pre><code class="language-python">show("""
+    SELECT s.store, y.year
+    FROM (SELECT DISTINCT store FROM orders) AS s
+    CROSS JOIN (SELECT DISTINCT strftime('%Y', order_date) AS year FROM orders) AS y
+    ORDER BY s.store, y.year
+    LIMIT 4
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>    store year
+Asheville 2024
+Asheville 2025
+     Bend 2024
+     Bend 2025</code></pre>
+                </div>
+
+                <p>Five stores times two years gives ten rows. The two things in parentheses are queries used as tables, which is the next topic.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="subqueries" class="lesson-section">
+                <h2>🪆 Subqueries</h2>
+
+                <p>A <strong>subquery</strong> is a <code>SELECT</code> in parentheses inside another query. Where you put it decides what it must return.</p>
+
+                <h3>One Value: A Scalar Subquery</h3>
+                <p>A subquery that returns one row and one column can stand anywhere a single value can. Here it supplies the average order, so you never hard-code it.</p>
+
+                <pre><code class="language-python">show("""
+    SELECT COUNT(*)                   AS very_large_orders,
+           ROUND(AVG(order_total), 2) AS their_average
+    FROM orders
+    WHERE order_total &gt; 5 * (SELECT AVG(order_total) FROM orders)
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code> very_large_orders  their_average
+                39        1842.99</code></pre>
+                </div>
+
+                <h3>A List: IN (subquery)</h3>
+                <p>A subquery that returns one column can feed <code>IN</code>. Who placed the bulk orders (totals above $2,000)?</p>
+
+                <pre><code class="language-python">show("""
+    SELECT first_name, last_name, city, state
+    FROM customers
+    WHERE customer_id IN (SELECT customer_id FROM orders WHERE order_total &gt; 2000)
+    ORDER BY last_name
+""")
+
+show("SELECT COUNT(DISTINCT customer_id) AS bulk_buyers FROM orders WHERE order_total &gt; 2000")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>first_name last_name       city state
+    Joanna     Amato   Meridian    ID
+      Elan       Cha  Las Vegas    NV
+     Damon    Ellery Greenville    SC
+     Quinn   Goswami Greenville    SC
+     Keanu   Herrera       Bend    OR
+       Ben     Kumar Sacramento    CA
+    Kalani    Ortega  Flagstaff    AZ
+     Hazel    Rahimi   Prescott    AZ
+     Kenji      Sato     Eugene    OR
+      Zane   Winslow       Bend    OR
+      Noor    Zamora   Missoula    MT
+ bulk_buyers
+          12</code></pre>
+                </div>
+
+                <p>Eleven names, but twelve distinct buyers. One bulk buyer's account has since been closed, so there is no row in <code>customers</code> for the filter to return. The unmatched keys follow you into every technique.</p>
+
+                <h3>A Table: A Subquery in FROM</h3>
+                <p>A subquery in <code>FROM</code> acts as a temporary table. This is how you aggregate an aggregate: first count orders per customer, then summarize those counts.</p>
+
+                <pre><code class="language-python">show("""
+    SELECT COUNT(*)              AS buyers,
+           ROUND(AVG(n_orders), 2) AS avg_orders,
+           MAX(n_orders)         AS most_orders
+    FROM (
+        SELECT customer_id, COUNT(*) AS n_orders
+        FROM orders
+        GROUP BY customer_id
+    ) AS per_customer
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code> buyers  avg_orders  most_orders
+   3942        5.15           41</code></pre>
+                </div>
+
+                <h3>Correlated Subqueries and EXISTS</h3>
+                <p>A <strong>correlated</strong> subquery refers to the row of the outer query it is being evaluated for, so think of it as running once per outer row. This one finds each category's most expensive product by asking, for every product, "what is the top price in <em>your</em> category?"</p>
+
+                <pre><code class="language-python">show("""
+    SELECT p.category, p.name, p.price
+    FROM products AS p
+    WHERE p.price = (SELECT MAX(p2.price) FROM products AS p2 WHERE p2.category = p.category)
+    ORDER BY p.price DESC
+    LIMIT 4
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>category                              name  price
+   Tents   Quillback Cascade 4-Person Tent 616.95
+Sleeping Tallgrass Lookout 0F Sleeping Bag 513.95
+ Apparel Larkspur Ridge Tundra Down Jacket 375.95
+   Packs  Cedar Notch Skyline 65L Backpack 335.95</code></pre>
+                </div>
+
+                <p><code>EXISTS (subquery)</code> is true if the subquery returns at least one row; what it selects is irrelevant, so people write <code>SELECT 1</code>. <code>NOT EXISTS</code> is the second way to write an anti-join, and it has an advantage over <code>NOT IN</code> that the <a href="#nulls">NULL section</a> will make clear.</p>
+
+                <pre><code class="language-python">show("""
+    SELECT COUNT(*) AS never_sold
+    FROM products AS p
+    WHERE NOT EXISTS (SELECT 1 FROM order_items AS i WHERE i.sku = p.sku)
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code> never_sold
+          8</code></pre>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="cte" class="lesson-section">
+                <h2>🪜 CTEs: Naming the Steps</h2>
+
+                <p>Subqueries nest, and nested queries must be read inside out. A <strong>common table expression</strong> (CTE) fixes that. <code>WITH name AS (query)</code> gives a query a name <em>before</em> the main query, and you then use the name like a table. Several CTEs can follow one another, each building on the ones above, so a long query reads top to bottom like a notebook: step, step, step, answer.</p>
+
+                <p>Does the documented loyalty rule hold (Silver at $600 or more of completed spending, Gold at $1,500 or more)? Step one computes each customer's spend; step two attaches the tier; the final query summarizes.</p>
+
+                <pre><code class="language-python">show("""
+    WITH spend AS (
+        SELECT customer_id,
+               COUNT(*)         AS orders,
+               SUM(order_total) AS total_spent
+        FROM orders
+        WHERE status = 'completed'
+        GROUP BY customer_id
+    ),
+    with_tier AS (
+        SELECT c.loyalty_tier, s.orders, s.total_spent
+        FROM spend AS s
+        JOIN customers AS c ON c.customer_id = s.customer_id
+    )
+    SELECT loyalty_tier,
+           COUNT(*)                   AS customers,
+           ROUND(MIN(total_spent), 2) AS lowest_spend,
+           ROUND(MAX(total_spent), 2) AS highest_spend,
+           ROUND(AVG(orders), 1)      AS avg_orders
+    FROM with_tier
+    GROUP BY loyalty_tier
+    ORDER BY lowest_spend
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>loyalty_tier  customers  lowest_spend  highest_spend  avg_orders
+       Basic       1710          7.50         599.91         2.1
+      Silver       1294        600.43        1499.56         5.1
+        Gold        734       1502.00        7945.54        10.8</code></pre>
+                </div>
+
+                <p>The rule holds exactly: no Silver customer below $600, no Gold below $1,500, no Basic at $600 or above. Notice how the CTE also solved the fan-out problem: <code>spend</code> has one row per customer <em>before</em> it is joined to anything.</p>
+
+                <div class="card card-info">
+                    <h4>💡 CTE or Subquery?</h4>
+                    <p>They are interchangeable for most purposes, and the engine usually treats them the same way. Choose by readability: a short one-off value reads fine as a subquery; anything with a meaning worth naming, or used more than once, reads better as a CTE. A CTE exists only for the one statement it is part of.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="recursive" class="lesson-section">
+                <h2>🌳 Recursive CTEs: Walking a Hierarchy</h2>
+
+                <p>The self join gave you each employee's manager: one level. "Everyone under the VP of Retail, however deep" or "how many levels are there?" cannot be answered with a fixed number of joins, because you do not know the depth in advance. A <strong>recursive CTE</strong> is a CTE that refers to itself, and it is SQL's way of looping.</p>
+
+                <p>It always has two parts joined by <code>UNION ALL</code>:</p>
+                <ul>
+                    <li>the <strong>anchor</strong>: an ordinary query that produces the starting rows (the CEO);</li>
+                    <li>the <strong>recursive part</strong>: a query that joins the table to <em>the rows found in the previous round</em> to produce the next round (the people who report to them).</li>
+                </ul>
+
+                <div class="mermaid">
+graph TD
+    A["Anchor: rows with no manager"] --> B["Result so far"]
+    B --> C{"Anyone report to the newest rows?"}
+    C -->|yes| D["Add them, one level deeper"]
+    D --> B
+    C -->|no| E["Stop and return everything"]
+                </div>
+
+                <pre><code class="language-python">ORG_CTE = """
+    WITH RECURSIVE org (employee_id, name, title, level, path) AS (
+        -- anchor: the top of the tree
+        SELECT employee_id,
+               first_name || ' ' || last_name,
+               title,
+               1,
+               first_name || ' ' || last_name
+        FROM employees
+        WHERE manager_id IS NULL
+
+        UNION ALL
+
+        -- recursive part: people whose manager is already in org
+        SELECT e.employee_id,
+               e.first_name || ' ' || e.last_name,
+               e.title,
+               org.level + 1,
+               org.path || ' &gt; ' || e.first_name || ' ' || e.last_name
+        FROM employees AS e
+        JOIN org ON e.manager_id = org.employee_id
+    )
 """
 
-df = pd.read_sql_query(query, conn)
-print(df)</code></pre>
+show(ORG_CTE + "SELECT level, COUNT(*) AS people FROM org GROUP BY level ORDER BY level")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code> level  people
+     1       1
+     2       4
+     3       7
+     4      14
+     5       8
+     6      21</code></pre>
+                </div>
 
-    <h3>Subqueries in FROM Clause</h3>
-    <pre class="language-python"><code># Derived tables
-query = """
-SELECT 
-    customer_segment,
-    AVG(order_count) AS avg_orders_per_customer,
-    AVG(total_spent) AS avg_spent_per_customer,
-    MAX(total_spent) AS max_spent,
-    MIN(total_spent) AS min_spent
-FROM (
-    SELECT 
-        c.customer_segment,
-        c.customer_id,
-        COUNT(o.order_id) AS order_count,
-        COALESCE(SUM(o.total_amount), 0) AS total_spent
-    FROM customers c
-    LEFT JOIN orders o ON c.customer_id = o.customer_id
-    GROUP BY c.customer_segment, c.customer_id
-) AS customer_summary
-GROUP BY customer_segment
-ORDER BY avg_spent_per_customer DESC;
-"""
+                <p>Six levels, 55 people in all. Trace the first rounds: the anchor returns Clara Soto at level 1. The recursive part finds the four people whose <code>manager_id</code> is Clara's id and gives them level 2. It runs again on those four and finds seven at level 3, and so on, until a round finds nobody and the loop ends. The CTE is stored in a Python string here so that the next queries can reuse it.</p>
 
-df = pd.read_sql_query(query, conn)
-print(df)</code></pre>
+                <p>The <code>path</code> column accumulates names on the way down. Sorting by it prints the tree in reading order, and a little indentation makes it an org chart. Here is the e-commerce branch:</p>
 
-    <h2>Common Table Expressions (CTEs)</h2>
-    
-    <h3>Basic CTEs</h3>
-    <pre class="language-python"><code># Single CTE
-query = """
-WITH customer_metrics AS (
-    SELECT 
-        c.customer_id,
-        c.first_name || ' ' || c.last_name AS customer_name,
-        c.customer_segment,
-        COUNT(DISTINCT o.order_id) AS order_count,
-        SUM(o.total_amount) AS total_spent,
-        AVG(o.total_amount) AS avg_order_value,
-        MAX(o.order_date) AS last_order_date
-    FROM customers c
-    LEFT JOIN orders o ON c.customer_id = o.customer_id
-    GROUP BY c.customer_id, c.first_name, c.last_name, c.customer_segment
-)
-SELECT 
-    customer_segment,
-    COUNT(*) AS customer_count,
-    AVG(order_count) AS avg_orders,
-    AVG(total_spent) AS avg_total_spent,
-    AVG(avg_order_value) AS avg_order_value
-FROM customer_metrics
-GROUP BY customer_segment
-ORDER BY avg_total_spent DESC;
-"""
+                <pre><code class="language-python">show(ORG_CTE + """
+    SELECT level,
+           substr('            ', 1, 3 * (level - 2)) || name AS employee,
+           title
+    FROM org
+    WHERE path LIKE 'Clara Soto &gt; Arjun Silva%'
+    ORDER BY path
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code> level           employee                      title
+     2        Arjun Silva           VP of E-commerce
+     3          Chidi Sen                Web Manager
+     4       Isaac Nakata              Web Developer
+     4       Zane Pacheco              Web Developer
+     3    Santiago Nakata          Marketing Manager
+     4        Hugo Volkov Email Marketing Specialist</code></pre>
+                </div>
 
-df = pd.read_sql_query(query, conn)
-print(df)</code></pre>
+                <p>And one person's chain of command is simply their <code>path</code>:</p>
 
-    <h3>Multiple CTEs</h3>
-    <pre class="language-python"><code># Chain multiple CTEs for complex analysis
-query = """
-WITH 
--- Calculate product performance
-product_performance AS (
-    SELECT 
-        p.product_id,
-        p.product_name,
-        p.category,
-        p.price,
-        COUNT(DISTINCT od.order_id) AS times_ordered,
-        SUM(od.quantity) AS total_quantity_sold,
-        SUM(od.quantity * od.unit_price * (1 - od.discount)) AS total_revenue
-    FROM products p
-    LEFT JOIN order_details od ON p.product_id = od.product_id
-    GROUP BY p.product_id, p.product_name, p.category, p.price
-),
--- Calculate category rankings
-category_rankings AS (
-    SELECT 
-        product_id,
-        product_name,
-        category,
-        total_revenue,
-        ROW_NUMBER() OVER (PARTITION BY category ORDER BY total_revenue DESC) AS category_rank,
-        DENSE_RANK() OVER (ORDER BY total_revenue DESC) AS overall_rank
-    FROM product_performance
-    WHERE total_revenue > 0
-),
--- Get top performers
-top_performers AS (
-    SELECT *
-    FROM category_rankings
-    WHERE category_rank <= 3
-)
-SELECT 
-    tp.*,
-    pp.times_ordered,
-    pp.total_quantity_sold,
-    ROUND(pp.total_revenue / pp.total_quantity_sold, 2) AS avg_selling_price
-FROM top_performers tp
-JOIN product_performance pp ON tp.product_id = pp.product_id
-ORDER BY tp.category, tp.category_rank;
-"""
+                <pre><code class="language-python">show(ORG_CTE + "SELECT path FROM org WHERE name = 'Bodhi Kato'")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>                                                                            path
+Clara Soto &gt; Tamar Kimura &gt; Elena Mistry &gt; Helga Shah &gt; Mabel Getty &gt; Bodhi Kato</code></pre>
+                </div>
 
-df = pd.read_sql_query(query, conn)
-print(df)</code></pre>
+                <div class="card card-warning">
+                    <h4>⚠️ A Recursive CTE Can Run Forever</h4>
+                    <p>If the data contains a cycle (A manages B, B manages A), the recursion never runs out of new rows. While developing, add a guard such as <code>WHERE org.level &lt; 20</code> to the recursive part, or a <code>LIMIT</code> on the final query. Recursive CTEs work the same way in PostgreSQL, where the keyword <code>RECURSIVE</code> is required; SQLite accepts the query with or without it.</p>
+                </div>
+            </section>
 
-    <h3>Recursive CTEs</h3>
-    <pre class="language-python"><code># Create a category hierarchy table
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS category_hierarchy (
-        category_id INTEGER PRIMARY KEY,
-        category_name TEXT,
-        parent_category_id INTEGER,
-        FOREIGN KEY (parent_category_id) REFERENCES category_hierarchy(category_id)
-    );
-''')
+            <!-- ============================================================ -->
+            <section id="case" class="lesson-section">
+                <h2>🔀 CASE: If-Then Logic</h2>
 
-# Recursive CTE for hierarchy traversal
-query = """
-WITH RECURSIVE category_tree AS (
-    -- Anchor: Start with root categories
-    SELECT 
-        category_id,
-        category_name,
-        parent_category_id,
-        0 AS level,
-        category_name AS path
-    FROM category_hierarchy
-    WHERE parent_category_id IS NULL
-    
-    UNION ALL
-    
-    -- Recursive: Add child categories
-    SELECT 
-        ch.category_id,
-        ch.category_name,
-        ch.parent_category_id,
-        ct.level + 1,
-        ct.path || ' > ' || ch.category_name
-    FROM category_hierarchy ch
-    INNER JOIN category_tree ct ON ch.parent_category_id = ct.category_id
-    WHERE ct.level < 10  -- Prevent infinite recursion
-)
-SELECT 
-    category_id,
-    category_name,
-    level,
-    path
-FROM category_tree
-ORDER BY path;
-"""
+                <p><code>CASE</code> is SQL's <code>if / elif / else</code>. It checks conditions in order and returns the value of the first one that is true. It is an expression, so it can go anywhere a value can: in <code>SELECT</code>, <code>GROUP BY</code>, <code>ORDER BY</code>, or inside an aggregate.</p>
 
-# Generate numbers sequence using recursive CTE
-query = """
-WITH RECURSIVE numbers(n) AS (
-    SELECT 1
-    UNION ALL
-    SELECT n + 1
-    FROM numbers
-    WHERE n < 100
-)
-SELECT 
-    n,
-    n * n AS square,
-    n * n * n AS cube
-FROM numbers
-WHERE n <= 10;
-"""
+                <pre><code class="language-python">show("""
+    SELECT CASE
+               WHEN order_total &lt; 50  THEN '1. under $50'
+               WHEN order_total &lt; 200 THEN '2. $50 to $199'
+               WHEN order_total &lt; 500 THEN '3. $200 to $499'
+               ELSE                        '4. $500 and up'
+           END                        AS size_band,
+           COUNT(*)                   AS orders,
+           ROUND(SUM(order_total), 2) AS revenue
+    FROM orders
+    WHERE status = 'completed'
+    GROUP BY size_band
+    ORDER BY size_band
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>      size_band  orders    revenue
+   1. under $50    2552   81356.13
+ 2. $50 to $199    9507 1104332.66
+3. $200 to $499    5674 1750591.58
+ 4. $500 and up    1029  688025.90</code></pre>
+                </div>
 
-df = pd.read_sql_query(query, conn)
-print(df)</code></pre>
+                <p>Because the conditions are tested in order, the second one does not need to say "50 or more". This is the SQL counterpart of <code>pd.cut</code>. Orders of $500 and up are under 6% of orders and about 19% of revenue. With no <code>ELSE</code>, unmatched rows get <code>NULL</code>.</p>
 
-    <h2>Advanced Join Techniques</h2>
-    
-    <h3>Non-Equi Joins</h3>
-    <pre class="language-python"><code># Date range joins
-query = """
--- Find overlapping promotions
-WITH promotions AS (
-    SELECT 
-        1 AS promo_id, 
-        'Summer Sale' AS promo_name,
-        DATE('2024-06-01') AS start_date,
-        DATE('2024-08-31') AS end_date
-    UNION ALL
-    SELECT 2, 'Back to School', DATE('2024-08-15'), DATE('2024-09-15')
-    UNION ALL
-    SELECT 3, 'Fall Special', DATE('2024-09-01'), DATE('2024-11-30')
-)
-SELECT 
-    p1.promo_name AS promo_1,
-    p1.start_date AS promo_1_start,
-    p1.end_date AS promo_1_end,
-    p2.promo_name AS promo_2,
-    p2.start_date AS promo_2_start,
-    p2.end_date AS promo_2_end,
-    -- Calculate overlap days
-    MIN(p1.end_date, p2.end_date) AS overlap_end,
-    MAX(p1.start_date, p2.start_date) AS overlap_start
-FROM promotions p1
-INNER JOIN promotions p2 
-    ON p1.promo_id < p2.promo_id
-    AND p1.start_date <= p2.end_date
-    AND p2.start_date <= p1.end_date;
-"""
+                <h3>Conditional Aggregation: Counts Side by Side</h3>
+                <p>Put a <code>CASE</code> inside <code>SUM</code> and you count only the rows that meet a condition. Several of these in one query turn row values into columns, a small pivot table.</p>
 
-df = pd.read_sql_query(query, conn)
-print(df)</code></pre>
+                <pre><code class="language-python">show("""
+    SELECT channel,
+           COUNT(*)                                             AS orders,
+           SUM(CASE WHEN status = 'returned'  THEN 1 ELSE 0 END) AS returned,
+           SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled,
+           ROUND(100.0 * SUM(CASE WHEN status = 'returned' THEN 1 ELSE 0 END) / COUNT(*), 1) AS return_pct
+    FROM orders
+    GROUP BY channel
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>channel  orders  returned  cancelled  return_pct
+ online   12854       890        360         6.9
+  store    7448       253         37         3.4</code></pre>
+                </div>
 
-    <h3>Complex Join Conditions</h3>
-    <pre class="language-python"><code># Multi-condition joins with CASE
-query = """
-SELECT 
-    c.customer_id,
-    c.first_name || ' ' || c.last_name AS customer_name,
-    c.customer_segment,
-    o.order_id,
-    o.total_amount,
-    CASE 
-        WHEN c.customer_segment = 'VIP' AND o.total_amount > 500 THEN 0.20
-        WHEN c.customer_segment = 'Premium' AND o.total_amount > 300 THEN 0.15
-        WHEN c.customer_segment = 'Regular' AND o.total_amount > 100 THEN 0.10
-        ELSE 0
-    END AS discount_rate,
-    o.total_amount * (1 - CASE 
-        WHEN c.customer_segment = 'VIP' AND o.total_amount > 500 THEN 0.20
-        WHEN c.customer_segment = 'Premium' AND o.total_amount > 300 THEN 0.15
-        WHEN c.customer_segment = 'Regular' AND o.total_amount > 100 THEN 0.10
-        ELSE 0
-    END) AS final_amount
-FROM customers c
-INNER JOIN orders o ON c.customer_id = o.customer_id
-WHERE o.status != 'Cancelled'
-ORDER BY final_amount DESC
-LIMIT 20;
-"""
+                <div class="card card-warning">
+                    <h4>⚠️ Why <code>100.0</code> and Not <code>100</code></h4>
+                    <p>Dividing one integer by another gives an integer in SQLite and PostgreSQL: <code>890 / 12854</code> is <code>0</code>. Multiplying by <code>100.0</code> first makes the arithmetic floating point. A percentage column that is all zeros is this bug every time.</p>
+                </div>
 
-df = pd.read_sql_query(query, conn)
-print(df)</code></pre>
+                <pre><code class="language-python">show("SELECT 890 / 12854 AS int_division, 100 * 890 / 12854 AS still_int, 100.0 * 890 / 12854 AS correct")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code> int_division  still_int  correct
+            0          6 6.923915</code></pre>
+                </div>
+            </section>
 
-    <h2>Set Operations</h2>
-    
-    <h3>UNION, INTERSECT, and EXCEPT</h3>
-    <pre class="language-python"><code># UNION - Combine customer and supplier contacts
-query = """
-SELECT 
-    'Customer' AS contact_type,
-    first_name || ' ' || last_name AS contact_name,
-    email AS contact_info,
-    city,
-    country
-FROM customers
-WHERE country = 'USA'
+            <!-- ============================================================ -->
+            <section id="sets" class="lesson-section">
+                <h2>⭕ Set Operations</h2>
 
-UNION
+                <p>Joins combine tables <em>side by side</em>, adding columns. Set operations combine query results <em>top to bottom</em>, and treat them as sets of rows. The two queries must return the same number of columns, of compatible types; the column names come from the first.</p>
 
-SELECT 
-    'Supplier' AS contact_type,
-    contact_name,
-    supplier_name AS contact_info,
-    NULL AS city,
-    country
-FROM suppliers
-WHERE country = 'USA'
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Operator</th><th>Returns</th><th>pandas idea</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="nowrap"><code>UNION ALL</code></td><td>All rows of both, duplicates kept</td><td><code>pd.concat([a, b])</code></td></tr>
+                            <tr><td class="nowrap"><code>UNION</code></td><td>All rows of both, duplicates removed</td><td><code>concat</code> then <code>drop_duplicates</code></td></tr>
+                            <tr><td class="nowrap"><code>INTERSECT</code></td><td>Rows that are in both</td><td>inner <code>merge</code> on all columns</td></tr>
+                            <tr><td class="nowrap"><code>EXCEPT</code></td><td>Rows of the first that are not in the second</td><td><code>a[~a["k"].isin(b["k"])]</code></td></tr>
+                        </tbody>
+                    </table>
+                </div>
 
-ORDER BY contact_type, contact_name;
-"""
+                <p>A classic retention question: of the customers who bought in 2024, how many came back in 2025, and how many did not?</p>
 
-df = pd.read_sql_query(query, conn)
-print(df.head())
+                <pre><code class="language-python">BUYERS_2024 = "SELECT customer_id FROM orders WHERE order_date &lt; '2025-01-01'"
+BUYERS_2025 = "SELECT customer_id FROM orders WHERE order_date &gt;= '2025-01-01'"
 
-# INTERSECT - Find common elements
-query = """
--- Customers who are also employees (by name)
-SELECT first_name, last_name
-FROM customers
+for label, operator in [("either year", "UNION"), ("both years", "INTERSECT"),
+                        ("2024 but not 2025", "EXCEPT"), ("stacked, duplicates kept", "UNION ALL")]:
+    n = conn.execute(f"SELECT COUNT(*) FROM ({BUYERS_2024} {operator} {BUYERS_2025})").fetchone()[0]
+    print(f"{operator:&lt;10} {label:&lt;26} {n:&gt;6,}")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>UNION      either year                 3,942
+INTERSECT  both years                  2,488
+EXCEPT     2024 but not 2025             431
+UNION ALL  stacked, duplicates kept   20,302</code></pre>
+                </div>
 
-INTERSECT
+                <p>3,942 different buyers over the two years; 2,488 bought in both; 431 bought in 2024 and did not return. <code>UNION ALL</code> removes nothing, so it returns one row per order: 20,302. (The f-string here assembles fixed pieces of SQL written in this notebook. No outside value goes into the text, so the rule from Lesson 5.1 is intact.)</p>
 
-SELECT first_name, last_name
-FROM employees;
-"""
+                <div class="card card-info">
+                    <h4>💡 Prefer <code>UNION ALL</code> Unless You Need Duplicates Removed</h4>
+                    <p><code>UNION</code> has to compare every row with every other to remove duplicates, which costs time on large results. When the two halves cannot overlap, or you want to keep repeats, <code>UNION ALL</code> is both faster and clearer about your intent.</p>
+                </div>
+            </section>
 
-df = pd.read_sql_query(query, conn)
-print(df)
+            <!-- ============================================================ -->
+            <section id="nulls" class="lesson-section">
+                <h2>🕳️ The Logic of NULL</h2>
 
-# EXCEPT - Find differences
-query = """
--- Products never ordered
-SELECT product_id
-FROM products
-WHERE discontinued = 0
+                <p><code>NULL</code> means "unknown", not zero and not an empty string. Because it is unknown, <strong>any comparison with it is also unknown</strong>: is an unknown value equal to 5? Unknown. Is it different from 5? Also unknown. SQL has three truth values (true, false, unknown), and <code>WHERE</code> keeps a row only when the condition is <em>true</em>.</p>
 
-EXCEPT
+                <pre><code class="language-python">show("""
+    SELECT NULL = NULL          AS null_equals_null,
+           NULL &lt;&gt; 1            AS null_differs_from_1,
+           1 + NULL             AS one_plus_null,
+           NULL IS NULL         AS null_is_null,
+           COALESCE(NULL, 'x')  AS coalesce_result
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>null_equals_null null_differs_from_1 one_plus_null  null_is_null coalesce_result
+            None                None          None             1               x</code></pre>
+                </div>
 
-SELECT DISTINCT product_id
-FROM order_details;
-"""
+                <p>The first three answers are themselves <code>NULL</code> (shown as <code>None</code>). Only <code>IS NULL</code> gives a straight answer. Three consequences cause most <code>NULL</code> bugs.</p>
 
-df = pd.read_sql_query(query, conn)
-print(df)</code></pre>
+                <h3>1. <code>= NULL</code> Never Matches; Use <code>IS NULL</code></h3>
+                <pre><code class="language-python">show("""
+    SELECT (SELECT COUNT(*) FROM orders WHERE promo_code = NULL)  AS equals_null,
+           (SELECT COUNT(*) FROM orders WHERE promo_code IS NULL) AS is_null
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code> equals_null  is_null
+           0    18154</code></pre>
+                </div>
 
-    <h2>Advanced Aggregations</h2>
-    
-    <h3>GROUPING SETS, ROLLUP, and CUBE</h3>
-    <pre class="language-python"><code># Simulate GROUPING SETS with UNION
-query = """
--- Multiple grouping levels in one query
-SELECT 
-    category,
-    NULL AS subcategory,
-    COUNT(*) AS product_count,
-    AVG(price) AS avg_price,
-    'Category Level' AS grouping_level
-FROM products
-GROUP BY category
+                <h3>2. A Condition and Its Opposite Do Not Add Up to Everything</h3>
+                <pre><code class="language-python">show("""
+    SELECT COUNT(*)                        AS all_orders,
+           SUM(promo_code = 'TRAIL15')     AS trail15,
+           SUM(promo_code &lt;&gt; 'TRAIL15')    AS not_trail15,
+           SUM(promo_code IS NULL)         AS no_code
+    FROM orders
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code> all_orders  trail15  not_trail15  no_code
+      20302      359         1789    18154</code></pre>
+                </div>
 
-UNION ALL
+                <p>359 orders used TRAIL15. "Not TRAIL15" finds only 1,789, not the other 19,943, because for the 18,154 orders with no promo code the comparison is unknown and the row is skipped. If you mean "every order that did not use TRAIL15", say <code>promo_code &lt;&gt; 'TRAIL15' OR promo_code IS NULL</code>, or compare <code>COALESCE(promo_code, 'none')</code>.</p>
 
-SELECT 
-    category,
-    subcategory,
-    COUNT(*) AS product_count,
-    AVG(price) AS avg_price,
-    'Subcategory Level' AS grouping_level
-FROM products
-GROUP BY category, subcategory
+                <p><code>COALESCE(a, b, ...)</code> returns its first argument that is not <code>NULL</code>. It is the SQL <code>fillna</code>.</p>
 
-UNION ALL
+                <h3>3. <code>NOT IN</code> with a NULL in the List Returns Nothing</h3>
+                <p>Which employees manage nobody? "Those whose id is not in the list of manager ids" sounds right.</p>
 
-SELECT 
-    NULL AS category,
-    NULL AS subcategory,
-    COUNT(*) AS product_count,
-    AVG(price) AS avg_price,
-    'Grand Total' AS grouping_level
-FROM products
+                <pre><code class="language-python">show("""
+    SELECT
+      (SELECT COUNT(*) FROM employees
+       WHERE employee_id NOT IN (SELECT manager_id FROM employees))                 AS not_in,
+      (SELECT COUNT(*) FROM employees
+       WHERE employee_id NOT IN (SELECT manager_id FROM employees
+                                 WHERE manager_id IS NOT NULL))                    AS not_in_fixed,
+      (SELECT COUNT(*) FROM employees AS e
+       WHERE NOT EXISTS (SELECT 1 FROM employees AS x
+                         WHERE x.manager_id = e.employee_id))                      AS not_exists
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code> not_in  not_in_fixed  not_exists
+      0            32          32</code></pre>
+                </div>
 
-ORDER BY 
-    CASE WHEN category IS NULL THEN 1 ELSE 0 END,
-    category,
-    CASE WHEN subcategory IS NULL THEN 1 ELSE 0 END,
-    subcategory;
-"""
+                <p>The first version returns <strong>zero</strong>, which is plainly wrong. The list of manager ids contains one <code>NULL</code> (the CEO's). <code>x NOT IN (1, 2, NULL)</code> means "x differs from 1 and from 2 and from an unknown value", and that last part is never true. Either filter the <code>NULL</code>s out of the list, or use <code>NOT EXISTS</code>, which does not have the problem. Thirty-two people manage nobody.</p>
 
-df = pd.read_sql_query(query, conn)
-print(df)</code></pre>
+                <div class="card card-success">
+                    <h4>✅ pandas Was Kinder, and Now You Know Why to Check</h4>
+                    <p>In pandas, <code>df["promo_code"] != "TRAIL15"</code> is <code>True</code> for missing values, so the two halves add up. SQL's stricter logic is not a flaw, but it does mean one extra question for every filter you write on a column that can be empty: "what should happen to the rows with no value?" Asking it out loud is the whole skill.</p>
+                </div>
 
-    <h2>Query Optimization Techniques</h2>
-    
-    <h3>Using EXPLAIN QUERY PLAN</h3>
-    <pre class="language-python"><code># Analyze query execution plan
-def analyze_query(query):
-    explain_query = f"EXPLAIN QUERY PLAN {query}"
-    df = pd.read_sql_query(explain_query, conn)
-    print("Query Execution Plan:")
-    print(df)
-    print("\nActual Query Results:")
-    return pd.read_sql_query(query, conn)
+                <p>Two last facts. Aggregates skip <code>NULL</code>, so <code>AVG(weight_kg)</code> averages the 228 products that have a weight, not all 242. And when sorting, SQLite puts <code>NULL</code> first in ascending order while PostgreSQL puts it last; <code>ORDER BY rating NULLS LAST</code> makes the choice explicit on both (SQLite 3.30 or later).</p>
+            </section>
 
-# Example: Comparing join strategies
-query1 = """
-SELECT c.*, o.*
-FROM customers c, orders o
-WHERE c.customer_id = o.customer_id
-AND c.country = 'USA'
-"""
+            <!-- ============================================================ -->
+            <section id="mistakes" class="lesson-section">
+                <h2>⚠️ Common Mistakes</h2>
 
-query2 = """
-SELECT c.*, o.*
-FROM customers c
-INNER JOIN orders o ON c.customer_id = o.customer_id
-WHERE c.country = 'USA'
-"""
+                <p>Three of the most expensive mistakes already appeared where they belong: the <a href="#multi">fan-out trap</a>, <a href="#case">integer division</a>, and <a href="#nulls"><code>NOT IN</code> with a <code>NULL</code></a>. None of them raises an error, which is why they got a demonstration each. Here are four more.</p>
 
-print("Query 1 - Old style join:")
-df1 = analyze_query(query1)
-print("\nQuery 2 - Modern join:")
-df2 = analyze_query(query2)</code></pre>
+                <h3>1. A Column Name That Exists in Both Tables</h3>
+                <pre data-raises="sqlite3.OperationalError"><code class="language-python">conn.execute("""
+    SELECT order_id, city
+    FROM orders AS o
+    JOIN customers AS c ON c.customer_id = o.customer_id
+    WHERE customer_id = 10034
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>OperationalError: ambiguous column name: customer_id</code></pre>
+                </div>
+                <p><strong>What it means:</strong> both tables have a <code>customer_id</code>, and the engine will not guess which you meant. <strong>Fix:</strong> prefix it: <code>WHERE o.customer_id = 10034</code>. Prefixing every column in a query that has a join is a habit that prevents this entirely.</p>
 
-    <h3>Index Usage</h3>
-    <pre class="language-python"><code># Create indexes for better performance
-cursor.executescript('''
-    -- Create indexes for foreign keys
-    CREATE INDEX IF NOT EXISTS idx_orders_customer_id 
-    ON orders(customer_id);
-    
-    CREATE INDEX IF NOT EXISTS idx_order_details_order_id 
-    ON order_details(order_id);
-    
-    CREATE INDEX IF NOT EXISTS idx_order_details_product_id 
-    ON order_details(product_id);
-    
-    -- Create composite indexes for common queries
-    CREATE INDEX IF NOT EXISTS idx_orders_status_date 
-    ON orders(status, order_date);
-    
-    CREATE INDEX IF NOT EXISTS idx_products_category_price 
-    ON products(category, price);
-    
-    -- Create covering index
-    CREATE INDEX IF NOT EXISTS idx_customers_covering 
-    ON customers(customer_id, first_name, last_name, email);
-''')
+                <h3>2. Forgetting the ON Condition</h3>
+                <pre><code class="language-python">show("""
+    SELECT (SELECT COUNT(*) FROM employees)  AS employees,
+           COUNT(*)                          AS rows_without_on
+    FROM employees AS e
+    JOIN employees AS m
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output (no error, wrong result)</h4>
+                    <pre><code> employees  rows_without_on
+        55             3025</code></pre>
+                </div>
+                <p><strong>What happened:</strong> SQLite accepts a <code>JOIN</code> with no <code>ON</code> and treats it as a cross join: 55 × 55 = 3,025 rows. On <code>orders</code> and <code>order_items</code> the same slip would produce over 900 million rows and a frozen notebook. PostgreSQL rejects it as a syntax error. <strong>Fix:</strong> every <code>JOIN</code> gets an <code>ON</code>; if a query is suddenly slow or its counts are huge, look for a missing or wrong join condition first.</p>
 
-# Query using indexes
-query = """
-SELECT 
-    c.first_name,
-    c.last_name,
-    c.email,
-    COUNT(o.order_id) AS order_count
-FROM customers c
-LEFT JOIN orders o ON c.customer_id = o.customer_id
-WHERE o.status = 'Delivered'
-    AND o.order_date >= DATE('now', '-30 days')
-GROUP BY c.customer_id, c.first_name, c.last_name, c.email
-HAVING COUNT(o.order_id) > 0
-ORDER BY order_count DESC;
-"""
+                <h3>3. Filtering the Right Table in WHERE Undoes a LEFT JOIN</h3>
+                <p>Goal: every customer, with their number of orders in December 2025 (zero for most).</p>
+                <pre><code class="language-python">show("""
+    WITH wrong AS (
+        SELECT c.customer_id, COUNT(o.order_id) AS dec_orders
+        FROM customers AS c
+        LEFT JOIN orders AS o ON o.customer_id = c.customer_id
+        WHERE o.order_date &gt;= '2025-12-01'              -- filter in WHERE
+        GROUP BY c.customer_id
+    ),
+    correct AS (
+        SELECT c.customer_id, COUNT(o.order_id) AS dec_orders
+        FROM customers AS c
+        LEFT JOIN orders AS o ON o.customer_id = c.customer_id
+                             AND o.order_date &gt;= '2025-12-01'   -- filter in ON
+        GROUP BY c.customer_id
+    )
+    SELECT (SELECT COUNT(*) FROM wrong)                         AS customers_wrong,
+           (SELECT COUNT(*) FROM correct)                       AS customers_correct,
+           (SELECT COUNT(*) FROM correct WHERE dec_orders = 0)  AS with_zero_orders
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code> customers_wrong  customers_correct  with_zero_orders
+             898               4850              3952</code></pre>
+                </div>
+                <p><strong>What happened:</strong> the left join produced <code>NULL</code> order columns for customers with no orders, and then <code>WHERE o.order_date &gt;= ...</code> threw those rows out, because a comparison with <code>NULL</code> is not true. Only 898 customers survived. <strong>Fix:</strong> a condition on the <em>right</em> table of a left join belongs in the <code>ON</code> clause. Conditions on the left table stay in <code>WHERE</code>.</p>
 
-df = analyze_query(query)
-print(df.head())</code></pre>
+                <h3>4. Selecting a Column That Is Not Grouped</h3>
+                <p>SQLite lets you write <code>SELECT store, order_date, COUNT(*) FROM orders GROUP BY store</code> and quietly returns <code>order_date</code> from an arbitrary row of each group. PostgreSQL refuses, with an error saying the column must appear in the <code>GROUP BY</code> clause or be used in an aggregate function. <strong>Fix:</strong> follow the rule from Lesson 5.1 even where SQLite does not enforce it: every selected column is either grouped or aggregated.</p>
+            </section>
 
-    <h2>Real-world Complex Query Examples</h2>
-    
-    <h3>Customer Lifetime Value Analysis</h3>
-    <pre class="language-python"><code>query = """
-WITH customer_metrics AS (
-    SELECT 
-        c.customer_id,
-        c.first_name || ' ' || c.last_name AS customer_name,
-        c.customer_segment,
-        c.registration_date,
-        COUNT(DISTINCT o.order_id) AS total_orders,
-        SUM(o.total_amount) AS total_spent,
-        AVG(o.total_amount) AS avg_order_value,
-        MIN(o.order_date) AS first_order_date,
-        MAX(o.order_date) AS last_order_date,
-        JULIANDAY(MAX(o.order_date)) - JULIANDAY(MIN(o.order_date)) AS customer_lifespan_days,
-        JULIANDAY('now') - JULIANDAY(MAX(o.order_date)) AS days_since_last_order
-    FROM customers c
-    LEFT JOIN orders o ON c.customer_id = o.customer_id
-    WHERE o.status != 'Cancelled'
-    GROUP BY c.customer_id, c.first_name, c.last_name, c.customer_segment, c.registration_date
-),
-customer_segments AS (
-    SELECT 
-        *,
-        CASE 
-            WHEN days_since_last_order <= 30 THEN 'Active'
-            WHEN days_since_last_order <= 90 THEN 'At Risk'
-            WHEN days_since_last_order <= 180 THEN 'Dormant'
-            ELSE 'Lost'
-        END AS activity_status,
-        CASE 
-            WHEN total_spent > 10000 THEN 'High Value'
-            WHEN total_spent > 5000 THEN 'Medium Value'
-            WHEN total_spent > 1000 THEN 'Low Value'
-            ELSE 'Minimal Value'
-        END AS value_segment,
-        CASE 
-            WHEN customer_lifespan_days = 0 THEN 0
-            ELSE total_spent / (customer_lifespan_days / 365.0)
-        END AS annual_value
-    FROM customer_metrics
-)
-SELECT 
-    activity_status,
-    value_segment,
-    COUNT(*) AS customer_count,
-    AVG(total_orders) AS avg_orders,
-    AVG(total_spent) AS avg_lifetime_value,
-    AVG(annual_value) AS avg_annual_value,
-    SUM(total_spent) AS total_revenue
-FROM customer_segments
-GROUP BY activity_status, value_segment
-ORDER BY activity_status, total_revenue DESC;
-"""
+            <!-- ============================================================ -->
+            <section id="project" class="lesson-section">
+                <h2>🛠️ Project: The Returns Investigation</h2>
 
-df = pd.read_sql_query(query, conn)
-print(df)</code></pre>
+                <p>Returns cost Pinecrest shipping, restocking and often the product itself. The operations team has asked a plain question: <em>where do returns come from?</em> Your EDA in Module 4 may have pointed at online orders. Now you will pin it down in SQL, joining four tables, and confirm the answer in pandas. Work in a new notebook, <code>lesson_5_2_project</code>. Allow about 45 minutes.</p>
 
-    <h3>Market Basket Analysis</h3>
-    <pre class="language-python"><code>query = """
-WITH product_pairs AS (
-    SELECT 
-        od1.product_id AS product_1,
-        od2.product_id AS product_2,
-        COUNT(DISTINCT od1.order_id) AS times_bought_together
-    FROM order_details od1
-    INNER JOIN order_details od2 
-        ON od1.order_id = od2.order_id
-        AND od1.product_id < od2.product_id
-    GROUP BY od1.product_id, od2.product_id
-    HAVING COUNT(DISTINCT od1.order_id) >= 5
-),
-product_stats AS (
-    SELECT 
-        product_id,
-        COUNT(DISTINCT order_id) AS total_orders
-    FROM order_details
-    GROUP BY product_id
-)
-SELECT 
-    p1.product_name AS product_1_name,
-    p2.product_name AS product_2_name,
-    pp.times_bought_together,
-    ps1.total_orders AS product_1_orders,
-    ps2.total_orders AS product_2_orders,
-    ROUND(
-        CAST(pp.times_bought_together AS FLOAT) / ps1.total_orders * 100, 
-        2
-    ) AS confidence_1_to_2,
-    ROUND(
-        CAST(pp.times_bought_together AS FLOAT) / ps2.total_orders * 100, 
-        2
-    ) AS confidence_2_to_1,
-    ROUND(
-        CAST(pp.times_bought_together AS FLOAT) / 
-        (ps1.total_orders + ps2.total_orders - pp.times_bought_together) * 100,
-        2
-    ) AS lift
-FROM product_pairs pp
-JOIN products p1 ON pp.product_1 = p1.product_id
-JOIN products p2 ON pp.product_2 = p2.product_id
-JOIN product_stats ps1 ON pp.product_1 = ps1.product_id
-JOIN product_stats ps2 ON pp.product_2 = ps2.product_id
-ORDER BY pp.times_bought_together DESC
-LIMIT 20;
-"""
+                <div class="card card-info">
+                    <h3>🛠️ Step 1: Connect and set the baseline <span class="step-time">(5 min)</span></h3>
+                    <p>Open the database read-only and compute the return rate by channel with conditional aggregation.</p>
+                    <pre><code class="language-python">import sqlite3
+import pandas as pd
 
-df = pd.read_sql_query(query, conn)
-print(df)</code></pre>
+db = sqlite3.connect("file:data/pinecrest.db?mode=ro", uri=True)
 
-    <h2>Practice Exercises</h2>
-    
-    <h3>Exercise 1: Sales Performance Dashboard</h3>
-    <p>Create a comprehensive query that shows:</p>
-    <ol>
-        <li>Monthly sales trends with year-over-year comparison</li>
-        <li>Top performing products by category</li>
-        <li>Customer segment analysis</li>
-        <li>Geographic sales distribution</li>
-        <li>All in a single query using CTEs</li>
-    </ol>
+baseline = pd.read_sql("""
+    SELECT channel,
+           COUNT(*)                                                AS orders,
+           SUM(CASE WHEN status = 'returned' THEN 1 ELSE 0 END)    AS returned,
+           ROUND(100.0 * SUM(CASE WHEN status = 'returned' THEN 1 ELSE 0 END) / COUNT(*), 1) AS return_pct
+    FROM orders
+    GROUP BY channel
+""", db)
+print(baseline)</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>  channel  orders  returned  return_pct
+0  online   12854       890         6.9
+1   store    7448       253         3.4</code></pre>
+                    </div>
+                    <p>Online orders are returned about twice as often as store orders. Why?</p>
+                </div>
 
-    <h3>Exercise 2: Customer Churn Analysis</h3>
-    <p>Build a query to identify:</p>
-    <ol>
-        <li>Customers likely to churn (no orders in 90 days)</li>
-        <li>Their historical purchase patterns</li>
-        <li>Common characteristics of churned customers</li>
-        <li>Recommendations for retention</li>
-    </ol>
+                <div class="card card-info">
+                    <h3>🛠️ Step 2: Return rate by category of what was ordered <span class="step-time">(10 min)</span></h3>
+                    <p>An order is returned as a whole, but it can contain several categories. Build one row per order and category first (a CTE with <code>DISTINCT</code>, so an order with two tents counts once for Tents), then compute the share of those orders that were returned. Keep discontinued SKUs visible with a <code>LEFT JOIN</code> and <code>COALESCE</code>.</p>
+                    <pre><code class="language-python">by_category = pd.read_sql("""
+    WITH order_categories AS (
+        SELECT DISTINCT i.order_id,
+               COALESCE(p.category, 'Discontinued') AS category
+        FROM order_items AS i
+        LEFT JOIN products AS p ON p.sku = i.sku
+    )
+    SELECT oc.category,
+           COUNT(*)                                                  AS online_orders,
+           ROUND(100.0 * SUM(CASE WHEN o.status = 'returned' THEN 1 ELSE 0 END) / COUNT(*), 1) AS return_pct
+    FROM order_categories AS oc
+    JOIN orders AS o ON o.order_id = oc.order_id
+    WHERE o.channel = 'online'
+    GROUP BY oc.category
+    ORDER BY return_pct DESC
+""", db)
+print(by_category)</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>       category  online_orders  return_pct
+0      Footwear           2854        14.4
+1       Apparel           3030         9.3
+2      Climbing           2125         7.0
+3          Snow           1588         6.9
+4  Camp Kitchen           4487         6.5
+5   Accessories           6352         6.3
+6         Packs           2065         6.2
+7         Tents           1417         5.9
+8      Sleeping           2146         5.8
+9  Discontinued            400         5.5</code></pre>
+                    </div>
+                    <p>Footwear stands well apart from the rest, with Apparel a distant second.</p>
+                </div>
 
-    <h3>Exercise 3: Inventory Optimization</h3>
-    <p>Design a query that:</p>
-    <ol>
-        <li>Identifies slow-moving products</li>
-        <li>Calculates optimal reorder points</li>
-        <li>Suggests bundle opportunities</li>
-        <li>Forecasts demand based on historical data</li>
-    </ol>
+                <div class="card card-info">
+                    <h3>🛠️ Step 3: Footwear or not, online or store <span class="step-time">(10 min)</span></h3>
+                    <p>Flag each order as containing footwear or not, and compare the four combinations. The CTE lists the footwear orders; a <code>LEFT JOIN</code> to it plus a <code>CASE</code> turns "found or not found" into a label.</p>
+                    <pre><code class="language-python">footwear = pd.read_sql("""
+    WITH footwear_orders AS (
+        SELECT DISTINCT i.order_id
+        FROM order_items AS i
+        JOIN products AS p ON p.sku = i.sku
+        WHERE p.category = 'Footwear'
+    )
+    SELECT o.channel,
+           CASE WHEN f.order_id IS NULL THEN 'no footwear' ELSE 'has footwear' END AS contents,
+           COUNT(*)                                                  AS orders,
+           SUM(CASE WHEN o.status = 'returned' THEN 1 ELSE 0 END)    AS returned,
+           ROUND(100.0 * SUM(CASE WHEN o.status = 'returned' THEN 1 ELSE 0 END) / COUNT(*), 1) AS return_pct
+    FROM orders AS o
+    LEFT JOIN footwear_orders AS f ON f.order_id = o.order_id
+    GROUP BY o.channel, contents
+    ORDER BY o.channel, contents
+""", db)
+print(footwear)
+print("orders counted:", footwear["orders"].sum())</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>  channel      contents  orders  returned  return_pct
+0  online  has footwear    2854       410        14.4
+1  online   no footwear   10000       480         4.8
+2   store  has footwear    1488        56         3.8
+3   store   no footwear    5960       197         3.3
+orders counted: 20302</code></pre>
+                    </div>
+                    <p>There it is. Online orders with footwear come back 14.4% of the time, three times the rate of other online orders. In stores, where people can try shoes on, footwear makes almost no difference. The row count check (20,302) confirms the joins neither dropped nor duplicated an order. The inner join inside the CTE is safe here because none of the discontinued SKUs is footwear.</p>
+                </div>
 
-    <h2>Key Takeaways</h2>
-    <ul>
-        <li>🔗 Master different join types for various data relationships</li>
-        <li>📊 CTEs make complex queries readable and maintainable</li>
-        <li>🎯 Subqueries provide flexibility in data filtering and aggregation</li>
-        <li>⚡ Proper indexing dramatically improves query performance</li>
-        <li>🔄 Recursive CTEs handle hierarchical data elegantly</li>
-        <li>📈 Set operations combine results from multiple queries</li>
-        <li>🧩 Complex business logic can be expressed in SQL</li>
-    </ul>
+                <div class="card card-info">
+                    <h3>🛠️ Step 4: Which kinds of footwear? <span class="step-time">(10 min)</span></h3>
+                    <p>Go one level deeper, to <code>product_type</code>, for online orders. <code>COUNT(DISTINCT ...)</code> with a <code>CASE</code> inside counts each order once even if it has two lines of the same type.</p>
+                    <pre><code class="language-python">by_type = pd.read_sql("""
+    SELECT p.product_type,
+           COUNT(DISTINCT o.order_id) AS online_orders,
+           COUNT(DISTINCT CASE WHEN o.status = 'returned' THEN o.order_id END) AS returned,
+           ROUND(100.0 * COUNT(DISTINCT CASE WHEN o.status = 'returned' THEN o.order_id END)
+                 / COUNT(DISTINCT o.order_id), 1) AS return_pct
+    FROM orders AS o
+    JOIN order_items AS i ON i.order_id = o.order_id
+    JOIN products AS p ON p.sku = i.sku
+    WHERE o.channel = :channel AND p.category = :category
+    GROUP BY p.product_type
+    ORDER BY return_pct DESC
+""", db, params={"channel": "online", "category": "Footwear"})
+print(by_type)</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>    product_type  online_orders  returned  return_pct
+0  Trail Runners            611       111        18.2
+1   Hiking Boots            390        58        14.9
+2   Hiking Socks            912       126        13.8
+3        Gaiters            434        55        12.7
+4   Camp Sandals            504        63        12.5
+5        Insoles            252        28        11.1</code></pre>
+                    </div>
+                    <p>A <code>CASE</code> with no <code>ELSE</code> gives <code>NULL</code> for orders that were not returned, and <code>COUNT</code> ignores <code>NULL</code>: that is what makes the trick work. Trail runners lead, but every footwear type is well above the 4.8% of non-footwear online orders, socks and insoles included. That is a caution: an order is returned as a whole, so the socks may simply be traveling with the boots.</p>
+                </div>
 
-    <h2>Further Resources</h2>
-    <ul>
-        <li><a href="https://www.sqlite.org/lang.html">SQLite SQL Language Reference</a></li>
-        <li><a href="https://www.postgresql.org/docs/current/queries.html">PostgreSQL Query Tutorial</a></li>
-        <li><a href="https://mode.com/sql-tutorial/sql-window-functions/">Window Functions Tutorial</a></li>
-        <li><a href="https://www.sqlshack.com/sql-query-optimization-techniques/">SQL Query Optimization</a></li>
-        <li><a href="https://leetcode.com/problemset/database/">LeetCode Database Problems</a></li>
-    </ul>
+                <div class="card card-info">
+                    <h3>🛠️ Step 5: Confirm with pandas <span class="step-time">(5 min)</span></h3>
+                    <p>Rebuild the Step 3 table from the CSV files with <code>merge</code> and <code>groupby</code>. Different tool, same data, same answer.</p>
+                    <pre><code class="language-python">orders_df = pd.read_csv("data/orders.csv")
+items_df = pd.read_csv("data/order_items.csv")
+products_df = pd.read_csv("data/products.csv")
 
-    <!-- Learning Journal (REQUIRED per the Courseware Authoring Standard) -->
-    <section id="journal" class="lesson-section">
-        <h2>📓 Learning Journal</h2>
-        <div class="card card-info">
-            <p>Keep a learning journal — digital or physical. After this lesson, take a few minutes to write down:</p>
-            <ul>
-                <li><strong>Key concepts</strong> you learned</li>
-                <li><strong>Techniques that clicked</strong> for you</li>
-                <li><strong>Questions or confusion points</strong> to revisit</li>
-                <li><strong>Ideas you want to try</strong></li>
-                <li><strong>Your progress and feelings</strong> about learning this</li>
-            </ul>
-            <p><strong>✍️ This lesson's prompt:</strong> CTEs let you name each step of a complex query. Think of an analytical question you'd want to answer from a database — how would breaking it into named CTE steps make it easier to reason about than one giant query?</p>
+lines = items_df.merge(products_df[["sku", "category"]], on="sku", how="left")
+footwear_ids = lines.loc[lines["category"] == "Footwear", "order_id"].unique()
+
+orders_df["contents"] = orders_df["order_id"].isin(footwear_ids).map({True: "has footwear", False: "no footwear"})
+orders_df["returned"] = orders_df["status"] == "returned"
+
+check = (orders_df.groupby(["channel", "contents"])["returned"]
+         .agg(orders="count", returned="sum", return_pct="mean")
+         .reset_index())
+check["return_pct"] = (check["return_pct"] * 100).round(1)
+print(check)
+print("same as SQL:", check.equals(footwear.astype(check.dtypes.to_dict())))
+db.close()</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>  channel      contents  orders  returned  return_pct
+0  online  has footwear    2854       410        14.4
+1  online   no footwear   10000       480         4.8
+2   store  has footwear    1488        56         3.8
+3   store   no footwear    5960       197         3.3
+same as SQL: True</code></pre>
+                    </div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 6: Write the finding <span class="step-time">(5 min)</span></h3>
+                    <p>In your notebook, write three sentences for the operations team: what you found (with the two key percentages), what you checked to trust it, and one thing the data cannot tell you. For example, it does not record <em>why</em> an order was returned or which item in it was the problem. Suggesting what to collect next (a return reason, an item-level return flag) is part of a good analysis.</p>
+                </div>
+
+                <div class="card card-success">
+                    <h3>✅ Project Completion Checklist</h3>
+                    <ul class="checklist">
+                        <li>The database is opened read-only and every query runs without changing it</li>
+                        <li>Baseline return rates are 6.9% online and 3.4% in stores</li>
+                        <li>Your category table includes a <code>Discontinued</code> row, so no order line was dropped</li>
+                        <li>The footwear table has four rows whose <code>orders</code> column adds up to 20,302</li>
+                        <li>Online orders with footwear show 14.4% returned against 4.8% without</li>
+                        <li>The pandas rebuild matches the SQL result exactly</li>
+                        <li>Your written finding names one limit of the data</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="exercises" class="lesson-section">
+                <h2>🏋️ Hands-on Exercises</h2>
+
+                <p>Use the read-only <code>conn</code> and <code>show()</code> from the lesson. Before running each query, write down how many rows you expect. Being wrong about the count is the fastest way to learn what a join really did.</p>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 1: Top Customers by Name</h3>
+                    <p>List the five customers with the highest total of <strong>completed</strong> orders: full name, city, number of orders and total spent. Which join type do you need, and what would change if you used the other one?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Join <code>orders</code> to <code>customers</code>, group by <code>c.customer_id</code> (names repeat, ids do not), order by the sum descending.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">show("""
+    SELECT c.first_name || ' ' || c.last_name AS customer,
+           c.city,
+           COUNT(*)                     AS orders,
+           ROUND(SUM(o.order_total), 2) AS spent
+    FROM orders AS o
+    JOIN customers AS c ON c.customer_id = o.customer_id
+    WHERE o.status = 'completed'
+    GROUP BY c.customer_id
+    ORDER BY spent DESC
+    LIMIT 5
+""")</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>      customer     city  orders   spent
+Rosa Blackwood  Atlanta      38 7945.54
+  Joanna Amato Meridian      14 6792.90
+   Rosa Ibarra Williams      35 6644.93
+  Liam Paredes     Bend      29 6630.48
+  Zane Winslow     Bend      12 6079.00</code></pre>
+                        </div>
+                        <p>An inner join is right when you need the name: an order from a closed account has no name to show. With <code>orders LEFT JOIN customers</code>, a closed account that spent enough would appear with an empty name and city. Grouping by <code>customer_id</code> rather than by name matters because 492 full names are shared by different people.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 2: What Needs Reordering?</h3>
+                    <p>The <code>inventory</code> table has one row per product per location. For the <code>Warehouse</code> location only, count the products whose <code>quantity</code> is below their <code>reorder_point</code>, by product category, most affected first.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Join <code>inventory</code> to <code>products</code> on <code>sku</code>. Two conditions in <code>WHERE</code>, one of them comparing two columns of the same row.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">show("""
+    SELECT p.category, COUNT(*) AS below_reorder_point
+    FROM inventory AS v
+    JOIN products AS p ON p.sku = v.sku
+    WHERE v.location = 'Warehouse'
+      AND v.quantity &lt; v.reorder_point
+    GROUP BY p.category
+    ORDER BY below_reorder_point DESC, p.category
+""")</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>    category  below_reorder_point
+     Apparel                    9
+ Accessories                    8
+    Footwear                    6
+        Snow                    6
+    Climbing                    5
+Camp Kitchen                    4
+       Packs                    4
+    Sleeping                    4
+       Tents                    3</code></pre>
+                        </div>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 3: Segment Buyers with a CTE and CASE</h3>
+                    <p>Put every buyer into a segment by their number of orders (any status): <code>1 order</code>, <code>2 to 4</code>, <code>5 to 9</code>, <code>10 or more</code>. Show the number of customers in each segment, in that order.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>CTE: orders per customer. Main query: a <code>CASE</code> on that count, grouped. To sort segments in a logical order rather than alphabetically, <code>ORDER BY MIN(n_orders)</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">show("""
+    WITH per_customer AS (
+        SELECT customer_id, COUNT(*) AS n_orders
+        FROM orders
+        GROUP BY customer_id
+    )
+    SELECT CASE
+               WHEN n_orders = 1  THEN '1 order'
+               WHEN n_orders &lt; 5  THEN '2 to 4'
+               WHEN n_orders &lt; 10 THEN '5 to 9'
+               ELSE                    '10 or more'
+           END      AS segment,
+           COUNT(*) AS customers
+    FROM per_customer
+    GROUP BY segment
+    ORDER BY MIN(n_orders)
+""")</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>   segment  customers
+   1 order        719
+    2 to 4       1520
+    5 to 9       1129
+10 or more        574</code></pre>
+                        </div>
+                        <p>The four counts add up to the 3,942 buyers, and 719 of them bought exactly once.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 4: Everyone Under One Manager</h3>
+                    <p>Write a recursive CTE that starts from a <strong>given employee id</strong> (passed as a parameter) and returns everyone below that person, with their depth relative to the start (direct reports are depth 1). Run it for employee 5, Elena Mistry, the Regional Manager for the West, and summarize the number of people and total salary by store location.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Change the anchor: instead of <code>manager_id IS NULL</code>, start from <code>WHERE manager_id = ?</code> with depth 1. The recursive part is unchanged.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">show("""
+    WITH RECURSIVE team (employee_id, location, salary, depth) AS (
+        SELECT employee_id, location, salary, 1
+        FROM employees
+        WHERE manager_id = ?
+
+        UNION ALL
+
+        SELECT e.employee_id, e.location, e.salary, team.depth + 1
+        FROM employees AS e
+        JOIN team ON e.manager_id = team.employee_id
+    )
+    SELECT location,
+           COUNT(*)    AS people,
+           MAX(depth)  AS deepest,
+           SUM(salary) AS payroll
+    FROM team
+    GROUP BY location
+    ORDER BY payroll DESC
+""", (5,))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code> location  people  deepest  payroll
+    Boise      10        3   439500
+     Bend       8        3   364900
+Flagstaff       7        3   330000</code></pre>
+                        </div>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 5: The Price Change Audit (Stretch)</h3>
+                    <p>List prices rose on 2025-03-01. <code>order_items.unit_price</code> is what was charged at the time; <code>products.price</code> is today's price. For order lines before and from that date, compare revenue computed from <code>unit_price</code> with revenue computed from today's <code>price</code>, and count the lines where the two prices differ. What goes wrong if an analyst values old orders with the current price list?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Join lines to orders (for the date) and to products (for today's price). Group by a <code>CASE</code> on the date. An inner join to <code>products</code> is fine here, because a discontinued product has no current price to compare.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">show("""
+    SELECT CASE WHEN o.order_date &lt; '2025-03-01' THEN '1. before the change'
+                ELSE '2. from the change on' END    AS period,
+           COUNT(*)                                 AS lines,
+           SUM(i.unit_price &lt;&gt; p.price)             AS lines_with_other_price,
+           ROUND(SUM(i.quantity * i.unit_price), 2) AS charged,
+           ROUND(SUM(i.quantity * p.price), 2)      AS at_todays_price
+    FROM order_items AS i
+    JOIN orders AS o ON o.order_id = i.order_id
+    JOIN products AS p ON p.sku = i.sku
+    GROUP BY period
+    ORDER BY period
+""")</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>               period  lines  lines_with_other_price   charged  at_todays_price
+ 1. before the change  23897                   14680 2094441.7        2161978.7
+2. from the change on  20984                       0 1832593.1        1832593.1</code></pre>
+                        </div>
+                        <p>Before the change, 61% of lines were sold at a price different from today's, and valuing them at today's price overstates that period's item revenue by about $67,500. From the change on, the two agree exactly. The lesson generalizes: a price (or an address, or a tier) stored in a lookup table is the value <em>now</em>. For history, use the value recorded on the transaction.</p>
+                    </details>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="quiz" class="lesson-section">
+                <h2>🎯 Quick Quiz</h2>
+                <div class="card quiz-container">
+                    <h3>🎯 Check Your Understanding</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> <code>orders</code> has 20,302 rows, and 739 of them have a <code>customer_id</code> that is not in <code>customers</code>. How many rows does <code>SELECT * FROM orders AS o LEFT JOIN customers AS c ON c.customer_id = o.customer_id</code> return?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="A left join keeps every row of the left table, orders. Each order matches at most one customer, so there are exactly 20,302 rows, 739 of them with NULL in the customer columns.">
+                                A) 20,302
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="That is what an inner join returns: only orders that found a customer. What does LEFT promise about the table named first?">
+                                B) 19,563
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Customers with no orders would be kept by a full outer join, or by a left join that starts FROM customers. Which table is on the left here?">
+                                C) 21,360
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> In <code>employees</code>, one row (the CEO) has <code>manager_id</code> NULL. What does this query return?</p>
+                        <pre><code class="language-sql">SELECT COUNT(*) FROM employees
+WHERE employee_id NOT IN (SELECT manager_id FROM employees)</code></pre>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="That would be the answer if the list of manager ids had no NULL in it. What does comparing a value with NULL produce?">
+                                A) 32, the employees who manage nobody
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="The query runs without an error. The trouble is in the logic: NOT IN means different from every item in the list, and one item is unknown.">
+                                B) An error, because NULL cannot be in a list
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="NOT IN requires the value to differ from every item in the list. Comparing with the NULL gives unknown, never true, so no row passes. Filter the NULLs out of the subquery or use NOT EXISTS.">
+                                C) 0, because the list contains a NULL
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> An analyst reports total revenue with the query below, and the figure is almost three times the true one. Why?</p>
+                        <pre><code class="language-sql">SELECT SUM(o.order_total)
+FROM orders AS o
+JOIN order_items AS i ON i.order_id = o.order_id</code></pre>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Every order line has an order, so the inner join loses nothing here. The problem is rows gained, not rows lost.">
+                                A) The inner join dropped orders that have no items
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="After the join there is one row per order line, and each carries its whole order's total. An order with three lines is added three times. Sum order_total from orders alone, or sum quantity times unit_price from the lines.">
+                                B) Each order's total is repeated once for every line on the order, then summed
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="SUM skips NULL values, so NULLs could only make a total smaller, never larger.">
+                                C) <code>SUM</code> counted NULL totals as large numbers
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 4:</strong> <code>orders.store</code> has five values (four store cities and Online). <code>employees.location</code> has six (the same four cities, HQ and Warehouse). What does this print?</p>
+                        <pre><code class="language-python">quiz_sql = "SELECT COUNT(*) FROM (SELECT store FROM orders UNION SELECT location FROM employees)"
+print(conn.execute(quiz_sql).fetchone()[0])</code></pre>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="UNION removes duplicate rows from the combined result. The four cities appear on both sides and are kept once, plus Online, HQ and Warehouse: seven distinct values.">
+                                A) <code>7</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Five plus six counts the four cities twice. What does UNION do with a value that appears on both sides?">
+                                B) <code>11</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="That is 20,302 orders plus 55 employees, every row stacked with nothing removed. Which operator keeps duplicates, UNION or UNION ALL?">
+                                C) <code>20357</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 5:</strong> You want every customer listed, with their number of orders placed in December 2025 (0 for most). Where does the date condition go?</p>
+                        <pre><code class="language-sql">SELECT c.customer_id, COUNT(o.order_id)
+FROM customers AS c
+LEFT JOIN orders AS o ON o.customer_id = c.customer_id
+GROUP BY c.customer_id</code></pre>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="For a customer with no orders at all, o.order_date is NULL after the left join. What does WHERE do with a row whose condition is not true?">
+                                A) In a <code>WHERE o.order_date &gt;= '2025-12-01'</code> clause before the <code>GROUP BY</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="HAVING filters whole groups after counting. It could remove customers, but it cannot make the count look only at December orders.">
+                                B) In a <code>HAVING</code> clause after the <code>GROUP BY</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="A condition on the right table belongs in the ON clause of a left join. Customers with no December order still appear, with NULL order columns, and COUNT(o.order_id) gives them 0. In WHERE, the same condition would remove them.">
+                                C) In the <code>ON</code> clause: <code>... AND o.order_date &gt;= '2025-12-01'</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="faq" class="lesson-section">
+                <h2>❓ Common Questions at This Stage</h2>
+
+                <details>
+                    <summary>Should I join in SQL or merge in pandas?</summary>
+                    <p>If the tables are in a database, join there: the engine can use keys and indexes, and only the result travels to your computer. Merge in pandas when the data is already in DataFrames, comes from different sources (a database table and a CSV, say), or when the tables are small and you are exploring. The row-count checks are the same either way.</p>
+                </details>
+                <details>
+                    <summary>What is <code>USING (order_id)</code> that I see in other people's queries?</summary>
+                    <p>A shorthand for <code>ON a.order_id = b.order_id</code> when the key has the same name in both tables. It works in SQLite and PostgreSQL. This lesson writes <code>ON</code> everywhere because it works for every join, including those where the names differ (<code>manager_id</code> and <code>employee_id</code>).</p>
+                </details>
+                <details>
+                    <summary>You may also see joins written with commas: <code>FROM orders o, customers c WHERE ...</code>. Is that different?</summary>
+                    <p>It is the older style for an inner join, with the join condition in <code>WHERE</code>. It gives the same result, but it mixes join conditions with filters and makes it easy to forget one and get a cross join. Use explicit <code>JOIN ... ON</code>.</p>
+                </details>
+                <details>
+                    <summary>How do I debug a long query with several CTEs?</summary>
+                    <p>One step at a time, the same way you debug a notebook. Replace the final <code>SELECT</code> with <code>SELECT * FROM first_cte LIMIT 10</code> and a <code>COUNT(*)</code>, check it, then move to the next CTE. Most wrong answers come from one step having more or fewer rows than you assumed.</p>
+                </details>
+                <details>
+                    <summary>Is a correlated subquery slow?</summary>
+                    <p>It can be, because in principle it runs once per outer row, though engines often find a smarter plan. On 242 products you will never notice. On millions of rows, a join to a grouped CTE usually does the same job faster. Lesson 5.4 shows you how to see what the engine actually does instead of guessing.</p>
+                </details>
+
+                <div class="card card-accent">
+                    <h3>🌟 Going Further: Bonus Challenge</h3>
+                    <p>Recursion is not only for trees. This CTE generates a calendar: <code>WITH RECURSIVE days(d) AS (SELECT '2025-11-01' UNION ALL SELECT date(d, '+1 day') FROM days WHERE d &lt; '2025-11-30')</code>. Cross join it with the four physical stores, then <code>LEFT JOIN</code> the completed <em>store</em> orders by date and store, and count orders per store per day. Are there any store-days in November 2025 with zero account-holder orders? (Remember where the date and status conditions on <code>orders</code> must go.) You have just built the SQL version of <code>reindex</code> from the time series lesson: a complete grid that makes absences visible.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="journal" class="lesson-section">
+                <h2>📓 Learning Journal</h2>
+                <div class="card card-accent">
+                    <p>Take five minutes to write in your learning journal (the <code>journal.md</code> file you started in Lesson 0.1, or a paper notebook). Jot down:</p>
+                    <ul>
+                        <li><strong>Key concepts</strong> you learned today</li>
+                        <li><strong>Techniques that clicked</strong> (and the ones that have not, yet)</li>
+                        <li><strong>Questions or confusion</strong> to come back to</li>
+                        <li><strong>Ideas to try</strong> on your own</li>
+                        <li><strong>Progress and feelings</strong>: how did this lesson go for you?</li>
+                    </ul>
+                    <p><strong>✍️ This lesson's prompt:</strong> Three results in this lesson were wrong without any error message: the fan-out total, <code>NOT IN</code> with a <code>NULL</code>, and the left join undone by <code>WHERE</code>. For each one, write the check that would have caught it. Which of the three do you think you are most likely to make, and why?</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="summary" class="lesson-section">
+                <h2>📝 Lesson Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎓 Key Takeaways</h3>
+                    <ul>
+                        <li>A join pairs rows by key; join types differ only in what happens to rows with no partner</li>
+                        <li><code>JOIN</code> keeps matches only and drops the rest silently; <code>LEFT JOIN</code> keeps all of the first table; <code>LEFT JOIN ... WHERE right.key IS NULL</code> finds what is missing</li>
+                        <li>Check the row count after every join, and never sum a "one"-side amount after joining to its "many" side</li>
+                        <li>Subqueries return a value, a list or a table depending on where they sit; CTEs give those steps names and a readable order</li>
+                        <li>A recursive CTE (anchor, <code>UNION ALL</code>, recursive part) walks a hierarchy of any depth</li>
+                        <li><code>CASE</code> builds categories, and inside <code>SUM</code> or <code>COUNT</code> it builds side-by-side columns; multiply by <code>100.0</code> to avoid integer division</li>
+                        <li><code>UNION</code>, <code>INTERSECT</code> and <code>EXCEPT</code> combine results as sets of rows; <code>UNION ALL</code> keeps duplicates</li>
+                        <li><code>NULL</code> is "unknown": test it with <code>IS NULL</code>, replace it with <code>COALESCE</code>, and prefer <code>NOT EXISTS</code> to <code>NOT IN</code></li>
+                    </ul>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🏆 What You've Accomplished</h3>
+                    <ul>
+                        <li>You joined customers, orders, order lines and products, and accounted for every unmatched row</li>
+                        <li>You found the customers who never ordered and the products that never sold</li>
+                        <li>You verified a business rule (the loyalty tiers) with a two-step CTE</li>
+                        <li>You walked a six-level reporting tree with a recursive query and printed it as an org chart</li>
+                        <li>You traced Pinecrest's online returns to footwear and confirmed the finding in pandas</li>
+                    </ul>
+                </div>
+
+                <h3>🔭 Looking Ahead</h3>
+                <p>In <a href="sql_window_functions.html"><strong>Lesson 5.3: SQL Window Functions</strong></a> you will meet the feature that lets a row see its neighbors: rank each product within its category, compare each month with the one before, keep a running total, and pick the top few per group, all without collapsing rows the way <code>GROUP BY</code> does. If you remember <code>rolling</code>, <code>shift</code> and <code>rank</code> from pandas, you already know what they are for.</p>
+
+                <h3>📋 Before the Next Lesson</h3>
+                <ul>
+                    <li>Keep the <code>ORG_CTE</code> string and your <code>show()</code> helper in your notebook.</li>
+                    <li>Write, from memory, a query that lists each product category with its number of products and number of <em>distinct</em> orders it appeared on. Check the row count you expect before you run it.</li>
+                    <li>Glance back at <a href="pandas_window_functions.html">Lesson 2.8: Window Functions</a>, especially <code>rolling</code>, <code>shift</code> and <code>cumsum</code>.</li>
+                </ul>
+
+                <div class="card card-accent">
+                    <h3>🌱 Encouragement for the Journey</h3>
+                    <p>This was a dense lesson, and it is supposed to feel that way: joins, CTEs and <code>NULL</code> logic are most of what separates someone who can look things up in a database from someone who can answer real questions with one. You do not need every pattern memorized. You need to remember that they exist, to count your rows, and to be suspicious of an answer that arrived without a check. You practiced all three today.</p>
+                </div>
+            </section>
+
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="sql_database_connections.html" class="prev-lesson">← Previous: Database Connections</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="sql_window_functions.html" class="next-lesson">Next: SQL Window Functions →</a>
+            </nav>
         </div>
-    </section>
-
-    <!-- Lesson Summary (full standard block) -->
-    <section id="summary" class="lesson-section">
-        <h2>📝 Lesson Summary</h2>
-        <div class="card card-success">
-            <h3>🎓 Key Takeaways</h3>
-            <ul>
-                <li>The join type you choose (INNER, LEFT, OUTER, SELF) determines exactly which rows survive when tables are combined.</li>
-                <li>CTEs (<code>WITH ...</code>) break a complex query into readable, named building blocks — and recursive CTEs traverse hierarchies.</li>
-                <li>Subqueries — scalar, correlated, and derived tables — let you filter and aggregate flexibly within a single statement.</li>
-                <li>Indexes and <code>EXPLAIN QUERY PLAN</code> turn a slow query into a fast one without changing its results.</li>
-            </ul>
-        </div>
-        <h3>🎉 What You've Accomplished</h3>
-        <p>You can now express sophisticated business questions directly in SQL — multi-table joins, layered CTEs, correlated subqueries, set operations, and window rankings — and tune them to run efficiently on real data.</p>
-        <h3>❓ Common Questions at This Stage</h3>
-        <details>
-            <summary>When should I use a CTE instead of a subquery?</summary>
-            <p>Use a CTE when the logic is complex, reused multiple times in the query, or recursive — it reads top-to-bottom like named steps. A simple one-off subquery inline in a WHERE or SELECT is fine when it's small and used once.</p>
-        </details>
-        <details>
-            <summary>What's the difference between WHERE and HAVING?</summary>
-            <p><code>WHERE</code> filters individual rows before grouping; <code>HAVING</code> filters groups after aggregation. If your condition uses an aggregate like <code>COUNT()</code> or <code>SUM()</code>, it belongs in <code>HAVING</code>.</p>
-        </details>
-        <details>
-            <summary>My query is slow. Where do I start?</summary>
-            <p>Run <code>EXPLAIN QUERY PLAN</code> to see whether it's scanning full tables. Add indexes on the columns used in joins and WHERE clauses, and select only the columns you actually need instead of <code>SELECT *</code>.</p>
-        </details>
-        <h3>🔭 Looking Ahead</h3>
-        <p>You touched window functions here with ROW_NUMBER and DENSE_RANK. Next you'll go deeper into window functions — running totals, moving averages, and comparisons across rows — the analyst's power tools.</p>
-        <h3>✅ Before the Next Lesson</h3>
-        <ul>
-            <li>Rewrite one deeply nested subquery as a chain of CTEs and confirm the results match.</li>
-            <li>Take a slow query, run <code>EXPLAIN QUERY PLAN</code>, add an index, and observe the change.</li>
-            <li>Write your Learning Journal entry for this lesson</li>
-        </ul>
-        <div class="card card-accent" style="text-align: center; padding: 2rem;">
-            <h3>🌟 Encouragement for the Journey</h3>
-            <p>Complex SQL is where data engineering meets storytelling — you can now ask the database almost anything and get a clear answer. Keep writing queries; every one you master makes the next feel effortless.</p>
-        </div>
-    </section>
-
-    <!-- Navigation at the bottom -->
-    <nav class="lesson-nav" aria-label="Lesson navigation">
-        <a href="sql_database_connections.html" class="prev-lesson" aria-label="Previous lesson">Previous: Database Connections from Python</a>
-        <a href="index.html" class="home-link" aria-label="Course home">Course Home</a>
-        <a href="sql_window_functions.html" class="next-lesson" aria-label="Next lesson">Next: Window Functions</a>
-    </nav>
-    
     </main>
 
-    <!-- Footer -->
     <footer class="site-footer">
         <p>&copy; 2026 Ray de la Paz. Python Data Science. All rights reserved.</p>
         <div class="footer-links">
@@ -1125,6 +1569,10 @@ print(df)</code></pre>
             <a href="https://rays-home.netlify.app/contact">Contact</a>
             <a href="#" id="print-button">Print Page</a>
         </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
     </footer>
+
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
 </body>
 </html>

@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Participant Workbook: Session 20</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Student workbook —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">write in it · bring it to every session</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Participant Workbook</div>
+    <h1>Session 20: Bokeh and Streamlit</h1>
+    <p class="sub">Your working pages for the last tools session. First Bokeh: several charts that look at one table, so a selection in one shows up in all. Then Streamlit: an app whose controls run your pandas code. At the end you choose your capstone question and write your plan.</p>
+    <div class="meta-row">
+      <span class="chip">Lessons <b>7.3–7.4</b></span>
+      <span class="chip">Session <b>20</b> · 3 hours</span>
+      <span class="chip">Name: ____________________</span>
+    </div>
+  </header>
+
+  <div class="sec"><h2>How to Use This Workbook</h2><span class="rule"></span></div>
+  <div class="note"><div class="t">Two lessons and a decision</div>
+    <p>Each lesson has your goals, the key ideas, a worked example with real output, the guided lab, two "predict, then run" items, a self-check and the journal prompt. The last section is new: the <b>capstone kickoff</b>, where you choose your question and write your plan. Starter files are in <code class="inline">labs/module-20/</code>. Today's two sentences: <b>share a source, share the rows</b> and <b>the whole script reruns</b>.</p>
+  </div>
+  <div class="sec"><h2>Session Goals</h2><span class="rule"></span></div>
+  <ul class="tick">
+          <li>☐ I can build a Bokeh figure from a <code class="inline">ColumnDataSource</code> with a formatted hover</li>
+          <li>☐ I can link two plots by a range and by a source, and say which link does what</li>
+          <li>☐ I can explain what happens when a reader changes a Streamlit widget</li>
+          <li>☐ I can keep a value across reruns and cache a slow step</li>
+          <li>☐ I chose my capstone question and wrote a one-paragraph plan</li>
+        </ul>
+  <div class="sec"><h2>Lessons</h2><span class="rule"></span></div>
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">7.3</span><h3>Interactive Charts with Bokeh</h3></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">By the end you can</div>
+        <ul class="tick">
+          <li>Build a figure by adding glyphs and save it with <code class="inline">output_file</code> and <code class="inline">save</code></li>
+          <li>Put data in a <code class="inline">ColumnDataSource</code> and name its columns in glyph calls</li>
+          <li>Write a hover tool with formatted fields</li>
+          <li>Link plots by a shared range (panning) and by a shared source (brushing)</li>
+          <li>Add a dropdown or slider that works in a plain HTML file</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Key ideas</div>
+        <ul class="tick">
+          <li><b>Two moves:</b> <code class="inline">p = figure(...)</code> makes an empty plot; <code class="inline">p.line</code>, <code class="inline">p.scatter</code>, <code class="inline">p.vbar</code> add glyphs. Each glyph call adds one renderer.</li>
+          <li><b>Everything is an object with properties:</b> <code class="inline">p.yaxis.formatter</code>, <code class="inline">p.legend.location</code>, <code class="inline">p.title.text</code>.</li>
+          <li><b>`output_file(name)` then `save(p)`</b> writes the HTML; <code class="inline">show(p)</code> also opens it in a browser.</li>
+          <li><b>A `ColumnDataSource` is the table behind the page.</b> With <code class="inline">source=source</code>, a string argument is a column name; a number is the same value for every mark.</li>
+          <li><b>Hover:</b> <code class="inline">("Revenue", "@revenue{$0,0}")</code>. <code class="inline">@name</code> is this row's value; the format goes in braces. Dates need <code class="inline">formatters={"@date": "datetime"}</code>.</li>
+          <li><b>Share a range, share the view:</b> <code class="inline">figure(x_range=top.x_range)</code>. <b>Share a source, share the rows:</b> pass the same source variable to both glyphs and add <code class="inline">box_select</code>.</li>
+          <li><b>In a saved file only JavaScript can react:</b> <code class="inline">js_link</code> copies a widget value into a property; <code class="inline">CustomJS</code> runs a few lines. A Python callback needs a server.</li>
+          <li><b>Every column of every source travels in the file.</b> Build the source from a table that holds only what the page needs. A new page needs new objects (a source belongs to one document).</li>
+        </ul>
+        <table class="timing">
+          <tr><td><b>You want to...</b></td><td><b>Write</b></td></tr>
+          <tr><td>Dollars on an axis</td><td><code class="inline">p.yaxis.formatter = NumeralTickFormatter(format="$0,0")</code></td></tr>
+          <tr><td>Color by a category column</td><td><code class="inline">color=factor_cmap("store", palette=..., factors=...)</code></td></tr>
+          <tr><td>Plots side by side / stacked</td><td><code class="inline">row(a, b)</code> / <code class="inline">column(a, b)</code></td></tr>
+          <tr><td>A selection that stands out</td><td><code class="inline">nonselection_alpha=0.15, selection_color="#d97706"</code></td></tr>
+          <tr><td>Show only one group</td><td><code class="inline">view=CDSView(filter=GroupFilter(column_name="store", group="Boise"))</code></td></tr>
+          <tr><td>A file that works offline</td><td><code class="inline">output_file(name, mode="inline")</code></td></tr>
+          <tr><td>Find a blank plot's cause</td><td><code class="inline">print(source.column_names)</code> and read the terminal for E-1001</td></tr>
+        </table>
+      </div>
+      <div class="blk"><div class="h">Worked example: a source, bars and a formatted hover</div>
+        <p>Asheville is the rainy store city. Summarize two years of weather to twelve rows, put them in a source, and draw bars whose hover shows the share as a percentage. The source holds three columns besides the index, and nothing else travels in the file.</p>
+<pre class="code"><span class="k">import</span> pandas <span class="k">as</span> pd
+<span class="k">from</span> bokeh.models <span class="k">import</span> ColumnDataSource, NumeralTickFormatter
+<span class="k">from</span> bokeh.plotting <span class="k">import</span> figure, output_file, save
+
+weather = pd.read_csv(<span class="s">"data/store_weather.csv"</span>, parse_dates=[<span class="s">"date"</span>])
+ash = weather[weather[<span class="s">"city"</span>] == <span class="s">"Asheville"</span>].copy()
+ash[<span class="s">"month"</span>] = ash[<span class="s">"date"</span>].dt.strftime(<span class="s">"%b"</span>)
+ash[<span class="s">"rainy"</span>] = ash[<span class="s">"precip_in"</span>] &gt;= <span class="s">0.10</span>
+months = [<span class="s">"Jan"</span>, <span class="s">"Feb"</span>, <span class="s">"Mar"</span>, <span class="s">"Apr"</span>, <span class="s">"May"</span>, <span class="s">"Jun"</span>,
+          <span class="s">"Jul"</span>, <span class="s">"Aug"</span>, <span class="s">"Sep"</span>, <span class="s">"Oct"</span>, <span class="s">"Nov"</span>, <span class="s">"Dec"</span>]
+table = ash.groupby(<span class="s">"month"</span>).agg(high=(<span class="s">"high_f"</span>, <span class="s">"mean"</span>), rainy=(<span class="s">"rainy"</span>, <span class="s">"mean"</span>))
+table = table.loc[months].reset_index()
+source = ColumnDataSource(table)
+tips = [(<span class="s">"Month"</span>, <span class="s">"@month"</span>), (<span class="s">"Rainy days"</span>, <span class="s">"@rainy{0%}"</span>),
+        (<span class="s">"Mean high"</span>, <span class="s">"@high{0} F"</span>)]
+p = figure(width=<span class="s">700</span>, height=<span class="s">300</span>, x_range=months, tools=<span class="s">"save"</span>, tooltips=tips,
+           title=<span class="s">"Asheville: July is the rainiest month"</span>)
+p.vbar(x=<span class="s">"month"</span>, top=<span class="s">"rainy"</span>, width=<span class="s">0.8</span>, source=source, color=<span class="s">"#667eea"</span>)
+p.yaxis.formatter = NumeralTickFormatter(format=<span class="s">"0%"</span>)
+p.y_range.start = <span class="s">0</span>
+output_file(<span class="s">"asheville_rain.html"</span>, title=<span class="s">"Asheville rain"</span>)
+save(p)
+print(source.column_names, <span class="s">"|"</span>, len(p.renderers), <span class="s">"renderer,"</span>, len(table), <span class="s">"bars"</span>)
+print(table.round(<span class="s">2</span>).iloc[[<span class="s">0</span>, <span class="s">5</span>, <span class="s">6</span>, <span class="s">7</span>, <span class="s">11</span>]].to_string(index=<span class="k">False</span>))</pre>
+<pre class="out">['index', 'month', 'high', 'rainy'] | 1 renderer, 12 bars
+month  high  rainy
+  Jan 47.87   0.21
+  Jun 84.33   0.28
+  Jul 82.81   0.39
+  Aug 83.39   0.34
+  Dec 51.32   0.19</pre>
+        <p>One <code class="inline">vbar</code> call drew twelve bars and added one renderer. The strings <code class="inline">"month"</code> and <code class="inline">"rainy"</code> are column names in the source; <code class="inline">width=0.8</code> is a plain number, the same for every bar. The tooltip reads <code class="inline">@rainy{0%}</code> from the same row. Open <code class="inline">asheville_rain.html</code> and hover July: 39% of July days had at least a tenth of an inch of rain.</p>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab</div>
+        <p><b>Lab 7.3-A:</b> open <code class="inline">labs/module-20/l7_3-bokeh/margin_brush_starter.py</code>. Run it once, then do TODO 1 to 6: two scatter plots of the product catalog that share one source. The lab writes <code class="inline">output/margin_brush.html</code>: open it from your file manager, drag a box in the left plot and watch the right one. Use <code class="inline">save</code>, not <code class="inline">show</code>, in the lab file.</p><p><b>Lab 7.3-B:</b> open <code class="inline">labs/module-20/l7_3-bokeh/category_picker_starter.py</code>. A dropdown that filters the chart inside the HTML file, a slider that moves a reference line, and a counter the callback rewrites. The numbers your page should show are printed at the end of the starter.</p><p>If a callback does nothing, press F12 in the browser and read the Console tab: JavaScript errors appear there.</p>
+      </div>
+      <div class="blk"><div class="h">Predict, then run</div>
+                <div class="q"><div class="qn">P1</div><div class="qt">Write what you expect, then run it. Were you right? If not, what did you miss?</div><pre class="code">p = figure(width=<span class="s">300</span>, height=<span class="s">200</span>)
+p.vbar(x=[<span class="s">1</span>, <span class="s">2</span>, <span class="s">3</span>], top=[<span class="s">4</span>, <span class="s">5</span>, <span class="s">6</span>], width=<span class="s">0.8</span>)
+p.line([<span class="s">1</span>, <span class="s">2</span>, <span class="s">3</span>], [<span class="s">4</span>, <span class="s">5</span>, <span class="s">6</span>])
+print(len(p.renderers), [type(r.glyph).__name__ <span class="k">for</span> r <span class="k">in</span> p.renderers])</pre><div class="write"></div></div>
+        <div class="q"><div class="qn">P2</div><div class="qt">Write what you expect, then run it. Were you right? If not, what did you miss?</div><pre class="code">a = ColumnDataSource(pd.DataFrame({<span class="s">"x"</span>: [<span class="s">1</span>, <span class="s">2</span>, <span class="s">3</span>]}))
+b = ColumnDataSource(pd.DataFrame({<span class="s">"x"</span>: [<span class="s">1</span>, <span class="s">2</span>, <span class="s">3</span>]}))
+a.selected.indices = [<span class="s">0</span>, <span class="s">2</span>]
+print(a.selected.indices, b.selected.indices, a <span class="k">is</span> b)</pre><div class="write"></div></div>
+      </div>
+      <div class="blk"><div class="h">My notes</div>
+        <div class="notes-lines"></div>
+      </div>
+      <div class="blk"><div class="h">Self-check</div>
+                <div class="q" data-sc="1"><div class="qn">Q1</div><div class="qt">A glyph is drawn with <code class="inline">p.scatter("visitors", "revenue", source=source, size="visitors")</code>. What does <code class="inline">size="visitors"</code> do?</div><div class="opts"><div class="opt">A) Raises an error: a size must be a number</div><div class="opt">B) Reads each marker's size from the <code class="inline">visitors</code> column of the source</div><div class="opt">C) Writes the word visitors next to each marker</div><div class="opt">D) Sets every marker to the average number of visitors</div></div></div>
+        <div class="q" data-sc="2" data-kind="short"><div class="qn">Q2</div><div class="qt">What does this print?</div><pre class="code">p = figure(width=<span class="s">300</span>, height=<span class="s">200</span>)
+<span class="k">for</span> store <span class="k">in</span> [<span class="s">"Boise"</span>, <span class="s">"Bend"</span>]:
+    p.line([<span class="s">1</span>, <span class="s">2</span>], [<span class="s">3</span>, <span class="s">4</span>], legend_label=store)
+    p.scatter([<span class="s">1</span>, <span class="s">2</span>], [<span class="s">3</span>, <span class="s">4</span>], legend_label=store)
+print(len(p.renderers), len(p.legend.items))</pre><div class="write"></div></div>
+        <div class="q" data-sc="3"><div class="qn">Q3</div><div class="qt">Two stacked time-series plots draw different columns. You want panning or zooming either one to move both along the date axis. What do you write?</div><div class="opts"><div class="opt">A) Put both plots in one <code class="inline">gridplot</code></div><div class="opt">B) Give both plots the same <code class="inline">title</code></div><div class="opt">C) Build each plot from its own copy of the source</div><div class="opt">D) Create the second plot with <code class="inline">x_range=top.x_range</code></div></div></div>
+        <div class="q" data-sc="4"><div class="qn">Q4</div><div class="qt">On one page you wrote <code class="inline">ColumnDataSource(df)</code> twice, once for each plot. A box selection in the left plot changes nothing in the right one, and there is no error. Why?</div><div class="opts"><div class="opt">A) The selection is stored in a source, and the two plots have two separate sources</div><div class="opt">B) Selections only link plots that also share an <code class="inline">x_range</code></div><div class="opt">C) <code class="inline">box_select</code> works on one plot per page</div><div class="opt">D) The DataFrame was not sorted the same way in both plots</div></div></div>
+        <div class="q" data-sc="5" data-kind="short"><div class="qn">Q5</div><div class="qt">What does this print?</div><pre class="code">source = ColumnDataSource(pd.DataFrame({<span class="s">"x"</span>: [<span class="s">1</span>, <span class="s">2</span>, <span class="s">3</span>], <span class="s">"y"</span>: [<span class="s">4</span>, <span class="s">5</span>, <span class="s">6</span>]}))
+print(source.column_names, len(source.data[<span class="s">"x"</span>]))</pre><div class="write"></div></div>
+        <div class="q" data-sc="6"><div class="qn">Q6</div><div class="qt">Which Bokeh tooltip shows a row's revenue as <code class="inline">$12,345</code>?</div><div class="opts"><div class="opt">A) <code class="inline">("Revenue", "$revenue")</code></div><div class="opt">B) <code class="inline">("Revenue", "@revenue:$,.0f")</code></div><div class="opt">C) <code class="inline">("Revenue", "@revenue{$0,0}")</code></div><div class="opt">D) <code class="inline">("Revenue", "%{revenue}")</code></div></div></div>
+      </div>
+      <div class="blk"><div class="h">Journal prompt (from the lesson)</div>
+        <p>Use your store explorer for five minutes on a store other than Boise. Write down one thing you noticed by brushing that you had not seen in any earlier lesson's chart, and one question it raised that the page cannot answer.</p>
+        <div class="write tall"></div>
+      </div>
+    </div>
+  </section>
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">7.4</span><h3>Dashboards with Streamlit</h3></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">By the end you can</div>
+        <ul class="tick">
+          <li>Write an app as a plain script and start it with <code class="inline">streamlit run</code></li>
+          <li>Explain the rerun model and predict what a variable holds after a click</li>
+          <li>Keep values with <code class="inline">st.session_state</code> and avoid repeated work with <code class="inline">@st.cache_data</code></li>
+          <li>Lay out a page with a sidebar, columns and tabs</li>
+          <li>Test an app without a browser, and say what sharing one takes</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Key ideas</div>
+        <ul class="tick">
+          <li><b>An app is a script.</b> Start it with <code class="inline">streamlit run app.py</code> from the folder that holds <code class="inline">data/</code>. Stop it with Ctrl+C. Not <code class="inline">python app.py</code>, and not in a notebook.</li>
+          <li><b>The whole script reruns</b> from the top every time a reader changes a widget. Ordinary variables start over. Widgets keep their values.</li>
+          <li><b>Showing and asking.</b> <code class="inline">st.title</code>, <code class="inline">st.metric</code>, <code class="inline">st.dataframe</code>, <code class="inline">st.plotly_chart</code> show things. <code class="inline">st.selectbox</code>, <code class="inline">st.multiselect</code>, <code class="inline">st.slider</code>, <code class="inline">st.date_input</code>, <code class="inline">st.toggle</code> ask, and return the answer.</li>
+          <li><b>`st.button` is True for one rerun only.</b> It is not a switch.</li>
+          <li><b>`st.session_state`</b> is a dictionary kept per browser tab across reruns. A widget with <code class="inline">key="x"</code> lives there as <code class="inline">st.session_state["x"]</code>. Change a widget's value only in a callback (<code class="inline">on_click=</code>).</li>
+          <li><b>`@st.cache_data`</b> stores a function's result per set of arguments. Use it for slow loading that does not depend on widgets. The cache is shared by all users.</li>
+          <li><b>`st.stop()`</b> ends the current run after a message: for an empty selection or a half-chosen date range.</li>
+          <li><b>Sharing</b> means a Python process kept running where readers can reach it, with the packages, the data, access control and no secrets in the code.</li>
+        </ul>
+        <table class="timing">
+          <tr><td><b>Where a value lives</b></td><td><b>How long it lasts</b></td></tr>
+          <tr><td>an ordinary variable</td><td>one run of the script</td></tr>
+          <tr><td>a widget's value</td><td>across reruns, in that browser tab</td></tr>
+          <tr><td><code class="inline">st.session_state["x"]</code></td><td>across reruns, in that browser tab</td></tr>
+          <tr><td>a <code class="inline">@st.cache_data</code> result</td><td>for every user, until the app restarts or the cache is cleared</td></tr>
+          <tr><td>Filters / side by side / views</td><td><code class="inline">with st.sidebar:</code> / <code class="inline">st.columns(3)</code> / <code class="inline">st.tabs([...])</code></td></tr>
+          <tr><td>Test without a browser</td><td><code class="inline">AppTest.from_file("app.py").run()</code> then <code class="inline">assert not at.exception</code></td></tr>
+        </table>
+      </div>
+      <div class="blk"><div class="h">Worked example: a small app and its test</div>
+        <p>How many days count as rainy depends on where you draw the line. This app lets the reader choose the city and the line. The loading is cached; the filtering is not, so it always reflects the widgets.</p>
+<p>File <code class="inline">rain_app.py</code>:</p>
+<pre class="code"><span class="k">import</span> pandas <span class="k">as</span> pd
+<span class="k">import</span> streamlit <span class="k">as</span> st
+
+@st.cache_data
+<span class="k">def</span> load_weather(path):
+    <span class="k">return</span> pd.read_csv(path, parse_dates=[<span class="s">"date"</span>])
+
+weather = load_weather(<span class="s">"data/store_weather.csv"</span>)
+city = st.selectbox(<span class="s">"City"</span>, [<span class="s">"Boise"</span>, <span class="s">"Bend"</span>, <span class="s">"Flagstaff"</span>, <span class="s">"Asheville"</span>])
+inches = st.slider(<span class="s">"A rainy day has at least this many inches"</span>,
+                   <span class="s">0.05</span>, <span class="s">1.00</span>, <span class="s">0.10</span>, step=<span class="s">0.05</span>)
+one = weather[weather[<span class="s">"city"</span>] == city]
+rainy = one[<span class="s">"precip_in"</span>] &gt;= inches
+st.metric(<span class="s">"Rainy days"</span>, <span class="s">f"{rainy.mean():.0%}"</span>,
+          help=<span class="s">"Share of the 731 days in 2024 and 2025"</span>)
+st.caption(<span class="s">f"{int(rainy.sum())} of {len(one)} days in {city}"</span>)</pre>
+<p>Check it without a browser:</p>
+<pre class="code"><span class="k">from</span> streamlit.testing.v1 <span class="k">import</span> AppTest
+
+<span class="k">def</span> report():
+    print(at.selectbox[<span class="s">0</span>].value, at.slider[<span class="s">0</span>].value, <span class="s">"-&gt;"</span>, at.metric[<span class="s">0</span>].value,
+          <span class="s">"|"</span>, at.caption[<span class="s">0</span>].value)
+
+at = AppTest.from_file(<span class="s">"rain_app.py"</span>, default_timeout=<span class="s">30</span>).run()
+report()
+at.selectbox[<span class="s">0</span>].select(<span class="s">"Asheville"</span>).run()
+report()
+at.slider[<span class="s">0</span>].set_value(<span class="s">0.5</span>).run()
+report()</pre>
+<pre class="out">Boise 0.1 -&gt; 9% | 68 of 731 days in Boise
+Asheville 0.1 -&gt; 24% | 172 of 731 days in Asheville
+Asheville 0.5 -&gt; 6% | 44 of 731 days in Asheville</pre>
+        <p>Three runs of the script, three different pages. <code class="inline">AppTest</code> ran the script in memory, changed a widget and ran it again, exactly as a reader's click would. Boise is rainy on about one day in ten at the default line; Asheville on about one in four; raise the line to half an inch and Asheville's share falls to 6%. No value was carried from one run to the next except the widgets' own.</p>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab</div>
+        <p><b>Lab 7.4-B (first):</b> open <code class="inline">labs/module-20/l7_4-streamlit/gear_shortlist_starter.py</code>. This file is an app and its own test. <code class="inline">streamlit run gear_shortlist_starter.py</code> opens it; <code class="inline">python gear_shortlist_starter.py</code> checks it without a browser. Before you change anything, predict what the check prints. Then do TODO 1 to 5 so the shortlist remembers.</p><p><b>Lab 7.4-A:</b> open <code class="inline">labs/module-20/l7_4-streamlit/catalog_browser_starter.py</code>. A catalog browser for store staff: sidebar filters with keys, a reset callback, a friendly message when nothing matches, three metrics, a table and a download. Run the check after each TODO; it tells you how far you have got.</p><p>Keep the app open in a browser tab with Always rerun switched on, and stop it with Ctrl+C when you finish.</p>
+      </div>
+      <div class="blk"><div class="h">Predict, then run</div>
+                <div class="q"><div class="qn">P1</div><div class="qt">Write what you expect, then run it. Were you right? If not, what did you miss?</div><pre class="code">at = AppTest.from_string(<span class="s">"""
+import streamlit as st
+total = st.session_state.get("total", 0)
+if st.button("Add 10"):
+    total += 10
+st.write("Total:", total)
+"""</span>).run()
+<span class="k">for</span> _ <span class="k">in</span> range(<span class="s">3</span>):
+    at.button[<span class="s">0</span>].click().run()
+print(at.markdown[-<span class="s">1</span>].value)</pre><div class="write"></div></div>
+        <div class="q"><div class="qn">P2</div><div class="qt">Write what you expect, then run it. Were you right? If not, what did you miss?</div><pre class="code">at = AppTest.from_string(<span class="s">"""
+import streamlit as st
+@st.cache_data
+def square(n):
+    st.session_state["runs"] = st.session_state.get("runs", 0) + 1
+    return n * n
+answers = [square(3), square(3), square(4)]
+st.write(st.session_state["runs"])
+"""</span>).run()
+print(at.markdown[<span class="s">0</span>].value)</pre><div class="write"></div></div>
+      </div>
+      <div class="blk"><div class="h">My notes</div>
+        <div class="notes-lines"></div>
+      </div>
+      <div class="blk"><div class="h">Self-check</div>
+                <div class="q" data-sc="7"><div class="qn">Q7</div><div class="qt">Line 5 of your app is <code class="inline">sales = pd.read_csv(...)</code> on a 200 MB file, with no decorator. A reader opens the page and then ticks a checkbox 10 times. How many times is the file read?</div><div class="opts"><div class="opt">A) 1</div><div class="opt">B) 11</div><div class="opt">C) 10</div><div class="opt">D) 0</div></div></div>
+        <div class="q" data-sc="8" data-kind="short"><div class="qn">Q8</div><div class="qt">What does this print? (The check clicks the button twice.)</div><pre class="code">at = AppTest.from_string(<span class="s">"""
+import streamlit as st
+if "n" not in st.session_state:
+    st.session_state["n"] = 5
+if st.button("Double"):
+    st.session_state["n"] *= 2
+st.write(st.session_state["n"])
+"""</span>).run()
+at.button[<span class="s">0</span>].click().run()
+at.button[<span class="s">0</span>].click().run()
+print(at.markdown[<span class="s">0</span>].value)</pre><div class="write"></div></div>
+        <div class="q" data-sc="9"><div class="qn">Q9</div><div class="qt">A Reset button must put a slider (which has a key) back to 0. Where does the line that sets the slider's value belong?</div><div class="opts"><div class="opt">A) In a function passed as <code class="inline">on_click=</code>, which Streamlit runs before the rerun starts</div><div class="opt">B) In an <code class="inline">if st.button("Reset"):</code> block placed after the slider</div><div class="opt">C) Inside the function decorated with <code class="inline">@st.cache_data</code></div><div class="opt">D) Nowhere: a widget's value cannot be changed from code</div></div></div>
+        <div class="q" data-sc="10"><div class="qn">Q10</div><div class="qt">Which step of a dashboard is the right one to wrap with <code class="inline">@st.cache_data</code>?</div><div class="opts"><div class="opt">A) Filtering the table by the stores and dates the reader chose</div><div class="opt">B) The whole app, so that nothing ever runs twice</div><div class="opt">C) A function that draws the sidebar widgets</div><div class="opt">D) Loading and preparing the CSV file, which is slow and the same whatever the widgets say</div></div></div>
+        <div class="q" data-sc="11" data-kind="short"><div class="qn">Q11</div><div class="qt">What does this print? (Two numbers.)</div><pre class="code">at = AppTest.from_string(<span class="s">"""
+import streamlit as st
+stores = st.multiselect("Stores", ["Boise", "Bend"], default=["Boise"])
+if not stores:
+    st.warning("Pick a store.")
+    st.stop()
+st.metric("Stores chosen", len(stores))
+"""</span>).run()
+at.multiselect[<span class="s">0</span>].set_value([]).run()
+print(len(at.warning), len(at.metric))</pre><div class="write"></div></div>
+        <div class="q" data-sc="12"><div class="qn">Q12</div><div class="qt">What does <code class="inline">st.button("Go")</code> return?</div><div class="opts"><div class="opt">A) True from the first click onward</div><div class="opt">B) The number of times it has been clicked</div><div class="opt">C) True only during the one rerun caused by a click, otherwise False</div><div class="opt">D) The label of the button</div></div></div>
+      </div>
+      <div class="blk"><div class="h">Journal prompt (from the lesson)</div>
+        <p>You have now made four kinds of deliverable from the same sales data: a static figure (7.1), an interactive file (7.2), a linked explorer (7.3) and an app (7.4). For each, name one real person or situation it would suit best, and one where it would be the wrong choice.</p>
+        <div class="write tall"></div>
+      </div>
+    </div>
+  </section>
+  <div class="sec"><h2>Capstone Kickoff</h2><span class="rule"></span></div>
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">8.1</span><h3>The Pinecrest Report: choose and plan</h3></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">The four questions (read the full text in Lesson 8.1, Choose Your Question)</div>
+        <table class="timing">
+          <tr><td><b>Q</b></td><td><b>Question</b></td><td><b>Main data</b></td></tr>
+          <tr><td><b>A</b></td><td>Why is Asheville falling behind?</td><td>daily_sales.csv (store_weather.csv, survey.csv, sales_2025.xlsx possibly useful)</td></tr>
+          <tr><td><b>B</b></td><td>Does it matter how we found the customer?</td><td>customers.csv, orders.csv</td></tr>
+          <tr><td><b>C</b></td><td>Does the welcome discount bring people back?</td><td>orders.csv (customers.csv possibly useful)</td></tr>
+          <tr><td><b>D</b></td><td>What did the March 2025 price increase do to sales?</td><td>order_items.csv, orders.csv, products.csv</td></tr>
+        </table><p>Choose the one you are most curious about: curiosity will carry you through the tedious parts better than ease will. An honest "no clear difference" is a full answer and scores as well as a dramatic discovery.</p>
+      </div>
+      <div class="blk"><div class="h">My question</div>
+        <div class="write"></div>
+      </div>
+      <div class="blk lab"><div class="h">My one-paragraph plan</div>
+        <p>My question is ____ (A, B, C or D, in my own words), which matters because the decision is ____. I will use the tables ____ and one row of my analysis table will be ____. I will compare ____ with ____ using ____ (the measure, and the method that fits it). The comparison could be unfair because ____, and I will check that by ____. The chart I expect to make is ____, and it would change my mind if ____.</p>
+        <div class="write tall"></div>
+        <div class="write tall"></div>
+      </div>
+      <div class="blk"><div class="h">Partner check</div>
+        <p>Swap workbooks. Your partner completes this sentence about your plan: "From this plan, I predict your notebook will contain ..."</p>
+        <div class="write"></div>
+      </div>
+      <div class="blk"><div class="h">Before Session 21: capstone milestones 1 to 4</div>
+        <ul class="tick">
+          <li>☐ <b>Milestone 1 · Question and plan (30 min).</b> The paragraph above becomes the first Markdown cell of <code class="inline">pinecrest_report.ipynb</code>. Done when someone else could read it and predict roughly what the notebook will contain.</li>
+          <li>☐ <b>Milestone 2 · Load and check (45 min).</b> For every file: shape, dtypes, date range, missing values, duplicate keys. Done when you can say what one row is and how many rows there are.</li>
+          <li>☐ <b>Milestone 3 · Clean and prepare (45 min).</b> One function returns your analysis table, with a row-count check around every merge and filter. Done when you can explain every row that was dropped.</li>
+          <li>☐ <b>Milestone 4 · Explore (75 min).</b> One variable, then pairs, then segments; a running list headed "What I have noticed". Done when you can say in two sentences what you expect the answer to be and what could still prove you wrong.</li>
+          <li>☐ Restart and Run All works on what I have so far.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+  <div class="sec"><h2>Notes</h2><span class="rule"></span></div>
+  <div class="notes-lines"></div>
+  <div class="sec"><h2>Homework Checklist</h2><span class="rule"></span></div>
+  <ul class="tick">
+          <li>☐ Capstone Milestones 1 to 4 (see the kickoff section): about 3 hours 15 minutes. Do these first</li>
+          <li>☐ Lesson 7.3 project: <code class="inline">store_explorer.html</code> opens by double-click and all three charts respond to a selection</li>
+          <li>☐ Lesson 7.4 project: <code class="inline">streamlit run dashboard.py</code> shows no red boxes, and the AppTest check runs clean</li>
+          <li>☐ Lesson exercises 7.3 (1 to 3) and 7.4 (1 to 3), both quizzes and both journal entries</li>
+          <li>☐ I read the rest of Lesson 8.1: the worked mini-example, the report template, the rubric, the five common mistakes</li>
+          <li>☐ For Session 21: my capstone notebook runs from a fresh kernel as far as I have got</li>
+        </ul>
+  <div class="sec"><h2>Glossary</h2><span class="rule"></span></div>
+  <ul class="tick">
+          <li><b>Glyph:</b> a family of marks added to a Bokeh figure: <code class="inline">line</code>, <code class="inline">scatter</code>, <code class="inline">vbar</code>.</li>
+          <li><b>Renderer:</b> what one glyph call adds to a figure; <code class="inline">p.renderers</code> lists them.</li>
+          <li><b>ColumnDataSource (CDS):</b> the table behind a Bokeh page: a dictionary of equal-length columns.</li>
+          <li><b>Linked panning:</b> two plots that share a range object, so they always show the same view.</li>
+          <li><b>Linked brushing:</b> two plots that share a source, so a selection in one highlights the same rows in the other.</li>
+          <li><b>View (CDSView):</b> a filter between a source and a glyph that shows only some rows.</li>
+          <li><b>CustomJS:</b> a few lines of JavaScript attached to a widget or property, run in the reader's browser.</li>
+          <li><b>Rerun:</b> one top-to-bottom run of a Streamlit script, triggered by opening the page or changing a widget.</li>
+          <li><b>Widget:</b> a control (<code class="inline">selectbox</code>, <code class="inline">slider</code>, <code class="inline">button</code>) whose function returns the reader's input.</li>
+          <li><b>Session state:</b> <code class="inline">st.session_state</code>: a dictionary Streamlit keeps for one browser tab across reruns.</li>
+          <li><b>Callback:</b> a function passed as <code class="inline">on_click=</code> or <code class="inline">on_change=</code>; Streamlit runs it before the rerun.</li>
+          <li><b>Cache:</b> stored results of a function decorated with <code class="inline">@st.cache_data</code>, reused when the arguments repeat.</li>
+          <li><b>AppTest:</b> Streamlit's testing tool: runs an app in memory and lets code read the page and operate widgets.</li>
+          <li><b>Deploying:</b> keeping an app running on a machine other people can reach.</li>
+        </ul>
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 20 · Participant Workbook · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

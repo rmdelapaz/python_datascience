@@ -3,1289 +3,1283 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Master SQL query optimization techniques. Learn indexing strategies, execution plans, and performance tuning for data science workloads.">
-    <title>Query Optimization - Python Data Science Path</title>
+    <meta name="description" content="Read EXPLAIN QUERY PLAN line by line, measure what an index does to a query's plan and timing, and learn when indexes help, when they do not, and what they cost. Python Data Science Lesson 5.4.">
+    <meta name="author" content="Ray de la Paz">
+    <title>Query Optimization - Python Data Science</title>
     <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/enhanced.css">
-    <link rel="icon" href="/favicon.png" type="image/png">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid: rendered (and re-rendered on theme change) by js/course-enhancements.js -->
     <script type="module">
-      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-      mermaid.initialize({ startOnLoad: true });
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        window.__mermaid = mermaid;
+        mermaid.initialize({ startOnLoad: false });
+        document.dispatchEvent(new Event('mermaid-ready'));
     </script>
-    <script src="js/course-enhancements.js" defer></script>
-    <link rel="stylesheet" href="styles/standard.css">
 </head>
 <body>
-    <!-- Skip to main content for accessibility -->
     <a href="#main-content" class="skip-to-main">Skip to main content</a>
-    
-    <!-- Progress indicator -->
+
     <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
         <div class="progress-bar"></div>
     </div>
-    
+
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">📊 Python Data Science</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">☰</button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
+    </nav>
+
     <main id="main-content">
-    <header role="banner">
-        <h1>Query Optimization</h1>
-        <div class="reading-time" aria-label="Estimated reading time"></div>
-    </header>
+        <div class="container">
+            <header>
+                <h1>⚡ Lesson 5.4: Query Optimization</h1>
+                <p class="lead">A correct query can still be a slow one. Learn to ask the database how it plans to run your query, and to change that plan with evidence instead of guesswork.</p>
 
-    <!-- What You'll Learn (learning objectives) -->
-    <div class="card card-info">
-        <h2>📚 What You'll Learn</h2>
-        <p>By the end of this lesson, you will be able to:</p>
-        <ul>
-            <li>Explain how a database parses, plans, and executes a SQL query</li>
-            <li>Read an <code>EXPLAIN</code> / <code>EXPLAIN QUERY PLAN</code> output to spot table scans versus index scans</li>
-            <li>Design single-column, composite, covering, and partial indexes for common access patterns</li>
-            <li>Rewrite slow queries by replacing correlated subqueries with joins and CTEs, and choosing EXISTS/UNION ALL appropriately</li>
-            <li>Apply database-specific tuning (PostgreSQL, MySQL, SQLite) and materialized views to accelerate heavy aggregations</li>
-            <li>Measure and profile query performance to confirm an optimization actually helped</li>
-        </ul>
-        <p><strong>⏱️ Estimated Time:</strong> 45–60 minutes</p>
-        <p><strong>🎯 Project:</strong> Take a slow dashboard query, read its execution plan, add the right indexes and a CTE rewrite, and measure the before/after speedup.</p>
-    </div>
-    
-    <!-- Breadcrumb Navigation -->
-    <nav class="breadcrumb" aria-label="Breadcrumb">
-        <a href="index.html">Home</a>
-        <span class="separator">›</span>
-        <a href="#">Intermediate Module</a>
-        <span class="separator">›</span>
-        <a href="#">SQL for Data Scientists</a>
-        <span class="separator">›</span>
-        <span class="current">Query Optimization</span>
-    </nav>
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Describe how SQLite turns a query into a plan, and read <code>EXPLAIN QUERY PLAN</code> output line by line</li>
+                        <li>Create single-column, composite and covering indexes, and show their effect on both the plan and the measured time</li>
+                        <li>Recognize the situations where an index does not help, and rewrite a filter so that an index can be used</li>
+                        <li>Measure what indexes cost in file size and write speed, and use <code>ANALYZE</code> to give the planner statistics</li>
+                        <li>Decide what work belongs in SQL and what belongs in pandas, and fetch only what you need</li>
+                    </ul>
+                </div>
 
-    <h2>Make Your Queries Lightning Fast! ⚡</h2>
-    
-    <blockquote>
-        <p>The difference between a query that takes seconds and one that takes hours often comes down to optimization. Understanding how databases execute queries, how to read execution plans, and when to use indexes can dramatically improve performance. Master these techniques to handle big data efficiently!</p>
-    </blockquote>
+                <ul class="lesson-meta">
+                    <li><span class="meta-label">⏱️ Time</span> 100 minutes</li>
+                    <li><span class="meta-label">📋 Prerequisites</span> <a href="sql_complex_queries.html">Lesson 5.2: Complex Queries</a> (joins) and <a href="sql_window_functions.html">Lesson 5.3: SQL Window Functions</a>; <code>timeit</code>-style timing from <a href="numpy_arrays_vs_lists.html">Lesson 1.1</a></li>
+                    <li><span class="meta-label">🛠️ You will build</span> A tuning report for a three-query workload: plans and timings before and after, the indexes you chose, and what they cost</li>
+                    <li><span class="meta-label">📂 Data</span> <code>data/pinecrest.db</code> (you will work on a copy, because this lesson creates indexes)</li>
+                </ul>
+            </header>
 
-    <h2>Understanding Query Execution</h2>
-    
-    <div class="mermaid">
-    graph TD
-        A[SQL Query] --> B[Parser]
-        B --> C[Query Optimizer]
-        C --> D[Execution Plan]
-        D --> E[Execute]
-        E --> F[Results]
-        
-        C --> G[Statistics]
-        C --> H[Indexes]
-        C --> I[Cost Model]
-        
-        D --> J[Table Scan]
-        D --> K[Index Scan]
-        D --> L[Join Strategy]
-        D --> M[Sort/Group]
-    </div>
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#how" class="toc-link">How a Query Runs</a></li>
+                        <li><a href="#explain" class="toc-link">Reading EXPLAIN QUERY PLAN</a></li>
+                        <li><a href="#index" class="toc-link">What an Index Does</a></li>
+                        <li><a href="#joins" class="toc-link">Indexes and Joins</a></li>
+                        <li><a href="#composite" class="toc-link">Composite and Covering Indexes</a></li>
+                        <li><a href="#nohelp" class="toc-link">When an Index Does Not Help</a></li>
+                        <li><a href="#analyze" class="toc-link">ANALYZE: Statistics for the Planner</a></li>
+                        <li><a href="#writes" class="toc-link">What Indexes Cost</a></li>
+                        <li><a href="#less" class="toc-link">Ask for Less: SQL or pandas?</a></li>
+                        <li><a href="#mistakes" class="toc-link">Common Mistakes</a></li>
+                        <li><a href="#project" class="toc-link">Project: The Tuning Report</a></li>
+                        <li><a href="#exercises" class="toc-link">Hands-on Exercises</a></li>
+                        <li><a href="#quiz" class="toc-link">Quick Quiz</a></li>
+                        <li><a href="#faq" class="toc-link">Common Questions</a></li>
+                        <li><a href="#journal" class="toc-link">Learning Journal</a></li>
+                        <li><a href="#summary" class="toc-link">Lesson Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
 
-    <h2>Setting Up Performance Testing Environment</h2>
-    <pre class="language-python"><code>import sqlite3
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
+            <!-- ============================================================ -->
+            <section id="how" class="lesson-section">
+                <h2>🧠 How a Query Runs</h2>
+
+                <p>SQL is a <strong>declarative</strong> language: you describe the result you want, not the steps to get it. Somebody still has to choose the steps. That somebody is the <strong>query planner</strong>, a part of the engine that looks at your query, at the tables, and at the indexes available, and picks a strategy. The same query can run a hundred times faster or slower depending on what the planner has to work with.</p>
+
+                <div class="mermaid">
+graph TD
+    A["Your SQL text"] --> B["Parser: is it valid SQL?"]
+    B --> C["Planner: compare possible strategies"]
+    C --> D["Chosen plan"]
+    D --> E["Executor: read tables and indexes"]
+    E --> F["Rows returned"]
+                </div>
+
+                <div class="card card-info">
+                    <h4>💡 Mental Model: The Book With No Index</h4>
+                    <p>A table is a thick reference book whose pages are in the order they were written. To find every mention of "crampons" you have exactly one strategy: start at page 1 and read to the end. That is a <strong>scan</strong>.</p>
+                    <p>An <strong>index</strong> is the alphabetical list at the back: each term, followed by the page numbers where it appears. Now the strategy is: jump to "crampons" in the list (fast, because the list is sorted), then turn straight to those pages. That is a <strong>search</strong>. The index is extra paper, and somebody has to update it every time a page is added. Those two facts are this entire lesson.</p>
+                </div>
+
+                <p>In SQLite, a table really is stored in order of one number, the <strong>rowid</strong> (for a table with an <code>INTEGER PRIMARY KEY</code>, such as <code>orders.order_id</code>, the primary key <em>is</em> the rowid). Finding a row by rowid is fast. Finding rows by anything else means reading the whole table, unless an index on that column exists. As shipped, <code>pinecrest.db</code> has no indexes beyond its primary keys. That was deliberate, and you are about to feel why.</p>
+
+                <h3>Setup: A Copy, a Plan Printer and a Stopwatch</h3>
+                <p>This lesson creates indexes, so it works on a copy. Two small helpers do the measuring: <code>plan()</code> prints the engine's strategy, and <code>timed()</code> runs a query once per parameter set and reports the best of several attempts, the same best-of-N approach as <code>timeit</code> in Lesson 1.1.</p>
+
+                <pre><code class="language-python">import os
+import shutil
+import sqlite3
 import time
-import random
-import string
+import pandas as pd
 
-# Create connection with optimizations
-conn = sqlite3.connect('performance.db')
-conn.execute("PRAGMA journal_mode = WAL")  # Write-Ahead Logging
-conn.execute("PRAGMA synchronous = NORMAL")  # Faster writes
-conn.execute("PRAGMA cache_size = -64000")  # 64MB cache
-conn.execute("PRAGMA temp_store = MEMORY")  # Use memory for temp tables
+pd.set_option("display.width", 150)
 
-cursor = conn.cursor()
+shutil.copy("data/pinecrest.db", "pinecrest_tuning.db")
+conn = sqlite3.connect("pinecrest_tuning.db", cached_statements=0)
 
-# Create large test tables
-cursor.executescript('''
-    -- Large orders table (1M+ rows)
-    CREATE TABLE IF NOT EXISTS large_orders (
-        order_id INTEGER PRIMARY KEY,
-        customer_id INTEGER,
-        product_id INTEGER,
-        order_date DATE,
-        quantity INTEGER,
-        unit_price DECIMAL(10,2),
-        total_amount DECIMAL(10,2),
-        status TEXT,
-        region TEXT,
-        category TEXT
-    );
-    
-    -- Large customers table (100K+ rows)
-    CREATE TABLE IF NOT EXISTS large_customers (
-        customer_id INTEGER PRIMARY KEY,
-        first_name TEXT,
-        last_name TEXT,
-        email TEXT,
-        country TEXT,
-        city TEXT,
-        registration_date DATE,
-        customer_type TEXT,
-        lifetime_value DECIMAL(10,2)
-    );
-    
-    -- Large products table (10K+ rows)
-    CREATE TABLE IF NOT EXISTS large_products (
-        product_id INTEGER PRIMARY KEY,
-        product_name TEXT,
-        category TEXT,
-        subcategory TEXT,
-        brand TEXT,
-        price DECIMAL(10,2),
-        cost DECIMAL(10,2),
-        weight DECIMAL(10,2),
-        supplier_id INTEGER
-    );
-''')
+def plan(sql, params=()):
+    """Print the query plan, one step per line, indented to show nesting."""
+    depth = {0: 0}
+    for step_id, parent, _, detail in conn.execute("EXPLAIN QUERY PLAN " + sql, params):
+        depth[step_id] = depth[parent] + 1
+        print("   " * depth[parent] + detail)
 
-# Function to generate large dataset
-def generate_large_dataset(num_orders=100000, num_customers=10000, num_products=1000):
-    print(f"Generating {num_orders} orders, {num_customers} customers, {num_products} products...")
-    
-    # Disable autocommit for bulk insert
-    conn.execute("BEGIN TRANSACTION")
-    
-    # Generate customers
-    customers = []
-    for i in range(num_customers):
-        customers.append((
-            i + 1,
-            f"First_{i}",
-            f"Last_{i}",
-            f"user{i}@example.com",
-            random.choice(['USA', 'UK', 'Canada', 'Germany', 'France']),
-            f"City_{random.randint(1, 100)}",
-            (datetime.now() - timedelta(days=random.randint(0, 1000))).date(),
-            random.choice(['Regular', 'Premium', 'VIP']),
-            random.uniform(100, 10000)
-        ))
-    
-    cursor.executemany('''
-        INSERT OR REPLACE INTO large_customers VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', customers)
-    
-    # Generate products
-    products = []
-    categories = ['Electronics', 'Clothing', 'Books', 'Home', 'Sports']
-    for i in range(num_products):
-        category = random.choice(categories)
-        products.append((
-            i + 1,
-            f"Product_{i}",
-            category,
-            f"{category}_Sub_{random.randint(1, 5)}",
-            f"Brand_{random.randint(1, 50)}",
-            random.uniform(10, 1000),
-            random.uniform(5, 500),
-            random.uniform(0.1, 50),
-            random.randint(1, 100)
-        ))
-    
-    cursor.executemany('''
-        INSERT OR REPLACE INTO large_products VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', products)
-    
-    # Generate orders in batches
-    batch_size = 10000
-    for batch_start in range(0, num_orders, batch_size):
-        orders = []
-        for i in range(batch_start, min(batch_start + batch_size, num_orders)):
-            order_date = (datetime.now() - timedelta(days=random.randint(0, 365))).date()
-            quantity = random.randint(1, 10)
-            unit_price = random.uniform(10, 500)
-            orders.append((
-                i + 1,
-                random.randint(1, num_customers),
-                random.randint(1, num_products),
-                order_date,
-                quantity,
-                unit_price,
-                quantity * unit_price,
-                random.choice(['Pending', 'Shipped', 'Delivered', 'Cancelled']),
-                random.choice(['North', 'South', 'East', 'West']),
-                random.choice(categories)
-            ))
-        
-        cursor.executemany('''
-            INSERT OR REPLACE INTO large_orders VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', orders)
-    
-    conn.commit()
-    print("Dataset generated successfully!")
+def timed(sql, param_list, repeat=5):
+    """Best time in milliseconds to run the query once for every item of param_list."""
+    best = float("inf")
+    for _ in range(repeat):
+        start = time.perf_counter()
+        for params in param_list:
+            conn.execute(sql, params).fetchall()
+        best = min(best, time.perf_counter() - start)
+    return best * 1000
 
-# Generate data if tables are empty
-cursor.execute("SELECT COUNT(*) FROM large_orders")
-if cursor.fetchone()[0] == 0:
-    generate_large_dataset()
+print(sqlite3.sqlite_version)</code></pre>
+                <div class="card card-output">
+                    <h4>Output (your version may differ)</h4>
+                    <pre><code>3.53.1</code></pre>
+                </div>
 
-# Performance measurement decorator
-def measure_performance(func):
-    def wrapper(*args, **kwargs):
-        start_time = time.time()
-        result = func(*args, **kwargs)
-        end_time = time.time()
-        print(f"Execution time: {end_time - start_time:.4f} seconds")
-        return result
-    return wrapper
+                <div class="card card-info">
+                    <h4>💡 Two Details in That Setup</h4>
+                    <p><code>cached_statements=0</code> turns off Python's cache of prepared statements for this connection. With the cache on, asking for the plan of a query a second time, after <em>dropping</em> an index, can show you the old plan. That is harmless for normal work and confusing in a lesson about plans.</p>
+                    <p>The plan wording shown here is from SQLite 3.36 or later. Older versions say <code>SCAN TABLE orders</code> where newer ones say <code>SCAN orders</code>; the meaning is the same.</p>
+                </div>
+            </section>
 
-@measure_performance
-def execute_query(query):
-    return pd.read_sql_query(query, conn)</code></pre>
+            <!-- ============================================================ -->
+            <section id="explain" class="lesson-section">
+                <h2>🔍 Reading EXPLAIN QUERY PLAN</h2>
 
-    <h2>Understanding Execution Plans</h2>
-    
-    <h3>Reading EXPLAIN Output</h3>
-    <pre class="language-python"><code># Basic EXPLAIN
-def explain_query(query, analyze=False):
-    """Show query execution plan"""
-    if analyze:
-        explain_query = f"EXPLAIN QUERY PLAN {query}"
-    else:
-        explain_query = f"EXPLAIN {query}"
-    
-    df = pd.read_sql_query(explain_query, conn)
-    print("Execution Plan:")
-    print(df.to_string())
-    return df
+                <p>Put <code>EXPLAIN QUERY PLAN</code> in front of any query and SQLite returns its strategy <strong>instead of running the query</strong>. Nothing is read or changed, so it is always safe. Here is the raw result for a lookup by primary key.</p>
 
-# Example: Table scan vs Index scan
-query_no_index = """
-SELECT * FROM large_orders 
-WHERE customer_id = 5000 AND status = 'Delivered'
-"""
+                <pre><code class="language-python">for row in conn.execute("EXPLAIN QUERY PLAN SELECT * FROM orders WHERE order_id = ?", (100500,)):
+    print(row)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>(2, 0, 33, 'SEARCH orders USING INTEGER PRIMARY KEY (rowid=?)')</code></pre>
+                </div>
 
-query_with_index = """
-SELECT * FROM large_orders 
-WHERE order_id = 5000
-"""
+                <p>Each row is one step: an id, the id of its parent step (for nesting), an unused number, and a sentence. The sentence is what matters, and the <code>plan()</code> helper prints only that. Two verbs do nearly all the work:</p>
 
-print("Query without index on customer_id:")
-explain_query(query_no_index)
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>The plan says</th><th>It means</th><th>Cost grows with</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="nowrap"><code>SCAN orders</code></td><td>Read every row of the table and test each one</td><td>The size of the table</td></tr>
+                            <tr><td><code>SEARCH orders USING INTEGER PRIMARY KEY (rowid=?)</code></td><td>Jump straight to the row by its rowid</td><td>Almost nothing</td></tr>
+                            <tr><td><code>SEARCH t USING INDEX i (col=?)</code></td><td>Find matching entries in index <code>i</code>, then fetch those rows from the table</td><td>The number of matching rows</td></tr>
+                            <tr><td><code>SEARCH t USING COVERING INDEX i (...)</code></td><td>The index alone has every column needed; the table is not touched</td><td>The number of matching rows</td></tr>
+                            <tr><td><code>SCAN t USING INDEX i</code> or <code>USING COVERING INDEX i</code></td><td>Still reads everything, but walks the index (useful for its order, or because it is smaller than the table)</td><td>The size of the table</td></tr>
+                            <tr><td><code>USE TEMP B-TREE FOR ORDER BY</code> (or <code>GROUP BY</code>, <code>DISTINCT</code>)</td><td>The rows must be sorted in a temporary structure before they can be returned</td><td>The number of rows sorted</td></tr>
+                        </tbody>
+                    </table>
+                </div>
 
-print("\nQuery with PRIMARY KEY index:")
-explain_query(query_with_index)
+                <p>Now compare three queries on <code>orders</code> through the helper.</p>
 
-# Analyze join strategies
-join_query = """
-SELECT o.*, c.first_name, c.last_name
-FROM large_orders o
-JOIN large_customers c ON o.customer_id = c.customer_id
-WHERE o.order_date >= DATE('now', '-30 days')
-"""
+                <pre><code class="language-python">print("1. by primary key")
+plan("SELECT * FROM orders WHERE order_id = ?", (100500,))
 
-print("\nJoin execution plan:")
-explain_query(join_query)</code></pre>
+print("2. by another column")
+plan("SELECT * FROM orders WHERE customer_id = ?", (12673,))
 
-    <h3>PostgreSQL EXPLAIN ANALYZE</h3>
-    <pre class="language-python"><code># For PostgreSQL (more detailed than SQLite)
-import psycopg2
+print("3. filter, then sort")
+plan("SELECT * FROM orders WHERE store = ? ORDER BY order_date", ("Bend",))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>1. by primary key
+SEARCH orders USING INTEGER PRIMARY KEY (rowid=?)
+2. by another column
+SCAN orders
+3. filter, then sort
+SCAN orders
+USE TEMP B-TREE FOR ORDER BY</code></pre>
+                </div>
 
-def pg_explain_analyze(query, conn_params):
-    """PostgreSQL EXPLAIN ANALYZE for detailed metrics"""
-    conn = psycopg2.connect(**conn_params)
-    cursor = conn.cursor()
-    
-    explain_query = f"EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) {query}"
-    cursor.execute(explain_query)
-    
-    result = cursor.fetchone()[0][0]
-    
-    print(f"Total execution time: {result['Execution Time']}ms")
-    print(f"Planning time: {result['Planning Time']}ms")
-    print(f"Rows returned: {result['Plan']['Actual Rows']}")
-    
-    # Parse plan tree
-    def print_plan(node, indent=0):
-        print("  " * indent + f"-> {node['Node Type']}")
-        print("  " * indent + f"   Cost: {node.get('Total Cost', 'N/A')}")
-        print("  " * indent + f"   Rows: {node.get('Actual Rows', 'N/A')}")
-        print("  " * indent + f"   Time: {node.get('Actual Total Time', 'N/A')}ms")
-        
-        if 'Plans' in node:
-            for child in node['Plans']:
-                print_plan(child, indent + 1)
-    
-    print_plan(result['Plan'])
-    
-    cursor.close()
-    conn.close()</code></pre>
+                <p>Read them line by line. Query 1 is a direct jump. Query 2 has no index on <code>customer_id</code>, so every one of the 20,302 orders is examined to find one customer's handful. Query 3 scans, keeps Bend's rows, and then needs a separate sorting step, the <code>TEMP B-TREE</code>, before it can return anything.</p>
 
-    <h2>Indexing Strategies</h2>
-    
-    <h3>Types of Indexes</h3>
-    <pre class="language-python"><code># Different index types and their use cases
-cursor.executescript('''
-    -- Single column index (most common)
-    CREATE INDEX IF NOT EXISTS idx_orders_customer 
-    ON large_orders(customer_id);
-    
-    -- Composite index (multiple columns)
-    CREATE INDEX IF NOT EXISTS idx_orders_customer_date 
-    ON large_orders(customer_id, order_date);
-    
-    -- Covering index (includes all needed columns)
-    CREATE INDEX IF NOT EXISTS idx_orders_covering 
-    ON large_orders(customer_id, order_date, total_amount);
-    
-    -- Partial index (filtered)
-    CREATE INDEX IF NOT EXISTS idx_orders_delivered 
-    ON large_orders(customer_id, order_date) 
-    WHERE status = 'Delivered';
-    
-    -- Unique index (enforces uniqueness)
-    CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_email 
-    ON large_customers(email);
-    
-    -- Expression index (computed values)
-    CREATE INDEX IF NOT EXISTS idx_customers_full_name 
-    ON large_customers(first_name || ' ' || last_name);
-''')
+                <div class="card card-success">
+                    <h4>✅ SCAN Is Not a Dirty Word</h4>
+                    <p>If a query needs most of a table (a yearly total, a <code>GROUP BY</code> over everything), reading all of it once <em>is</em> the best plan. A scan is a problem only when you wanted a few rows and paid for all of them. The question to ask of every <code>SCAN</code> line is: "how much of this table did I actually need?"</p>
+                </div>
+            </section>
 
-# Compare performance with and without indexes
-print("Testing index performance...")
+            <!-- ============================================================ -->
+            <section id="index" class="lesson-section">
+                <h2>📇 What an Index Does</h2>
 
-# Without index
-cursor.execute("DROP INDEX IF EXISTS idx_test_customer")
+                <p>The classic slow query in this database is "the lines of one order". <code>order_items</code> has 45,490 rows and its primary key is <code>order_item_id</code>, so a filter on <code>order_id</code> gets no help.</p>
+
+                <pre><code class="language-python">ITEMS_SQL = "SELECT * FROM order_items WHERE order_id = ?"
+plan(ITEMS_SQL, (100500,))
+
+order_ids = [(100000 + 100 * k,) for k in range(1, 201)]      # 200 different orders
+before = timed(ITEMS_SQL, order_ids)
+print(f"200 lookups: {before:.1f} ms")</code></pre>
+                <div class="card card-output">
+                    <h4>Output (your timing will differ)</h4>
+                    <pre><code>SCAN order_items
+200 lookups: 148.5 ms</code></pre>
+                </div>
+
+                <p>Each lookup reads all 45,490 rows to return two or three. Two hundred lookups read about nine million rows. On a table this small that is a fraction of a second; on a table a thousand times larger, the same page of a web app would take minutes.</p>
+
+                <p>Create an index on the column you search by. The name is yours to choose; a common convention is <code>idx_table_column</code>.</p>
+
+                <pre><code class="language-python">conn.execute("CREATE INDEX idx_order_items_order_id ON order_items (order_id)")
 conn.commit()
 
-start = time.time()
-cursor.execute("""
-    SELECT COUNT(*) FROM large_orders 
-    WHERE customer_id = 5000
-""")
-without_index_time = time.time() - start
-print(f"Without index: {without_index_time:.4f} seconds")
+plan(ITEMS_SQL, (100500,))
+after = timed(ITEMS_SQL, order_ids)
+print(f"200 lookups: {after:.1f} ms   ({before / after:.0f} times faster)")</code></pre>
+                <div class="card card-output">
+                    <h4>Output (your timing will differ)</h4>
+                    <pre><code>SEARCH order_items USING INDEX idx_order_items_order_id (order_id=?)
+200 lookups: 1.3 ms   (117 times faster)</code></pre>
+                </div>
 
-# With index
-cursor.execute("""
-    CREATE INDEX idx_test_customer ON large_orders(customer_id)
-""")
+                <p><code>SCAN</code> became <code>SEARCH ... USING INDEX</code>, and the time dropped by about two orders of magnitude. You did not change the query at all. The planner noticed the new index and chose a better strategy by itself, and the result is the same rows as before.</p>
+
+                <div class="diagram">
+                    <svg viewBox="0 0 440 232" width="440" height="232" xmlns="http://www.w3.org/2000/svg" xml:space="preserve" role="img" aria-label="An index on order_id is a sorted list of order_id values, each pointing to the rowid of a row in the order_items table. To find order 100500, the engine jumps to that value in the sorted index and follows the pointers to three rows, instead of reading the whole table.">
+                        <defs>
+                            <marker id="arrow-idx" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                                <path d="M0,0 L8,4 L0,8 Z" class="svg-arrow"/>
+                            </marker>
+                        </defs>
+                        <text x="14" y="18" class="svg-text" font-size="13" font-weight="bold">Index (sorted)</text>
+                        <text x="14" y="34" class="svg-muted svg-mono" font-size="12">order_id  rowid</text>
+                        <rect x="14" y="42" width="130" height="24" class="svg-box"/>
+                        <text x="22" y="59" class="svg-text svg-mono" font-size="12">100499    1114</text>
+                        <rect x="14" y="66" width="130" height="24" class="svg-box-2"/>
+                        <text x="22" y="83" class="svg-text svg-mono" font-size="12">100500    1115</text>
+                        <rect x="14" y="90" width="130" height="24" class="svg-box-2"/>
+                        <text x="22" y="107" class="svg-text svg-mono" font-size="12">100500    1116</text>
+                        <rect x="14" y="114" width="130" height="24" class="svg-box-2"/>
+                        <text x="22" y="131" class="svg-text svg-mono" font-size="12">100500    1117</text>
+                        <rect x="14" y="138" width="130" height="24" class="svg-box"/>
+                        <text x="22" y="155" class="svg-text svg-mono" font-size="12">100501    1118</text>
+
+                        <text x="226" y="18" class="svg-text" font-size="13" font-weight="bold">Table order_items</text>
+                        <text x="226" y="34" class="svg-muted svg-mono" font-size="12">rowid  order_id  sku</text>
+                        <rect x="226" y="42" width="200" height="24" class="svg-box"/>
+                        <text x="234" y="59" class="svg-text svg-mono" font-size="12">1114   100499    ...</text>
+                        <rect x="226" y="66" width="200" height="24" class="svg-box-1"/>
+                        <text x="234" y="83" class="svg-text svg-mono" font-size="12">1115   100500    ...</text>
+                        <rect x="226" y="90" width="200" height="24" class="svg-box-1"/>
+                        <text x="234" y="107" class="svg-text svg-mono" font-size="12">1116   100500    ...</text>
+                        <rect x="226" y="114" width="200" height="24" class="svg-box-1"/>
+                        <text x="234" y="131" class="svg-text svg-mono" font-size="12">1117   100500    ...</text>
+                        <rect x="226" y="138" width="200" height="24" class="svg-box"/>
+                        <text x="234" y="155" class="svg-text svg-mono" font-size="12">1118   100501    ...</text>
+
+                        <path d="M144,78 L220,78" class="svg-line" marker-end="url(#arrow-idx)"/>
+                        <path d="M144,102 L220,102" class="svg-line" marker-end="url(#arrow-idx)"/>
+                        <path d="M144,126 L220,126" class="svg-line" marker-end="url(#arrow-idx)"/>
+
+                        <text x="14" y="186" class="svg-muted" font-size="12">1. Jump to 100500 in the sorted index (a few steps, like</text>
+                        <text x="14" y="202" class="svg-muted" font-size="12">   finding a word in a dictionary).</text>
+                        <text x="14" y="222" class="svg-muted" font-size="12">2. Follow each rowid straight to its row in the table.</text>
+                    </svg>
+                </div>
+
+                <p>An index is a separate, sorted structure (a B-tree) holding the indexed column and the rowid of each row. Because it is sorted, finding a value takes a handful of steps even among millions of entries, the way you find a word in a dictionary without reading it. The diagram also shows why this particular index was missing in the first place: <code>order_id</code> repeats in <code>order_items</code>, so it could not be the primary key.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Primary Keys and UNIQUE Columns Are Indexed Automatically</h4>
+                    <p>That is why lookups by <code>orders.order_id</code>, <code>customers.customer_id</code> and <code>products.sku</code> were fast all along. The columns you usually have to index yourself are <strong>foreign keys</strong> (the "many" side of a join, such as <code>order_items.order_id</code> and <code>orders.customer_id</code>) and the columns you <strong>filter and sort by</strong> most.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="joins" class="lesson-section">
+                <h2>🔗 Indexes and Joins</h2>
+
+                <p>SQLite runs a join as a <strong>nested loop</strong>: for each row of one table (the outer loop), find the matching rows of the other (the inner loop). The plan lists the outer table first and the inner one indented beneath it. The inner step runs once <em>per outer row</em>, so it had better be a <code>SEARCH</code>.</p>
+
+                <p>Here is a customer's order history with its lines. To see where the engine starts from nothing, temporarily remove the index you just made.</p>
+
+                <pre><code class="language-python">HISTORY_SQL = """
+    SELECT o.order_id, o.order_date, i.sku, i.quantity
+    FROM orders AS o
+    JOIN order_items AS i ON i.order_id = o.order_id
+    WHERE o.customer_id = ?
+"""
+customers = [(10001 + 20 * k,) for k in range(200)]      # 200 customer ids
+
+conn.execute("DROP INDEX idx_order_items_order_id")
+print("No indexes:")
+plan(HISTORY_SQL, (12673,))
+t0 = timed(HISTORY_SQL, customers[:20], repeat=3) * 10    # 20 lookups, scaled to 200
+
+conn.execute("CREATE INDEX idx_order_items_order_id ON order_items (order_id)")
+print("Index on order_items(order_id):")
+plan(HISTORY_SQL, (12673,))
+t1 = timed(HISTORY_SQL, customers)
+
+conn.execute("CREATE INDEX idx_orders_customer_id ON orders (customer_id)")
+conn.commit()
+print("Plus index on orders(customer_id):")
+plan(HISTORY_SQL, (12673,))
+t2 = timed(HISTORY_SQL, customers)
+
+print(f"200 histories: {t0:.0f} ms, then {t1:.0f} ms, then {t2:.1f} ms")</code></pre>
+                <div class="card card-output">
+                    <h4>Output (your timings will differ)</h4>
+                    <pre><code>No indexes:
+SCAN i
+SEARCH o USING INTEGER PRIMARY KEY (rowid=?)
+Index on order_items(order_id):
+SCAN o
+SEARCH i USING INDEX idx_order_items_order_id (order_id=?)
+Plus index on orders(customer_id):
+SEARCH o USING INDEX idx_orders_customer_id (customer_id=?)
+SEARCH i USING INDEX idx_order_items_order_id (order_id=?)
+200 histories: 388 ms, then 90 ms, then 3.1 ms</code></pre>
+                </div>
+
+                <p>Three plans for one unchanged query:</p>
+                <ol>
+                    <li><strong>No indexes.</strong> The planner makes the best of it: scan all 45,490 lines and look up each line's order by primary key to check the customer. Backwards from how you wrote it, and slow.</li>
+                    <li><strong>Index on the lines.</strong> Now it scans the 20,302 orders for the customer, and for each of that customer's orders <em>searches</em> the lines. Better: the inner loop is a search.</li>
+                    <li><strong>Both indexes.</strong> Search for the customer's few orders, then search for each order's lines. No scans at all. This is the plan you want for a "show me one customer" page.</li>
+                </ol>
+
+                <div class="card card-warning">
+                    <h4>⚠️ The Planner Reorders Your Joins</h4>
+                    <p>The order of tables in your <code>FROM</code> clause is not the order of execution. The planner picks the outer and inner tables for you, as the first plan showed. Read the plan to see what it chose; do not assume.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="composite" class="lesson-section">
+                <h2>🧬 Composite and Covering Indexes</h2>
+
+                <h3>Composite: More Than One Column</h3>
+                <p>A store manager's report filters on two things: a store <em>and</em> a date range. An index can cover several columns, and their <strong>order matters</strong>, exactly as it does in a phone book sorted by last name and then first name.</p>
+
+                <pre><code class="language-python">REPORT_SQL = "SELECT order_id, order_total FROM orders WHERE store = ? AND order_date BETWEEN ? AND ?"
+week = [("Bend", "2025-07-01", "2025-07-07")] * 200
+
+plan(REPORT_SQL, week[0])
+t_before = timed(REPORT_SQL, week)
+
+conn.execute("CREATE INDEX idx_orders_store_date ON orders (store, order_date)")
 conn.commit()
 
-start = time.time()
-cursor.execute("""
-    SELECT COUNT(*) FROM large_orders 
-    WHERE customer_id = 5000
-""")
-with_index_time = time.time() - start
-print(f"With index: {with_index_time:.4f} seconds")
-print(f"Speedup: {without_index_time/with_index_time:.2f}x")</code></pre>
+plan(REPORT_SQL, week[0])
+t_after = timed(REPORT_SQL, week)
+print(f"200 reports: {t_before:.0f} ms before, {t_after:.1f} ms after")</code></pre>
+                <div class="card card-output">
+                    <h4>Output (your timings will differ)</h4>
+                    <pre><code>SCAN orders
+SEARCH orders USING INDEX idx_orders_store_date (store=? AND order_date&gt;? AND order_date&lt;?)
+200 reports: 116 ms before, 2.5 ms after</code></pre>
+                </div>
 
-    <h3>Index Selection Guidelines</h3>
-    <pre class="language-python"><code># Analyze index usage
-def analyze_index_usage():
-    """Identify which indexes are being used"""
-    
-    # Find unused indexes (PostgreSQL)
-    unused_indexes_query = """
-    SELECT 
-        schemaname,
-        tablename,
-        indexname,
-        idx_scan,
-        idx_tup_read,
-        idx_tup_fetch,
-        pg_size_pretty(pg_relation_size(indexrelid)) as index_size
-    FROM pg_stat_user_indexes
-    WHERE idx_scan = 0
-    AND indexrelid NOT IN (
-        SELECT conindid FROM pg_constraint WHERE contype = 'p'
-    )
-    ORDER BY pg_relation_size(indexrelid) DESC;
-    """
-    
-    # Find missing indexes (based on query patterns)
-    missing_indexes_query = """
-    WITH frequent_scans AS (
-        SELECT 
-            tablename,
-            attname,
-            n_distinct,
-            correlation
-        FROM pg_stats
-        WHERE schemaname = 'public'
-        AND n_distinct > 100
-        AND correlation < 0.1
-    )
-    SELECT 
-        tablename,
-        attname AS column_name,
-        n_distinct AS distinct_values,
-        CASE 
-            WHEN n_distinct > 10000 THEN 'High Selectivity - Good Index Candidate'
-            WHEN n_distinct > 1000 THEN 'Medium Selectivity - Consider Index'
-            ELSE 'Low Selectivity - Probably Not Worth Indexing'
-        END AS recommendation
-    FROM frequent_scans
-    ORDER BY n_distinct DESC;
-    """
-    
-    print("Index usage analysis complete")
+                <p>The plan line tells you how much of the index is being used: <code>store=?</code> for the first column, then a range on <code>order_date</code>. The engine jumps to "Bend, July 1" in the index and reads forward to "Bend, July 7".</p>
 
-# Index maintenance
-def maintain_indexes():
-    """Rebuild fragmented indexes"""
-    
-    # SQLite: VACUUM and REINDEX
-    cursor.execute("VACUUM")
-    cursor.execute("REINDEX")
-    
-    # Analyze tables to update statistics
-    cursor.execute("ANALYZE")
-    
-    print("Index maintenance complete")
+                <p>What can this one index do for other queries?</p>
 
-maintain_indexes()</code></pre>
+                <pre><code class="language-python">print("store only:")
+plan("SELECT order_id FROM orders WHERE store = ?", ("Bend",))
 
-    <h2>Query Rewriting Techniques</h2>
-    
-    <h3>Subquery vs JOIN Optimization</h3>
-    <pre class="language-python"><code># Inefficient: Correlated subquery
-inefficient_query = """
-SELECT 
-    c.customer_id,
-    c.first_name,
-    c.last_name,
-    (SELECT COUNT(*) 
-     FROM large_orders o 
-     WHERE o.customer_id = c.customer_id) AS order_count,
-    (SELECT SUM(total_amount) 
-     FROM large_orders o 
-     WHERE o.customer_id = c.customer_id) AS total_spent
-FROM large_customers c
-WHERE c.customer_type = 'VIP'
-"""
+print("date only:")
+plan("SELECT order_id FROM orders WHERE order_date = ?", ("2025-07-04",))
 
-# Efficient: JOIN with aggregation
-efficient_query = """
-SELECT 
-    c.customer_id,
-    c.first_name,
-    c.last_name,
-    COUNT(o.order_id) AS order_count,
-    COALESCE(SUM(o.total_amount), 0) AS total_spent
-FROM large_customers c
-LEFT JOIN large_orders o ON c.customer_id = o.customer_id
-WHERE c.customer_type = 'VIP'
-GROUP BY c.customer_id, c.first_name, c.last_name
-"""
+print("store, sorted by date:")
+plan("SELECT * FROM orders WHERE store = ? ORDER BY order_date", ("Bend",))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>store only:
+SEARCH orders USING COVERING INDEX idx_orders_store_date (store=?)
+date only:
+SCAN orders USING COVERING INDEX idx_orders_store_date
+store, sorted by date:
+SEARCH orders USING INDEX idx_orders_store_date (store=?)</code></pre>
+                </div>
 
-print("Inefficient query (correlated subquery):")
-start = time.time()
-df1 = pd.read_sql_query(inefficient_query, conn)
-inefficient_time = time.time() - start
-print(f"Time: {inefficient_time:.4f} seconds")
+                <ul>
+                    <li><strong>Store only:</strong> a <code>SEARCH</code>. The first column of a composite index works on its own.</li>
+                    <li><strong>Date only:</strong> a <code>SCAN</code> (of the index, but a scan of everything all the same). The dates are sorted only <em>within</em> each store, so there is no single place to jump to, just as a phone book is no help for finding everyone named "Maria".</li>
+                    <li><strong>Store, sorted by date:</strong> a <code>SEARCH</code>, and the <code>TEMP B-TREE FOR ORDER BY</code> from earlier is gone. Within one store, the index is already in date order, so no sorting step is needed.</li>
+                </ul>
 
-print("\nEfficient query (JOIN):")
-start = time.time()
-df2 = pd.read_sql_query(efficient_query, conn)
-efficient_time = time.time() - start
-print(f"Time: {efficient_time:.4f} seconds")
+                <div class="card card-info">
+                    <h4>💡 The Leftmost-Prefix Rule</h4>
+                    <p>An index on <code>(a, b, c)</code> can serve filters on <code>a</code>, on <code>a, b</code>, and on <code>a, b, c</code>, but not on <code>b</code> or <code>c</code> alone. When you design one, put columns compared with <code>=</code> first and the column with a range (<code>BETWEEN</code>, <code>&gt;</code>, <code>&lt;</code>) or the sort last.</p>
+                </div>
 
-print(f"\nSpeedup: {inefficient_time/efficient_time:.2f}x")</code></pre>
+                <h3>Covering: The Index Answers by Itself</h3>
+                <p>Notice that the "store only" plan said <code>USING COVERING INDEX</code>. The query asked only for <code>order_id</code> (the rowid, which every index entry carries), so the engine never opened the table at all. You can design for that. The weekly revenue total needs <code>order_total</code>; add it to the index and the table is out of the picture.</p>
 
-    <h3>EXISTS vs IN Optimization</h3>
-    <pre class="language-python"><code># IN clause (can be slow with large lists)
-in_query = """
-SELECT * FROM large_customers
-WHERE customer_id IN (
-    SELECT customer_id FROM large_orders
-    WHERE total_amount > 1000
-)
-"""
+                <pre><code class="language-python">TOTAL_SQL = "SELECT COUNT(*), SUM(order_total) FROM orders WHERE store = ? AND order_date BETWEEN ? AND ?"
 
-# EXISTS (often faster)
-exists_query = """
-SELECT * FROM large_customers c
-WHERE EXISTS (
-    SELECT 1 FROM large_orders o
-    WHERE o.customer_id = c.customer_id
-    AND o.total_amount > 1000
-)
-"""
+plan(TOTAL_SQL, week[0])
+t_plain = timed(TOTAL_SQL, week)
 
-# JOIN (alternative approach)
-join_alternative = """
-SELECT DISTINCT c.*
-FROM large_customers c
-INNER JOIN large_orders o ON c.customer_id = o.customer_id
-WHERE o.total_amount > 1000
-"""
+conn.execute("CREATE INDEX idx_orders_store_date_total ON orders (store, order_date, order_total)")
+conn.commit()
 
-# Compare performance
-queries = {
-    'IN clause': in_query,
-    'EXISTS': exists_query,
-    'JOIN': join_alternative
+plan(TOTAL_SQL, week[0])
+t_cover = timed(TOTAL_SQL, week)
+print(f"200 totals: {t_plain:.2f} ms with the two-column index, {t_cover:.2f} ms with the covering index")</code></pre>
+                <div class="card card-output">
+                    <h4>Output (your timings will differ)</h4>
+                    <pre><code>SEARCH orders USING INDEX idx_orders_store_date (store=? AND order_date&gt;? AND order_date&lt;?)
+SEARCH orders USING COVERING INDEX idx_orders_store_date_total (store=? AND order_date&gt;? AND order_date&lt;?)
+200 totals: 1.63 ms with the two-column index, 1.35 ms with the covering index</code></pre>
+                </div>
+
+                <p>A modest gain this time, and on your machine it may be within the noise: the big win was going from a scan to a search, and covering only trims the last step of fetching a few rows from the table. The three-column index makes the two-column one redundant (it serves every query the other can, by the leftmost-prefix rule), so remove the older one. Every index you keep has a price, which a later section measures.</p>
+
+                <pre><code class="language-python">conn.execute("DROP INDEX idx_orders_store_date")
+conn.commit()
+
+for name, table in conn.execute("SELECT name, tbl_name FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_%' ORDER BY name"):
+    print(f"{name:&lt;30} on {table}")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>idx_order_items_order_id       on order_items
+idx_orders_customer_id         on orders
+idx_orders_store_date_total    on orders</code></pre>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="nohelp" class="lesson-section">
+                <h2>🚧 When an Index Does Not Help</h2>
+
+                <p>An index is used only when the engine can go to a <em>position</em> in its sorted order. Several perfectly reasonable-looking filters make that impossible.</p>
+
+                <h3>1. A Function Wrapped Around the Column</h3>
+                <p>Both of these find Bend's orders for July 2025. Look at how much of the index each can use.</p>
+
+                <pre><code class="language-python">print("function on the column:")
+plan("SELECT COUNT(*) FROM orders WHERE store = ? AND strftime('%Y-%m', order_date) = ?", ("Bend", "2025-07"))
+
+print("range on the bare column:")
+plan("SELECT COUNT(*) FROM orders WHERE store = ? AND order_date &gt;= ? AND order_date &lt; ?", ("Bend", "2025-07-01", "2025-08-01"))
+
+a = conn.execute("SELECT COUNT(*) FROM orders WHERE store = ? AND strftime('%Y-%m', order_date) = ?", ("Bend", "2025-07")).fetchone()[0]
+b = conn.execute("SELECT COUNT(*) FROM orders WHERE store = ? AND order_date &gt;= ? AND order_date &lt; ?", ("Bend", "2025-07-01", "2025-08-01")).fetchone()[0]
+print("same answer:", a, b)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>function on the column:
+SEARCH orders USING COVERING INDEX idx_orders_store_date_total (store=?)
+range on the bare column:
+SEARCH orders USING COVERING INDEX idx_orders_store_date_total (store=? AND order_date&gt;? AND order_date&lt;?)
+same answer: 83 83</code></pre>
+                </div>
+
+                <p>With <code>strftime(...)</code> around <code>order_date</code>, the index helps only with the store; every one of Bend's orders is then run through the function. The index is sorted by <code>order_date</code>, not by <code>strftime('%Y-%m', order_date)</code>. Written as a range on the bare column, the same question uses both columns of the index. <strong>Keep the indexed column alone on one side of the comparison</strong> and move the calculation to the other side. (If you truly need to filter on an expression, SQLite and PostgreSQL can index the expression itself: <code>CREATE INDEX ... ON orders (strftime('%Y-%m', order_date))</code>.)</p>
+
+                <h3>2. A Pattern That Starts with a Wildcard</h3>
+                <pre><code class="language-python">print("LIKE '%Tent%':")
+plan("SELECT sku FROM products WHERE name LIKE '%Tent%'")
+
+print("LIKE 'TNT%' on the primary key:")
+plan("SELECT sku FROM products WHERE sku LIKE 'TNT%'")
+
+print("the same prefix as a range:")
+plan("SELECT sku FROM products WHERE sku &gt;= 'TNT' AND sku &lt; 'TNU'")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>LIKE '%Tent%':
+SCAN products
+LIKE 'TNT%' on the primary key:
+SCAN products USING COVERING INDEX sqlite_autoindex_products_1
+the same prefix as a range:
+SEARCH products USING COVERING INDEX sqlite_autoindex_products_1 (sku&gt;? AND sku&lt;?)</code></pre>
+                </div>
+
+                <p>A pattern beginning with <code>%</code> can match anywhere in the text, so sorted order is no help: a dictionary cannot find every word <em>containing</em> "ent". The second result is a SQLite subtlety: because <code>LIKE</code> ignores case and the index does not, even a prefix pattern scans here. Rewriting the prefix as a range uses the primary key's index. (Searching inside text at scale is a job for a full-text index, a separate feature.)</p>
+
+                <h3>3. A Column with Few Distinct Values</h3>
+                <p><code>status</code> has three values, and 92% of orders are <code>completed</code>. Index it and compare the index with a plain scan. <code>NOT INDEXED</code> after a table name tells SQLite to ignore indexes, which is handy for exactly this kind of experiment.</p>
+
+                <pre><code class="language-python">conn.execute("CREATE INDEX idx_orders_status ON orders (status)")
+conn.commit()
+
+WITH_INDEX = "SELECT AVG(shipping_cost) FROM orders WHERE status = ?"
+NO_INDEX = "SELECT AVG(shipping_cost) FROM orders NOT INDEXED WHERE status = ?"
+plan(WITH_INDEX, ("completed",))
+
+for status in ["completed", "cancelled"]:
+    n = conn.execute("SELECT COUNT(*) FROM orders WHERE status = ?", (status,)).fetchone()[0]
+    t_idx = timed(WITH_INDEX, [(status,)] * 20)
+    t_scan = timed(NO_INDEX, [(status,)] * 20)
+    print(f"{status:&lt;10} {n:&gt;6,} rows   with index {t_idx:6.1f} ms   plain scan {t_scan:6.1f} ms")</code></pre>
+                <div class="card card-output">
+                    <h4>Output (your timings will differ)</h4>
+                    <pre><code>SEARCH orders USING INDEX idx_orders_status (status=?)
+completed  18,762 rows   with index   19.8 ms   plain scan   15.4 ms
+cancelled     397 rows   with index    1.1 ms   plain scan    9.4 ms</code></pre>
+                </div>
+
+                <p>For the rare value, <code>cancelled</code> (397 rows), the index is a clear win. For <code>completed</code> (18,762 rows) it is no better than reading the table straight through, and often worse: the engine walks the index <em>and</em> then visits nearly every row of the table anyway, in a less convenient order. An index pays off when it lets the engine <strong>skip most of the table</strong>. This property is called <strong>selectivity</strong>.</p>
+
+                <h3>4. A Small Table</h3>
+                <p><code>employees</code> has 55 rows and <code>products</code> 242. Each fits in a few pages of the file, and scanning a few pages is as fast as any index lookup. Do not index small lookup tables beyond their primary key.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>An index on a column helps when...</th><th>...and does little or nothing when</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>The filter is <code>=</code>, <code>IN</code>, a range, or a prefix on the bare column</td><td>The column is inside a function or arithmetic</td></tr>
+                            <tr><td>The filter keeps a small share of the rows</td><td>Most rows match (low selectivity)</td></tr>
+                            <tr><td>The column is a join key on the inner side of the loop</td><td>The table is small</td></tr>
+                            <tr><td>The query sorts or groups by the indexed order</td><td>The pattern starts with a wildcard</td></tr>
+                            <tr><td>The index contains every column the query needs (covering)</td><td>The filter is on a later column of a composite index only</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="analyze" class="lesson-section">
+                <h2>📊 ANALYZE: Statistics for the Planner</h2>
+
+                <p>So far the planner has been choosing with almost no knowledge of your data: it knows which indexes exist, not how many rows a table has or how many distinct values a column holds. <code>ANALYZE</code> measures those things and stores them in a table named <code>sqlite_stat1</code>, where the planner consults them.</p>
+
+                <p>Recall the "date only" query, which could not seek in an index that starts with <code>store</code>. Check its plan and timing, run <code>ANALYZE</code>, and check again.</p>
+
+                <pre><code class="language-python">DATE_SQL = "SELECT COUNT(*) FROM orders WHERE order_date = ?"
+days = [("2025-07-04",)] * 200
+
+plan(DATE_SQL, days[0])
+t_before = timed(DATE_SQL, days)
+
+conn.execute("ANALYZE")
+conn.commit()
+
+plan(DATE_SQL, days[0])
+t_after = timed(DATE_SQL, days)
+print(f"200 counts: {t_before:.1f} ms before ANALYZE, {t_after:.1f} ms after")</code></pre>
+                <div class="card card-output">
+                    <h4>Output (your timings will differ)</h4>
+                    <pre><code>SCAN orders USING COVERING INDEX idx_orders_store_date_total
+SEARCH orders USING COVERING INDEX idx_orders_store_date_total (ANY(store) AND order_date=?)
+200 counts: 83.9 ms before ANALYZE, 1.3 ms after</code></pre>
+                </div>
+
+                <p>The plan changed from a <code>SCAN</code> to a <code>SEARCH</code> with <code>ANY(store)</code>. The statistics told the planner that <code>store</code> has only five distinct values, so a new strategy became worthwhile: do five small searches, one per store, each jumping to the date. This is called a <strong>skip-scan</strong>, and SQLite only considers it once <code>ANALYZE</code> has shown that the leading column has few values. Same query, same indexes, better plan, because the planner now knows the shape of the data.</p>
+
+                <pre><code class="language-python">for table, index, stat in conn.execute("SELECT tbl, idx, stat FROM sqlite_stat1 WHERE tbl IN ('orders', 'order_items') ORDER BY tbl, idx"):
+    print(f"{table:&lt;12} {index:&lt;30} {stat}")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>order_items  idx_order_items_order_id       45490 3
+orders       idx_orders_customer_id         20302 6
+orders       idx_orders_status              20302 6768
+orders       idx_orders_store_date_total    20302 4061 7 1</code></pre>
+                </div>
+
+                <p>Each <code>stat</code> starts with the number of rows, followed by the average number of rows that share a value of the first column, then of the first two columns, and so on. For the three-column index: 20,302 orders, about 4,061 per store, about 7 per store and date. For <code>idx_orders_status</code>: about 6,768 rows per status, which is an <em>average</em>. These basic statistics do not record that one status has 18,762 rows and another 397.</p>
+
+                <pre><code class="language-python">plan(WITH_INDEX, ("completed",))
+
+conn.execute("DROP INDEX idx_orders_status")      # it did not earn its keep
+conn.commit()</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>SEARCH orders USING INDEX idx_orders_status (status=?)</code></pre>
+                </div>
+
+                <p>So even after <code>ANALYZE</code>, the planner still picks the unhelpful status index for <code>completed</code>. Statistics improve the planner's choices; they do not make it all-knowing. You decided that index was not worth keeping by measuring, and dropping it is the fix.</p>
+
+                <div class="card card-info">
+                    <h4>💡 When to Run ANALYZE</h4>
+                    <p>After creating indexes, and again after the data changes a great deal. In SQLite it is manual (<code>PRAGMA optimize</code>, run before closing a connection, does it only when needed). PostgreSQL gathers richer statistics, including the most common values of each column, and refreshes them automatically in the background.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="writes" class="lesson-section">
+                <h2>💸 What Indexes Cost</h2>
+
+                <p>If indexes made everything faster, databases would index every column automatically. They do not, because an index is a second, sorted copy of part of the table, and it must be kept in order <strong>on every insert, update and delete</strong>.</p>
+
+                <p>Measure it. This function builds an empty copy of <code>order_items</code> with a chosen number of indexes, loads the same 45,490 rows into it, and reports the time and the growth of the database file.</p>
+
+                <pre><code class="language-python">rows = conn.execute("SELECT order_id, sku, quantity, unit_price FROM order_items").fetchall()
+INDEX_COLUMNS = ["order_id", "sku", "unit_price", "quantity"]
+
+def load_with_indexes(n_indexes):
+    conn.execute("DROP TABLE IF EXISTS items_copy")
+    conn.execute("VACUUM")                                   # give freed space back, for a fair size
+    size_before = os.path.getsize("pinecrest_tuning.db")
+    conn.execute("""CREATE TABLE items_copy (order_item_id INTEGER PRIMARY KEY, order_id INTEGER,
+                                             sku TEXT, quantity INTEGER, unit_price REAL)""")
+    for col in INDEX_COLUMNS[:n_indexes]:
+        conn.execute(f"CREATE INDEX idx_copy_{col} ON items_copy ({col})")
+    start = time.perf_counter()
+    with conn:                                   # commits when the block ends (Lesson 5.1)
+        conn.executemany("INSERT INTO items_copy (order_id, sku, quantity, unit_price) VALUES (?, ?, ?, ?)", rows)
+    elapsed = (time.perf_counter() - start) * 1000
+    added_kb = (os.path.getsize("pinecrest_tuning.db") - size_before) / 1024
+    return elapsed, added_kb
+
+for n in [0, 1, 2, 4]:
+    ms, kb = load_with_indexes(n)
+    print(f"{n} indexes: insert 45,490 rows in {ms:6.1f} ms, file grew by {kb:7,.0f} KB")
+
+conn.execute("DROP TABLE items_copy")
+conn.execute("VACUUM")</code></pre>
+                <div class="card card-output">
+                    <h4>Output (your timings will differ)</h4>
+                    <pre><code>0 indexes: insert 45,490 rows in   22.2 ms, file grew by   1,388 KB
+1 indexes: insert 45,490 rows in   34.0 ms, file grew by   1,964 KB
+2 indexes: insert 45,490 rows in   52.5 ms, file grew by   2,800 KB
+4 indexes: insert 45,490 rows in   89.4 ms, file grew by   4,068 KB</code></pre>
+                </div>
+
+                <p>Every index added made the same load slower and the file bigger. With four indexes, the insert takes several times as long as with none, and the indexes together take up more space than the table itself. (The column names in that f-string come from a fixed list in your own code, never from outside input.)</p>
+
+                <div class="card card-info">
+                    <h4>💡 The Trade</h4>
+                    <p>An index buys faster reads and pays with slower writes and more storage. For a table that is read constantly and changed rarely, as in most analysis and reporting, indexes are cheap. For a table receiving thousands of inserts a second, each one is a real expense. Bulk loading follows from this: when loading millions of rows into a new table, load first and create the indexes afterward.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="less" class="lesson-section">
+                <h2>🎯 Ask for Less: SQL or pandas?</h2>
+
+                <p>The cheapest row is the one you never fetch. Indexes help the engine find rows faster, but a great deal of slowness in analysis code has nothing to do with indexes. It comes from moving more data than the question needs out of the database and into Python.</p>
+
+                <h3>Aggregate Where the Data Lives</h3>
+                <p>Item revenue by store, two ways: pull every joined row into pandas and group there, or ask the database for five rows.</p>
+
+                <pre><code class="language-python">def pandas_way():
+    df = pd.read_sql("SELECT * FROM order_items AS i JOIN orders AS o ON o.order_id = i.order_id", conn)
+    df = df[df["status"] == "completed"]
+    return (df["quantity"] * df["unit_price"]).groupby(df["store"]).sum().round(2)
+
+def sql_way():
+    return pd.read_sql("""
+        SELECT o.store, ROUND(SUM(i.quantity * i.unit_price), 2) AS revenue
+        FROM order_items AS i
+        JOIN orders AS o ON o.order_id = i.order_id
+        WHERE o.status = 'completed'
+        GROUP BY o.store
+    """, conn).set_index("store")["revenue"]
+
+def best_of(func, repeat=3):
+    best = float("inf")
+    for _ in range(repeat):
+        start = time.perf_counter()
+        result = func()
+        best = min(best, time.perf_counter() - start)
+    return best * 1000, result
+
+t_pandas, r_pandas = best_of(pandas_way)
+t_sql, r_sql = best_of(sql_way)
+print(f"SELECT * then pandas: {t_pandas:6.1f} ms")
+print(f"GROUP BY in SQL     : {t_sql:6.1f} ms")
+print("same numbers:", (r_pandas - r_sql).abs().max() &lt; 0.01)</code></pre>
+                <div class="card card-output">
+                    <h4>Output (your timings will differ)</h4>
+                    <pre><code>SELECT * then pandas:  147.0 ms
+GROUP BY in SQL     :   13.8 ms
+same numbers: True</code></pre>
+                </div>
+
+                <p>Same answer, many times faster, because 45,490 rows of 16 columns never had to be turned into Python objects and a DataFrame. On a server database the gap is wider still, since those rows would also cross a network.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Do it in SQL</th><th>Do it in pandas</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Filtering rows and choosing columns</td><td>Statistics, tests and models (Module 4)</td></tr>
+                            <tr><td>Joining tables that live in the database</td><td>Reshaping: pivot, melt, resample</td></tr>
+                            <tr><td>Aggregating large tables down to a summary</td><td>Charts</td></tr>
+                            <tr><td>Top N, deduplication, ranking on big data</td><td>Messy text cleanup and date parsing</td></tr>
+                            <tr><td>Anything that reduces millions of rows to thousands</td><td>Exploration, once the data fits comfortably in memory</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>Three More Habits</h3>
+                <ul>
+                    <li><strong>Name your columns.</strong> <code>SELECT *</code> fetches every column, defeats covering indexes, and breaks your code when someone adds a column. Ask for the ones you use.</li>
+                    <li><strong>Use <code>LIMIT</code> while exploring.</strong> <code>SELECT ... LIMIT 20</code> shows you the shape of a result without waiting for all of it.</li>
+                    <li><strong>One query, not a loop of queries.</strong> Fetching a list of ids and then running one query per id in a Python <code>for</code> loop is known as the "N+1 problem". On a server database each round trip costs network time, and a join or an <code>IN (...)</code> does the same work in one trip.</li>
+                </ul>
+
+                <div class="card card-info">
+                    <h4>💡 Where PostgreSQL Differs</h4>
+                    <p>The ideas carry over unchanged: scans, index searches, composite and covering indexes, selectivity, statistics. The commands differ. PostgreSQL uses <code>EXPLAIN</code> for the plan and <code>EXPLAIN ANALYZE</code> to run the query and report actual times and row counts per step. Its plans name more strategies (<code>Seq Scan</code>, <code>Index Scan</code>, <code>Index Only Scan</code>, <code>Hash Join</code>, <code>Merge Join</code>) where SQLite has nested loops only. Statistics are kept up to date automatically. Those statements are from PostgreSQL's documentation; nothing in this lesson was run on PostgreSQL.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="mistakes" class="lesson-section">
+                <h2>⚠️ Common Mistakes</h2>
+
+                <h3>1. Creating an Index That Already Exists</h3>
+                <pre data-raises="sqlite3.OperationalError"><code class="language-python">conn.execute("CREATE INDEX idx_order_items_order_id ON order_items (order_id)")</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>OperationalError: index idx_order_items_order_id already exists</code></pre>
+                </div>
+                <p><strong>What it means:</strong> you ran the cell twice, which everyone does. <strong>Fix:</strong> <code>CREATE INDEX IF NOT EXISTS ...</code> makes the statement safe to rerun. The names differ but the trap is the same in reverse: two indexes with different names on the same column are both maintained and only one is ever used. List what exists before adding more.</p>
+
+                <h3>2. Assuming the Index Is Used</h3>
+                <p>Creating an index proves nothing. The planner may ignore it because of a function on the column, a type or collation mismatch, or because it judged a scan to be cheaper. <strong>Fix:</strong> after creating an index, rerun <code>EXPLAIN QUERY PLAN</code> on the query it was meant for and read the line. You are looking for the index's name.</p>
+
+                <h3>3. Trusting One Timing</h3>
+                <pre><code class="language-python">single_runs = []
+for _ in range(5):
+    start = time.perf_counter()
+    conn.execute("SELECT store, COUNT(*) FROM orders GROUP BY store").fetchall()
+    single_runs.append((time.perf_counter() - start) * 1000)
+print("five runs of the same query, in ms:", [round(t, 2) for t in single_runs])</code></pre>
+                <div class="card card-output">
+                    <h4>Output (your timings will differ)</h4>
+                    <pre><code>five runs of the same query, in ms: [0.63, 0.49, 0.49, 0.49, 0.5]</code></pre>
+                </div>
+                <p><strong>What it shows:</strong> identical runs do not take identical time. The first is often the slowest, because later runs find the data already in memory (the operating system and SQLite both cache pages). A single "before" and a single "after" can show an improvement that is only the cache warming up. <strong>Fix:</strong> repeat, take the best or the median, and compare like with like, as <code>timed()</code> does. Trust the plan first and the stopwatch second.</p>
+
+                <h3>4. Indexing Every Column "to Be Safe"</h3>
+                <p>You measured the result above: slower writes, a larger file, and more choices for the planner to get wrong. <strong>Fix:</strong> start from the queries that are actually slow and actually matter, index for those, and drop indexes that no important query uses.</p>
+
+                <h3>5. Optimizing Before Measuring</h3>
+                <p>Most queries in an analysis are fast enough as first written. <strong>Fix:</strong> write the clear version, notice which one makes you wait, look at its plan, and tune that. Clever SQL written to save two milliseconds costs the next reader, usually you, far more than it saves.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="project" class="lesson-section">
+                <h2>🛠️ Project: The Tuning Report</h2>
+
+                <p>Pinecrest's web team is building an internal dashboard and has sent you the three queries it will run most. On the production-sized database they are too slow. Your job is the one a data engineer would do: measure, read the plans, add the fewest indexes that fix the problem, prove the answers did not change, and report the cost. Work in a new notebook, <code>lesson_5_4_project</code>. Allow about 45 minutes.</p>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 1: A fresh copy and the workload <span class="step-time">(5 min)</span></h3>
+                    <p>Start from the original database, with no indexes. Each query comes with a list of parameter sets that stands in for real traffic.</p>
+                    <pre><code class="language-python">import os
+import shutil
+import sqlite3
+import time
+import pandas as pd
+
+shutil.copy("data/pinecrest.db", "tuning_project.db")
+db = sqlite3.connect("tuning_project.db", cached_statements=0)
+
+WORKLOAD = {
+    "customer history": (
+        """SELECT o.order_id, o.order_date, o.order_total, i.sku, i.quantity
+           FROM orders AS o
+           JOIN order_items AS i ON i.order_id = o.order_id
+           WHERE o.customer_id = ?
+           ORDER BY o.order_date DESC""",
+        [(10001 + 25 * k,) for k in range(100)],
+    ),
+    "product sales by month": (
+        """SELECT strftime('%Y-%m', o.order_date) AS month, SUM(i.quantity) AS units
+           FROM order_items AS i
+           JOIN orders AS o ON o.order_id = i.order_id
+           WHERE i.sku = ?
+           GROUP BY month""",
+        [(sku,) for (sku,) in db.execute("SELECT sku FROM products ORDER BY sku LIMIT 50")],
+    ),
+    "store daily report": (
+        """SELECT order_date, COUNT(*) AS orders, SUM(order_total) AS revenue
+           FROM orders
+           WHERE store = ? AND order_date BETWEEN ? AND ?
+           GROUP BY order_date""",
+        [(s, "2025-11-01", "2025-11-30") for s in ["Boise", "Bend", "Flagstaff", "Asheville"]] * 25,
+    ),
 }
-
-for name, query in queries.items():
-    start = time.time()
-    df = pd.read_sql_query(query, conn)
-    elapsed = time.time() - start
-    print(f"{name}: {elapsed:.4f} seconds ({len(df)} rows)")</code></pre>
-
-    <h3>UNION vs UNION ALL</h3>
-    <pre class="language-python"><code># UNION (removes duplicates - slower)
-union_query = """
-SELECT customer_id, 'High Value' AS segment
-FROM large_orders
-WHERE total_amount > 1000
-
-UNION
-
-SELECT customer_id, 'Frequent' AS segment
-FROM large_orders
-GROUP BY customer_id
-HAVING COUNT(*) > 10
-"""
-
-# UNION ALL (keeps duplicates - faster)
-union_all_query = """
-SELECT customer_id, 'High Value' AS segment
-FROM large_orders
-WHERE total_amount > 1000
-
-UNION ALL
-
-SELECT customer_id, 'Frequent' AS segment
-FROM large_orders
-GROUP BY customer_id
-HAVING COUNT(*) > 10
-"""
-
-print("UNION (distinct):")
-start = time.time()
-df1 = pd.read_sql_query(union_query, conn)
-union_time = time.time() - start
-print(f"Time: {union_time:.4f} seconds, Rows: {len(df1)}")
-
-print("\nUNION ALL (with duplicates):")
-start = time.time()
-df2 = pd.read_sql_query(union_all_query, conn)
-union_all_time = time.time() - start
-print(f"Time: {union_all_time:.4f} seconds, Rows: {len(df2)}")
-
-print(f"\nSpeedup: {union_time/union_all_time:.2f}x")</code></pre>
-
-    <h2>Advanced Optimization Techniques</h2>
-    
-    <h3>Partitioning Large Tables</h3>
-    <pre class="language-python"><code># Table partitioning simulation (manual in SQLite)
-cursor.executescript('''
-    -- Create partitioned tables by date
-    CREATE TABLE IF NOT EXISTS orders_2024_q1 (
-        CHECK (order_date >= '2024-01-01' AND order_date < '2024-04-01')
-    ) INHERITS (large_orders);
-    
-    CREATE TABLE IF NOT EXISTS orders_2024_q2 (
-        CHECK (order_date >= '2024-04-01' AND order_date < '2024-07-01')
-    ) INHERITS (large_orders);
-    
-    CREATE TABLE IF NOT EXISTS orders_2024_q3 (
-        CHECK (order_date >= '2024-07-01' AND order_date < '2024-10-01')
-    ) INHERITS (large_orders);
-    
-    CREATE TABLE IF NOT EXISTS orders_2024_q4 (
-        CHECK (order_date >= '2024-10-01' AND order_date < '2025-01-01')
-    ) INHERITS (large_orders);
-''')
-
-# Create a view to union partitions
-partition_view = """
-CREATE VIEW IF NOT EXISTS orders_partitioned AS
-SELECT * FROM orders_2024_q1
-UNION ALL
-SELECT * FROM orders_2024_q2
-UNION ALL
-SELECT * FROM orders_2024_q3
-UNION ALL
-SELECT * FROM orders_2024_q4
-"""
-
-# Query specific partition (fast)
-partition_query = """
-SELECT * FROM orders_2024_q2
-WHERE customer_id = 1000
-"""
-
-# Query all partitions (slower)
-all_partitions_query = """
-SELECT * FROM orders_partitioned
-WHERE customer_id = 1000
-"""</code></pre>
-
-    <h3>Materialized Views</h3>
-    <pre class="language-python"><code># Create materialized view for expensive aggregations
-cursor.executescript('''
-    -- Drop if exists
-    DROP TABLE IF EXISTS customer_summary_mv;
-    
-    -- Create materialized view (as table in SQLite)
-    CREATE TABLE customer_summary_mv AS
-    SELECT 
-        c.customer_id,
-        c.first_name,
-        c.last_name,
-        c.customer_type,
-        COUNT(DISTINCT o.order_id) AS total_orders,
-        SUM(o.total_amount) AS lifetime_value,
-        AVG(o.total_amount) AS avg_order_value,
-        MAX(o.order_date) AS last_order_date,
-        MIN(o.order_date) AS first_order_date
-    FROM large_customers c
-    LEFT JOIN large_orders o ON c.customer_id = o.customer_id
-    GROUP BY c.customer_id, c.first_name, c.last_name, c.customer_type;
-    
-    -- Create indexes on materialized view
-    CREATE INDEX idx_mv_customer_id ON customer_summary_mv(customer_id);
-    CREATE INDEX idx_mv_lifetime_value ON customer_summary_mv(lifetime_value DESC);
-''')
-
-# Compare query performance
-# Without materialized view
-start = time.time()
-query_direct = """
-SELECT 
-    c.customer_id,
-    c.first_name,
-    c.last_name,
-    COUNT(DISTINCT o.order_id) AS total_orders,
-    SUM(o.total_amount) AS lifetime_value
-FROM large_customers c
-LEFT JOIN large_orders o ON c.customer_id = o.customer_id
-GROUP BY c.customer_id, c.first_name, c.last_name
-ORDER BY lifetime_value DESC
-LIMIT 100
-"""
-df1 = pd.read_sql_query(query_direct, conn)
-direct_time = time.time() - start
-
-# With materialized view
-start = time.time()
-query_mv = """
-SELECT * FROM customer_summary_mv
-ORDER BY lifetime_value DESC
-LIMIT 100
-"""
-df2 = pd.read_sql_query(query_mv, conn)
-mv_time = time.time() - start
-
-print(f"Direct query: {direct_time:.4f} seconds")
-print(f"Materialized view: {mv_time:.4f} seconds")
-print(f"Speedup: {direct_time/mv_time:.2f}x")
-
-# Refresh materialized view
-def refresh_materialized_view():
-    """Refresh materialized view with latest data"""
-    cursor.execute("DELETE FROM customer_summary_mv")
-    cursor.execute("""
-        INSERT INTO customer_summary_mv
-        SELECT ... -- same as original query
-    """)
-    conn.commit()</code></pre>
-
-    <h3>Query Result Caching</h3>
-    <pre class="language-python"><code>import hashlib
-import pickle
-from datetime import datetime, timedelta
-
-class QueryCache:
-    def __init__(self, ttl_minutes=60):
-        self.cache = {}
-        self.ttl = timedelta(minutes=ttl_minutes)
-    
-    def _get_cache_key(self, query, params=None):
-        """Generate cache key from query and parameters"""
-        key_string = query + str(params) if params else query
-        return hashlib.md5(key_string.encode()).hexdigest()
-    
-    def get(self, query, params=None):
-        """Get cached result if available and not expired"""
-        cache_key = self._get_cache_key(query, params)
-        
-        if cache_key in self.cache:
-            result, timestamp = self.cache[cache_key]
-            if datetime.now() - timestamp < self.ttl:
-                print(f"Cache hit for query: {query[:50]}...")
-                return result
-        
-        return None
-    
-    def set(self, query, result, params=None):
-        """Cache query result"""
-        cache_key = self._get_cache_key(query, params)
-        self.cache[cache_key] = (result, datetime.now())
-        print(f"Cached result for query: {query[:50]}...")
-    
-    def invalidate(self, pattern=None):
-        """Invalidate cache entries"""
-        if pattern:
-            # Invalidate matching patterns
-            keys_to_delete = [k for k in self.cache.keys() if pattern in k]
-            for key in keys_to_delete:
-                del self.cache[key]
-        else:
-            # Clear entire cache
-            self.cache.clear()
-
-# Use cache
-cache = QueryCache(ttl_minutes=30)
-
-def cached_query(query, params=None):
-    """Execute query with caching"""
-    # Check cache
-    result = cache.get(query, params)
-    
-    if result is None:
-        # Execute query
-        start = time.time()
-        result = pd.read_sql_query(query, conn)
-        elapsed = time.time() - start
-        print(f"Query executed in {elapsed:.4f} seconds")
-        
-        # Cache result
-        cache.set(query, result, params)
-    
-    return result
-
-# Test caching
-test_query = "SELECT * FROM customer_summary_mv WHERE lifetime_value > 5000"
-
-print("First execution:")
-df1 = cached_query(test_query)
-
-print("\nSecond execution (cached):")
-df2 = cached_query(test_query)</code></pre>
-
-    <h2>Common Performance Pitfalls</h2>
-    
-    <h3>Avoiding Common Mistakes</h3>
-    <pre class="language-python"><code># Pitfall 1: SELECT * instead of specific columns
-bad_query = """
-SELECT * FROM large_orders o
-JOIN large_customers c ON o.customer_id = c.customer_id
-"""
-
-good_query = """
-SELECT 
-    o.order_id, 
-    o.order_date, 
-    o.total_amount,
-    c.first_name,
-    c.last_name
-FROM large_orders o
-JOIN large_customers c ON o.customer_id = c.customer_id
-"""
-
-# Pitfall 2: Functions in WHERE clause
-bad_where = """
-SELECT * FROM large_orders
-WHERE DATE(order_date) = '2024-01-01'
-"""
-
-good_where = """
-SELECT * FROM large_orders
-WHERE order_date >= '2024-01-01' 
-  AND order_date < '2024-01-02'
-"""
-
-# Pitfall 3: OR in WHERE clause (can prevent index usage)
-bad_or = """
-SELECT * FROM large_customers
-WHERE country = 'USA' OR city = 'London'
-"""
-
-good_union = """
-SELECT * FROM large_customers WHERE country = 'USA'
-UNION
-SELECT * FROM large_customers WHERE city = 'London'
-"""
-
-# Pitfall 4: Implicit type conversion
-bad_type = """
-SELECT * FROM large_orders
-WHERE customer_id = '1000'  -- String instead of integer
-"""
-
-good_type = """
-SELECT * FROM large_orders
-WHERE customer_id = 1000  -- Correct type
-"""
-
-# Pitfall 5: NOT IN with NULL values
-bad_not_in = """
-SELECT * FROM large_customers
-WHERE customer_id NOT IN (
-    SELECT customer_id FROM large_orders
-    WHERE customer_id IS NULL OR total_amount > 1000
-)
-"""
-
-good_not_exists = """
-SELECT * FROM large_customers c
-WHERE NOT EXISTS (
-    SELECT 1 FROM large_orders o
-    WHERE o.customer_id = c.customer_id
-    AND o.total_amount > 1000
-)
-"""</code></pre>
-
-    <h2>Database-Specific Optimizations</h2>
-    
-    <h3>PostgreSQL Specific</h3>
-    <pre class="language-python"><code># PostgreSQL optimization settings
-pg_optimizations = """
--- Connection level settings
-SET work_mem = '256MB';  -- Memory for sorts/hashes
-SET effective_cache_size = '4GB';  -- OS cache estimate
-SET random_page_cost = 1.1;  -- SSD optimization
-SET effective_io_concurrency = 200;  -- SSD parallel I/O
-
--- Table statistics
-ALTER TABLE large_orders SET (autovacuum_vacuum_scale_factor = 0.01);
-ALTER TABLE large_orders SET (autovacuum_analyze_scale_factor = 0.005);
-
--- Parallel query execution
-SET max_parallel_workers_per_gather = 4;
-SET min_parallel_table_scan_size = '8MB';
-
--- Create partial indexes
-CREATE INDEX idx_recent_orders ON large_orders(order_date)
-WHERE order_date >= CURRENT_DATE - INTERVAL '90 days';
-
--- Create covering indexes with INCLUDE
-CREATE INDEX idx_customer_covering ON large_orders(customer_id)
-INCLUDE (order_date, total_amount, status);
-
--- Use BRIN indexes for large sequential data
-CREATE INDEX idx_orders_date_brin ON large_orders USING BRIN(order_date);
-
--- GIN indexes for full-text search
-CREATE INDEX idx_product_search ON large_products USING GIN(to_tsvector('english', product_name));
-"""</code></pre>
-
-    <h3>MySQL Specific</h3>
-    <pre class="language-python"><code># MySQL optimization settings
-mysql_optimizations = """
--- Query cache (deprecated in MySQL 8.0)
-SET GLOBAL query_cache_size = 67108864;
-SET GLOBAL query_cache_type = 1;
-
--- Buffer pool (InnoDB)
-SET GLOBAL innodb_buffer_pool_size = 2147483648;  -- 2GB
-SET GLOBAL innodb_buffer_pool_instances = 4;
-
--- Use index hints
-SELECT * FROM large_orders USE INDEX (idx_orders_customer)
-WHERE customer_id = 1000;
-
--- Force index
-SELECT * FROM large_orders FORCE INDEX (idx_orders_date)
-WHERE order_date >= '2024-01-01';
-
--- Analyze tables
-ANALYZE TABLE large_orders;
-OPTIMIZE TABLE large_orders;
-
--- Partitioning
-ALTER TABLE large_orders
-PARTITION BY RANGE (YEAR(order_date)) (
-    PARTITION p2022 VALUES LESS THAN (2023),
-    PARTITION p2023 VALUES LESS THAN (2024),
-    PARTITION p2024 VALUES LESS THAN (2025),
-    PARTITION p_future VALUES LESS THAN MAXVALUE
-);
-"""</code></pre>
-
-    <h3>SQLite Specific</h3>
-    <pre class="language-python"><code># SQLite optimization
-def optimize_sqlite():
-    """SQLite specific optimizations"""
-    
-    # PRAGMA settings
-    optimizations = [
-        "PRAGMA cache_size = -64000",  # 64MB cache
-        "PRAGMA temp_store = MEMORY",  # Use memory for temp operations
-        "PRAGMA journal_mode = WAL",   # Write-ahead logging
-        "PRAGMA synchronous = NORMAL", # Balance safety/speed
-        "PRAGMA page_size = 4096",     # Optimal page size
-        "PRAGMA mmap_size = 268435456", # Memory-mapped I/O (256MB)
-        "PRAGMA optimize",              # Run optimizer
-    ]
-    
-    for pragma in optimizations:
-        cursor.execute(pragma)
-    
-    # Analyze tables
-    cursor.execute("ANALYZE")
-    
-    # Vacuum database
-    cursor.execute("VACUUM")
-    
-    print("SQLite optimizations applied")
-
-optimize_sqlite()
-
-# SQLite query planner configuration
-cursor.execute("PRAGMA query_only = 0")  # Allow writes
-cursor.execute("PRAGMA automatic_index = 1")  # Auto-create temp indexes</code></pre>
-
-    <h2>Monitoring and Profiling</h2>
-    
-    <h3>Query Performance Monitoring</h3>
-    <pre class="language-python"><code>import logging
-from contextlib import contextmanager
-
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-class QueryProfiler:
-    def __init__(self, conn, slow_query_threshold=1.0):
-        self.conn = conn
-        self.slow_query_threshold = slow_query_threshold
-        self.query_stats = []
-    
-    @contextmanager
-    def profile(self, query_name="Unknown"):
-        """Profile query execution"""
-        start_time = time.time()
-        start_memory = self._get_memory_usage()
-        
-        try:
-            yield
-        finally:
-            end_time = time.time()
-            end_memory = self._get_memory_usage()
-            
-            execution_time = end_time - start_time
-            memory_used = end_memory - start_memory
-            
-            # Log slow queries
-            if execution_time > self.slow_query_threshold:
-                logger.warning(f"Slow query detected: {query_name} took {execution_time:.4f}s")
-            
-            # Store statistics
-            self.query_stats.append({
-                'query_name': query_name,
-                'execution_time': execution_time,
-                'memory_used': memory_used,
-                'timestamp': datetime.now()
-            })
-    
-    def _get_memory_usage(self):
-        """Get current memory usage"""
-        import psutil
-        process = psutil.Process()
-        return process.memory_info().rss / 1024 / 1024  # MB
-    
-    def report(self):
-        """Generate performance report"""
-        df = pd.DataFrame(self.query_stats)
-        
-        print("\n=== Query Performance Report ===")
-        print(f"Total queries: {len(df)}")
-        print(f"Average execution time: {df['execution_time'].mean():.4f}s")
-        print(f"Slowest query: {df['execution_time'].max():.4f}s")
-        print(f"Total execution time: {df['execution_time'].sum():.4f}s")
-        
-        print("\nTop 5 slowest queries:")
-        print(df.nlargest(5, 'execution_time')[['query_name', 'execution_time']])
-        
-        return df
-
-# Usage
-profiler = QueryProfiler(conn)
-
-with profiler.profile("Customer Summary"):
-    df = pd.read_sql_query("""
-        SELECT customer_id, COUNT(*) as order_count
-        FROM large_orders
-        GROUP BY customer_id
-    """, conn)
-
-with profiler.profile("Product Analysis"):
-    df = pd.read_sql_query("""
-        SELECT category, AVG(total_amount) as avg_amount
-        FROM large_orders
-        GROUP BY category
-    """, conn)
-
-# Generate report
-report = profiler.report()</code></pre>
-
-    <h2>Real-world Optimization Case Study</h2>
-    
-    <h3>Optimizing a Complex Dashboard Query</h3>
-    <pre class="language-python"><code># Original slow query (multiple scans, no indexes)
-original_query = """
-SELECT 
-    c.customer_id,
-    c.first_name || ' ' || c.last_name as customer_name,
-    c.customer_type,
-    (SELECT COUNT(*) FROM large_orders o WHERE o.customer_id = c.customer_id) as order_count,
-    (SELECT SUM(total_amount) FROM large_orders o WHERE o.customer_id = c.customer_id) as total_spent,
-    (SELECT MAX(order_date) FROM large_orders o WHERE o.customer_id = c.customer_id) as last_order,
-    (SELECT COUNT(*) FROM large_orders o WHERE o.customer_id = c.customer_id 
-     AND o.order_date >= DATE('now', '-30 days')) as recent_orders,
-    (SELECT AVG(total_amount) FROM large_orders o WHERE o.customer_id = c.customer_id) as avg_order_value
-FROM large_customers c
-WHERE c.customer_type IN ('Premium', 'VIP')
-ORDER BY total_spent DESC
-LIMIT 100
-"""
-
-# Step 1: Create necessary indexes
-optimization_steps = []
-
-cursor.execute("CREATE INDEX IF NOT EXISTS idx_orders_customer_date_amount ON large_orders(customer_id, order_date, total_amount)")
-optimization_steps.append("Created composite index")
-
-# Step 2: Rewrite using CTEs and joins
-optimized_query = """
-WITH customer_stats AS (
-    SELECT 
-        customer_id,
-        COUNT(*) as order_count,
-        SUM(total_amount) as total_spent,
-        MAX(order_date) as last_order,
-        AVG(total_amount) as avg_order_value,
-        COUNT(CASE WHEN order_date >= DATE('now', '-30 days') THEN 1 END) as recent_orders
-    FROM large_orders
-    GROUP BY customer_id
-)
-SELECT 
-    c.customer_id,
-    c.first_name || ' ' || c.last_name as customer_name,
-    c.customer_type,
-    COALESCE(cs.order_count, 0) as order_count,
-    COALESCE(cs.total_spent, 0) as total_spent,
-    cs.last_order,
-    COALESCE(cs.recent_orders, 0) as recent_orders,
-    COALESCE(cs.avg_order_value, 0) as avg_order_value
-FROM large_customers c
-LEFT JOIN customer_stats cs ON c.customer_id = cs.customer_id
-WHERE c.customer_type IN ('Premium', 'VIP')
-ORDER BY total_spent DESC
-LIMIT 100
-"""
-
-# Step 3: Create materialized view for frequently accessed data
-cursor.execute("""
-    CREATE TABLE IF NOT EXISTS dashboard_summary AS
-    WITH customer_stats AS (
-        SELECT 
-            customer_id,
-            COUNT(*) as order_count,
-            SUM(total_amount) as total_spent,
-            MAX(order_date) as last_order,
-            AVG(total_amount) as avg_order_value
-        FROM large_orders
-        GROUP BY customer_id
-    )
-    SELECT 
-        c.*,
-        cs.order_count,
-        cs.total_spent,
-        cs.last_order,
-        cs.avg_order_value
-    FROM large_customers c
-    LEFT JOIN customer_stats cs ON c.customer_id = cs.customer_id
-""")
-optimization_steps.append("Created materialized view")
-
-# Compare performance
-print("Performance Comparison:")
-print("-" * 50)
-
-start = time.time()
-df_original = pd.read_sql_query(original_query, conn)
-original_time = time.time() - start
-print(f"Original query: {original_time:.4f} seconds")
-
-start = time.time()
-df_optimized = pd.read_sql_query(optimized_query, conn)
-optimized_time = time.time() - start
-print(f"Optimized query: {optimized_time:.4f} seconds")
-
-start = time.time()
-df_materialized = pd.read_sql_query("SELECT * FROM dashboard_summary WHERE customer_type IN ('Premium', 'VIP') ORDER BY total_spent DESC LIMIT 100", conn)
-materialized_time = time.time() - start
-print(f"Materialized view: {materialized_time:.4f} seconds")
-
-print(f"\nOptimization results:")
-print(f"Query optimization speedup: {original_time/optimized_time:.2f}x")
-print(f"Materialized view speedup: {original_time/materialized_time:.2f}x")</code></pre>
-
-    <h2>Best Practices Checklist</h2>
-    
-    <pre class="language-python"><code># Query optimization best practices
-optimization_checklist = """
-✅ INDEXING
-   □ Create indexes on columns used in WHERE, JOIN, ORDER BY
-   □ Use composite indexes for multi-column conditions
-   □ Consider covering indexes for read-heavy queries
-   □ Remove unused indexes to improve write performance
-   □ Use partial indexes for filtered queries
-   
-✅ QUERY STRUCTURE
-   □ Select only needed columns, avoid SELECT *
-   □ Use JOINs instead of correlated subqueries
-   □ Prefer EXISTS over IN for large datasets
-   □ Use UNION ALL instead of UNION when possible
-   □ Push filters down to reduce data early
-   
-✅ DATABASE DESIGN
-   □ Normalize tables appropriately
-   □ Consider denormalization for read-heavy workloads
-   □ Partition large tables by date or other criteria
-   □ Use appropriate data types (smallest that fits)
-   □ Add NOT NULL constraints where applicable
-   
-✅ PERFORMANCE MONITORING
-   □ Use EXPLAIN to understand query plans
-   □ Monitor slow query logs
-   □ Track index usage statistics
-   □ Set up query result caching
-   □ Profile queries in production environment
-   
-✅ MAINTENANCE
-   □ Update table statistics regularly (ANALYZE)
-   □ Rebuild fragmented indexes
-   □ VACUUM to reclaim space (PostgreSQL/SQLite)
-   □ Archive old data to separate tables
-   □ Monitor and optimize connection pools
-"""
-
-print(optimization_checklist)</code></pre>
-
-    <h2>Practice Exercises</h2>
-    
-    <h3>Exercise 1: Index Strategy Design</h3>
-    <p>Given a query workload, design optimal indexes:</p>
-    <ol>
-        <li>Analyze query patterns in slow query log</li>
-        <li>Identify columns used in WHERE, JOIN, ORDER BY</li>
-        <li>Create composite indexes for common patterns</li>
-        <li>Test performance improvements</li>
-        <li>Monitor index usage and remove unused ones</li>
-    </ol>
-
-    <h3>Exercise 2: Query Rewriting Challenge</h3>
-    <p>Optimize a complex reporting query:</p>
-    <ol>
-        <li>Take a slow multi-table join with subqueries</li>
-        <li>Rewrite using CTEs</li>
-        <li>Eliminate correlated subqueries</li>
-        <li>Add appropriate indexes</li>
-        <li>Measure performance improvement</li>
-    </ol>
-
-    <h3>Exercise 3: Database Tuning</h3>
-    <p>Tune database for specific workload:</p>
-    <ol>
-        <li>Identify workload characteristics (OLTP vs OLAP)</li>
-        <li>Adjust memory settings</li>
-        <li>Configure connection pooling</li>
-        <li>Set up query caching</li>
-        <li>Implement monitoring and alerting</li>
-    </ol>
-
-    <h2>Key Takeaways</h2>
-    <ul>
-        <li>⚡ Proper indexing can improve query performance by 10-1000x</li>
-        <li>📊 Always use EXPLAIN to understand query execution plans</li>
-        <li>🔄 Rewrite queries to eliminate inefficient patterns</li>
-        <li>💾 Materialized views cache expensive aggregations</li>
-        <li>🎯 Monitor and profile queries to identify bottlenecks</li>
-        <li>🔧 Database-specific optimizations matter</li>
-        <li>📈 Regular maintenance keeps performance optimal</li>
-    </ul>
-
-    <h2>Further Resources</h2>
-    <ul>
-        <li><a href="https://use-the-index-luke.com/">Use The Index, Luke! - SQL Indexing Guide</a></li>
-        <li><a href="https://www.postgresql.org/docs/current/performance-tips.html">PostgreSQL Performance Tips</a></li>
-        <li><a href="https://dev.mysql.com/doc/refman/8.0/en/optimization.html">MySQL Query Optimization</a></li>
-        <li><a href="https://www.sqlite.org/queryplanner.html">SQLite Query Planner</a></li>
-        <li><a href="https://github.com/ankane/pghero">PgHero - PostgreSQL Performance Dashboard</a></li>
-        <li><a href="https://explain.depesz.com/">PostgreSQL EXPLAIN Visualizer</a></li>
-    </ul>
-
-    <!-- Learning Journal (REQUIRED per the Courseware Authoring Standard) -->
-    <section id="journal" class="lesson-section">
-        <h2>📓 Learning Journal</h2>
-        <div class="card card-info">
-            <p>Keep a learning journal — digital or physical. After this lesson, take a few minutes to write down:</p>
-            <ul>
-                <li><strong>Key concepts</strong> you learned</li>
-                <li><strong>Techniques that clicked</strong> for you</li>
-                <li><strong>Questions or confusion points</strong> to revisit</li>
-                <li><strong>Ideas you want to try</strong></li>
-                <li><strong>Your progress and feelings</strong> about learning this</li>
-            </ul>
-            <p><strong>✍️ This lesson's prompt:</strong> Think of a query you have written that felt slow. Now that you can read an execution plan, what do you suspect was really happening under the hood — a full table scan, a missing index, or an inefficient join — and what would you change first?</p>
+print({name: len(params) for name, (sql, params) in WORKLOAD.items()})</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>{'customer history': 100, 'product sales by month': 50, 'store daily report': 100}</code></pre>
+                    </div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 2: Measure the baseline and keep the answers <span class="step-time">(10 min)</span></h3>
+                    <p>One function measures the whole workload: plan, best-of-three time, and the actual results, which you will need later to prove nothing changed.</p>
+                    <pre><code class="language-python">def measure(db):
+    report = {}
+    for name, (sql, param_list) in WORKLOAD.items():
+        steps = [row[3] for row in db.execute("EXPLAIN QUERY PLAN " + sql, param_list[0])]
+        best = float("inf")
+        for _ in range(3):
+            start = time.perf_counter()
+            results = [db.execute(sql, p).fetchall() for p in param_list]
+            best = min(best, time.perf_counter() - start)
+        report[name] = {"plan": steps, "ms": best * 1000, "results": results}
+    return report
+
+baseline = measure(db)
+size_before = os.path.getsize("tuning_project.db")
+
+for name, r in baseline.items():
+    print(f"{name}: {r['ms']:.0f} ms")
+    for step in r["plan"]:
+        print("    " + step)</code></pre>
+                    <div class="card card-output">
+                        <h4>Output (your timings will differ)</h4>
+                        <pre><code>customer history: 201 ms
+    SCAN i
+    SEARCH o USING INTEGER PRIMARY KEY (rowid=?)
+    USE TEMP B-TREE FOR ORDER BY
+product sales by month: 70 ms
+    SCAN i
+    SEARCH o USING INTEGER PRIMARY KEY (rowid=?)
+    USE TEMP B-TREE FOR GROUP BY
+store daily report: 61 ms
+    SCAN orders
+    USE TEMP B-TREE FOR GROUP BY</code></pre>
+                    </div>
+                    <p>Read each plan before going on. Every one contains a <code>SCAN</code> of a large table for a query that needs only a few rows.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 3: Choose and create the indexes <span class="step-time">(10 min)</span></h3>
+                    <p>Reason from the <code>WHERE</code> and <code>ON</code> clauses. Customer history filters <code>orders</code> by <code>customer_id</code> and joins the lines by <code>order_id</code>. Product sales filters the lines by <code>sku</code> (and then joins to <code>orders</code> by its primary key, which is already fast). The store report filters by <code>store</code> and a date range, and sums <code>order_total</code>: a composite index, equality column first, made covering.</p>
+                    <pre><code class="language-python">INDEXES = [
+    "CREATE INDEX IF NOT EXISTS idx_orders_customer_id ON orders (customer_id)",
+    "CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items (order_id)",
+    "CREATE INDEX IF NOT EXISTS idx_order_items_sku ON order_items (sku)",
+    "CREATE INDEX IF NOT EXISTS idx_orders_store_date_total ON orders (store, order_date, order_total)",
+]
+with db:
+    for statement in INDEXES:
+        db.execute(statement)
+db.execute("ANALYZE")
+db.commit()
+
+tuned = measure(db)
+for name, r in tuned.items():
+    print(name)
+    for step in r["plan"]:
+        print("    " + step)</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>customer history
+    SEARCH o USING INDEX idx_orders_customer_id (customer_id=?)
+    SEARCH i USING INDEX idx_order_items_order_id (order_id=?)
+    USE TEMP B-TREE FOR ORDER BY
+product sales by month
+    SEARCH i USING INDEX idx_order_items_sku (sku=?)
+    SEARCH o USING INTEGER PRIMARY KEY (rowid=?)
+    USE TEMP B-TREE FOR GROUP BY
+store daily report
+    SEARCH orders USING COVERING INDEX idx_orders_store_date_total (store=? AND order_date&gt;? AND order_date&lt;?)</code></pre>
+                    </div>
+                    <p>Every large-table <code>SCAN</code> is gone. The remaining <code>TEMP B-TREE</code> steps sort or group only the handful of rows each query found, which is cheap.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 4: The before-and-after table <span class="step-time">(10 min)</span></h3>
+                    <p>Put the numbers side by side, and check the most important column: are the results identical?</p>
+                    <pre><code class="language-python">summary = pd.DataFrame({
+    "before_ms": {name: r["ms"] for name, r in baseline.items()},
+    "after_ms": {name: r["ms"] for name, r in tuned.items()},
+})
+summary["speedup"] = (summary["before_ms"] / summary["after_ms"]).round(0)
+summary["same_results"] = [
+    sorted(map(sorted, baseline[name]["results"])) == sorted(map(sorted, tuned[name]["results"]))
+    for name in summary.index
+]
+print(summary.round(1))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output (your timings will differ)</h4>
+                        <pre><code>                        before_ms  after_ms  speedup  same_results
+customer history            200.6       1.9    106.0          True
+product sales by month       70.4      13.9      5.0          True
+store daily report           61.1       2.3     27.0          True</code></pre>
+                    </div>
+                    <p>The rows inside each result are sorted before comparing because the two plans may return rows in a different order where the query does not fully specify one. The <em>set</em> of rows must be the same, and it is.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 5: Report the cost <span class="step-time">(5 min)</span></h3>
+                    <pre><code class="language-python">size_after = os.path.getsize("tuning_project.db")
+print(f"database file: {size_before / 1e6:.2f} MB before, {size_after / 1e6:.2f} MB after "
+      f"(+{100 * (size_after - size_before) / size_before:.0f}%)")
+
+print(f"total workload: {summary['before_ms'].sum():.0f} ms before, {summary['after_ms'].sum():.0f} ms after")
+db.close()</code></pre>
+                    <div class="card card-output">
+                        <h4>Output (your timings will differ)</h4>
+                        <pre><code>database file: 3.47 MB before, 5.70 MB after (+64%)
+total workload: 332 ms before, 18 ms after</code></pre>
+                    </div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 6: Write the recommendation <span class="step-time">(5 min)</span></h3>
+                    <p>In a Markdown cell, write the short note you would send to the web team: the four indexes and which query each one serves, the speedup per query from <em>your</em> run, the storage cost, and one sentence on what to watch (for example, that <code>orders</code> and <code>order_items</code> receive inserts all day, so four indexes is where you would stop without new evidence).</p>
+                </div>
+
+                <div class="card card-success">
+                    <h3>✅ Project Completion Checklist</h3>
+                    <ul class="checklist">
+                        <li>You worked on <code>tuning_project.db</code>; <code>data/pinecrest.db</code> still has no extra indexes</li>
+                        <li>You recorded a plan and a best-of-three time for all three queries before changing anything</li>
+                        <li>After tuning, no plan contains a <code>SCAN</code> of <code>orders</code> or <code>order_items</code></li>
+                        <li><code>same_results</code> is <code>True</code> for all three queries</li>
+                        <li>You can say which index serves which query, and why its columns are in that order</li>
+                        <li>Your report states the cost in file size as well as the gain in time</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="exercises" class="lesson-section">
+                <h2>🏋️ Hands-on Exercises</h2>
+
+                <p>These continue with the lesson's <code>conn</code> (your <code>pinecrest_tuning.db</code> copy) and the <code>plan()</code> and <code>timed()</code> helpers. For each one, predict the plan before you print it. A wrong prediction is the most useful thing that can happen here.</p>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 1: Predict the Plan</h3>
+                    <p>The <code>inventory</code> table has the primary key <code>(sku, location)</code>, which SQLite backs with an automatic index on those two columns in that order. Without running anything, say whether each query will <code>SCAN</code> or <code>SEARCH</code>, then check with <code>plan()</code>:</p>
+                    <ol>
+                        <li><code>WHERE sku = 'TNT-1001'</code></li>
+                        <li><code>WHERE location = 'Boise'</code></li>
+                        <li><code>WHERE sku = 'TNT-1001' AND location = 'Boise'</code></li>
+                    </ol>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>The leftmost-prefix rule. Which of the three filters start with the index's first column?</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">plan("SELECT * FROM inventory WHERE sku = 'TNT-1001'")
+plan("SELECT * FROM inventory WHERE location = 'Boise'")
+plan("SELECT * FROM inventory WHERE sku = 'TNT-1001' AND location = 'Boise'")</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>SEARCH inventory USING INDEX sqlite_autoindex_inventory_1 (sku=?)
+SCAN inventory
+SEARCH inventory USING INDEX sqlite_autoindex_inventory_1 (sku=? AND location=?)</code></pre>
+                        </div>
+                        <p>The second query filters only on the index's second column, so it scans. With 1,210 rows that is perfectly fine. If <code>inventory</code> had millions of rows and "everything at one location" were a common question, an index on <code>(location)</code> would be the fix.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 2: Look Up Customers by Email</h3>
+                    <p>A support tool finds customers by email address. Time 200 lookups of <code>SELECT customer_id, first_name, last_name FROM customers WHERE email = ?</code> using the first 200 emails in the table. Then create an index that also <em>guarantees</em> no two customers share an email, and time it again.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>CREATE UNIQUE INDEX</code> both speeds up lookups and enforces uniqueness. It would fail if duplicates already existed; the README says emails are unique.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">EMAIL_SQL = "SELECT customer_id, first_name, last_name FROM customers WHERE email = ?"
+emails = conn.execute("SELECT email FROM customers ORDER BY customer_id LIMIT 200").fetchall()
+
+plan(EMAIL_SQL, emails[0])
+t_before = timed(EMAIL_SQL, emails)
+
+conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_email ON customers (email)")
+conn.commit()
+
+plan(EMAIL_SQL, emails[0])
+t_after = timed(EMAIL_SQL, emails)
+print(f"{t_before:.1f} ms before, {t_after:.2f} ms after")</code></pre>
+                        <div class="card card-output">
+                            <h4>Output (your timings will differ)</h4>
+                            <pre><code>SCAN customers
+SEARCH customers USING INDEX idx_customers_email (email=?)
+27.2 ms before, 0.99 ms after</code></pre>
+                        </div>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 3: Make the Filter Index-Friendly</h3>
+                    <p>Marketing counts customers who signed up in 2023 with <code>WHERE strftime('%Y', signup_date) = '2023'</code>. Create an index on <code>customers (signup_date)</code>, show that this query cannot seek in it, rewrite the filter so that it can, and confirm that both versions return the same count.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>"During 2023" is <code>signup_date &gt;= '2023-01-01' AND signup_date &lt; '2024-01-01'</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">conn.execute("CREATE INDEX IF NOT EXISTS idx_customers_signup ON customers (signup_date)")
+conn.commit()
+
+SLOW = "SELECT COUNT(*) FROM customers WHERE strftime('%Y', signup_date) = '2023'"
+FAST = "SELECT COUNT(*) FROM customers WHERE signup_date &gt;= '2023-01-01' AND signup_date &lt; '2024-01-01'"
+
+plan(SLOW)
+plan(FAST)
+print(conn.execute(SLOW).fetchone()[0], conn.execute(FAST).fetchone()[0])</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>SCAN customers USING COVERING INDEX idx_customers_signup
+SEARCH customers USING COVERING INDEX idx_customers_signup (signup_date&gt;? AND signup_date&lt;?)
+676 676</code></pre>
+                        </div>
+                        <p>The first plan is a <code>SCAN</code> that happens to walk the index (every entry is read and passed through <code>strftime</code>). The second is a <code>SEARCH</code> that jumps to the first day of 2023 and stops at the last.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 4: Is a Covering Index Worth It? (Stretch)</h3>
+                    <p>The merchandising team often asks for units and revenue of one product: <code>SELECT SUM(quantity), SUM(quantity * unit_price) FROM order_items WHERE sku = ?</code>. Compare three situations for 50 SKUs: no index on <code>sku</code>, a plain index on <code>(sku)</code>, and a covering index on <code>(sku, quantity, unit_price)</code>. Report the time for each and how much each index adds to the file. Which would you keep?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Measure the file with <code>os.path.getsize</code> after a <code>commit</code>, before and after each <code>CREATE INDEX</code>. Drop the plain index before creating the covering one so that the planner's choice is clear.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">SKU_SQL = "SELECT SUM(quantity), SUM(quantity * unit_price) FROM order_items WHERE sku = ?"
+skus = conn.execute("SELECT sku FROM products ORDER BY sku LIMIT 50").fetchall()
+
+def file_kb():
+    conn.commit()
+    return os.path.getsize("pinecrest_tuning.db") / 1024
+
+results = []
+size0 = file_kb()
+plan(SKU_SQL, skus[0])
+results.append(("no index", timed(SKU_SQL, skus), 0.0))
+
+conn.execute("CREATE INDEX idx_items_sku ON order_items (sku)")
+plan(SKU_SQL, skus[0])
+results.append(("index on (sku)", timed(SKU_SQL, skus), file_kb() - size0))
+
+conn.execute("DROP INDEX idx_items_sku")
+conn.execute("VACUUM")
+size0 = file_kb()
+conn.execute("CREATE INDEX idx_items_sku_cover ON order_items (sku, quantity, unit_price)")
+plan(SKU_SQL, skus[0])
+results.append(("covering index", timed(SKU_SQL, skus), file_kb() - size0))
+
+for label, ms, kb in results:
+    print(f"{label:&lt;16} {ms:7.1f} ms   +{kb:,.0f} KB")</code></pre>
+                        <div class="card card-output">
+                            <h4>Output (your timings will differ)</h4>
+                            <pre><code>SCAN order_items
+SEARCH order_items USING INDEX idx_items_sku (sku=?)
+SEARCH order_items USING COVERING INDEX idx_items_sku_cover (sku=?)
+no index            54.7 ms   +0 KB
+index on (sku)       2.9 ms   +728 KB
+covering index       0.9 ms   +1,196 KB</code></pre>
+                        </div>
+                        <p>Both indexes turn the scan into a search and give most of the gain. The covering index is faster again, because the three sums are computed from the index without visiting the table, and it costs more space. There is no universal answer. If this query runs thousands of times a day, the covering index earns its space; if it runs once a week, the plain one (or none) is the sensible choice. What matters is that you can now put numbers on both sides of the decision.</p>
+                    </details>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="quiz" class="lesson-section">
+                <h2>🎯 Quick Quiz</h2>
+                <div class="card quiz-container">
+                    <h3>🎯 Check Your Understanding</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> A query that returns three rows has the plan <code>SCAN order_items</code>. What does that tell you?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="A plan describes the strategy, not a failure. The query ran and returned its three rows. How did the engine find them?">
+                                A) The query failed and returned nothing
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Using an index shows up in the plan as SEARCH ... USING INDEX with the name of the index. Is an index named here?">
+                                B) The engine used an index to find the three rows
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="SCAN means every row of the table was read and tested against the filter. Reading 45,490 rows to return three is the sign that an index on the filtered column would help.">
+                                C) The engine read every row of the table to find the three
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> <code>orders</code> has an index on <code>(order_date)</code>. Which filter lets the engine jump to a position in that index?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="The bare column is compared with constants, so the engine can jump to July 1 in the sorted index and read forward to the end of the month.">
+                                A) <code>WHERE order_date &gt;= '2025-07-01' AND order_date &lt; '2025-08-01'</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="The index is sorted by order_date, not by the result of strftime on it. Every row would have to be passed through the function first.">
+                                B) <code>WHERE strftime('%Y-%m', order_date) = '2025-07'</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="A pattern that begins with a wildcard can match anywhere in the text, so sorted order does not help.">
+                                C) <code>WHERE order_date LIKE '%-07-%'</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> A table that receives thousands of new rows a minute has nine indexes, most of them added "just in case". What is the most likely consequence?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Indexes never change which rows a query returns, only how they are found.">
+                                A) Queries start returning wrong results
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Every insert has to update all nine sorted structures as well as the table, and each index takes space. Indexes that no important query uses are pure cost.">
+                                B) Inserts are slower and the database is larger than it needs to be
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="More indexes can help reads, but each one must be maintained on every write. Think about which operation this table does most.">
+                                C) Everything gets faster, because more indexes means more options
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 4:</strong> In <code>orders</code>, 92% of rows have <code>status = 'completed'</code>. Why does an index on <code>status</code> do little for <code>WHERE status = 'completed'</code>?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Text columns can be indexed perfectly well: the email and sku indexes in this lesson are on text.">
+                                A) Text columns cannot be indexed
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="An index pays off by letting the engine skip most of the table. When nearly every row matches, the engine walks the index and then visits almost the whole table anyway, which is no better than a plain scan.">
+                                B) Almost every row matches, so there is almost nothing to skip
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="ANALYZE was run in the lesson and the plan for this query did not change. The limit here is the data, not missing statistics.">
+                                C) The index only works after running <code>ANALYZE</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 5:</strong> The primary key of <code>inventory</code> is <code>(sku, location)</code>, and it has no other index. What does this print?</p>
+                        <pre><code class="language-python">quiz_plan = conn.execute("EXPLAIN QUERY PLAN SELECT quantity FROM inventory WHERE location = 'Bend'").fetchall()
+print(quiz_plan[0][3])</code></pre>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="The index behind the primary key is sorted by sku first, then location. A filter on location alone does not start with the leftmost column, so the engine reads the whole table.">
+                                A) <code>SCAN inventory</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="location is part of the primary key, but it is the second column. What does the leftmost-prefix rule say about filtering on a later column only?">
+                                B) <code>SEARCH inventory USING INDEX sqlite_autoindex_inventory_1 (location=?)</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="A rowid search needs the rowid. The filter here is on location, which is neither the rowid nor the first column of any index.">
+                                C) <code>SEARCH inventory USING INTEGER PRIMARY KEY (rowid=?)</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="faq" class="lesson-section">
+                <h2>❓ Common Questions at This Stage</h2>
+
+                <details>
+                    <summary>As an analyst, will I be allowed to create indexes at work?</summary>
+                    <p>Often not on production databases, and that is reasonable: indexes affect everyone's writes. What you <em>can</em> always do is read the plan, write filters that can use the indexes that exist, fetch less, and bring a specific, measured request to whoever administers the database: "this query scans the orders table; an index on <code>(store, order_date)</code> takes it from 110 ms to 2 ms". That request gets approved far more often than "the database is slow".</p>
+                </details>
+                <details>
+                    <summary>Does the order of conditions in my <code>WHERE</code> clause matter?</summary>
+                    <p>No. <code>WHERE a = 1 AND b = 2</code> and <code>WHERE b = 2 AND a = 1</code> get the same plan; the planner rearranges them. What matters is the order of columns <em>in the index</em>.</p>
+                </details>
+                <details>
+                    <summary>I dropped an index and the plan still mentions it. What happened?</summary>
+                    <p>Python's <code>sqlite3</code> module keeps recently used statements prepared, and an <code>EXPLAIN QUERY PLAN</code> statement taken from that cache can report the plan from before the drop. The real query is not affected. Connecting with <code>cached_statements=0</code>, as this lesson does, avoids it; so does opening a new connection.</p>
+                </details>
+                <details>
+                    <summary>My numbers show a smaller speedup than the lesson's. Is something wrong?</summary>
+                    <p>Probably not. Timings depend on your disk, your processor and what else is running, and this database is small enough that everything fits in memory. Compare the plans: if yours say <code>SEARCH ... USING INDEX</code> where the lesson's do, you have the same improvement. The gap between a scan and a search grows with the size of the table, so on real data it would be far larger than anything you can measure here.</p>
+                </details>
+                <details>
+                    <summary>What about the window-function and CTE queries from the last two lessons?</summary>
+                    <p>Run <code>plan()</code> on them: it works on any <code>SELECT</code>. You will see extra lines such as <code>CO-ROUTINE</code> or <code>MATERIALIZE</code> for CTEs and subqueries, and <code>USE TEMP B-TREE</code> for the sorting that windows need. The same reading applies: find the <code>SCAN</code> lines and ask whether each one needed the whole table.</p>
+                </details>
+
+                <div class="card card-accent">
+                    <h3>🌟 Going Further: Bonus Challenge</h3>
+                    <p>How does the benefit of an index grow with table size? On a fresh copy, build a larger <code>order_items</code> by inserting the table into a new table 10 times over (give each copy a different <code>order_id</code> offset, for example <code>order_id + 1000000 * k</code>). Time 200 lookups by <code>order_id</code> on the 45,490-row original and on the 454,900-row copy, without and with an index. Does the scan time grow about tenfold? Does the indexed time grow at all? Explain the difference in your journal using the dictionary analogy, then delete the copy: it will be around 30 MB.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="journal" class="lesson-section">
+                <h2>📓 Learning Journal</h2>
+                <div class="card card-accent">
+                    <p>Take five minutes to write in your learning journal (the <code>journal.md</code> file you started in Lesson 0.1, or a paper notebook). Jot down:</p>
+                    <ul>
+                        <li><strong>Key concepts</strong> you learned today</li>
+                        <li><strong>Techniques that clicked</strong> (and the ones that have not, yet)</li>
+                        <li><strong>Questions or confusion</strong> to come back to</li>
+                        <li><strong>Ideas to try</strong> on your own</li>
+                        <li><strong>Progress and feelings</strong>: how did this lesson go for you?</li>
+                    </ul>
+                    <p><strong>✍️ This lesson's prompt:</strong> Record the before and after times you measured for the 200 order lookups, and explain the difference to a non-programmer using the book-and-index picture. Then describe one case from this lesson where adding an index was the <em>wrong</em> answer, and how you could tell.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="summary" class="lesson-section">
+                <h2>📝 Lesson Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎓 Key Takeaways</h3>
+                    <ul>
+                        <li>The planner chooses how to run your query; <code>EXPLAIN QUERY PLAN</code> shows the choice without running anything</li>
+                        <li><code>SCAN</code> reads the whole table; <code>SEARCH</code> jumps to the rows it needs through a primary key or an index</li>
+                        <li>Index the columns you filter, join and sort by, starting with foreign keys; primary keys are indexed already</li>
+                        <li>In a composite index, column order matters: equality columns first, the range or sort column last (the leftmost-prefix rule)</li>
+                        <li>A covering index contains every column a query needs, so the table is never opened</li>
+                        <li>An index does not help when the column is wrapped in a function, the pattern starts with a wildcard, most rows match, or the table is small</li>
+                        <li>Indexes cost storage and slow down every write; keep the ones that earn their place and drop the rest</li>
+                        <li><code>ANALYZE</code> gives the planner statistics, which can change its plans</li>
+                        <li>Filter, join and aggregate in SQL; bring a small result to pandas; measure more than once</li>
+                    </ul>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🏆 What You've Accomplished</h3>
+                    <ul>
+                        <li>You read query plans line by line and predicted how they would change</li>
+                        <li>You turned a 45,490-row scan into an index search and measured the difference</li>
+                        <li>You designed composite and covering indexes and removed a redundant one</li>
+                        <li>You found an index that did not help, proved it, and dropped it</li>
+                        <li>You measured what indexes cost on inserts and in file size</li>
+                        <li>You tuned a three-query workload and wrote up the gain and the cost</li>
+                    </ul>
+                </div>
+
+                <h3>🔭 Looking Ahead</h3>
+                <p>Four lessons of rows and columns have shown what relational databases are good at. Not all data is shaped that way. In <a href="sql_nosql_mongodb.html"><strong>Lesson 5.5: NoSQL with MongoDB</strong></a> you will work with <code>web_sessions.json</code>, where each session holds a nested device, an optional campaign, a list of page views and a cart. You will see why a document database stores that naturally, query it with <code>pymongo</code>, build an aggregation pipeline, and flatten the results into a DataFrame. Indexes turn up there too, and everything you learned today applies.</p>
+
+                <h3>📋 Before the Next Lesson</h3>
+                <ul>
+                    <li>Delete the working copies you no longer need (<code>pinecrest_tuning.db</code>, <code>tuning_project.db</code>), or keep them out of any folder you share.</li>
+                    <li>Run <code>plan()</code> on one query from Lesson 5.2 or 5.3 and find its <code>SCAN</code> lines. Would an index help? Check your answer.</li>
+                    <li>Open <code>data/web_sessions.json</code> in a text editor and look at the first session. Which parts would be awkward to store in one flat table?</li>
+                </ul>
+
+                <div class="card card-accent">
+                    <h3>🌱 Encouragement for the Journey</h3>
+                    <p>Performance tuning has a reputation as a dark art practiced by specialists. Today you saw that it is ordinary measurement: read the plan, form a guess, change one thing, measure again. You even caught the planner making a poor choice and overruled it with evidence. You will not remember every plan phrase next month, and you do not need to. The habit is what matters: when something is slow, look before you guess.</p>
+                </div>
+            </section>
+
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="sql_window_functions.html" class="prev-lesson">← Previous: SQL Window Functions</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="sql_nosql_mongodb.html" class="next-lesson">Next: NoSQL with MongoDB →</a>
+            </nav>
         </div>
-    </section>
-
-    <!-- Lesson Summary (full standard block) -->
-    <section id="summary" class="lesson-section">
-        <h2>📝 Lesson Summary</h2>
-        <div class="card card-success">
-            <h3>🎓 Key Takeaways</h3>
-            <ul>
-                <li>The query optimizer chooses an execution plan using statistics, indexes, and a cost model — <code>EXPLAIN</code> lets you see the plan it picked.</li>
-                <li>Indexes are the single biggest lever: the right composite or covering index can turn a scan of millions of rows into a targeted lookup.</li>
-                <li>How you write a query matters — joins and CTEs usually beat correlated subqueries, and <code>UNION ALL</code> avoids a needless dedupe.</li>
-                <li>Always measure before and after; an "optimization" that you cannot demonstrate with timing is just a guess.</li>
-            </ul>
-        </div>
-        <h3>🎉 What You've Accomplished</h3>
-        <p>You can now diagnose why a query is slow instead of guessing, choose indexes deliberately, rewrite problematic patterns, and prove your changes worked with real timings. That is the core skill that separates a query that runs in milliseconds from one that times out.</p>
-        <h3>❓ Common Questions at This Stage</h3>
-        <details>
-            <summary>Should I just add an index to every column?</summary>
-            <p>No. Every index speeds up reads but slows down inserts, updates, and deletes, and consumes storage. Index the columns you actually filter, join, and sort on, then remove indexes that the planner never uses.</p>
-        </details>
-        <details>
-            <summary>Why did adding an index not speed up my query?</summary>
-            <p>Common causes: a function or type mismatch in the <code>WHERE</code> clause prevents the index from being used, the table is small enough that a scan is cheaper, or statistics are stale — run <code>ANALYZE</code> and re-check the plan.</p>
-        </details>
-        <details>
-            <summary>Do these techniques transfer between PostgreSQL, MySQL, and SQLite?</summary>
-            <p>The principles (plans, indexing, avoiding scans, rewriting subqueries) transfer everywhere. The exact syntax, index types, and tuning knobs differ, which is why we looked at each engine's specifics separately.</p>
-        </details>
-        <h3>🔭 Looking Ahead</h3>
-        <p>With relational query tuning under your belt, you're ready to see how a very different kind of store — a document database — models and retrieves data, and when its trade-offs beat a relational engine.</p>
-        <h3>✅ Before the Next Lesson</h3>
-        <ul>
-            <li>Run <code>EXPLAIN QUERY PLAN</code> on two of your own queries and identify whether each uses an index or a full scan.</li>
-            <li>Take one correlated-subquery query and rewrite it as a join or CTE, then time both versions.</li>
-            <li>Write your Learning Journal entry for this lesson</li>
-        </ul>
-        <div class="card card-accent" style="text-align: center; padding: 2rem;">
-            <h3>🌟 Encouragement for the Journey</h3>
-            <p>Performance tuning can feel like magic, but it is really just careful observation. Every plan you read makes the next one easier — soon you will spot the slow query before it ever ships.</p>
-        </div>
-    </section>
-
-    <!-- Navigation at the bottom -->
-    <nav class="lesson-nav" aria-label="Lesson navigation">
-        <a href="sql_window_functions.html" class="prev-lesson" aria-label="Previous lesson">Previous: Window Functions</a>
-        <a href="index.html" class="home-link" aria-label="Course home">Course Home</a>
-        <a href="sql_nosql_mongodb.html" class="next-lesson" aria-label="Next lesson">Next: NoSQL Basics (MongoDB)</a>
-    </nav>
-    
     </main>
 
-    <!-- Footer -->
     <footer class="site-footer">
         <p>&copy; 2026 Ray de la Paz. Python Data Science. All rights reserved.</p>
         <div class="footer-links">
@@ -1293,6 +1287,10 @@ print(optimization_checklist)</code></pre>
             <a href="https://rays-home.netlify.app/contact">Contact</a>
             <a href="#" id="print-button">Print Page</a>
         </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
     </footer>
+
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
 </body>
 </html>

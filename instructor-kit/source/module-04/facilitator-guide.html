@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facilitator Guide: Session 4</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Instructor copy —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">contains answers &amp; timing · not for students</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Facilitator Guide</div>
+    <h1>Session 4: DataFrames and Loading Data</h1>
+    <p class="sub">How to teach the session where the course moves from NumPy arrays to pandas tables. First learners meet the labeled column and the labeled table, learn to inspect, select, filter, change, sort and count, and see for themselves why chained assignment never works under copy-on-write. Then they learn to get data in properly from CSV, Excel and nested JSON with the right types, and to save results in a format that remembers them.</p>
+    <div class="meta-row">
+      <span class="chip"><b>2</b> lessons</span>
+      <span class="chip"><b>3 hrs</b> session</span>
+      <span class="chip">Lessons <b>2.1–2.2</b></span>
+      <span class="chip">Session <b>4</b> of 21</span>
+    </div>
+  </header>
+
+  <div class="sec"><h2>How to Use This Guide</h2><span class="rule"></span></div>
+  <ul class="tick">
+          <li>Each lesson block has the same four beats: <b>frame</b> (the mental model, said out loud), <b>live demo</b> (you type, they follow), <b>guided lab</b> (new practice from <code class="inline">labs/module-04/</code>) and <b>start the lesson project</b> (the first two steps, together). The rest of each project, the lessons' exercises, quizzes and journals are homework.</li>
+          <li>The lessons are timed at 90 and 85 minutes for a solo learner; the room has 75 for each. The demo scripts below are therefore compressed paths through the lesson pages, with every output printed from a real run on the course data (pandas 3.0.6).</li>
+          <li><b>Type, do not paste.</b> Every code block is what to type. Two steps in 2.1 and one in 2.2 are deliberate mistakes; make them for real and read the last line of the error aloud.</li>
+          <li>Keep <code class="inline">pandas_dataframes_series.html</code> and <code class="inline">pandas_data_loading.html</code> open in browser tabs for the reference tables (the dtype table, the three selection tools, the <code class="inline">read_csv</code> options, the readers and writers).</li>
+          <li>Starters go to learners; every <code class="inline">*_solution.py</code> stays with you until after the lab. <code class="inline">debug_filters.py</code> is a handout that is broken on purpose.</li>
+        </ul>
+  <div class="note warn"><div class="t">The #1 risk of Session 4: mistakes that raise no error</div><p>Most of today's damage is silent. Chained assignment prints a warning and changes nothing. <code class="inline">== np.nan</code> counts zero missing values. A spreadsheet loaded without <code class="inline">skiprows</code> gives 15 rows of nonsense and no complaint. A date left as text sorts and filters wrongly weeks later. Train one habit all session and say it every time: <b>"Run it, then look: <code class="inline">shape</code>, <code class="inline">dtypes</code>, <code class="inline">head()</code>."</b> The second risk is pace: 2.1 has more new vocabulary than any lesson so far. Protect <code class="inline">.loc</code> versus <code class="inline">.iloc</code> and the copy-on-write demonstration; everything else can be looked up.</p></div>
+  <div class="sec"><h2>Before the Session</h2><span class="rule"></span></div>
+  <ul class="tick lab">
+          <li>☐ Copy the <b>starter</b> files (<code class="inline">*_starter.py</code>), <code class="inline">debug_filters.py</code> and <code class="inline">till_export_week08.txt</code> from <code class="inline">labs/module-04/</code> to the shared folder or each machine, keeping the two lesson folders and <code class="inline">labs_paths.py</code> one level up as they are. Keep every <code class="inline">*_solution.py</code> on your machine.</li>
+          <li>☐ From the kit folder run <code class="inline">python3 labs/check_labs.py module-04</code>. All 10 lines should say PASS.</li>
+          <li>☐ No servers to start and no internet needed. Files used today: <code class="inline">products.csv</code>, <code class="inline">orders.csv</code>, <code class="inline">customers.csv</code>, <code class="inline">order_items.csv</code>, <code class="inline">daily_sales.csv</code>, <code class="inline">survey.csv</code>, <code class="inline">sales_2025.xlsx</code>, <code class="inline">web_sessions.json</code>.</li>
+          <li>☐ Environment traps: <code class="inline">read_excel</code> needs <code class="inline">openpyxl</code> and <code class="inline">to_parquet</code> needs <code class="inline">pyarrow</code> (both installed in Lesson 0.1; check with <code class="inline">python -c "import openpyxl, pyarrow"</code>). A learner whose pandas prints <code class="inline">object</code> for text columns is on an old version: have them activate the course virtual environment.</li>
+          <li>☐ Projector: a notebook called <code class="inline">session04</code> opened <b>in the project folder</b> (the one that contains <code class="inline">data/</code>), font at least 18 pt, <code class="inline">pd.set_option("display.width", 150)</code> in the first cell.</li>
+          <li>☐ Whiteboard, before learners arrive: the three-shelf drawing, and the two sentences <b>"Change a table: <code class="inline">df.loc[rows, \"col\"] = value</code>."<b> and </b>"Run it, then look: shape, dtypes, head."</b></li>
+          <li>☐ Skim learners' Session 3 homework: the 1.4 and 1.5 lesson projects, and Lesson 1.5's 'Before the Next Lesson' (open <code class="inline">daily_sales.csv</code> and read its header row). That header is your bridge into today.</li>
+          <li>☐ Sticky notes or slips for the exit ticket. Print the workbook for Session 4.</li>
+        </ul>
+  <div class="sec"><h2>Session 4 Agenda (3 hours)</h2><span class="rule"></span></div>
+  <table class="timing">
+    <thead><tr><th>Clock</th><th>Minutes</th><th>Segment</th><th>What happens</th></tr></thead>
+    <tbody>
+      <tr><td class="t">0:00</td><td class="t">10</td><td>Warm-up</td><td>Five retrieval questions on Session 3 (random numbers, linear algebra), homework check, bridge from arrays to tables.</td></tr>
+      <tr><td class="t">0:10</td><td class="t">10</td><td><b>2.1</b> Frame and mental model</td><td>Two limits of arrays; the labeled shelf; why every later lesson starts with a DataFrame.</td></tr>
+      <tr><td class="t">0:20</td><td class="t">30</td><td><b>2.1</b> Live demo</td><td>Series and alignment, the four-line greeting, <code class="inline">.loc</code> / <code class="inline">.iloc</code>, masks, new columns, chained assignment (two deliberate mistakes), sort and count.</td></tr>
+      <tr><td class="t">0:50</td><td class="t">25</td><td><b>2.1</b> Guided lab</td><td><code class="inline">labs/module-04/l2_1-dataframes-series/busiest_days_starter.py</code>, then <code class="inline">recommend_groups_starter.py</code>.</td></tr>
+      <tr><td class="t">1:15</td><td class="t">10</td><td><b>2.1</b> Start the lesson project</td><td>Catalog Health Check, Steps 1 and 2 together; the rest goes home.</td></tr>
+      <tr><td class="t">1:25</td><td class="t">10</td><td>Break</td><td>Leave the <code class="inline">price_band</code> counts on the projector.</td></tr>
+      <tr><td class="t">1:35</td><td class="t">10</td><td><b>2.2</b> Frame and mental model</td><td>Loading is translation; the interpreter at the border; readers and writers.</td></tr>
+      <tr><td class="t">1:45</td><td class="t">30</td><td><b>2.2</b> Live demo</td><td><code class="inline">read_csv</code> options, an awkward export, Excel with the header on row 4, nested JSON, memory and chunks, CSV versus Parquet.</td></tr>
+      <tr><td class="t">2:15</td><td class="t">25</td><td><b>2.2</b> Guided lab</td><td><code class="inline">labs/module-04/l2_2-loading-data/till_export_starter.py</code>, then <code class="inline">product_pages_starter.py</code>.</td></tr>
+      <tr><td class="t">2:40</td><td class="t">10</td><td><b>2.2</b> Start the lesson project</td><td>The Pinecrest Snapshot, Steps 1 and 2 together; the rest goes home.</td></tr>
+      <tr><td class="t">2:50</td><td class="t">10</td><td>Wrap-up</td><td>Exit ticket (3 questions), homework, bring list for Session 5.</td></tr>
+      <tr><td class="t"><b>Total</b></td><td class="t"><b>180</b></td><td></td><td>Ends at 3:00.</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:.9rem;color:var(--ink-2)"><b>In the room:</b> both mental models, both live demos, the guided labs <code class="inline">busiest_days</code> and <code class="inline">till_export</code> for everyone (<code class="inline">recommend_groups</code> and <code class="inline">product_pages</code> for pairs that finish), and the first two steps of each lesson project. <b>Goes home:</b> Steps 3 to 6 of both projects, the lessons' exercises (five each), both Quick Quizzes, both journal entries, and any lab not finished: about 2 to 3 hours.</p>
+  <p style="font-size:.9rem;color:var(--ink-2)"><b>Protect:</b> the <code class="inline">.loc</code> / <code class="inline">.iloc</code> experiment and the chained-assignment demonstration in 2.1; 'load, then look' and the Excel header trap in 2.2; both guided labs. <b>Cut first if running long:</b> the Series alignment step (say it in one sentence and point to the lesson), then memory and chunks in 2.2 (homework reading), then the second lab of each block.</p>
+  <div class="sec"><h2>Warm-up</h2><span class="rule"></span></div>
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">0:00</span><h3>Warm-up: Retrieval from Session 3</h3><span class="dur">10 min</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Five retrieval questions (no notes, 5 minutes)</div>
+        <p>Slide 3. Learners write answers on paper with notebooks closed, then compare with a neighbor for one minute before you take answers. Wrong answers are welcome: the point is the effort of recalling.</p>
+        <ol class="steps">
+          <li>You write <code class="inline">rng = np.random.default_rng(42)</code>. What is <code class="inline">rng</code>, and what does the 42 do? <b>Answer:</b> A random number generator. The seed fixes where its sequence starts, so the same code run from the top gives the same numbers.</li>
+          <li>Can <code class="inline">rng.integers(1, 7, size=5)</code> ever return a 7? <b>Answer:</b> No. The upper end is left out, so the values are 1 to 6 (a die).</li>
+          <li>What does <code class="inline">replace=False</code> guarantee in <code class="inline">rng.choice(skus, size=10, replace=False)</code>? <b>Answer:</b> Ten distinct items: nothing is picked twice.</li>
+          <li>For two 1-D arrays of length 3, what is the difference between <code class="inline">a * b</code> and <code class="inline">a @ b</code>? <b>Answer:</b> <code class="inline">a * b</code> is position by position and gives three numbers; <code class="inline">a @ b</code> is the dot product, one number: a weighted sum.</li>
+          <li>A matrix of shape <code class="inline">(726, 3)</code> is multiplied with <code class="inline">@</code> by a vector of shape <code class="inline">(3,)</code>. What shape is the result, and what must match? <b>Answer:</b> <code class="inline">(726,)</code>. The inner numbers must match (3 and 3): one dot product per row.</li>
+        </ol>
+      </div>
+      <div class="blk"><div class="h">Homework check (3 minutes)</div>
+        <ul class="tick">
+          <li>Ask for a show of hands: who finished the 1.4 project (the simulation) and the 1.5 project (the revenue model)? Note who did not, for a quiet word at the break.</li>
+          <li>One volunteer answers Lesson 1.4's rerun question: with a different seed, which printed numbers changed and which conclusions changed? (Numbers move a little; conclusions should not.)</li>
+          <li>Ask who opened <code class="inline">daily_sales.csv</code> and read its header row (Lesson 1.5, 'Before the Next Lesson'). Have someone read the column names aloud.</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Bridge to today (2 minutes)</div>
+        <p>Say: "In Module 1 those eight names were in your head, and the numbers were in arrays you had to keep in the same order by hand. Today the names move into the data. That is the whole idea of pandas."</p>
+      </div>
+    </div>
+  </section>
+  <div class="sec"><h2>Lesson Plans</h2><span class="rule"></span></div>
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">2.1</span><h3>DataFrames and Series</h3><span class="dur">75 min</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Objectives (the lesson's own words)</div>
+        <ul class="tick">
+          <li>Describe a Series as a labeled array and a DataFrame as a set of Series that share one index</li>
+          <li>Inspect any table with <code class="inline">shape</code>, <code class="inline">head()</code>, <code class="inline">info()</code>, <code class="inline">dtypes</code> and <code class="inline">describe()</code>, and read the dtypes pandas reports</li>
+          <li>Select columns with <code class="inline">[]</code>, rows and cells by label with <code class="inline">.loc</code> and by position with <code class="inline">.iloc</code>, and filter rows with boolean masks</li>
+          <li>Add and change columns in a way that works under copy-on-write, and explain why chained assignment never does</li>
+          <li>Sort a table and count the values in a column with <code class="inline">sort_values()</code> and <code class="inline">value_counts()</code></li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Timing inside this block</div>
+        <table class="timing"><tbody>
+          <tr><td class="t">10 min</td><td>Frame: from arrays to tables, the labeled shelf</td></tr>
+          <tr><td class="t">30 min</td><td>Live demo: Series, alignment, the four-line greeting, <code class="inline">.loc</code> / <code class="inline">.iloc</code>, masks, new columns, copy-on-write, sort and count</td></tr>
+          <tr><td class="t">25 min</td><td>Guided lab: <code class="inline">busiest_days</code>, then <code class="inline">recommend_groups</code></td></tr>
+          <tr><td class="t">10 min</td><td>Start the lesson project (Catalog Health Check, Steps 1 and 2)</td></tr>
+        </tbody></table>
+      </div>
+      <div class="blk"><div class="h">Mental model to say</div>
+        <p>Say: "Picture the stockroom at a Pinecrest store. A Series is one shelf of bins, and every bin has a label on the front. A DataFrame is the whole shelving unit: several shelves lined up so the same label runs across all of them. Pull the label <code class="inline">TNT-1002</code> and you get that product's name, price and rating together. Underneath, every shelf is still a NumPy array, so everything from Module 1 still works. We are adding names to the race cars, not giving them up." Draw three shelves and one row label across them on the board, and leave it up: you will point at it when <code class="inline">.loc</code> versus <code class="inline">.iloc</code> comes up.</p>
+      </div>
+      <div class="blk"><div class="h">Live demo (you type, they follow)</div>
+        <p>Type everything in a notebook called <code class="inline">session04</code> opened in the project folder (the one that holds <code class="inline">data/</code>). Run each cell before you talk about it, and make the two deliberate mistakes in steps 8 and 11 for real: the error text is part of the lesson. The code follows the lesson page, so learners can find every line again at home.</p>
+        <ol class="steps">
+          <li><b>A Series is an array with labels (2 min).</b> Say: "Two columns print, but only the right one is data. The left one is the index: the label on each bin." Ask what <code class="inline">boise["Sat"]</code> will return before you run it.
+<pre class="code">days = [<span class="s">"Mon"</span>, <span class="s">"Tue"</span>, <span class="s">"Wed"</span>, <span class="s">"Thu"</span>, <span class="s">"Fri"</span>, <span class="s">"Sat"</span>, <span class="s">"Sun"</span>]
+boise = pd.Series([<span class="s">5962.00</span>, <span class="s">6583.13</span>, <span class="s">3866.59</span>, <span class="s">7667.88</span>, <span class="s">9570.46</span>, <span class="s">12388.57</span>, <span class="s">9361.59</span>],
+                  index=days, name=<span class="s">"boise"</span>)
+print(boise[<span class="s">"Sat"</span>], boise.mean().round(<span class="s">2</span>))
+print(boise[boise &gt; <span class="s">9000</span>])</pre>
+<pre class="out">12388.57 7914.32
+Fri     9570.46
+Sat    12388.57
+Sun     9361.59
+Name: boise, dtype: float64</pre></li>
+          <li><b>Alignment by label (3 min).</b> Bend's figures arrive for four days only, in a different order. Ask: "NumPy would raise an error for lengths 7 and 4. What will pandas do?" Then run it. Say: "It matched Monday with Monday. Where a label has no partner, the answer is NaN. When a calculation gives you NaNs you did not expect, compare the two indexes first."
+<pre class="code">bend = pd.Series([<span class="s">6719.33</span>, <span class="s">7083.36</span>, <span class="s">4132.92</span>, <span class="s">3675.57</span>],
+                 index=[<span class="s">"Sun"</span>, <span class="s">"Sat"</span>, <span class="s">"Mon"</span>, <span class="s">"Tue"</span>], name=<span class="s">"bend"</span>)
+print(boise + bend)</pre>
+<pre class="out">Fri         NaN
+Mon    10094.92
+Sat    19471.93
+Sun    16080.92
+Thu         NaN
+Tue    10258.70
+Wed         NaN
+dtype: float64</pre></li>
+          <li><b>Load a real table (2 min).</b> Say: "You will rarely type data in. Shape is rows first, then columns, exactly as for a 2-D array." Point at the backslash where the wide table wraps.
+<pre class="code">products = pd.read_csv(<span class="s">"data/products.csv"</span>)
+print(products.shape)
+print(products[[<span class="s">"sku"</span>, <span class="s">"name"</span>, <span class="s">"category"</span>, <span class="s">"price"</span>, <span class="s">"rating"</span>]].head(<span class="s">3</span>))</pre>
+<pre class="out">(242, 13)
+        sku                                 name category   price  rating
+0  TNT-1001     Granite Fork Drift 1-Person Tent    Tents  299.95     4.0
+1  TNT-1002  Cedar Notch Ridgeline 2-Person Tent    Tents  217.95     3.7
+2  TNT-1003     Pinecrest Solstice 3-Person Tent    Tents  459.95     4.7</pre></li>
+          <li><b>The four-line greeting: info() (3 min).</b> Say: "<code class="inline">shape</code>, <code class="inline">head()</code>, <code class="inline">info()</code>, <code class="inline">describe()</code>: every new table, every time." Have the room find the two columns whose Non-Null Count is not 242 (<code class="inline">weight_kg</code> 228, <code class="inline">rating</code> 234). Then point at <code class="inline">launch_date</code>: it says <code class="inline">str</code>. "A date is not a date until you say so." Text is <code class="inline">str</code> in this version of pandas; older tutorials show <code class="inline">object</code>.
+<pre class="code">products.info()</pre>
+<pre class="out">&lt;class 'pandas.DataFrame'&gt;
+RangeIndex: 242 entries, 0 to 241
+Data columns (total 13 columns):
+ #   Column        Non-Null Count  Dtype  
+---  ------        --------------  -----  
+ 0   sku           242 non-null    str    
+ 1   name          242 non-null    str    
+ 2   category      242 non-null    str    
+ 3   product_type  242 non-null    str    
+ 4   brand         242 non-null    str    
+ 5   price         242 non-null    float64
+ 6   cost          242 non-null    float64
+ 7   weight_kg     228 non-null    float64
+ 8   color         242 non-null    str    
+ 9   rating        234 non-null    float64
+ 10  review_count  242 non-null    int64  
+ 11  stock_status  242 non-null    str    
+ 12  launch_date   242 non-null    str    
+dtypes: float64(4), int64(1), str(8)
+memory usage: 47.1 KB</pre></li>
+          <li><b>describe(): scan for things that look wrong (2 min).</b> Ask: "The median price is $82.95 and the mean is $121.80. What does that tell you?" (A few expensive products pull the mean up.) "<code class="inline">review_count</code> has a minimum of 0. Why does that explain the 8 missing ratings?"
+<pre class="code">print(products[[<span class="s">"price"</span>, <span class="s">"rating"</span>, <span class="s">"review_count"</span>]].describe().round(<span class="s">2</span>))</pre>
+<pre class="out">        price  rating  review_count
+count  242.00  234.00        242.00
+mean   121.80    4.14         70.45
+std    117.14    0.39         88.57
+min      8.50    2.80          0.00
+25%     39.95    3.90         14.00
+50%     82.95    4.10         39.00
+75%    155.95    4.40         89.75
+max    616.95    5.00        561.00</pre></li>
+          <li><b>Labels: set_index and .loc (3 min).</b> Say: "<code class="inline">set_index</code> returned a new table and left <code class="inline">products</code> alone: 13 columns became 12 because <code class="inline">sku</code> moved to the index. <code class="inline">.loc</code> is rows, comma, columns, by label." Ask how many rows the slice will return before you run it: three, because a label slice includes its end.
+<pre class="code">by_sku = products.set_index(<span class="s">"sku"</span>)
+print(products.shape, by_sku.shape)
+print(by_sku.loc[<span class="s">"TNT-1002"</span>, <span class="s">"price"</span>])
+print(by_sku.loc[<span class="s">"TNT-1001"</span>:<span class="s">"TNT-1003"</span>, [<span class="s">"name"</span>, <span class="s">"price"</span>]])</pre>
+<pre class="out">(242, 13) (242, 12)
+217.95
+                                         name   price
+sku                                                  
+TNT-1001     Granite Fork Drift 1-Person Tent  299.95
+TNT-1002  Cedar Notch Ridgeline 2-Person Tent  217.95
+TNT-1003     Pinecrest Solstice 3-Person Tent  459.95</pre></li>
+          <li><b>Positions: .iloc, and the one-line experiment (2 min).</b> Say: "<code class="inline">.iloc</code> ignores labels and counts from 0, like NumPy." Have everyone write a prediction for the last line on paper. <code class="inline">4 3</code>: labels 0 through 3 are four rows, positions 0 up to 3 are three. Neither is wrong; they answer different questions.
+<pre class="code">print(products.iloc[<span class="s">0</span>, <span class="s">5</span>], products.iloc[-<span class="s">1</span>, <span class="s">0</span>])
+print(len(products.loc[<span class="s">0</span>:<span class="s">3</span>]), len(products.iloc[<span class="s">0</span>:<span class="s">3</span>]))</pre>
+<pre class="out">299.95 ACC-1032
+4 3</pre></li>
+          <li><b>A mask, and the first deliberate mistake (4 min).</b> Build the mask in two steps so they see the True/False Series. "<code class="inline">sum()</code> of a mask counts the rows, <code class="inline">mean()</code> gives the share." Then type the <code class="inline">and</code> version exactly as a learner would and read the last line of the error aloud: "A Series is 242 answers, and Python's <code class="inline">and</code> wants one." Fix it with <code class="inline">&amp;</code> and one pair of parentheses per condition.
+<pre class="code">is_tent = products[<span class="s">"category"</span>] == <span class="s">"Tents"</span>
+print(is_tent.sum(), round(is_tent.mean(), <span class="s">3</span>))
+products[products[<span class="s">"price"</span>] &gt; <span class="s">100</span> <span class="k">and</span> products[<span class="s">"rating"</span>] &gt; <span class="s">4.5</span>]</pre>
+<pre class="out">24 0.099
+ValueError: The truth value of a Series is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().</pre></li>
+          <li><b>Fix it: &amp;, | and ~ with parentheses (2 min).</b> Say: "Seven tents under $200, and most of them are tarps and footprints. A filter is a quick way to find out a category is broader than its name." Show <code class="inline">.isin()</code> and <code class="inline">~</code> in the last line: 44 products are not in stock.
+<pre class="code">picks = products[(products[<span class="s">"price"</span>] &gt; <span class="s">100</span>) &amp; (products[<span class="s">"rating"</span>] &gt; <span class="s">4.5</span>)]
+cheap_tents = products[(products[<span class="s">"category"</span>] == <span class="s">"Tents"</span>) &amp; (products[<span class="s">"price"</span>] &lt; <span class="s">200</span>)]
+print(len(picks), len(cheap_tents))
+print((~products[<span class="s">"stock_status"</span>].isin([<span class="s">"in_stock"</span>])).sum(), products[<span class="s">"rating"</span>].isna().sum())</pre>
+<pre class="out">14 7
+44 8</pre></li>
+          <li><b>New columns, and changing some rows with .loc (3 min).</b> Say: "No loop. Two Series subtract row by row and the result becomes a new column." Then the sentence to drill: "In <code class="inline">products</code>, for the rows where the mask is true, in the <code class="inline">price_band</code> column, store this. One object, one <code class="inline">.loc</code>, one assignment."
+<pre class="code">products[<span class="s">"margin"</span>] = products[<span class="s">"price"</span>] - products[<span class="s">"cost"</span>]
+products[<span class="s">"price_band"</span>] = np.where(products[<span class="s">"price"</span>] &gt;= <span class="s">200</span>, <span class="s">"premium"</span>, <span class="s">"standard"</span>)
+products.loc[products[<span class="s">"price"</span>] &lt; <span class="s">25</span>, <span class="s">"price_band"</span>] = <span class="s">"budget"</span>
+print(products[<span class="s">"price_band"</span>].value_counts())</pre>
+<pre class="out">price_band
+standard    166
+premium      44
+budget       32
+Name: count, dtype: int64</pre></li>
+          <li><b>The second deliberate mistake: chained assignment (4 min).</b> Ask the room to predict the printed prices, then run it. A red warning appears and the prices have not moved. Say: "Two sets of brackets, then an equals sign. The first pair made a temporary table of 24 tents; we wrote into that, and it was thrown away. Under copy-on-write every piece you take behaves as its own copy." In a notebook the warning is red and easy to scroll past: make them find the word <code class="inline">ChainedAssignmentError</code>.
+<pre class="code">products[products[<span class="s">"category"</span>] == <span class="s">"Tents"</span>][<span class="s">"price"</span>] = <span class="s">0</span>
+print(products.loc[products[<span class="s">"category"</span>] == <span class="s">"Tents"</span>, <span class="s">"price"</span>].head(<span class="s">2</span>).tolist())</pre>
+<pre class="out">ChainedAssignmentError: A value is being set on a copy of a DataFrame or Series through chained assignment.
+[299.95, 217.95]</pre>
+The first line shown above is the warning pandas prints (shortened to its first line); the list under it is the real output.</li>
+          <li><b>The fix, on a deliberate copy (2 min).</b> Say: "Same shape as step 10: one <code class="inline">.loc</code> on the table you want to change. We work on <code class="inline">demo</code> so <code class="inline">products</code> keeps its real prices." Compare the two printed lists.
+<pre class="code">demo = products.copy()
+demo.loc[demo[<span class="s">"category"</span>] == <span class="s">"Tents"</span>, <span class="s">"price"</span>] = demo[<span class="s">"price"</span>] * <span class="s">0.9</span>
+print(demo.loc[demo[<span class="s">"category"</span>] == <span class="s">"Tents"</span>, <span class="s">"price"</span>].head(<span class="s">2</span>).round(<span class="s">2</span>).tolist())
+print(products.loc[products[<span class="s">"category"</span>] == <span class="s">"Tents"</span>, <span class="s">"price"</span>].head(<span class="s">2</span>).tolist())</pre>
+<pre class="out">[269.96, 196.16]
+[299.95, 217.95]</pre></li>
+          <li><b>Sort and count (3 min).</b> Point at the index on the left of the sorted table: 19, 12, 20. "The labels traveled with their rows. That is why position and label are different things." Then <code class="inline">value_counts(normalize=True)</code>: about 82% of the catalog is in stock.
+<pre class="code">top = products.sort_values(<span class="s">"price"</span>, ascending=<span class="k">False</span>)
+print(top[[<span class="s">"sku"</span>, <span class="s">"price"</span>]].head(<span class="s">3</span>))
+print(products[<span class="s">"stock_status"</span>].value_counts(normalize=<span class="k">True</span>).round(<span class="s">3</span>))</pre>
+<pre class="out">         sku   price
+19  TNT-1020  616.95
+12  TNT-1013  585.95
+20  TNT-1021  574.95
+stock_status
+in_stock        0.818
+low_stock       0.120
+out_of_stock    0.062
+Name: proportion, dtype: float64</pre></li>
+        </ol>
+      </div>
+      <div class="blk warn"><div class="h">Three mistakes to expect</div>
+        <ul class="tick">
+          <li><b><code class="inline">and</code> / <code class="inline">or</code> between masks, or <code class="inline">&amp;</code> without parentheses.</b> Symptoms: <code class="inline">ValueError: The truth value of a Series is ambiguous</code> (for <code class="inline">and</code>) or the cryptic <code class="inline">TypeError: Cannot perform 'rand_' with a dtyped [float64] array and scalar of type [bool]</code> (for missing parentheses). Coach: "Read me the last line. How many True/False values is on each side of your <code class="inline">and</code>?" Then: "Put a pair of parentheses around each condition and tell me what changed." Do not type the fix for them.</li>
+          <li><b>Chained assignment: <code class="inline">df[mask]["col"] = value</code>.</b> Symptom: a <code class="inline">ChainedAssignmentError</code> warning that is easy to miss, and a table that did not change. Coach: "Count the pairs of brackets before the equals sign. Which table did the first pair create? Where did it go?" The repair is always the same sentence: one <code class="inline">.loc[rows, "col"]</code> on the table you mean to change. Learners who read older tutorials will reach for <code class="inline">.copy()</code> after every filter; tell them it is no longer needed.</li>
+          <li><b>A position where a label was expected (and the reverse).</b> Symptom: <code class="inline">KeyError: 0</code> from <code class="inline">by_sku.loc[0]</code>, or one row too many from <code class="inline">.loc[0:3]</code>. Coach: "Is 0 a label in this table or a position? Print <code class="inline">df.index[:3]</code> and decide." Point at the board drawing: <code class="inline">.loc</code> reads the label on the bin, <code class="inline">.iloc</code> counts bins from the left. Also expect <code class="inline">KeyError: 'Price'</code>: names are case-sensitive, so have them print <code class="inline">df.columns.tolist()</code> and copy the name.</li>
+        </ul>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab</div>
+        <ul class="tick lab">
+          <li><code class="inline">labs/module-04/l2_1-dataframes-series/busiest_days_starter.py</code> (reference: <code class="inline">busiest_days_solution.py</code>), 15 min: the greeting, sorting, masks with <code class="inline">&amp;</code> and <code class="inline">~</code>, <code class="inline">.idxmax()</code> with <code class="inline">.loc</code> on <code class="inline">daily_sales.csv</code>.</li>
+          <li><code class="inline">labs/module-04/l2_1-dataframes-series/recommend_groups_starter.py</code> (reference: <code class="inline">recommend_groups_solution.py</code>), 15 min: a new column filled with <code class="inline">.loc[mask, col] = ...</code>, <code class="inline">value_counts()</code>, mask means, and a copy-on-write check on <code class="inline">survey.csv</code>.</li>
+        </ul>
+        <p>Also in the folder: <code class="inline">labs/module-04/l2_1-dataframes-series/debug_filters.py</code>. A deliberately broken handout with five bugs (three crashes, two silent) for fast finishers and for homework. It is not run by <code class="inline">check_labs.py</code>.</p>
+        <ul class="tick lab">
+          <li>Run <code class="inline">busiest_days</code> in the room for everyone. Circulate during TODO 3: it is the first time they combine masks on their own, and the parentheses error will appear on several screens within two minutes. Let it.</li>
+          <li>At minute 12, stop the room and ask one pair to read their three counts. 101 = 36 + 65. If a pair has numbers that do not add up, debug it on the projector together.</li>
+          <li>Pairs that finish move to <code class="inline">recommend_groups</code>. Everyone else takes it home. Before they run TODO 4, make them write down how many rows of <code class="inline">survey</code> will say 'checked'.</li>
+          <li>Do not show the solution file. If someone is stuck for more than three minutes, give them the next line only.</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Start the lesson project</div>
+        <ul class="tick">
+          <li>The lesson project is the <b>Catalog Health Check</b> (six steps, about 30 minutes solo). In the room do Step 1 (load with <code class="inline">parse_dates</code>, count dtypes, find the two columns with gaps) and Step 2 (margin, margin percent, launch year) together, each learner in their own <code class="inline">lesson_2_1_project</code> notebook.</li>
+          <li>Checkpoint before you move on: everyone's <code class="inline">catalog.shape</code> is <code class="inline">(242, 13)</code> and <code class="inline">launch_date</code> is <code class="inline">datetime64[us]</code>.</li>
+          <li>Steps 3 to 6 (flags with <code class="inline">.loc</code>, star products, stock gaps, the printed report) go home. Tell them the target numbers: 8 star products, and a report whose median margin is 45.5%.</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Checks for understanding</div>
+        <ol class="steps">
+          <li>What three things make up a Series? <b>Answer:</b> An array of values, an index of labels of the same length, and an optional name.</li>
+          <li><code class="inline">products["price"]</code> and <code class="inline">products[["price"]]</code>: what is the difference? <b>Answer:</b> The first is a Series; the second (a list of names) is a one-column DataFrame.</li>
+          <li>Why does <code class="inline">(products["rating"] == np.nan).sum()</code> print 0 when 8 ratings are missing? <b>Answer:</b> NaN is not equal to anything, itself included. Use <code class="inline">.isna()</code>.</li>
+          <li>After <code class="inline">tents = products[products["category"] == "Tents"]</code>, does <code class="inline">tents["price"] = 0</code> change <code class="inline">products</code>? <b>Answer:</b> No. Under copy-on-write <code class="inline">tents</code> behaves as an independent copy.</li>
+        </ol>
+        <p>Workbook self-check, items Q1 to Q6.</p>
+        <p style="font-size:.9rem;margin:.2rem 0">Answers: <b>Q1</b> <span data-sc="1">C) <code class="inline">[6.0, nan, 8.0]</code></span>; <b>Q2</b> <span data-sc="2"><code class="inline">3 2 40</code></span>; <b>Q3</b> <span data-sc="3">A) 8 products have no rating</span>; <b>Q4</b> <span data-sc="4">D) <code class="inline">((products["category"] == "Tents") | (products["price"] &lt; 20)).sum()</code></span>; <b>Q5</b> <span data-sc="5"><code class="inline">[10, 50, 90]</code></span>; <b>Q6</b> <span data-sc="6">B) The original row label of the most expensive product</span>. Full set with explanations in the Answer Key.</p>
+      </div>
+      <div class="blk"><div class="h">Differentiation</div>
+        <p><b>Support:</b> Pair anyone who was shaky on boolean masks in Lesson 1.2 with a partner for <code class="inline">busiest_days</code>, and give them the masks one at a time: first print <code class="inline">big.sum()</code> alone, then <code class="inline">promo.sum()</code> alone, then combine. Keep the selection table from the lesson (<code class="inline">[]</code>, <code class="inline">[[]]</code>, <code class="inline">.loc</code>, <code class="inline">.iloc</code>) on the projector during the lab.</p>
+        <p><b>Stretch:</b> <code class="inline">debug_filters.py</code>, then the lesson's bonus challenge: rewrite a filter with <code class="inline">products.query("price &gt; 100 and rating &gt; 4.5")</code> and confirm with <code class="inline">.equals()</code> that the result is the same 14 rows. Ask which form they would rather read in six months.</p>
+      </div>
+    </div>
+  </section>
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">2.2</span><h3>Loading Data</h3><span class="dur">75 min</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Objectives (the lesson's own words)</div>
+        <ul class="tick">
+          <li>Read a CSV file with the options that matter: columns, dtypes, dates, missing-value markers, separators and header position</li>
+          <li>Read a sheet from an Excel workbook whose header is not on the first row</li>
+          <li>Flatten nested JSON into tables with <code class="inline">pd.json_normalize()</code></li>
+          <li>Process a file in chunks and shrink its memory use with <code class="inline">usecols</code> and <code class="inline">dtype</code></li>
+          <li>Write a DataFrame to CSV, Excel, JSON and Parquet, and explain what each format keeps and loses</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Timing inside this block</div>
+        <table class="timing"><tbody>
+          <tr><td class="t">10 min</td><td>Frame: loading is translation, the interpreter at the border</td></tr>
+          <tr><td class="t">30 min</td><td>Live demo: <code class="inline">read_csv</code> options, an awkward export, Excel with the header on row 4, nested JSON, memory and chunks, CSV versus Parquet</td></tr>
+          <tr><td class="t">25 min</td><td>Guided lab: <code class="inline">till_export</code>, then <code class="inline">product_pages</code></td></tr>
+          <tr><td class="t">10 min</td><td>Start the lesson project (The Pinecrest Snapshot, Steps 1 and 2)</td></tr>
+        </tbody></table>
+      </div>
+      <div class="blk"><div class="h">Mental model to say</div>
+        <p>Say: "A file is a message written in another language. A CSV says 2024-01-01, and it is only characters: nothing in the file says 'this is a date'. <code class="inline">read_csv</code> is an interpreter who makes a reasonable guess about each column. Good interpreters can be briefed: column three is a date, the word for missing is n/a, ignore the two lines of notes at the top. Today's options are that briefing. And like any careful traveler, you check the translation before you rely on it: <code class="inline">shape</code>, <code class="inline">dtypes</code>, <code class="inline">head()</code> after every load." Write on the board: <b>file → reader + options → DataFrame → check → (fix the options) → analyze → writer</b>.</p>
+      </div>
+      <div class="blk"><div class="h">Live demo (you type, they follow)</div>
+        <p>Same notebook, new section. The pattern for every step is: load, look at <code class="inline">dtypes</code> or <code class="inline">shape</code>, name what is wrong, add one option, look again. Resist loading with all the right options at once: the lesson is in the before and after. Step 5 is a deliberate mistake.</p>
+        <ol class="steps">
+          <li><b>Look at the raw text first (2 min).</b> Say: "Before pandas touches it, it is only text: a header line, commas, and two commas with nothing between them where a value is missing." Ask what the empty spot after <code class="inline">cash</code> is (the promo code).
+<pre class="code"><span class="k">with</span> open(<span class="s">"data/orders.csv"</span>, encoding=<span class="s">"utf-8"</span>) <span class="k">as</span> f:
+    <span class="k">for</span> _ <span class="k">in</span> range(<span class="s">3</span>):
+        print(f.readline().rstrip())</pre>
+<pre class="out">order_id,customer_id,order_date,channel,store,status,payment_method,promo_code,discount_pct,shipping_cost,order_total
+100001,12673,2024-01-01,store,Flagstaff,completed,cash,,0,0.0,434.9
+100002,10034,2024-01-01,store,Asheville,completed,card,,0,0.0,278.9</pre></li>
+          <li><b>What pandas guesses, and what it will not guess (3 min).</b> Run the plain load and have the room find the wrong dtype: <code class="inline">order_date</code> is <code class="inline">str</code>. "pandas does not guess dates, because guessing wrong is worse than not guessing." Add <code class="inline">parse_dates</code> and show what a real date can do: Sunday and Saturday are Pinecrest's busiest days.
+<pre class="code">orders = pd.read_csv(<span class="s">"data/orders.csv"</span>)
+print(orders[<span class="s">"order_date"</span>].dtype, orders[<span class="s">"order_total"</span>].dtype)
+orders = pd.read_csv(<span class="s">"data/orders.csv"</span>, parse_dates=[<span class="s">"order_date"</span>])
+print(orders[<span class="s">"order_date"</span>].dtype)
+print(orders[<span class="s">"order_date"</span>].dt.day_name().value_counts().head(<span class="s">2</span>))</pre>
+<pre class="out">str float64
+datetime64[us]
+order_date
+Sunday      3336
+Saturday    3276
+Name: count, dtype: int64</pre></li>
+          <li><b>Only what you need: usecols, index_col, nrows (2 min).</b> Say: "Three data columns and an index instead of eleven columns. On this file that is tidiness; on a file with 200 columns it is the difference between a load that takes a second and one that fills your memory. And <code class="inline">nrows=5</code> is the safe way to look at any file you have never seen."
+<pre class="code">slim = pd.read_csv(<span class="s">"data/orders.csv"</span>, usecols=[<span class="s">"order_id"</span>, <span class="s">"order_date"</span>, <span class="s">"store"</span>, <span class="s">"order_total"</span>],
+                   parse_dates=[<span class="s">"order_date"</span>], index_col=<span class="s">"order_id"</span>)
+print(slim.shape)
+print(pd.read_csv(<span class="s">"data/order_items.csv"</span>, nrows=<span class="s">2</span>))</pre>
+<pre class="out">(20302, 3)
+   order_item_id  order_id       sku  quantity  unit_price
+0              1    100001  SLP-1021         1      371.95
+1              2    100001  KIT-1014         1       62.95</pre></li>
+          <li><b>A whole-number column that loads as float (3 min).</b> Ask: "A birth year is a whole number. Why does it print as 1989.0?" Point at the <code class="inline">nan</code> at the top: 442 customers gave no year, and NumPy's <code class="inline">int64</code> cannot say 'missing'. Then the fix: <code class="inline">"Int64"</code> with a capital I, the nullable integer, and <code class="inline">"category"</code> for a column with three distinct values repeated 4,850 times.
+<pre class="code">customers = pd.read_csv(<span class="s">"data/customers.csv"</span>)
+print(customers[<span class="s">"birth_year"</span>].dtype, customers[<span class="s">"birth_year"</span>].head(<span class="s">3</span>).tolist())
+customers = pd.read_csv(<span class="s">"data/customers.csv"</span>, parse_dates=[<span class="s">"signup_date"</span>],
+                        dtype={<span class="s">"birth_year"</span>: <span class="s">"Int64"</span>, <span class="s">"loyalty_tier"</span>: <span class="s">"category"</span>})
+print(customers[<span class="s">"birth_year"</span>].dtype, customers[<span class="s">"birth_year"</span>].head(<span class="s">3</span>).tolist())
+print(customers[<span class="s">"birth_year"</span>].isna().sum(), customers[<span class="s">"loyalty_tier"</span>].dtype)</pre>
+<pre class="out">float64 [nan, 1989.0, 1995.0]
+Int64 [&lt;NA&gt;, 1989, 1995]
+442 category</pre></li>
+          <li><b>Deliberate mistake: lowercase int64 (1 min).</b> Type the lowercase version and read the error aloud. "Column 8, counting from 0, is <code class="inline">birth_year</code>. The message tells you exactly which column has the gaps. One capital letter is the whole fix."
+<pre class="code">pd.read_csv(<span class="s">"data/customers.csv"</span>, dtype={<span class="s">"birth_year"</span>: <span class="s">"int64"</span>})</pre>
+<pre class="out">ValueError: Integer column has NA values in column 8</pre></li>
+          <li><b>An awkward export: five options, five things you can see (4 min).</b> Type the export into the notebook so everyone can see the dialect: semicolons, two lines of notes, <code class="inline">55.400,22</code>, and two spellings of 'nothing here'. Before each option ask, "Which thing in the text does this one fix?" Then show that <code class="inline">revenue</code> is <code class="inline">float64</code> and <code class="inline">returns</code> has real NaNs. <code class="inline">io.StringIO</code> wraps a string so it can stand in for a file.
+<pre class="code">export = io.StringIO(<span class="s">"""Pinecrest regional export
+generated by the till system
+store;week;revenue;returns
+Boise;2024-W01;55.400,22;n/a
+Bend;2024-W01;38.128,49;3
+Flagstaff;2024-W01;32.769,02;--
+"""</span>)
+regional = pd.read_csv(export, sep=<span class="s">";"</span>, skiprows=<span class="s">2</span>, decimal=<span class="s">","</span>, thousands=<span class="s">"."</span>,
+                       na_values=[<span class="s">"n/a"</span>, <span class="s">"--"</span>])
+print(regional)
+print(regional.dtypes.astype(str).to_dict())</pre>
+<pre class="out">       store      week   revenue  returns
+0      Boise  2024-W01  55400.22      NaN
+1       Bend  2024-W01  38128.49      3.0
+2  Flagstaff  2024-W01  32769.02      NaN
+{'store': 'str', 'week': 'str', 'revenue': 'float64', 'returns': 'float64'}</pre></li>
+          <li><b>Excel: the header is not where pandas looked (4 min).</b> Run the naive load first and let the room react to the column names. "When you see <code class="inline">Unnamed</code>, the header is not where pandas looked. And notice: no error. The code ran. This is the dangerous kind of mistake." Then list the sheets and skip three rows: 12 months, six named columns.
+<pre class="code">raw = pd.read_excel(<span class="s">"data/sales_2025.xlsx"</span>)
+print(raw.shape, raw.columns.tolist()[<span class="s">1</span>:<span class="s">3</span>])
+print(pd.ExcelFile(<span class="s">"data/sales_2025.xlsx"</span>).sheet_names)
+monthly = pd.read_excel(<span class="s">"data/sales_2025.xlsx"</span>, sheet_name=<span class="s">"Monthly Sales"</span>, skiprows=<span class="s">3</span>)
+print(monthly.shape)
+print(monthly.head(<span class="s">2</span>))</pre>
+<pre class="out">(15, 6) ['Unnamed: 1', 'Unnamed: 2']
+['Monthly Sales', 'Targets']
+(12, 6)
+  Month   Boise    Bend  Flagstaff  Asheville  Online
+0   Jan  242847  169817     160348     147792   86269
+1   Feb  218456  146918     154777     127039   86043</pre></li>
+          <li><b>JSON is a tree: look before you flatten (3 min).</b> Say: "CSV and Excel are tables. JSON is a tree: values inside dictionaries inside lists. Load it with the <code class="inline">json</code> module first, so you can see its shape." The records you want are one level down, under <code class="inline">sessions</code>. Look at one: simple values, nested dictionaries (<code class="inline">device</code>, <code class="inline">utm</code>, <code class="inline">cart</code>) and a list (<code class="inline">pages</code>).
+<pre class="code"><span class="k">with</span> open(<span class="s">"data/web_sessions.json"</span>, encoding=<span class="s">"utf-8"</span>) <span class="k">as</span> f:
+    data = json.load(f)
+print(list(data), len(data[<span class="s">"sessions"</span>]))
+one = data[<span class="s">"sessions"</span>][<span class="s">1</span>]
+print(list(one))
+print(one[<span class="s">"device"</span>], one[<span class="s">"pages"</span>][<span class="s">0</span>])</pre>
+<pre class="out">['site', 'period', 'note', 'sessions'] 2400
+['session_id', 'customer_id', 'started_at', 'device', 'utm', 'pages', 'cart', 'converted', 'order_id']
+{'type': 'desktop', 'os': 'macOS', 'browser': 'Safari'} {'path': '/', 'seconds': 18, 'at': '2025-11-01T06:48:03'}</pre></li>
+          <li><b>json_normalize: one column per inner key (3 min).</b> Say: "Fourteen columns. <code class="inline">device</code> became <code class="inline">device.type</code>, <code class="inline">device.os</code>, <code class="inline">device.browser</code>." Then the detail that matters: 916 sessions have no <code class="inline">utm</code> key at all, and <code class="inline">json_normalize</code> neither failed nor dropped them. "In JSON, a key that is simply absent is a normal way of saying 'missing'." Ids became floats because some are null: fix with <code class="inline">Int64</code>.
+<pre class="code">sessions = pd.json_normalize(data[<span class="s">"sessions"</span>])
+print(sessions.shape)
+print(sessions.columns.tolist()[<span class="s">6</span>:])
+print(sessions[<span class="s">"utm.medium"</span>].isna().sum(), sessions[<span class="s">"customer_id"</span>].dtype)
+sessions[<span class="s">"customer_id"</span>] = sessions[<span class="s">"customer_id"</span>].astype(<span class="s">"Int64"</span>)
+sessions[<span class="s">"started_at"</span>] = pd.to_datetime(sessions[<span class="s">"started_at"</span>])
+print(sessions[<span class="s">"customer_id"</span>].dtype, sessions[<span class="s">"started_at"</span>].dtype, sessions[<span class="s">"converted"</span>].mean().round(<span class="s">3</span>))</pre>
+<pre class="out">(2400, 14)
+['device.type', 'device.os', 'device.browser', 'cart.items', 'cart.value', 'utm.source', 'utm.medium', 'utm.campaign']
+916 float64
+Int64 datetime64[us] 0.096</pre></li>
+          <li><b>Lists inside records: record_path and meta (2 min).</b> Say: "<code class="inline">record_path</code> names the key that holds the list; <code class="inline">meta</code> names the parent fields to copy onto every row. 2,400 sessions became 9,348 page views, and each row carries its <code class="inline">session_id</code> so the two tables can be connected again." That is the pattern for nested data: one table per level, linked by a key. Lesson 2.5 joins them back.
+<pre class="code">pages = pd.json_normalize(data[<span class="s">"sessions"</span>], record_path=<span class="s">"pages"</span>, meta=[<span class="s">"session_id"</span>])
+print(pages.shape)
+print(pages.head(<span class="s">3</span>))</pre>
+<pre class="out">(9348, 4)
+                 path  seconds                   at session_id
+0                   /       45  2025-11-01T06:31:45     S00001
+1  /category/sleeping       13  2025-11-01T06:32:30     S00001
+2                   /       18  2025-11-01T06:48:03     S00002</pre></li>
+          <li><b>Big files: measure, load less, read in chunks (3 min).</b> Say: "The order to try things in: <code class="inline">nrows</code> to peek, <code class="inline">usecols</code> to load less, <code class="inline">dtype</code> to make it smaller, <code class="inline">chunksize</code> when it still does not fit." The memory falls from 2.08 MB to 0.71 MB, and the chunked total matches the whole-file total exactly: 65,104 units. "At no point were more than 10,000 rows in memory."
+<pre class="code">items = pd.read_csv(<span class="s">"data/order_items.csv"</span>)
+lean = pd.read_csv(<span class="s">"data/order_items.csv"</span>, usecols=[<span class="s">"order_id"</span>, <span class="s">"sku"</span>, <span class="s">"quantity"</span>, <span class="s">"unit_price"</span>],
+                   dtype={<span class="s">"order_id"</span>: <span class="s">"int32"</span>, <span class="s">"quantity"</span>: <span class="s">"int16"</span>, <span class="s">"sku"</span>: <span class="s">"category"</span>})
+<span class="k">for</span> t <span class="k">in</span> (items, lean):
+    print(round(t.memory_usage(deep=<span class="k">True</span>).sum() / <span class="s">1024</span>**<span class="s">2</span>, <span class="s">2</span>), <span class="s">"MB"</span>)
+total_units = <span class="s">0</span>
+<span class="k">for</span> chunk <span class="k">in</span> pd.read_csv(<span class="s">"data/order_items.csv"</span>, chunksize=<span class="s">10_000</span>):
+    total_units += chunk[<span class="s">"quantity"</span>].sum()
+print(total_units, items[<span class="s">"quantity"</span>].sum())</pre>
+<pre class="out">2.08 MB
+0.71 MB
+65104 65104</pre></li>
+          <li><b>Writing: CSV forgets, Parquet remembers (4 min).</b> Ask for a prediction before the read-back: "We wrote a date column to a CSV. What dtype comes back?" <code class="inline">str</code>: a CSV is only text. Parquet stores each column's type with the data, comes back equal to the original, and is under a third of the size. Close with the habit: <code class="inline">index=False</code> on every <code class="inline">to_csv</code>, or a colleague gets a column called <code class="inline">Unnamed: 0</code>.
+<pre class="code"><span class="k">from</span> pathlib <span class="k">import</span> Path
+out = Path(<span class="s">"output"</span>)
+out.mkdir(exist_ok=<span class="k">True</span>)
+completed = orders[orders[<span class="s">"status"</span>] == <span class="s">"completed"</span>]
+completed.to_csv(out / <span class="s">"completed_orders.csv"</span>, index=<span class="k">False</span>)
+completed.to_parquet(out / <span class="s">"completed_orders.parquet"</span>)
+print(pd.read_csv(out / <span class="s">"completed_orders.csv"</span>)[<span class="s">"order_date"</span>].dtype)
+back = pd.read_parquet(out / <span class="s">"completed_orders.parquet"</span>)
+print(back[<span class="s">"order_date"</span>].dtype, back.equals(completed))
+<span class="k">for</span> name <span class="k">in</span> [<span class="s">"completed_orders.csv"</span>, <span class="s">"completed_orders.parquet"</span>]:
+    print(<span class="s">f"{name:&lt;28}{(out / name).stat().st_size / 1024:&gt;8,.0f} KB"</span>)</pre>
+<pre class="out">str
+datetime64[us] True
+completed_orders.csv           1,280 KB
+completed_orders.parquet         354 KB</pre></li>
+        </ol>
+      </div>
+      <div class="blk warn"><div class="h">Three mistakes to expect</div>
+        <ul class="tick">
+          <li><b>The file is not where Python is looking.</b> Symptom: <code class="inline">FileNotFoundError: [Errno 2] No such file or directory: 'orders.csv'</code>. Coach: "Which folder is Python working in? Print <code class="inline">Path.cwd()</code>. Is there a <code class="inline">data</code> folder inside it?" This is almost always a notebook opened from the wrong folder, not a typo. In the labs the question does not arise (<code class="inline">DATA</code> finds the folder), so expect it in the lesson project instead.</li>
+          <li><b>Trusting a load that ran without error.</b> Symptoms: <code class="inline">Unnamed: 1</code> column names and 15 rows instead of 12 from the Excel sheet; <code class="inline">.dt</code> raising <code class="inline">AttributeError: Can only use .dt accessor with datetimelike values</code> because the date is still text; a numeric column that is <code class="inline">str</code> because of one <code class="inline">n/a</code>. Coach: "What did <code class="inline">shape</code> and <code class="inline">dtypes</code> say right after the load?" If they did not look, that is the fix. Make 'load, then look' a spoken rule today.</li>
+          <li><b><code class="inline">pd.read_json</code> on a nested file, or flattening the wrong level.</b> Symptom: <code class="inline">ValueError: Mixing dicts with non-Series may lead to ambiguous ordering.</code> or a DataFrame with whole dictionaries in its cells. Coach: "Print <code class="inline">list(data)</code>. Which key holds the list of records? Is it the file itself or one level down?" Then <code class="inline">json.load</code> plus <code class="inline">pd.json_normalize(data["sessions"])</code>, and <code class="inline">record_path</code> only when they want one row per item of an inner list.</li>
+        </ul>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab</div>
+        <ul class="tick lab">
+          <li><code class="inline">labs/module-04/l2_2-loading-data/till_export_starter.py</code> (reference: <code class="inline">till_export_solution.py</code>), 15 min: <code class="inline">sep</code>, <code class="inline">skiprows</code>, <code class="inline">decimal</code>, <code class="inline">thousands</code>, <code class="inline">na_values</code>, <code class="inline">parse_dates</code> with <code class="inline">date_format</code>, then checking the load against a clean file.</li>
+          <li><code class="inline">labs/module-04/l2_2-loading-data/product_pages_starter.py</code> (reference: <code class="inline">product_pages_solution.py</code>), 15 min: <code class="inline">json.load</code>, <code class="inline">pd.json_normalize</code> with <code class="inline">record_path</code> and <code class="inline">meta</code>, fixing dtypes after the load, <code class="inline">.str</code> filters, a Parquet round trip into <code class="inline">OUTPUT</code>.</li>
+          <li><code class="inline">labs/module-04/l2_2-loading-data/targets_vs_actuals_starter.py</code> (reference: <code class="inline">targets_vs_actuals_solution.py</code>), 15 min: two Excel sheets with different options (<code class="inline">header=3</code>), a result table built from a list of dictionaries, <code class="inline">to_excel(..., index=False)</code> and a read-back.</li>
+        </ul>
+        <ul class="tick lab">
+          <li>Start with <code class="inline">till_export</code>. Give the room two silent minutes to read the six raw lines and list, on paper, everything the reader must be told. Collect the list on the board before anyone types.</li>
+          <li>Circulate during TODO 1. The commonest stall is <code class="inline">skiprows</code>: they count the header line as a note. Ask them to say which line holds the column names.</li>
+          <li>At minute 12, ask for the missing store and day, and the total. 163,755.71 on every screen is the signal to move on.</li>
+          <li><code class="inline">product_pages</code> next for pairs that are done (it writes to an <code class="inline">output/</code> folder next to the lab file). <code class="inline">targets_vs_actuals</code> is homework.</li>
+          <li>Labs write only to <code class="inline">OUTPUT</code>. If someone edits a path to write into <code class="inline">data/</code>, stop them: the course data is read-only all course long.</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Start the lesson project</div>
+        <ul class="tick">
+          <li>The lesson project is <b>The Pinecrest Snapshot</b>: seven tables from CSV, Excel and JSON, saved as Parquet and verified (six steps, about 30 minutes solo).</li>
+          <li>In the room do Step 1 (orders, fully typed: dates and five category columns) and Step 2 (customers with <code class="inline">Int64</code> birth years, products with real launch dates). Checkpoint: <code class="inline">customers["birth_year"].dtype</code> prints <code class="inline">Int64</code>.</li>
+          <li>Steps 3 to 6 (both Excel sheets, two tables from the JSON, saving, the verification table) go home. Tell them what done looks like: seven <code class="inline">.parquet</code> files and a verification table that says <code class="inline">True</code> on every row.</li>
+          <li>Ask them to keep the <code class="inline">snapshot</code> folder: it is a one-line way to start any later analysis.</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Checks for understanding</div>
+        <ol class="steps">
+          <li>Why does pandas not turn <code class="inline">order_date</code> into a date on its own? <b>Answer:</b> It does not guess dates, because guessing wrong is worse than not guessing. You say so with <code class="inline">parse_dates</code>.</li>
+          <li>What is the difference between <code class="inline">"Int64"</code> and <code class="inline">"int64"</code>? <b>Answer:</b> Capital I is pandas's nullable integer and can hold <code class="inline">&lt;NA&gt;</code>; lowercase is NumPy's and cannot hold a missing value.</li>
+          <li>You see columns called <code class="inline">Unnamed: 1</code>, <code class="inline">Unnamed: 2</code>. What happened? <b>Answer:</b> The header is not on the row pandas read as the header. Use <code class="inline">skiprows</code> or <code class="inline">header</code>.</li>
+          <li>What does a record with no <code class="inline">utm</code> key become after <code class="inline">json_normalize</code>? <b>Answer:</b> A row with NaN in the <code class="inline">utm.*</code> columns. Nothing fails and nothing is dropped.</li>
+        </ol>
+        <p>Workbook self-check, items Q7 to Q12.</p>
+        <p style="font-size:.9rem;margin:.2rem 0">Answers: <b>Q7</b> <span data-sc="7">B) <code class="inline">[4, &lt;NA&gt;, 6]</code></span>; <b>Q8</b> <span data-sc="8">A) <code class="inline">pd.read_csv(f, sep=";", skiprows=2, decimal=",", thousands=".")</code></span>; <b>Q9</b> <span data-sc="9"><code class="inline">(3, 2)</code></span>; <b>Q10</b> <span data-sc="10">D) Load with <code class="inline">parse_dates=["order_date"]</code>, or convert with <code class="inline">pd.to_datetime()</code></span>; <b>Q11</b> <span data-sc="11"><code class="inline">['Unnamed: 0', 'a']</code></span>; <b>Q12</b> <span data-sc="12">C) Read it with <code class="inline">usecols</code> and <code class="inline">chunksize</code>, keeping a running total</span>. Full set with explanations in the Answer Key.</p>
+      </div>
+      <div class="blk"><div class="h">Differentiation</div>
+        <p><b>Support:</b> For <code class="inline">till_export</code>, hand out the option names on a card (<code class="inline">sep</code>, <code class="inline">skiprows</code>, <code class="inline">decimal</code>, <code class="inline">thousands</code>, <code class="inline">na_values</code>, <code class="inline">parse_dates</code>, <code class="inline">date_format</code>) and let learners match each to a line of the raw text; they only have to fill in the values. For the JSON lab, draw the tree on the board: file → <code class="inline">sessions</code> (list) → one session → <code class="inline">pages</code> (list).</p>
+        <p><b>Stretch:</b> <code class="inline">targets_vs_actuals</code>, then the lesson's bonus challenge: one row per cart line with <code class="inline">record_path=["cart", "items"]</code>, and an eighth Parquet file in the snapshot. Or ask: "Rewrite the chunk loop so it also gives the mean quantity. What two running numbers do you need?" (A sum and a count.)</p>
+      </div>
+    </div>
+  </section>
+  <div class="sec"><h2>Closing</h2><span class="rule"></span></div>
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">2:50</span><h3>Wrap-up</h3><span class="dur">10 min</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Exit ticket (3 questions, on paper or sticky notes, 5 minutes)</div>
+        <ol class="steps">
+          <li>You run <code class="inline">df[df["price"] &gt; 100]["price"] = 0</code>. What happens to <code class="inline">df</code>, and what should you write instead? <b>Answer:</b> Nothing happens to <code class="inline">df</code> (pandas warns with <code class="inline">ChainedAssignmentError</code>): the first brackets made a temporary copy. Write <code class="inline">df.loc[df["price"] &gt; 100, "price"] = 0</code>.</li>
+          <li>On a table with the default index, how many rows do <code class="inline">df.loc[0:3]</code> and <code class="inline">df.iloc[0:3]</code> return, and why are they different? <b>Answer:</b> 4 and 3. <code class="inline">.loc</code> slices by label and includes the end; <code class="inline">.iloc</code> slices by position and leaves out the stop.</li>
+          <li>You save a table that has a date column to <code class="inline">out.csv</code> and to <code class="inline">out.parquet</code>. Read back with no options, which file gives the date back as a date, and why? <b>Answer:</b> The Parquet file. It stores each column's dtype with the data; a CSV is only text, so the date comes back as <code class="inline">str</code> unless you pass <code class="inline">parse_dates</code> again.</li>
+        </ol>
+      </div>
+      <div class="blk"><div class="h">Homework (about 2 to 3 hours before Session 5)</div>
+        <ul class="tick">
+          <li>Finish the <b>Catalog Health Check</b> (2.1, Steps 3 to 6) and <b>The Pinecrest Snapshot</b> (2.2, Steps 3 to 6). Keep both: the margin columns and the <code class="inline">snapshot</code> folder come back later.</li>
+          <li>Do each lesson's exercises (1 to 4; number 5 is a stretch), Quick Quiz and journal entry.</li>
+          <li>Finish any lab you started; <code class="inline">targets_vs_actuals</code> and <code class="inline">debug_filters.py</code> are for home.</li>
+          <li>Lesson 2.2, 'Before the Next Lesson': run <code class="inline">pd.read_csv("data/orders_messy.csv", nrows=8)</code>, print <code class="inline">.columns.tolist()</code> and <code class="inline">.dtypes</code>, and write down what you notice. Session 5 starts there.</li>
+        </ul>
+      </div>
+      <div class="blk lab"><div class="h">Bring list for Session 5</div>
+        <ul class="tick">
+          <li>Laptop with the course environment working (<code class="inline">import pandas, openpyxl, pyarrow</code> runs without error). Nothing new to install.</li>
+          <li>The course <code class="inline">data/</code> folder as it is: <code class="inline">orders_messy.csv</code>, <code class="inline">orders.csv</code> and <code class="inline">order_items.csv</code> are the main files next time.</li>
+          <li>Your finished notebooks for 2.1 and 2.2, and your notes on what looked wrong in <code class="inline">orders_messy.csv</code>.</li>
+          <li>This workbook. No servers to start, no accounts and no internet connection are needed for Session 5.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+  <div class="sec"><h2>If You Run Long or Short</h2><span class="rule"></span></div>
+    <div class="note warn"><div class="t">Running long: what to protect, what to cut first</div><p>Protect, in this order: the chained-assignment demonstration and its fix (2.1 demo steps 11 and 12), the <code class="inline">.loc</code> / <code class="inline">.iloc</code> experiment (step 7), 'load, then look' with the Excel header trap (2.2 step 7), and one guided lab per lesson. Cut first: the alignment step in 2.1 (one sentence), then 2.2 step 11 (memory and chunks: assign the lesson's 'Large Files' section as reading), then step 6 (the awkward export is practiced in the lab anyway), then the second lab of each block. If 2.1 overruns by more than ten minutes, shorten the 2.2 project start to reading the brief aloud and naming the two checkpoints.</p></div>
+    <div class="note lab"><div class="t">Running short: what to add</div><p>Run <code class="inline">recommend_groups</code> and <code class="inline">product_pages</code> for the whole room, and have two pairs explain their numbers. Then <code class="inline">debug_filters.py</code> as a race in pairs: first pair to print 82.95, 14, 7, 8 and 29 explains the two silent bugs. Still time: do Step 3 of the Catalog Health Check together and ask why the order of the three <code class="inline">.loc</code> lines matters.</p></div>
+
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 4 · Facilitator Guide · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

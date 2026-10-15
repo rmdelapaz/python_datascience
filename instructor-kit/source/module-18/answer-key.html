@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Answer Key: Session 18</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Instructor copy —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">answers &amp; solutions · not for students</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Answer Key</div>
+    <h1>Session 18: APIs: Keys, Tokens and Polite Clients</h1>
+    <p class="sub">Answers, reasoning and reference output for Session 18: the 12 self-check items, predict-then-run answers, four lab solutions, the Checkpoint 2 rubric and model answer, both lesson quizzes, the warm-up and the exit ticket.</p>
+    <div class="meta-row">
+      <span class="chip">Session <b>18</b></span>
+      <span class="chip"><b>12</b> self-check items</span>
+      <span class="chip">Checkpoint <b>2</b></span>
+      <span class="chip">Confidential</span>
+    </div>
+  </header>
+
+  <div class="sec"><h2>How to Use This Key</h2><span class="rule"></span></div>
+<ul class="tick">
+  <li>The 12 self-check items with every option explained, predict-then-run answers, the four lab solutions and the Checkpoint 2 model answer and rubric with real output, both lesson quizzes, the warm-up and the exit ticket.</li>
+  <li>Lab outputs are real offline runs (saved responses, pretend clock). Online runs against <code class="inline">data/mock_api.py</code> with the lesson flags printed the same numbers; only tokens and the mode line differ.</li>
+  <li>Correct letters: Q1 A, Q3 C, Q4 B, Q5 D, Q6 B, Q7 C, Q10 A, Q11 D, Q12 B.</li>
+</ul>
+
+  <div class="sec"><h2>6.4 · API Authentication: Self-check</h2><span class="rule"></span></div>
+<div class="q" data-sc="1"><div class="qn">Q1</div><div class="qt">The orders endpoint wants a key in the <code class="inline">X-API-Key</code> header. What do you get with no key at all, and with a misspelled key?</div><div class="opts"><div class="opt correct">A) 401 for no key, 403 for the misspelled one</div><div class="opt">B) 403 for both</div><div class="opt">C) 401 for both</div><div class="opt">D) 404 for no key, 401 for the misspelled one</div></div><div class="why"><b>Why:</b> 401 means "I cannot tell who you are" (no credential). 403 means "I understood, and the answer is no" (a credential that is rejected). The practice API answers <code class="inline">missing_api_key</code> and <code class="inline">invalid_api_key</code>.<br><b>B</b> is wrong: With no key there is nothing to refuse: the server cannot tell who you are, which is 401.<br><b>C</b> is wrong: A wrong key was understood and rejected: 403. Sending it again will never help.<br><b>D</b> is wrong: 404 is for an address that does not exist; <code class="inline">/orders</code> exists.</div></div>
+<div class="q" data-sc="2" data-kind="short"><div class="qn">Q2</div><div class="qt">What does this print? (<code class="inline">ApiError</code> is the class from the demo.)</div><pre class="code">err = ApiError(<span class="s">401</span>, <span class="s">"token_expired"</span>, <span class="s">"Log in again."</span>)
+print(err)
+print(err.code == <span class="s">"token_expired"</span>, isinstance(err, Exception))</pre><div class="opts"><div class="opt correct"><code class="inline">401 token_expired: Log in again.</code> then <code class="inline">True True</code></div></div><div class="why"><b>Why:</b> <code class="inline">super().__init__(f"{status} {code}: {message}")</code> sets the text that <code class="inline">print(err)</code> shows. The code is stored as an attribute, so a program can branch on <code class="inline">err.code</code>, and <code class="inline">ApiError</code> inherits from <code class="inline">Exception</code>.</div></div>
+<div class="q" data-sc="3"><div class="qn">Q3</div><div class="qt">What does this print?</div><pre class="code">pages = {<span class="s">"/o?page=1"</span>: {<span class="s">"items"</span>: [<span class="s">"a"</span>, <span class="s">"b"</span>], <span class="s">"next"</span>: <span class="s">"/o?page=2"</span>},
+         <span class="s">"/o?page=2"</span>: {<span class="s">"items"</span>: [<span class="s">"c"</span>], <span class="s">"next"</span>: <span class="s">"/o?page=3"</span>},
+         <span class="s">"/o?page=3"</span>: {<span class="s">"items"</span>: [], <span class="s">"next"</span>: <span class="k">None</span>}}
+items, url, calls = [], <span class="s">"/o?page=1"</span>, <span class="s">0</span>
+<span class="k">while</span> url:
+    page = pages[url]
+    calls += <span class="s">1</span>
+    items.extend(page[<span class="s">"items"</span>])
+    url = page[<span class="s">"next"</span>]
+print(items, calls)</pre><div class="opts"><div class="opt">A) <code class="inline">['a', 'b'] 1</code></div><div class="opt">B) <code class="inline">['a', 'b', 'c'] 2</code></div><div class="opt correct">C) <code class="inline">['a', 'b', 'c'] 3</code></div><div class="opt">D) <code class="inline">['a', 'b', 'c', None] 3</code></div></div><div class="why"><b>Why:</b> The loop reads a page, then follows <code class="inline">next</code> until it is <code class="inline">None</code>. Page 3 exists and is empty, so three pages are fetched and the items are a, b, c.<br><b>A</b> is wrong: The loop does not stop after the first page: page 1 has a <code class="inline">next</code>.<br><b>B</b> is wrong: Page 2 also points onward, so a third request is made (it returns no items).<br><b>D</b> is wrong: <code class="inline">next</code> is not an item; <code class="inline">extend</code> adds only the items list.</div></div>
+<div class="q" data-sc="4"><div class="qn">Q4</div><div class="qt">In <code class="inline">get_all()</code> the first request sends the filters in <code class="inline">params</code>, then the loop sets <code class="inline">params = None</code>. Why?</div><div class="opts"><div class="opt">A) To save memory</div><div class="opt correct">B) The <code class="inline">next</code> address already carries the filters; sending them again would attach every filter twice</div><div class="opt">C) The server rejects a second page that has parameters</div><div class="opt">D) To force the server to start again at page 1</div></div><div class="why"><b>Why:</b> <code class="inline">next</code> looks like <code class="inline">/orders?page=2&amp;per_page=10&amp;since=2025-12-15&amp;status=returned</code>: the filters are already in it.<br><b>A</b> is wrong: A small dictionary costs nothing.<br><b>C</b> is wrong: The server accepts parameters on every page; the problem is duplicates you did not mean to send.<br><b>D</b> is wrong: Page numbers come from <code class="inline">next</code>; dropping <code class="inline">params</code> does not reset anything.</div></div>
+<div class="q" data-sc="5"><div class="qn">Q5</div><div class="qt">Which header sends a bearer token correctly?</div><div class="opts"><div class="opt">A) <code class="inline">X-API-Key: &lt;token&gt;</code></div><div class="opt">B) <code class="inline">Authorization: &lt;token&gt;</code></div><div class="opt">C) The token as <code class="inline">?token=</code> in the URL</div><div class="opt correct">D) <code class="inline">Authorization: Bearer &lt;token&gt;</code></div></div><div class="why"><b>Why:</b> The value is the scheme, a space, then the token. Without the word Bearer the practice API reports <code class="inline">missing_token</code>.<br><b>A</b> is wrong: That header is for the API key, a different credential.<br><b>B</b> is wrong: This is mistake 1 in the lesson: the server does not recognize a token at all.<br><b>C</b> is wrong: URLs are written to logs and histories: never put a credential there.</div></div>
+<div class="q" data-sc="6"><div class="qn">Q6</div><div class="qt">You will share this notebook. Which line may stay in it?</div><div class="opts"><div class="opt">A) <code class="inline">print(API_KEY)</code></div><div class="opt correct">B) <code class="inline">print("key loaded:", API_KEY[:4] + "...")</code></div><div class="opt">C) <code class="inline">API_KEY = "pinecrest-demo-key"</code></div><div class="opt">D) <code class="inline">url = f"{API}/orders?api_key={API_KEY}"</code></div></div><div class="why"><b>Why:</b> A hint confirms the secret loaded without revealing it. The key itself comes from <code class="inline">os.environ</code> at run time.<br><b>A</b> is wrong: Output cells are saved with the notebook: the whole key would be shared.<br><b>C</b> is wrong: A secret typed into code travels with every copy of the file.<br><b>D</b> is wrong: The key would end up in logs, histories and error messages.</div></div>
+
+  <div class="sec"><h2>6.5 · Rate Limiting and Retries: Self-check</h2><span class="rule"></span></div>
+<div class="q" data-sc="7"><div class="qn">Q7</div><div class="qt">A response carries <code class="inline">X-RateLimit-Remaining: 0</code> and <code class="inline">X-RateLimit-Reset: 3</code>. What should your next request do?</div><div class="opts"><div class="opt">A) Go at once: the request itself is valid</div><div class="opt">B) Switch to a second API key</div><div class="opt correct">C) Wait about 3 seconds, until the window starts over</div><div class="opt">D) Stop the job: the limit is used up for the day</div></div><div class="why"><b>Why:</b> You have used this window's allowance, and the window resets in 3 seconds. Waiting is the polite move and the fastest route to a 200.<br><b>A</b> is wrong: It will be refused with 429 and count as wasted traffic.<br><b>B</b> is wrong: Getting around a limit with extra keys breaks the ground rules.<br><b>D</b> is wrong: Reset is in seconds for this API, not a daily quota.</div></div>
+<div class="q" data-sc="8" data-kind="short"><div class="qn">Q8</div><div class="qt">What does this print? (<code class="inline">CaseInsensitiveDict</code> is the type of <code class="inline">resp.headers</code>.)</div><pre class="code">print(int(requests.utils.CaseInsensitiveDict({<span class="s">"retry-after"</span>: <span class="s">"3"</span>}).get(<span class="s">"Retry-After"</span>, <span class="s">1</span>)))</pre><div class="opts"><div class="opt correct"><code class="inline">3</code></div></div><div class="why"><b>Why:</b> Header names ignore case, so <code class="inline">Retry-After</code> finds <code class="inline">retry-after</code>. The default <code class="inline">1</code> is not needed here, but it protects you when a 429 arrives without the header.</div></div>
+<div class="q" data-sc="9" data-kind="short"><div class="qn">Q9</div><div class="qt">What does this print?</div><pre class="code">print([min(<span class="s">2.0</span>, <span class="s">0.2</span> * <span class="s">2</span> ** n) <span class="k">for</span> n <span class="k">in</span> range(<span class="s">5</span>)])</pre><div class="opts"><div class="opt correct"><code class="inline">[0.2, 0.4, 0.8, 1.6, 2.0]</code></div></div><div class="why"><b>Why:</b> Each wait doubles (exponential backoff) and <code class="inline">min</code> caps it at 2.0 seconds.</div></div>
+<div class="q" data-sc="10"><div class="qn">Q10</div><div class="qt">The demo's <code class="inline">Retry</code> policy has <code class="inline">allowed_methods=["GET", "HEAD"]</code>. Why not retry POST too?</div><div class="opts"><div class="opt correct">A) Repeating a POST can repeat its effect, such as placing an order twice</div><div class="opt">B) urllib3 cannot retry POST</div><div class="opt">C) POST requests never fail with 503</div><div class="opt">D) A POST is always faster</div></div><div class="why"><b>Why:</b> GET and HEAD only read, so sending them twice is harmless. A POST changes something on the server.<br><b>B</b> is wrong: It can when told to; the policy deliberately does not.<br><b>C</b> is wrong: Any request can meet a busy server.<br><b>D</b> is wrong: Speed has nothing to do with whether a repeat is safe.</div></div>
+<div class="q" data-sc="11"><div class="qn">Q11</div><div class="qt">A cache function writes <code class="inline">resp.text</code> to disk and only then calls <code class="inline">check(resp)</code>. One request gets a 429. What happens on every later run?</div><div class="opts"><div class="opt">A) Nothing: the cache refreshes itself</div><div class="opt">B) The next run raises <code class="inline">FileNotFoundError</code></div><div class="opt">C) The 429 is retried automatically</div><div class="opt correct">D) The saved error body is served from the cache, as if it were data</div></div><div class="why"><b>Why:</b> A cache that stores a failure serves it faithfully forever. Check first, write second.<br><b>A</b> is wrong: This cache has no expiry: a file that exists is always used.<br><b>B</b> is wrong: The file exists; that is the problem.<br><b>C</b> is wrong: A cache hit never touches the network, so nothing is retried.</div></div>
+<div class="q" data-sc="12"><div class="qn">Q12</div><div class="qt">A job is slow because the API allows 10 requests per 5 seconds per client. A colleague suggests running three copies of the script at once. What happens?</div><div class="opts"><div class="opt">A) It finishes three times faster</div><div class="opt correct">B) The limit applies to you, so the copies hit 429 three times as often and the job is no faster</div><div class="opt">C) Each copy gets its own 10 per 5 seconds</div><div class="opt">D) The server queues the extra requests politely</div></div><div class="why"><b>Why:</b> The limit counts the client (the key, or the address). Parallel copies share it; on a public service this looks like abuse.<br><b>A</b> is wrong: The allowance does not grow with the number of copies.<br><b>C</b> is wrong: The copies send the same key from the same machine: one client.<br><b>D</b> is wrong: Over the limit, the answer is 429, not a queue.</div></div>
+
+  <div class="sec"><h2>Predict, Then Run: Answers</h2><span class="rule"></span></div>
+<div class="blk"><div class="h">6.4</div>
+<p><b>1.</b></p>
+<pre class="out">401 403 200 </pre>
+<p>No key 401, wrong key 403, right key 200. Common wrong answer: 401 for the wrong key.</p>
+<p><b>2.</b></p>
+<pre class="out">397 4 /orders?page=2&amp;per_page=100&amp;status=cancelled</pre>
+<p>397 cancelled orders, 4 pages of up to 100, and <code class="inline">next</code> points at page 2 with the filters already in it.</p>
+</div>
+<div class="blk"><div class="h">6.5</div>
+<p><b>1.</b></p>
+<pre class="out">400 False | 401 False | 404 False | 429 True | 500 True | 503 True | </pre>
+<p>Only temporary failures are retried: 429, 500, 503. 400, 401 and 404 describe the request. (An expired token is the one 401 worth handling, by renewing once, which is a different mechanism.)</p>
+<p><b>2.</b></p>
+<pre class="out">True False</pre>
+<p><code class="inline">sort_keys=True</code> makes the two orders the same request, so the same file; a different spelling of a value is a different request.</p>
+</div>
+
+  <div class="sec"><h2>Lab Reference Solutions</h2><span class="rule"></span></div>
+<div class="blk"><div class="h">Lab 6.4-A · cancelled_orders_solution.py</div>
+<p>File: <code class="inline">labs/module-18/l6_4-api-authentication/cancelled_orders_solution.py</code>. Output of a real run:</p>
+<pre class="out">1. key loaded: pine... (18 characters)
+2. no key: 401 missing_api_key
+2. a key with a typo: 403 invalid_api_key
+3. 70 cancelled orders since 2025-10-01; requests needed at 25 per page: 3
+4. pages read: 3 | shape: (70, 11)
+   matches the promised total: True | unique ids: True | first date: 2025-10-01
+5. cancelled orders by store:
+           orders    value
+store                     
+Online         62  9788.71
+Flagstaff       4   687.96
+Boise           3    91.95
+Asheville       1    35.95
+   total value $10,604.57; 88.6% of the cancellations were online orders
+6. 400 bad_request -&gt; 'since' must look like 2025-01-31, got '10/01/2025'.
+7. orders.csv has 70 such orders | same ids: True | same total: True
+   for comparison, online orders are 65.5% of ALL orders since 2025-10-01
+   Stores almost never cancel: a cancellation is something that happens to an online order.</pre><ul class="tick">
+  <li><b>TODO 1</b> <code class="inline">API_KEY = require_env("PINECREST_API_KEY")</code>, a hint <code class="inline">API_KEY[:4] + "..."</code>, and <code class="inline">{"X-API-Key": API_KEY}</code>.</li>
+  <li><b>TODO 3</b> <code class="inline">probe["total"]</code> and <code class="inline">-(-total // 25)</code>: 70 orders, 3 requests.</li>
+  <li><b>TODO 4</b> the <code class="inline">while url:</code> loop with <code class="inline">params = None</code> after the first page; 70 rows, unique ids, first date 2025-10-01.</li>
+  <li><b>TODO 5</b> <code class="inline">groupby("store").agg(orders=("order_id", "count"), value=("order_total", "sum"))</code>; online share 88.6%.</li>
+  <li><b>TODO 6</b> the 400 explains itself: <code class="inline">'since' must look like 2025-01-31, got '10/01/2025'.</code></li>
+</ul>
+<p><b>Common wrong answers.</b> 25 rows (one page). 140 rows or duplicates (filters sent again with <code class="inline">next</code>). "Online customers cancel more" without the base rate (65.5% of all orders are online).</p>
+</div>
+<div class="blk"><div class="h">Lab 6.4-B · token_lifecycle_solution.py</div>
+<p>File: <code class="inline">labs/module-18/l6_4-api-authentication/token_lifecycle_solution.py</code>. Output of a real run (your token differs):</p>
+<pre class="out">1. Bearer token wJl73K... valid for 5 seconds (your token will differ)
+2. answered for: Demo Analyst | analyst
+3. token without the word Bearer: 401 missing_token
+3. a token nobody issued: 401 invalid_token
+3. wrong password: 401 invalid_credentials
+4. waiting 6 seconds for the token to expire ...
+   the same token, later: 401 token_expired
+5. answered for: analyst | logins so far: 2
+6. the journal:
+                      request  status                code                          next move
+                       log in     200                  ok                       use the data
+                  fresh token     200                  ok                       use the data
+token without the word Bearer     401       missing_token               stop: fix the header
+        a token nobody issued     401       invalid_token  stop: this token was never issued
+               wrong password     401 invalid_credentials stop: fix the password, never loop
+        the same token, later     401       token_expired           log in again, retry ONCE
+                renewed token     200                  ok                       use the data
+   Only token_expired earns a second try, and exactly one.</pre><p>TODO 2 is the header <code class="inline">Authorization: Bearer &lt;token&gt;</code>; TODO 5 renews only on <code class="inline">token_expired</code>, once. Note for the room: the practice API forgets an expired token the first time it reports it, so a second request with the same token gets <code class="inline">invalid_token</code>. That is why the lab lets the request in Step 5 be the one that discovers the expiry.</p>
+</div>
+<div class="blk"><div class="h">Lab 6.5-A · stock_check_solution.py</div>
+<p>File: <code class="inline">labs/module-18/l6_5-rate-limiting/stock_check_solution.py</code>. Output of a real run:</p>
+<pre class="out">this server allows: 10 requests per 5 seconds per client
+1. 200 {'X-RateLimit-Limit': '10', 'X-RateLimit-Remaining': '9', 'X-RateLimit-Reset': '5'}
+   a polite pace: one request every 0.55 s, so 13 requests take about 7 s
+2. burst:  [200, 200, 200, 200, 200, 200, 200, 200, 200, 404, 429, 429, 429]
+   answered 10 of 13, refused 3 | Retry-After: 5 s
+   the server said: Too many requests. Try again in 5 second(s).
+3. plan B: [200, 200, 200, 200, 200, 200, 200, 200, 200, 404, 200, 404, 200]
+   refused in the end: 0 | waits: 1 | took about 5 s
+4. plan A: [200, 200, 200, 200, 200, 200, 200, 200, 200, 404, 200, 404, 200]
+   refused: 0 | took about 7 s
+5. 9 of 9 categories answered
+    category  products  out_of_stock  low_stock
+       Packs        24             3          1
+     Apparel        35             2          7
+ Accessories        32             2          5
+    Footwear        28             2          3
+        Snow        22             2          3
+    Sleeping        24             1          3
+    Climbing        24             1          3
+       Tents        24             1          2
+Camp Kitchen        29             1          2
+   SNW-1007: 404 No product with SKU 'SNW-1007'.
+   TNT-1020: 200 in_stock
+   PCK-1015: 404 No product with SKU 'PCK-1015'.
+   KIT-1027: 200 in_stock
+   The two 404s were each asked once in steps 3 and 4: a product that does not exist
+   will not exist in five seconds either. Only the 429 earned a second try.</pre><ul class="tick">
+  <li><b>TODO 1</b> the three <code class="inline">X-RateLimit</code> headers; <code class="inline">PER / LIMIT * 1.1</code> = 0.55 s.</li>
+  <li><b>TODO 2</b> <code class="inline">float(last.headers.get("Retry-After", 1))</code>.</li>
+  <li><b>TODO 3</b> a loop over at most <code class="inline">max_tries</code>: on 429 wait as asked and try again; return anything else at once.</li>
+  <li><b>TODO 4</b> <code class="inline">throttle.wait()</code> before each request.</li>
+  <li><b>TODO 5</b> only the 429s earned a second try; the 404s were asked once.</li>
+</ul>
+<p><b>Common wrong answers.</b> A <code class="inline">TypeError</code> from <code class="inline">int(None)</code> (no default). A plan B that also retries 404s (the two missing SKUs are asked five times each). Plan A still refused: the interval computed as <code class="inline">LIMIT / PER</code>.</p>
+</div>
+<div class="blk"><div class="h">Lab 6.5-B · retry_and_cache_solution.py</div>
+<p>File: <code class="inline">labs/module-18/l6_5-rate-limiting/retry_and_cache_solution.py</code>. Output of a real offline run (online, step 4 prints <code class="inline">200 after retrying [503, 503]</code> instead of the skip note):</p>
+<pre class="out">this server allows: 10 requests per 5 seconds per client
+1. schedule:    [0.25, 0.5, 1.0, 2.0, 3.0, 3.0]
+   with jitter: [0.08, 0.08, 0.65, 0.14, 1.61, 1.1]
+2. /flaky: [503, 503, 200] | Retry-After on the first: 1
+3. /flaky: 200 {'status': 'ok', 'attempts_needed': 3} | tries: 3
+   /products/SNW-1007: 404 not_found | tries: 1
+   with max_tries=2: gave up after 2 tries (last status: 503)
+4. would the policy retry?
+   GET  503: True
+   GET  429: True
+   GET  404: False
+   GET  401: False
+   POST 503: False
+   offline: a mounted Retry policy needs the real practice API, so this step is skipped.
+   Online it prints: 200 after retrying [503, 503]
+5. asked 6 times: ['network', 'network', 'network', 'cache', 'cache', 'cache']
+   3 requests sent, 3 answers from the cache, 3 files in the cache
+   a 404 is raised, not saved: 404 not_found | files in the cache: 3
+6. median list price:
+          products  median_price
+category                        
+Sleeping        24        141.45
+Packs           24        118.95
+Climbing        24         82.45
+   Six questions, three requests. Run the lab again without the rmtree line and it needs none.</pre><p>The schedule is <code class="inline">min(cap, base * 2 ** attempt)</code> with base 0.25 and cap 3; jitter draws <code class="inline">random.uniform(0, ceiling)</code>. The policy's <code class="inline">is_retry</code> shows the design: GET 503 and 429 yes; 404, 401 and any POST no. The cache writes only after <code class="inline">check()</code>, so the 404 is raised and not saved.</p>
+</div>
+
+  <div class="sec"><h2>Checkpoint 2: Rubric and Model Answer</h2><span class="rule"></span></div>
+<div class="blk"><div class="h">Rubric (5 rows; score each row 2, 1 or 0)</div>
+<table class="rubric"><thead><tr><th>Criterion</th><th>Full (2)</th><th>Partial (1)</th><th>Not yet (0)</th></tr></thead><tbody>
+<tr><td class="crit">1. Database query</td><td>Read-only connection (<code class="inline">?mode=ro</code>), ONE query with <code class="inline">?</code> parameters, correct filter (<code class="inline">status = 'returned'</code>, <code class="inline">order_date &gt;= '2025-11-01'</code>): 118 orders, $25,191.92</td><td>Right numbers but values glued into the SQL text, or not read-only</td><td>No query, or a wrong filter (for example <code class="inline">&gt;</code> instead of <code class="inline">&gt;=</code>, or all statuses)</td></tr>
+<tr><td class="crit">2. Credentials</td><td>Key from the environment (<code class="inline">os.environ</code> / <code class="inline">require_env</code>), sent as <code class="inline">X-API-Key</code>; only a hint printed</td><td>Works, but the key is printed in full or typed into the file</td><td>No key sent, or the key in the URL</td></tr>
+<tr><td class="crit">3. Pagination and status checks</td><td>Follows <code class="inline">next</code> to the end (3 pages at 50), filters sent with the first request only, every response checked: 118 rows, unique ids</td><td>Reads all pages but sends <code class="inline">params</code> on every page, or skips the status check</td><td>Reads only the first page, or a 401 body is treated as data</td></tr>
+<tr><td class="crit">4. Comparison</td><td>Compares the id sets AND the totals; reports 0 ids only in one source</td><td>Compares counts or totals only</td><td>No comparison</td></tr>
+<tr><td class="crit">5. The answer</td><td>One clear sentence with both numbers that Finance could act on</td><td>A sentence without numbers, or numbers without a conclusion</td><td>No sentence</td></tr>
+</tbody></table>
+<p><b>Reading the score:</b> 9 to 10 ready for the capstone's data step; 6 to 8 one lesson to revisit (name it); 5 or less, book a catch-up on Lessons 5.1 and 6.4 before Session 20.</p>
+</div>
+<div class="blk"><div class="h">Model answer</div>
+<p>File: <code class="inline">labs/module-18/checkpoint-2/checkpoint2_solution.py</code>. The three parts:</p>
+<pre class="code">conn = sqlite3.connect((DATA / <span class="s">"pinecrest.db"</span>).as_uri() + <span class="s">"?mode=ro"</span>, uri=<span class="k">True</span>)
+from_db = pd.read_sql(
+    <span class="s">"""
+    SELECT order_id, order_date, order_total
+    FROM orders
+    WHERE status = ? AND order_date &gt;= ?
+    ORDER BY order_id
+    """</span>,
+    conn, params=(STATUS, SINCE))
+conn.close()
+
+api_key = os.environ.get(<span class="s">"PINECREST_API_KEY"</span>)
+items, pages = [], <span class="s">0</span>
+url, params = <span class="s">f"{API}/orders"</span>, {<span class="s">"status"</span>: STATUS, <span class="s">"since"</span>: SINCE, <span class="s">"per_page"</span>: <span class="s">50</span>}
+<span class="k">while</span> url:
+    r = http.get(url, headers={<span class="s">"X-API-Key"</span>: api_key}, params=params, timeout=<span class="s">10</span>)
+    r.raise_for_status()
+    data = r.json()
+    items.extend(data[<span class="s">"items"</span>])
+    pages += <span class="s">1</span>
+    url = <span class="s">f"{API}{data['next']}"</span> <span class="k">if</span> data[<span class="s">"next"</span>] <span class="k">else</span> <span class="k">None</span>
+    params = <span class="k">None</span>
+from_api = pd.DataFrame(items)</pre>
+<p>Output of a real run (offline; the online run against the practice API printed the same lines):</p>
+<pre class="out">A. database: 118 returned orders since 2025-11-01, total $25,191.92
+B. key loaded: pine...
+   API: 3 pages, 118 rows (the API promised 118), total $25,191.92
+   unique ids: True | first date: 2025-11-02
+C. same order ids: True | same total value: True
+   ids only in the API: 0 | ids only in the database: 0
+ANSWER: Yes. Both sources hold the same 118 returned orders placed since 2025-11-01, worth $25,191.92 in total; no order is in one source and missing from the other.</pre><p><b>A typical partial answer:</b> Part A correct; Part B reads only the first page (50 rows, $9,877.33) and concludes "No, they disagree". That is rubric row 3 at 0 and row 5 at 1: the sentence was honest about the numbers it had, but the pull was incomplete. Point at <code class="inline">next</code> in the first response.</p>
+</div>
+
+  <div class="sec"><h2>Lesson Quiz Answers</h2><span class="rule"></span></div>
+<div class="blk"><div class="h">Lesson 6.4: API Authentication</div>
+<p>The five-question quiz at the end of <code class="inline">webscraping_api_authentication.html</code> (three options each).</p>
+<table class="rubric"><thead><tr><th>Item</th><th>Answer</th><th>Reason</th></tr></thead><tbody>
+<tr><td class="crit">Question 1</td><td><b>C</b></td><td>403 means understood and refused: stop and fix the credential.</td></tr>
+<tr><td class="crit">Question 2</td><td><b>B</b></td><td>An environment variable (or a prompt), read at run time.</td></tr>
+<tr><td class="crit">Question 3</td><td><b>A</b></td><td>Both pages are read; <code class="inline">i</code> ends at 1, the index of the last page.</td></tr>
+<tr><td class="crit">Question 4</td><td><b>B</b></td><td>Expiry is normal: log in again and repeat the request once.</td></tr>
+<tr><td class="crit">Question 5</td><td><b>A</b></td><td>A leaked token stops working soon and can be revoked without changing the password.</td></tr>
+</tbody></table>
+</div>
+<div class="blk"><div class="h">Lesson 6.5: Rate Limiting and Retries</div>
+<p>The five-question quiz at the end of <code class="inline">webscraping_rate_limiting.html</code> (three options each).</p>
+<table class="rubric"><thead><tr><th>Item</th><th>Answer</th><th>Reason</th></tr></thead><tbody>
+<tr><td class="crit">Question 1</td><td><b>A</b></td><td>Honor <code class="inline">Retry-After</code>: wait at least 4 seconds, then retry.</td></tr>
+<tr><td class="crit">Question 2</td><td><b>C</b></td><td>Each wait doubles and <code class="inline">min</code> caps it at 8.0.</td></tr>
+<tr><td class="crit">Question 3</td><td><b>B</b></td><td>Jitter spreads retries so clients that failed together do not retry together.</td></tr>
+<tr><td class="crit">Question 4</td><td><b>C</b></td><td>A 404 describes the request: retrying cannot change it.</td></tr>
+<tr><td class="crit">Question 5</td><td><b>A</b></td><td>Each page is saved to its own file as it arrives, and existing files are skipped.</td></tr>
+</tbody></table>
+</div>
+
+  <div class="sec"><h2>Warm-up and Exit Ticket Answers</h2><span class="rule"></span></div>
+<div class="blk"><div class="h">Warm-up (retrieval from Session 17)</div>
+<ol class="steps">
+  <li>Which Beautiful Soup method returns <code class="inline">None</code> when nothing matches? <b>Answer:</b> <code class="inline">select_one()</code> (and <code class="inline">find()</code>). <code class="inline">select()</code> and <code class="inline">find_all()</code> return a list, empty when nothing matches.</li>
+  <li>Why does <code class="inline">get_soup()</code> pass <code class="inline">resp.content</code>, not <code class="inline">resp.text</code>? <b>Answer:</b> From bytes, Beautiful Soup reads the page's own <code class="inline">&lt;meta charset&gt;</code>, so the text decodes correctly whatever the server said.</li>
+  <li>How does a pagination loop know it has reached the last page of the catalog? <b>Answer:</b> There is no <code class="inline">a.next</code> link on the last page, so <code class="inline">select_one("nav.pagination a.next")</code> returns <code class="inline">None</code>.</li>
+  <li><code class="inline">requests</code> sees an empty list where the browser shows deals. What do you try before Selenium? <b>Answer:</b> Find the data file the page loads (Network tab or the script) and request it directly, if allowed.</li>
+  <li>Why <code class="inline">WebDriverWait(...).until(...)</code> instead of <code class="inline">time.sleep()</code>, and where does <code class="inline">driver.quit()</code> go? <b>Answer:</b> The wait continues as soon as the condition is true and raises clearly if it never is. <code class="inline">quit()</code> goes in a <code class="inline">finally</code> block.</li>
+</ol>
+</div>
+<div class="blk"><div class="h">Exit ticket</div>
+<ol class="steps">
+  <li>What is the difference between a 401 and a 403, and what does your program do with each? <b>Answer:</b> 401: no valid credential (missing, malformed, expired): fix how you send it, or renew an expired token and retry once. 403: understood and refused: stop; a person must fix the key or permission.</li>
+  <li>The server answers 429 with <code class="inline">Retry-After: 5</code>. What does your client do? <b>Answer:</b> Wait at least 5 seconds, then send the request again (with a maximum number of tries). Better still: pace requests so this rarely happens.</li>
+  <li>Name one failure that must NOT be retried, and say why. <b>Answer:</b> Any of 400, 401 (except an expired token, once), 403, 404: they describe the request, so the same request gets the same answer.</li>
+</ol>
+<p><b>What wrong answers reveal.</b> 401 and 403 swapped: redo predict item 1 at the start of Session 19's warm-up. "Retry immediately" for a 429: the cost to the server has not landed. "Retry everything": the difference between the request and the server's mood needs one more example.</p>
+</div>
+
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 18 · Answer Key · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

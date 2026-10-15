@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facilitator Guide: Session 14</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Instructor copy —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">contains answers &amp; timing · not for students</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Facilitator Guide</div>
+    <h1>Session 14: SQL from Python: Queries and Joins</h1>
+    <p class="sub">How to teach the first SQL session: connect to a database from Python, ask one table for exactly what you need, pass values safely, then combine tables with joins, CTEs and CASE without losing or inventing a single row.</p>
+    <div class="meta-row">
+      <span class="chip"><b>2</b> lessons</span>
+      <span class="chip"><b>3 hrs</b> session</span>
+      <span class="chip">Lessons <b>5.1–5.2</b></span>
+      <span class="chip">Session <b>14</b> of 21</span>
+    </div>
+  </header>
+
+  <div class="sec"><h2>How to Use This Guide</h2><span class="rule"></span></div>
+<ul class="tick">
+  <li>Module 5 starts here. For most learners this is their first SQL, and both lessons are dense. Every idea has a pandas twin they already own: say the pandas version aloud whenever a query looks foreign.</li>
+  <li>Same rhythm as every session: <b>Frame</b> → <b>Live demo</b> (you type, they follow) → <b>Guided lab</b> (new practice from the kit) → <b>Start the project</b>. The lesson projects are finished at home.</li>
+  <li>Type SQL one clause per line and run it after each clause. Every code block below was run on the course data; the gray block under it is the real output.</li>
+  <li>Labs live in <code class="inline">labs/module-14/</code>: starters for learners, solutions for you. Teal blocks are hands-on, amber blocks are watch-outs.</li>
+  <li>Keep <code class="inline">sql_database_connections.html</code> and <code class="inline">sql_complex_queries.html</code> open in browser tabs for the flow diagrams, the join table and the recursion diagram.</li>
+</ul>  <div class="note warn"><div class="t">The #1 risk of Session 14: results that are wrong and look right</div>
+    <p>In pandas a bad merge at least changes <code class="inline">.shape</code> in front of you. In SQL an inner join drops 739 orders, a fan-out triples revenue and a comparison with NULL skips 18,154 rows, all without a word. The habit to build all session: <b>say the row count you expect before you run the query, then count</b>. The second risk is safety: one learner will build SQL with an f-string out of habit. Stop the room when you see it.</p>
+  </div>
+
+  <div class="sec"><h2>Before the Session</h2><span class="rule"></span></div>
+<ul class="tick">
+  <li>☐ From the <code class="inline">instructor-kit/</code> folder run <code class="inline">python3 labs/check_labs.py module-14</code>. Expect <code class="inline">12 passed, 0 failed</code>.</li>
+  <li>☐ Copy the <b>starter files only</b> to the shared folder: <code class="inline">labs/module-14/l5_1-database-connections/*_starter.py</code> and <code class="inline">labs/module-14/l5_2-complex-queries/*_starter.py</code>. Keep every <code class="inline">*_solution.py</code> on your machine.</li>
+  <li>☐ Files used today: <code class="inline">data/pinecrest.db</code> (3.5 MB, six tables) and, for the project checks at home, <code class="inline">orders.csv</code>, <code class="inline">order_items.csv</code>, <code class="inline">products.csv</code>. No server, no internet, no accounts: SQLite ships inside Python.</li>
+  <li>☐ On the projector machine, and on any learner machine you can reach, run <code class="inline">python -c "import sqlite3; print(sqlite3.sqlite_version)"</code> and <code class="inline">python -c "import sqlalchemy; print(sqlalchemy.__version__)"</code>. You need SQLAlchemy 2.x.</li>
+  <li>☐ Projector: one empty notebook, <code class="inline">session14_sql.ipynb</code>, in the folder that holds <code class="inline">data/</code>. Font 18 pt or larger. Delete any old <code class="inline">pinecrest_work.db</code> in that folder so step 1 starts clean.</li>
+  <li>☐ Board: on the left the running order <b>FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY → LIMIT</b>; on the right, covered until after the break, <b>739 · 1,058 · 609 · 8</b>; across the top, "Say the row count before you run it."</li>
+  <li>☐ Checkpoint 1 rubrics, marked, one sentence of advice each. They go back in the first two minutes.</li>
+  <li>☐ Skim the Session 13 homework: the Decision Memo, the returns project (its finding, online footwear, is today's 5.2 project in SQL) and the paper sketch of the four tables.</li>
+</ul>  <div class="note warn"><div class="t">Known environment traps</div>
+    <p><b>An old SQLite.</b> <code class="inline">RIGHT JOIN</code> and <code class="inline">FULL OUTER JOIN</code> need SQLite 3.39 or later (Lesson 5.2 shows a rewrite that works everywhere); nothing in the demo or the labs needs them. A version below 3.25 means Session 15's window functions will not run: note the learner and get them a newer Python before then. <b>A typo in the file name</b> creates a new, empty database and the error arrives one line later as <code class="inline">OperationalError: no such table: orders</code>. Look for a stray small <code class="inline">.db</code> file and delete it. <b>The wrong working folder</b> gives the same message for the same reason. The labs avoid both (they find the data through <code class="inline">labs_paths</code> and open it read-only). <b><code class="inline">database is locked</code></b>: two notebooks hold the same working copy and one has an uncommitted write; commit or restart one kernel. <b>Windows</b> will not overwrite <code class="inline">pinecrest_work.db</code> while a connection to it is open (<code class="inline">PermissionError</code> on the <code class="inline">shutil.copy</code> line when rerunning): restart the kernel first. <b>SQLAlchemy 2</b> refuses bare strings (<code class="inline">ObjectNotExecutableError</code>): wrap SQL in <code class="inline">text(...)</code>.</p>
+  </div>
+
+  <div class="sec"><h2>Session 14 Agenda (3 hours)</h2><span class="rule"></span></div>
+  <table class="timing">
+    <thead><tr><th>Clock</th><th>Minutes</th><th>Segment</th><th>What happens</th></tr></thead>
+    <tbody>
+      <tr><td class="t">0:00</td><td class="t">10</td><td>Warm-up</td><td>Checkpoint 1 rubrics back. Five retrieval questions on Session 13 (experiments, the EDA routine), no notes. Homework check.</td></tr>
+      <tr><td class="t">0:10</td><td class="t">10</td><td><b>5.1</b> Frame and mental model</td><td>The binder and the librarian. SQL as a second language for ideas they already know from pandas.</td></tr>
+      <tr><td class="t">0:20</td><td class="t">30</td><td><b>5.1</b> Live demo</td><td>A working copy, the catalog, cursors, <code class="inline">SELECT</code> clause by clause, <code class="inline">GROUP BY</code> and <code class="inline">HAVING</code>, placeholders against an f-string, a rollback, SQLAlchemy and <code class="inline">pd.read_sql</code>.</td></tr>
+      <tr><td class="t">0:50</td><td class="t">25</td><td><b>5.1</b> Guided lab</td><td><code class="inline">labs/module-14/l5_1-database-connections/staff_report_starter.py</code>, then <code class="inline">safe_lookup_starter.py</code>.</td></tr>
+      <tr><td class="t">1:15</td><td class="t">10</td><td><b>5.1</b> Start the lesson project</td><td>The Store Scorecard: Steps 1 and 2 in the room (1,320 completed Boise orders in 2025).</td></tr>
+      <tr><td class="t">1:25</td><td class="t">10</td><td>Break</td><td>Leave the SQL-to-pandas table on the projector.</td></tr>
+      <tr><td class="t">1:35</td><td class="t">10</td><td><b>5.2</b> Frame and mental model</td><td>Two stacks of index cards. The four unmatched-row numbers, written on the board.</td></tr>
+      <tr><td class="t">1:45</td><td class="t">30</td><td><b>5.2</b> Live demo</td><td>Read-only connection, <code class="inline">JOIN</code> and its missing 739 rows, <code class="inline">LEFT JOIN</code> and the anti-join, three tables, the fan-out trap, a CTE, a recursive CTE, <code class="inline">CASE</code>, NULL.</td></tr>
+      <tr><td class="t">2:15</td><td class="t">25</td><td><b>5.2</b> Guided lab</td><td><code class="inline">labs/module-14/l5_2-complex-queries/join_row_counts_starter.py</code>, then the first two steps of <code class="inline">stock_vs_sales_starter.py</code>.</td></tr>
+      <tr><td class="t">2:40</td><td class="t">10</td><td><b>5.2</b> Start the lesson project</td><td>The Returns Investigation: Step 1 in the room (6.9% online, 3.4% in stores), Step 2 read together.</td></tr>
+      <tr><td class="t">2:50</td><td class="t">10</td><td>Wrap-up</td><td>Exit ticket (3 questions), homework, bring list for Session 15.</td></tr>
+      <tr><td class="t"><b>Total</b></td><td class="t"><b>180</b></td><td></td><td>Ends at 3:00.</td></tr>
+    </tbody>
+  </table>
+<p><b>In the room:</b> both mental models; SQL from the first <code class="inline">SELECT</code> to a parameterized <code class="inline">pd.read_sql</code> in thirteen cells; joins, the fan-out trap, a CTE, a recursive CTE, CASE and NULL in twelve cells; four short labs on the <code class="inline">employees</code> and <code class="inline">inventory</code> tables; the first step or two of each lesson project.</p><p><b>Moves home, exactly:</b> <b>Lesson 5.1</b>: <code class="inline">sqlite3.Row</code> and iterating a cursor; <code class="inline">IN</code>, <code class="inline">BETWEEN</code>, <code class="inline">LIKE</code> and <code class="inline">DISTINCT</code>; grouping by <code class="inline">strftime</code>; named placeholders with sqlite3 and "What Placeholders Cannot Do"; <code class="inline">contextlib.closing</code>; <code class="inline">engine.begin()</code> and <code class="inline">inspect</code>; <code class="inline">chunksize</code>; the PostgreSQL comparison table; Common Mistakes 1 to 6; Store Scorecard Steps 3 to 6; Exercises 1 to 4; the quiz and the journal. <b>Lesson 5.2</b>: <code class="inline">RIGHT JOIN</code>, <code class="inline">FULL OUTER JOIN</code> and the rewrite; <code class="inline">CROSS JOIN</code>; scalar, <code class="inline">IN</code> and correlated subqueries and <code class="inline">EXISTS</code>; the org chart printed from the <code class="inline">path</code> column; CASE as size bands; the set operations; Common Mistakes 1 to 4; Returns Investigation Steps 2 to 6; Exercises 1 to 5; the quiz and the journal. <b>Kit labs</b>: <code class="inline">save_summary</code>, the CTE half of <code class="inline">stock_vs_sales</code>, and <code class="inline">org_payroll</code> (stretch). About three hours.</p><p><b>Protect:</b> the placeholder demonstration (5.1 step 10) and the lab's injection step; the row-count habit (5.2 steps 2 and 3), the fan-out trap (step 6) and the lab's predictions. <b>Cut first:</b> see "If You Run Long or Short".</p>
+  <div class="sec"><h2>Warm-up</h2><span class="rule"></span></div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">0:00</span><h3>Warm-up: Retrieval from Session 13</h3><span class="dur">10 min</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Timing</div>
+<table class="timing"><tbody>
+<tr><td class="t">2m</td><td>Checkpoint 1 rubrics back, one sentence to the room</td></tr>
+<tr><td class="t">6m</td><td>Five retrieval questions on paper, no notes, then answers</td></tr>
+<tr><td class="t">2m</td><td>Homework check and today's roadmap</td></tr>
+</tbody></table>
+      </div>
+      <div class="blk"><div class="h">Checkpoint 1 rubrics</div>
+<p>Hand the rubrics back face down. One sentence to the room, chosen from what you saw when marking, for example: "Most of you had the right answer; fewer of you said how sure you were. An estimate without an interval is half an answer." If more than a third of the room had no interval or effect size, spend three warm-up minutes re-running the Welch cell from the model answer instead of questions 1 and 2. Individual conversations happen at the break.</p>
+      </div>
+      <div class="blk"><div class="h">Five retrieval questions (Lessons 4.6 and 4.7)</div>
+<ol class="steps">
+  <li>Name three of the six lines of an experiment plan. <b>Answer:</b> Any three of: unit, primary metric, guardrail metric, hypotheses (two-sided, alpha), sample size and duration, decision rule.</li>
+  <li>Conversion went from 8.86% to 10.03%. Say the lift two ways. <b>Answer:</b> +1.17 percentage points (absolute) and +13% (relative). Both are correct; always say which.</li>
+  <li>Why is "stop the test the first time p is below 0.05" a problem? <b>Answer:</b> Each look is another chance to cross the line by luck. With weekly looks the false-alarm rate was about 12% instead of 5%; with daily looks about 27%.</li>
+  <li>What does "grain" mean, and what is the grain of <code class="inline">order_items</code>? <b>Answer:</b> What one row represents. One product line on an order (45,490 rows for 20,302 orders). Today's joins live or die on this.</li>
+  <li>Merging 1,800 survey rows with <code class="inline">orders</code> on <code class="inline">customer_id</code> gave 9,230 rows. What happened, and what guards against it? <b>Answer:</b> Each response was repeated once per order of that customer. Guard: summarize to one row per customer first, and state the relationship with <code class="inline">validate=</code>. In SQL the same trap is called fan-out, and you will see it turn $3.7 million into $10.3 million after the break.</li>
+</ol>
+      </div>
+      <div class="blk"><div class="h">Homework check and roadmap</div>
+<p>Ask what the returns project found (online orders containing footwear are returned 14.4% of the time against 4.8%; in stores footwear makes no difference). "Keep that number. You will find it again today, in a different language." Ask one learner to describe the link between <code class="inline">orders</code> and <code class="inline">order_items</code> from their sketch.</p><p>Roadmap: "Every dataset so far arrived as a file. In most organizations the data lives in a database. Before the break: ask one table for what you need, safely. After the break: combine tables without losing or inventing rows."</p>
+      </div>
+      <div class="blk warn"><div class="h">Watch-outs</div>
+<ul class="tick">
+  <li>Questions 4 and 5 are the bridge to today. If the room is unsure about "grain", spend the extra minute now.</li>
+  <li>A learner who missed Session 13 does Checkpoint 1 at home on the honor system (task sheet in the Session 13 workbook). Nothing today depends on it.</li>
+</ul>
+      </div>
+    </div>
+  </section>
+
+  <div class="sec"><h2>Lesson Plans</h2><span class="rule"></span></div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">5.1</span><h3>Database Connections</h3><span class="dur">75 min</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Objectives (from the lesson page)</div>
+<ul class="tick">
+  <li>Open a SQLite database from Python, run a query through a cursor, and close the connection cleanly</li>
+  <li>Write SELECT queries that filter, sort, aggregate and group rows, and say which pandas operation each clause matches</li>
+  <li>Pass values into a query with parameters, and explain why building SQL with f-strings is dangerous</li>
+  <li>Use a SQLAlchemy engine with text(), and move data both ways with pd.read_sql and DataFrame.to_sql</li>
+  <li>Name the main things that change when the database is PostgreSQL instead of SQLite</li>
+</ul>
+      </div>
+      <div class="blk"><div class="h">Timing inside the block (75 minutes)</div>
+<table class="timing"><tbody>
+<tr><td class="t">10m</td><td>Frame and mental model</td></tr>
+<tr><td class="t">30m</td><td>Live demo, steps 1 to 13</td></tr>
+<tr><td class="t">25m</td><td>Guided lab: the staff report, then a safe stock lookup</td></tr>
+<tr><td class="t">10m</td><td>Start the Store Scorecard: Steps 1 and 2</td></tr>
+</tbody></table>
+      </div>
+      <div class="blk"><div class="h">Mental model to say</div>
+<p>"A CSV file is a photocopied binder. To find last March's returned orders you carry the whole binder to your desk and flip through every page yourself. A database is a library with a librarian at the desk. You hand over a request slip, 'returned orders, March, Boise store, sorted by total', and the librarian brings back only those pages. The request slip is written in SQL, and the librarian is the database engine."</p><p>Then the reassurance: "You already know the ideas. Filtering, sorting, grouping and merging are what you did in Module 2. Today you learn to say the same things in a second language. When a query feels foreign, translate it into pandas in your head." Put the SQL-to-pandas table (it is in the workbook) on the projector and leave it up through the break.</p><p>One line on the engine: "SQLite is a complete SQL database in a single file, with no server and no password, and it ships inside Python. Nearly everything you write today runs unchanged on PostgreSQL." Have learners take out the paper sketch of the four tables from their homework: it comes into play after the break.</p>
+      </div>
+      <div class="blk"><div class="h">Live demo (you type, they follow): from connection to DataFrame</div>
+<p>One notebook, <code class="inline">session14_sql.ipynb</code>, in the folder that holds <code class="inline">data/</code>. Thirteen cells; the marked minutes add up to 30. Type SQL one clause per line and run after each new clause, so every error is one clause old. The SQLite version printed in step 1 will differ from machine to machine.</p><ol class="steps">
+  <li><b>A working copy, then connect (2m).</b> Say: "First habit of this module: work on a COPY. Some lessons create tables and indexes, and the original must stay exactly as documented."
+<pre class="code"><span class="k">import</span> shutil
+<span class="k">import</span> sqlite3
+<span class="k">import</span> pandas <span class="k">as</span> pd
+
+shutil.copy(<span class="s">"data/pinecrest.db"</span>, <span class="s">"pinecrest_work.db"</span>)    <span class="c"># a private working copy</span>
+conn = sqlite3.connect(<span class="s">"pinecrest_work.db"</span>)
+print(<span class="s">"SQLite library version:"</span>, sqlite3.sqlite_version)</pre>
+<pre class="out">SQLite library version: 3.53.1</pre>
+<p style="margin:.3rem 0 0">Your version will differ. "A connection is an open line to the file. Everything goes through it." Mention once: <code class="inline">connect</code> never complains about a wrong file name; it creates an empty database.</p></li>
+  <li><b>What is in there? (2m).</b> Say: "Every SQLite database keeps a catalog of itself. This is your first SQL query: read it left to right."
+<pre class="code">tables = conn.execute(
+    <span class="s">"SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name"</span>)
+print([name <span class="k">for</span> (name,) <span class="k">in</span> tables])
+<span class="k">for</span> row <span class="k">in</span> conn.execute(<span class="s">"PRAGMA table_info(orders)"</span>):
+    print(row)</pre>
+<pre class="out">['customers', 'employees', 'inventory', 'order_items', 'orders', 'products']
+(0, 'order_id', 'INTEGER', 0, None, 1)
+(1, 'customer_id', 'INTEGER', 1, None, 0)
+(2, 'order_date', 'TEXT', 1, None, 0)
+(3, 'channel', 'TEXT', 1, None, 0)
+(4, 'store', 'TEXT', 1, None, 0)
+(5, 'status', 'TEXT', 1, None, 0)
+(6, 'payment_method', 'TEXT', 1, None, 0)
+(7, 'promo_code', 'TEXT', 0, None, 0)
+(8, 'discount_pct', 'INTEGER', 1, None, 0)
+(9, 'shipping_cost', 'REAL', 1, None, 0)
+(10, 'order_total', 'REAL', 1, None, 0)</pre>
+<p style="margin:.3rem 0 0">Four old friends and two tables that exist only here: <code class="inline">employees</code> and <code class="inline">inventory</code> (today's labs live in those). Point at <code class="inline">order_date TEXT</code>: "SQLite has no date type. <code class="inline">2024-03-05</code> sorts correctly as text, so date filters still work."</p></li>
+  <li><b>A cursor walks the rows (1m).</b> Say: "Running a statement gives a cursor: a pointer that moves forward through the result. Rows are tuples."
+<pre class="code">cur = conn.cursor()
+cur.execute(<span class="s">"SELECT order_id, store, order_total FROM orders"</span>)
+print(cur.fetchone())        <span class="c"># the next row</span>
+print(cur.fetchmany(<span class="s">2</span>))      <span class="c"># the next two, as a list</span>
+print(len(cur.fetchall()))   <span class="c"># everything that is left</span></pre>
+<pre class="out">(100001, 'Flagstaff', 434.9)
+[(100002, 'Asheville', 278.9), (100003, 'Online', 75.9)]
+20299</pre>
+<p style="margin:.3rem 0 0">1 + 2 + 20,299 = 20,302. "Once a row is fetched it is gone from the cursor."</p></li>
+  <li><b>A helper so we can read results (2m).</b> Say: "Reading tuples by hand gets old. pandas can run a query and hand back a DataFrame. This helper is all we need for an hour."
+<pre class="code"><span class="k">def</span> show(sql, params=()):
+    <span class="s">"""Run a query and print the result as a table."""</span>
+    print(pd.read_sql(sql, conn, params=params).to_string(index=<span class="k">False</span>))
+
+show(<span class="s">"SELECT order_id, order_date, store, status, order_total FROM orders LIMIT 3"</span>)</pre>
+<pre class="out"> order_id order_date     store    status  order_total
+   100001 2024-01-01 Flagstaff completed        434.9
+   100002 2024-01-01 Asheville completed        278.9
+   100003 2024-01-01    Online completed         75.9</pre></li>
+  <li><b>Rows: WHERE (3m).</b> Say: "WHERE is the boolean mask of SQL. Text in SINGLE quotes, equality is a single <code class="inline">=</code>, conditions join with AND, OR, NOT." Type it clause by clause; run after each new line.
+<pre class="code">show(<span class="s">"""
+    SELECT name, price, rating
+    FROM products
+    WHERE category = 'Tents'
+      AND price &lt; 250
+      AND rating &gt;= 4.5
+"""</span>)</pre>
+<pre class="out">                              name  price  rating
+          Quillback Wayfinder Tarp 132.95     4.9
+Quillback Alpenglow Tent Footprint  67.95     5.0</pre>
+<p style="margin:.3rem 0 0">Ask for the pandas version aloud: <code class="inline">products[(products.category == 'Tents') &amp; (products.price &lt; 250) &amp; (products.rating &gt;= 4.5)]</code>. "Same idea, new spelling." <code class="inline">IN</code>, <code class="inline">BETWEEN</code> and <code class="inline">LIKE</code> are homework reading.</p></li>
+  <li><b>Order and top N (1m).</b> Say: "Without ORDER BY the order of rows is not guaranteed, even if it looks stable today. ORDER BY with LIMIT is how SQL says top N."
+<pre class="code">show(<span class="s">"""
+    SELECT order_id, order_date, store, order_total
+    FROM orders
+    WHERE status = 'completed'
+    ORDER BY order_total DESC, order_id
+    LIMIT 3
+"""</span>)</pre>
+<pre class="out"> order_id order_date  store  order_total
+   106479 2024-09-15 Online       4893.0
+   114268 2025-06-24 Online       4184.9
+   113836 2025-06-11 Online       4150.4</pre>
+<p style="margin:.3rem 0 0">"There is the $4,893 bulk order from Lesson 0.1, found without loading 20,301 other rows."</p></li>
+  <li><b>Aggregates, and three kinds of COUNT (3m).</b> Say: "An aggregate turns many rows into one value. The five you will use daily: COUNT, SUM, AVG, MIN, MAX."
+<pre class="code">show(<span class="s">"""
+    SELECT COUNT(*)                   AS orders,
+           ROUND(SUM(order_total), 2) AS revenue,
+           ROUND(AVG(order_total), 2) AS avg_order
+    FROM orders
+    WHERE status = 'completed'
+"""</span>)
+show(<span class="s">"""
+    SELECT COUNT(*)             AS all_rows,
+           COUNT(phone)         AS with_phone,
+           COUNT(DISTINCT city) AS cities
+    FROM customers
+"""</span>)</pre>
+<pre class="out"> orders    revenue  avg_order
+  18762 3624306.27     193.17
+ all_rows  with_phone  cities
+     4850        4570      35</pre>
+<p style="margin:.3rem 0 0">"$3,624,306.27: the number you have computed with pandas since Module 2, answered by the engine in one row." Then the three COUNTs: rows, non-NULL values, different values (<code class="inline">.nunique()</code>). "Aggregates skip NULL the way pandas skips NaN."</p></li>
+  <li><b>GROUP BY: one row per group (3m).</b> Say: "Split, apply, combine: Lesson 2.4. The rule for SQL: every column in SELECT is either in the GROUP BY or inside an aggregate."
+<pre class="code">show(<span class="s">"""
+    SELECT store,
+           COUNT(*)                   AS orders,
+           ROUND(SUM(order_total), 2) AS revenue,
+           ROUND(AVG(order_total), 2) AS avg_order
+    FROM orders
+    WHERE status = 'completed'
+    GROUP BY store
+    ORDER BY revenue DESC
+"""</span>)</pre>
+<pre class="out">    store  orders    revenue  avg_order
+   Online   11604 2357984.45     203.20
+    Boise    2502  443386.85     177.21
+Flagstaff    1648  300580.35     182.39
+     Bend    1650  284575.25     172.47
+Asheville    1358  237779.37     175.10</pre></li>
+  <li><b>HAVING filters the groups (2m).</b> Say: "Which stores have an average order above $180? HAVING is the answer; then watch me put the condition in WHERE instead." The last line is the wrong version; read the error aloud.
+<pre class="code">show(<span class="s">"""
+    SELECT store, ROUND(AVG(order_total), 2) AS avg_order
+    FROM orders
+    WHERE status = 'completed'
+    GROUP BY store
+    HAVING AVG(order_total) &gt; 180
+    ORDER BY avg_order DESC
+"""</span>)
+conn.execute(<span class="s">"SELECT store FROM orders WHERE AVG(order_total) &gt; 180 GROUP BY store"</span>)</pre>
+<pre class="out">    store  avg_order
+   Online     203.20
+Flagstaff     182.39
+OperationalError: misuse of aggregate: AVG()</pre>
+<p style="margin:.3rem 0 0"><code class="inline">misuse of aggregate</code>: "WHERE runs before the groups exist, so there is nothing to average yet." Draw the running order on the board: FROM, WHERE, GROUP BY, HAVING, SELECT, ORDER BY, LIMIT.</p></li>
+  <li><b>Parameters, and the wrong way demonstrated safely (4m).</b> Say: "Real queries are rarely fixed text. The store comes from a dropdown, the name from a form. How the value gets into the query is the most important safety habit in this module."
+<pre class="code"><span class="k">def</span> count_customers_unsafe(last_name):
+    sql = <span class="s">f"SELECT COUNT(*) FROM customers WHERE last_name = '{last_name}'"</span>  <span class="c"># NO</span>
+    <span class="k">return</span> conn.execute(sql).fetchone()[<span class="s">0</span>]
+
+<span class="k">def</span> count_customers_safe(last_name):
+    sql = <span class="s">"SELECT COUNT(*) FROM customers WHERE last_name = ?"</span>
+    <span class="k">return</span> conn.execute(sql, (last_name,)).fetchone()[<span class="s">0</span>]
+
+print(count_customers_unsafe(<span class="s">"Soto"</span>), count_customers_safe(<span class="s">"Soto"</span>))
+sneaky = <span class="s">"nobody' OR '1'='1"</span>
+print(count_customers_unsafe(sneaky), count_customers_safe(sneaky))</pre>
+<pre class="out">45 45
+4850 0</pre>
+<p style="margin:.3rem 0 0">Write the SQL the unsafe function built on the board: <code class="inline">WHERE last_name = 'nobody' OR '1'='1'</code>. "The quote in the input closed the string early and the rest became SQL. That is SQL injection. Had this returned names and emails, the visitor would have the customer list." Leave the rule on the board: <b>never f-string, .format, % or + a value into SQL</b>.</p></li>
+  <li><b>Writing: create, insert, commit (2m).</b> Say: "Analysts mostly read. When you do write: placeholders again, <code class="inline">executemany</code> for a list, and <code class="inline">commit</code> to make it permanent."
+<pre class="code">conn.execute(<span class="s">"""
+    CREATE TABLE store_targets (
+        store          TEXT NOT NULL,
+        quarter        TEXT NOT NULL,
+        target_revenue REAL NOT NULL,
+        PRIMARY KEY (store, quarter)
+    )
+"""</span>)
+targets = [(<span class="s">"Boise"</span>, <span class="s">"2025-Q1"</span>, <span class="s">720000.0</span>), (<span class="s">"Bend"</span>, <span class="s">"2025-Q1"</span>, <span class="s">505000.0</span>)]
+conn.executemany(<span class="s">"INSERT INTO store_targets VALUES (?, ?, ?)"</span>, targets)
+conn.commit()
+show(<span class="s">"SELECT * FROM store_targets"</span>)</pre>
+<pre class="out">store quarter  target_revenue
+Boise 2025-Q1        720000.0
+ Bend 2025-Q1        505000.0</pre></li>
+  <li><b>A transaction is all or nothing (2m).</b> Say: "Two inserts in one <code class="inline">with conn:</code> block. The second breaks the primary key. Predict: how many rows afterward, two or three?"
+<pre class="code">insert = <span class="s">"INSERT INTO store_targets VALUES (?, ?, ?)"</span>
+<span class="k">try</span>:
+    <span class="k">with</span> conn:
+        conn.execute(insert, (<span class="s">"Asheville"</span>, <span class="s">"2025-Q1"</span>, <span class="s">390000.0</span>))
+        conn.execute(insert, (<span class="s">"Boise"</span>, <span class="s">"2025-Q1"</span>, <span class="s">999999.0</span>))    <span class="c"># duplicate key</span>
+<span class="k">except</span> sqlite3.IntegrityError <span class="k">as</span> e:
+    print(<span class="s">"IntegrityError:"</span>, e)
+show(<span class="s">"SELECT store, quarter FROM store_targets"</span>)</pre>
+<pre class="out">IntegrityError: UNIQUE constraint failed: store_targets.store, store_targets.quarter
+store quarter
+ Bend 2025-Q1
+Boise 2025-Q1</pre>
+<p style="margin:.3rem 0 0">Two. "The Asheville row was fine, and it was rolled back anyway." One warning: for sqlite3, <code class="inline">with conn:</code> ends the transaction; it does not close the connection.</p></li>
+  <li><b>SQLAlchemy and pandas: the pattern you will keep (3m).</b> Say: "sqlite3 speaks only to SQLite. SQLAlchemy gives one way to connect to any database, and it is what pandas prefers. Three pieces: an engine, <code class="inline">text()</code>, and <code class="inline">:name</code> parameters in a dictionary."
+<pre class="code"><span class="k">from</span> sqlalchemy <span class="k">import</span> create_engine, text
+
+engine = create_engine(<span class="s">"sqlite:///pinecrest_work.db"</span>)
+query = text(<span class="s">"""
+    SELECT store, COUNT(*) AS returned
+    FROM orders
+    WHERE status = :status AND order_date &gt;= :since
+    GROUP BY store
+    ORDER BY returned DESC
+"""</span>)
+<span class="k">with</span> engine.connect() <span class="k">as</span> sa_conn:
+    returned = pd.read_sql(query, sa_conn,
+                           params={<span class="s">"status"</span>: <span class="s">"returned"</span>, <span class="s">"since"</span>: <span class="s">"2025-01-01"</span>})
+print(returned)
+rows = returned.to_sql(<span class="s">"returns_2025"</span>, engine, if_exists=<span class="s">"replace"</span>, index=<span class="k">False</span>)
+print(<span class="s">"rows written:"</span>, rows)</pre>
+<pre class="out">       store  returned
+0     Online       467
+1      Boise        36
+2       Bend        34
+3  Flagstaff        30
+4  Asheville        30
+rows written: 5</pre>
+<p style="margin:.3rem 0 0">"Database to DataFrame with <code class="inline">read_sql</code>, DataFrame to table with <code class="inline">to_sql</code>. Change the engine URL and the same code talks to PostgreSQL." Warn: <code class="inline">if_exists="replace"</code> drops the table first. The PostgreSQL comparison table is homework reading.</p></li>
+</ol>
+      </div>
+      <div class="blk warn"><div class="h">Three mistakes to expect</div>
+<ul class="tick">
+  <li><b>A string where a tuple of parameters belongs.</b> <code class="inline">conn.execute("... WHERE store = ?", "Boise")</code> raises <code class="inline">ProgrammingError: Incorrect number of bindings supplied. The current statement uses 1, and there are 5 supplied.</code> Coach: "How many characters in Boise?" Fix: <code class="inline">("Boise",)</code> with the trailing comma. It appears in the lab's Step 3 on purpose.</li>
+  <li><b>An aggregate in WHERE</b> (or a selected column that is neither grouped nor aggregated). The message is <code class="inline">misuse of aggregate</code>. Coach with the running order on the board: "Point to where WHERE runs. Do the groups exist yet?" SQLite silently allows the ungrouped-column version; PostgreSQL refuses. Hold them to the rule either way.</li>
+  <li><b>The f-string out of habit.</b> They have built strings with f-strings for two courses, and one will do it in the lab "because the value comes from my own code". Coach: "What happens to that query when the store is called O'Malley's?" The rule has no exceptions for values. (For a column NAME, which a placeholder cannot carry, the lab shows the allowed-list check.)</li>
+</ul>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab (25 min)</div>
+<p>Two short labs on tables the lesson does not touch. Learners open <code class="inline">labs/module-14/l5_1-database-connections/staff_report_starter.py</code> first; your references are the matching <code class="inline">_solution.py</code> files. Both labs open the database read-only, so nothing a learner types can change it.</p><ul class="tick">
+  <li><b>Minutes 0 to 12, the staff report (<code class="inline">employees</code>, 55 rows).</b> TODO 1 and 2 are cursor mechanics: 10 columns; the first hire is Clara Soto, 2016-02-01; the last <code class="inline">fetchone()</code> prints <code class="inline">None</code> because the cursor is spent (ask for predictions first). TODO 3 returns the four store managers (Helga Shah 77,800 first). TODO 4: Retail 36 people and 1,841,600 of payroll, Operations 11, E-commerce 6, Executive 2. TODO 5 needs HAVING: HQ 17, Boise 10, Asheville 8, Bend 8. Walk the room at TODO 5: half the room will try WHERE first, which is the point.</li>
+  <li><b>Minutes 12 to 25, a safe stock lookup (<code class="inline">labs/module-14/l5_1-database-connections/safe_lookup_starter.py</code>, <code class="inline">inventory</code>, 1,210 rows).</b> An unsafe function is given. TODO 1: the placeholder version returns the same counts (Boise out of stock 65; Warehouse at 5 or fewer 39). TODO 2: the crafted location <code class="inline">nowhere' OR '1'='1' --</code> makes the unsafe function count all 1,210 rows; the safe one returns 0. Have a volunteer write the built SQL on the board and underline what the quote and the two dashes did. TODO 3 is the one-item tuple (the message says 8 because <code class="inline">TNT-1001</code> has eight characters). TODO 4, the allowed list for <code class="inline">sort_by</code>, is for fast finishers.</li>
+  <li><b>Debrief (last 2 minutes).</b> "In <code class="inline">low_stock</code> there IS an f-string in the SQL. Why is that one acceptable?" (It inserts a column name checked against a fixed list; values still travel through <code class="inline">params</code>.)</li>
+  <li>Goes home: <code class="inline">labs/module-14/l5_1-database-connections/save_summary_starter.py</code> (SQLAlchemy, <code class="inline">to_sql</code>, a rollback, on a copy in the output folder).</li>
+</ul>
+      </div>
+      <div class="blk"><div class="h">Start the lesson project (10 min)</div>
+<p>Open the lesson page at "Project: The Store Scorecard". The brief: one parameterized report function for any store and any year, saved back as a table and checked against pandas. In the room, everyone does <b>Step 1</b> (a fresh copy called <code class="inline">scorecard.db</code> and a SQLAlchemy engine; the six table names print) and <b>Step 2</b> (the headline query with <code class="inline">:store</code>, <code class="inline">:start</code>, <code class="inline">:end</code> for Boise in 2025). On track: one row with <code class="inline">1320</code> orders, <code class="inline">672</code> customers and revenue <code class="inline">240660.6</code>. Ask why the year is written as <code class="inline">&gt;= :start AND &lt; :end</code>. Steps 3 to 6 are homework.</p>
+      </div>
+      <div class="blk"><div class="h">Checks for understanding</div>
+<p>Workbook self-check, Q1 to Q6. Good cold calls: Q3 (the bindings error) and Q6 (predict the rollback).</p><p style="font-size:.9rem;margin:.2rem 0">Answers: <b>Q1</b> <span data-sc="1">C) <code class="inline">FROM</code>, because the engine has to pick the table before it can filter, group or select</span>; <b>Q2</b> <span data-sc="2"><code class="inline">(3, 2, 6)</code></span>; <b>Q3</b> <span data-sc="3">A) Pass a one-item tuple: <code class="inline">("Boise",)</code></span>; <b>Q4</b> <span data-sc="4">B) <code class="inline">AVG(order_total) &gt; 190</code></span>; <b>Q5</b> <span data-sc="5">D) <code class="inline">conn.execute("SELECT * FROM orders WHERE store = ?", (store,))</code></span>; <b>Q6</b> <span data-sc="6"><code class="inline">0</code></span>. Full set with explanations in the Answer Key.</p>
+      </div>
+      <div class="blk"><div class="h">Differentiation</div>
+<p><b>Support:</b> learners new to SQL type less and read more: let them run the demo cells from the lesson page and spend the lab on the staff report only, with the SQL-to-pandas table open. Give them the first line of each query (<code class="inline">SELECT ... FROM employees</code>). <b>Stretch:</b> <code class="inline">safe_lookup</code> TODO 4, then <code class="inline">save_summary</code> in the room. Learners who know SQL from work: have them explain to a neighbor why <code class="inline">with conn:</code> did not keep the Asheville row, then try the lesson's bonus (<code class="inline">describe_database(engine)</code> with <code class="inline">inspect</code>).</p>
+      </div>
+    </div>
+  </section>
+  <div class="note"><div class="t">Break (1:25 to 1:35)</div>
+    <p>Leave the SQL-to-pandas table on the projector. Over the break: uncover the four numbers on the board, and have the short Checkpoint 1 conversations with anyone who had a row at Beginning.</p>
+  </div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">5.2</span><h3>Complex Queries</h3><span class="dur">75 min</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Objectives (from the lesson page)</div>
+<ul class="tick">
+  <li>Choose between inner, left, right, full outer, cross and self joins, and predict how many rows each returns when keys do not all match</li>
+  <li>Use subqueries and common table expressions (CTEs) to break a hard question into named steps</li>
+  <li>Walk a hierarchy of any depth with a recursive CTE</li>
+  <li>Build categories and side-by-side counts with CASE, and combine results with UNION, INTERSECT and EXCEPT</li>
+  <li>Explain how NULL behaves in comparisons, and avoid the three bugs it causes most often</li>
+</ul>
+      </div>
+      <div class="blk"><div class="h">Timing inside the block (75 minutes)</div>
+<table class="timing"><tbody>
+<tr><td class="t">10m</td><td>Frame and mental model</td></tr>
+<tr><td class="t">30m</td><td>Live demo, steps 1 to 12</td></tr>
+<tr><td class="t">25m</td><td>Guided lab: revenue by brand, then stock against sales</td></tr>
+<tr><td class="t">10m</td><td>Start the Returns Investigation: Step 1</td></tr>
+</tbody></table>
+      </div>
+      <div class="blk"><div class="h">Mental model to say</div>
+<p>"Picture a stack of order cards and a stack of customer cards. A join goes through the order cards one at a time, finds the customer card with the same customer_id, and staples the two together into one wider card. Every kind of join is the same stapling. They differ only in what happens to a card that finds no partner: throw it away, or keep it with a blank where the partner would be."</p><p>Then uncover the four numbers on the board: <b>739</b> orders belong to 150 closed accounts that are not in <code class="inline">customers</code> · <b>1,058</b> customers have never ordered · <b>609</b> order lines use 6 discontinued SKUs that are not in <code class="inline">products</code> · <b>8</b> products have never sold. Ask learners to look at their paper sketch: which side of each link is "one" and which is "many"?</p><p>Say what is coming: "Three results today will be wrong with no error message. I will make each mistake on purpose so that you recognize it when it is yours." (An inner join that drops rows, a sum after a fan-out, a comparison with NULL.)</p>
+      </div>
+      <div class="blk"><div class="h">Live demo (you type, they follow): joins without losing or inventing rows</div>
+<p>Continue in the same notebook under a new heading, with a NEW connection (step 1 replaces <code class="inline">conn</code> and <code class="inline">show</code>). Twelve cells; the marked minutes add up to 30. Before every join, ask the room for the row count they expect.</p><ol class="steps">
+  <li><b>A read-only connection (2m).</b> Say: "This lesson only reads. A second way to protect the file, besides a copy: open it read-only and let the engine refuse."
+<pre class="code"><span class="k">import</span> sqlite3
+<span class="k">import</span> pandas <span class="k">as</span> pd
+
+conn = sqlite3.connect(<span class="s">"file:data/pinecrest.db?mode=ro"</span>, uri=<span class="k">True</span>)
+
+<span class="k">def</span> show(sql, params=()):
+    <span class="s">"""Run a query and print the result as a table."""</span>
+    print(pd.read_sql(sql, conn, params=params).to_string(index=<span class="k">False</span>))
+
+conn.execute(<span class="s">"DELETE FROM orders"</span>)</pre>
+<pre class="out">OperationalError: attempt to write a readonly database</pre>
+<p style="margin:.3rem 0 0">"Exactly what you want from a connection you only mean to read with." A bonus: a typo in the file name is now an error instead of a new empty database.</p></li>
+  <li><b>INNER JOIN: only the matches (3m).</b> Say: "A join goes in FROM: the first table, then JOIN the second ON the condition that pairs the rows. Short aliases, and every column wears its alias." Before the second query: "20,302 orders. How many rows come through?"
+<pre class="code">show(<span class="s">"""
+    SELECT o.order_id, o.order_total, c.first_name, c.last_name, c.city
+    FROM orders AS o
+    JOIN customers AS c ON c.customer_id = o.customer_id
+    ORDER BY o.order_id
+    LIMIT 3
+"""</span>)
+show(<span class="s">"""
+    SELECT (SELECT COUNT(*) FROM orders) AS orders_in_table,
+           COUNT(*)                      AS rows_after_inner_join
+    FROM orders AS o
+    JOIN customers AS c ON c.customer_id = o.customer_id
+"""</span>)</pre>
+<pre class="out"> order_id  order_total first_name last_name     city
+   100001        434.9     Xavier  Madrigal  Phoenix
+   100002        278.9       Aiko    Larkin     Bend
+   100003         75.9     Kareem      Pike Missoula
+ orders_in_table  rows_after_inner_join
+           20302                  19563</pre>
+<p style="margin:.3rem 0 0">"739 orders vanished: the closed accounts. No error, no warning." The habit: count after every join, the way you checked `.shape` after a merge.</p></li>
+  <li><b>LEFT JOIN keeps the unmatched (3m).</b> Say: "LEFT JOIN keeps every row of the table named first. Where there is no partner, the other side is NULL."
+<pre class="code">show(<span class="s">"""
+    SELECT COUNT(*)                   AS all_rows,
+           COUNT(c.customer_id)       AS with_customer,
+           SUM(c.customer_id IS NULL) AS without_customer
+    FROM orders AS o
+    LEFT JOIN customers AS c ON c.customer_id = o.customer_id
+"""</span>)</pre>
+<pre class="out"> all_rows  with_customer  without_customer
+    20302          19563               739</pre></li>
+  <li><b>The anti-join: which ones are missing? (2m).</b> Say: "Start FROM the table you care about, LEFT JOIN the other, keep the rows with nothing on the other side."
+<pre class="code">show(<span class="s">"""
+    SELECT c.loyalty_tier, COUNT(*) AS never_ordered
+    FROM customers AS c
+    LEFT JOIN orders AS o ON o.customer_id = c.customer_id
+    WHERE o.order_id IS NULL
+    GROUP BY c.loyalty_tier
+"""</span>)</pre>
+<pre class="out">loyalty_tier  never_ordered
+       Basic           1058</pre>
+<p style="margin:.3rem 0 0">1,058, all Basic (higher tiers are earned by spending). Tick the second board number.</p></li>
+  <li><b>Three tables: choose the join one link at a time (3m).</b> Say: "Revenue by category: orders to order_items to products. For each link ask: if a row has no partner here, do I still want it?"
+<pre class="code">show(<span class="s">"""
+    SELECT p.category,
+           COUNT(*)                                 AS lines,
+           ROUND(SUM(i.quantity * i.unit_price), 2) AS item_revenue
+    FROM orders AS o
+    JOIN order_items AS i ON i.order_id = o.order_id
+    LEFT JOIN products AS p ON p.sku = i.sku
+    WHERE o.status = 'completed'
+    GROUP BY p.category
+    ORDER BY item_revenue DESC
+"""</span>)</pre>
+<pre class="out">    category  lines  item_revenue
+ Accessories  11080     567699.20
+    Sleeping   3386     516302.45
+       Tents   2110     447114.75
+     Apparel   4554     435424.65
+    Footwear   4142     391188.90
+       Packs   3103     387082.35
+Camp Kitchen   7298     367311.60
+    Climbing   3157     272994.05
+        Snow   2391     216940.15
+         NaN    567      34228.25</pre>
+<p style="margin:.3rem 0 0">The last row has no category: 567 lines, $34,228.25 on discontinued SKUs. "Real revenue that an inner join would have silently dropped." The lab names it with <code class="inline">COALESCE</code>.</p></li>
+  <li><b>The fan-out trap (3m).</b> Say: "Total completed revenue, but I have joined the lines first."
+<pre class="code">show(<span class="s">"""
+    SELECT ROUND(SUM(o.order_total), 2) AS after_join,
+           COUNT(*)                     AS rows_summed,
+           COUNT(DISTINCT o.order_id)   AS orders
+    FROM orders AS o
+    JOIN order_items AS i ON i.order_id = o.order_id
+    WHERE o.status = 'completed'
+"""</span>)
+show(<span class="s">"""
+    SELECT ROUND(SUM(order_total), 2) AS true_revenue
+    FROM orders
+    WHERE status = 'completed'
+"""</span>)</pre>
+<pre class="out"> after_join  rows_summed  orders
+10073626.41        41788   18762
+ true_revenue
+   3624306.27</pre>
+<p style="margin:.3rem 0 0">"$10.3 million instead of $3.7 million, and it looks plausible. Each order's total was added once per line." The rule for the board: <b>sum a column at the level where it lives</b>. Connect to Session 13: the survey merged with orders went from 1,800 rows to 9,230. Same trap.</p></li>
+  <li><b>A table joined to itself (2m).</b> Say: "<code class="inline">manager_id</code> holds the <code class="inline">employee_id</code> of another row in the same table. Two aliases, two roles."
+<pre class="code">show(<span class="s">"""
+    SELECT e.first_name || ' ' || e.last_name AS employee,
+           e.title,
+           m.first_name || ' ' || m.last_name AS manager
+    FROM employees AS e
+    LEFT JOIN employees AS m ON m.employee_id = e.manager_id
+    ORDER BY e.employee_id
+    LIMIT 5
+"""</span>)</pre>
+<pre class="out">     employee                   title      manager
+   Clara Soto Chief Executive Officer          NaN
+ Tamar Kimura            VP of Retail   Clara Soto
+  Arjun Silva        VP of E-commerce   Clara Soto
+Elise Delgado        VP of Operations   Clara Soto
+ Elena Mistry  Regional Manager, West Tamar Kimura</pre>
+<p style="margin:.3rem 0 0">"LEFT JOIN, so the CEO is not dropped. A self join reaches exactly one level up. Hold that thought."</p></li>
+  <li><b>A query used as a table (2m).</b> Say: "How many orders does a typical buyer place? Count per customer first, then summarize the counts."
+<pre class="code">show(<span class="s">"""
+    SELECT COUNT(*)                AS buyers,
+           ROUND(AVG(n_orders), 2) AS avg_orders,
+           MAX(n_orders)           AS most_orders
+    FROM (
+        SELECT customer_id, COUNT(*) AS n_orders
+        FROM orders
+        GROUP BY customer_id
+    ) AS per_customer
+"""</span>)</pre>
+<pre class="out"> buyers  avg_orders  most_orders
+   3942        5.15           41</pre></li>
+  <li><b>CTEs: name the steps (3m).</b> Say: "Nested queries read inside out. <code class="inline">WITH name AS (...)</code> gives a step a name. Does the loyalty rule hold: Silver from $600, Gold from $1,500?"
+<pre class="code">show(<span class="s">"""
+    WITH spend AS (
+        SELECT customer_id, COUNT(*) AS orders, SUM(order_total) AS total_spent
+        FROM orders
+        WHERE status = 'completed'
+        GROUP BY customer_id
+    )
+    SELECT c.loyalty_tier,
+           COUNT(*)                     AS customers,
+           ROUND(MIN(s.total_spent), 2) AS lowest_spend,
+           ROUND(MAX(s.total_spent), 2) AS highest_spend
+    FROM spend AS s
+    JOIN customers AS c ON c.customer_id = s.customer_id
+    GROUP BY c.loyalty_tier
+    ORDER BY lowest_spend
+"""</span>)</pre>
+<pre class="out">loyalty_tier  customers  lowest_spend  highest_spend
+       Basic       1710          7.50         599.91
+      Silver       1294        600.43        1499.56
+        Gold        734       1502.00        7945.54</pre>
+<p style="margin:.3rem 0 0">"The rule holds exactly. And spend has ONE row per customer before it is joined to anything: that is the cure for fan-out."</p></li>
+  <li><b>A recursive CTE walks the whole tree (3m).</b> Say: "How many levels does the company have? A recursive CTE is SQL's loop: an anchor, UNION ALL, and a part that joins the table to the rows found last round."
+<pre class="code">ORG_CTE = <span class="s">"""
+    WITH RECURSIVE org (employee_id, name, level) AS (
+        SELECT employee_id, first_name || ' ' || last_name, 1
+        FROM employees
+        WHERE manager_id IS NULL                  -- anchor: top of the tree
+        UNION ALL
+        SELECT e.employee_id, e.first_name || ' ' || e.last_name, org.level + 1
+        FROM employees AS e
+        JOIN org ON e.manager_id = org.employee_id   -- reports of the last round
+    )
+"""</span>
+show(ORG_CTE + <span class="s">"SELECT level, COUNT(*) AS people FROM org GROUP BY level"</span>)</pre>
+<pre class="out"> level  people
+     1       1
+     2       4
+     3       7
+     4      14
+     5       8
+     6      21</pre>
+<p style="margin:.3rem 0 0">Trace two rounds aloud: the anchor returns Clara Soto at level 1; the recursive part finds the four people who report to her; it runs again on those four. "It stops when a round finds nobody." The lesson's <code class="inline">path</code> column (an org chart) is homework reading.</p></li>
+  <li><b>CASE inside an aggregate (2m).</b> Say: "CASE is SQL's if / elif / else. Put it inside SUM and you count only the rows that meet a condition."
+<pre class="code">show(<span class="s">"""
+    SELECT channel,
+           COUNT(*)                                             AS orders,
+           SUM(CASE WHEN status = 'returned' THEN 1 ELSE 0 END) AS returned,
+           ROUND(100.0 * SUM(CASE WHEN status = 'returned' THEN 1 ELSE 0 END)
+                 / COUNT(*), 1)                                 AS return_pct
+    FROM orders
+    GROUP BY channel
+"""</span>)
+show(<span class="s">"SELECT 890 / 12854 AS int_division, 100.0 * 890 / 12854 AS correct"</span>)</pre>
+<pre class="out">channel  orders  returned  return_pct
+ online   12854       890         6.9
+  store    7448       253         3.4
+ int_division  correct
+            0 6.923915</pre>
+<p style="margin:.3rem 0 0">"Why <code class="inline">100.0</code> and not <code class="inline">100</code>? An integer divided by an integer is an integer." This table is Step 1 of the project.</p></li>
+  <li><b>NULL means unknown (2m).</b> Say: "NULL is not zero and not an empty string. It is 'unknown', and any comparison with unknown is unknown. WHERE keeps a row only when the condition is TRUE."
+<pre class="code">show(<span class="s">"""
+    SELECT COUNT(*)                     AS all_orders,
+           SUM(promo_code = 'TRAIL15')  AS trail15,
+           SUM(promo_code &lt;&gt; 'TRAIL15') AS not_trail15,
+           SUM(promo_code IS NULL)      AS no_code
+    FROM orders
+"""</span>)
+show(<span class="s">"""
+    SELECT (SELECT COUNT(*) FROM employees
+            WHERE employee_id NOT IN (SELECT manager_id FROM employees)) AS not_in,
+           (SELECT COUNT(*) FROM employees AS e
+            WHERE NOT EXISTS (SELECT 1 FROM employees AS x
+                WHERE x.manager_id = e.employee_id))             AS not_exists
+"""</span>)</pre>
+<pre class="out"> all_orders  trail15  not_trail15  no_code
+      20302      359         1789    18154
+ not_in  not_exists
+      0          32</pre>
+<p style="margin:.3rem 0 0">"A condition and its opposite do not add up: 359 + 1,789 is not 20,302." And <code class="inline">NOT IN</code> with one NULL in the list returns nothing: zero instead of 32. "Ask of every filter on a column that can be empty: what should happen to the rows with no value?"</p></li>
+</ol>
+      </div>
+      <div class="blk warn"><div class="h">Three mistakes to expect</div>
+<ul class="tick">
+  <li><b>Not counting after a join.</b> The query runs, a table appears, and nobody asks how many rows it should have. Coach before they run it: "Write the number you expect in a comment. Now run it." The lab's first step forces it (45,490 lines: 44,881 after the inner join, 45,490 after the left join).</li>
+  <li><b>Summing after a fan-out.</b> In <code class="inline">stock_vs_sales</code> both sides are "many" and both sums inflate (154,470 units sold instead of 30,894; 3,693,132 on hand instead of 22,815). Coach: "What is one row after this join? At what level does <code class="inline">quantity</code> live?" The cure: aggregate each side to the grain you need first (a CTE), then join.</li>
+  <li><b>A filter on the right-hand table in WHERE, which undoes the LEFT JOIN, and its cousin <code class="inline">= NULL</code>.</b> Listing every customer with their December 2025 orders, <code class="inline">WHERE o.order_date &gt;= '2025-12-01'</code> after the left join keeps only 898 customers instead of 4,850, because the NULL order rows fail the comparison. Coach: "Which table is that condition about? Conditions on the right table of a left join go in the ON clause." And <code class="inline">= NULL</code> never matches: <code class="inline">IS NULL</code>.</li>
+</ul>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab (25 min)</div>
+<p>Learners open <code class="inline">labs/module-14/l5_2-complex-queries/join_row_counts_starter.py</code>. The buying team wants item revenue by brand for completed orders: three tables. The starter has a line for three row-count predictions; do not let anyone skip it.</p><ul class="tick">
+  <li><b>Minutes 0 to 5, predictions and TODO 1.</b> 45,490 lines; inner join to products 44,881; left join 45,490. Anyone who predicted correctly used the board number 609.</li>
+  <li><b>Minutes 5 to 12, TODO 2 and 3.</b> The tempting inner join reports 3,602,058.10; the left join with <code class="inline">COALESCE(p.brand, 'Discontinued')</code> shows nine rows that add up to 3,636,286.35. "How much did the inner join lose?" 34,228.25, on 567 lines. Top brand: Wrenfield, 515,811.85.</li>
+  <li><b>Minutes 12 to 15, TODO 4</b> (the anti-join): six SKUs, led by APL-1033 at 11,432.85; all last sold in September 2024. TODO 5 (<code class="inline">NOT EXISTS</code>) is for fast finishers: Granite Fork has 3 unsold products.</li>
+  <li><b>Minutes 15 to 25, <code class="inline">labs/module-14/l5_2-complex-queries/stock_vs_sales_starter.py</code>, Steps 1 and 2 only.</b> Everyone computes the two true totals (30,894 units sold in 2025; 22,815 on hand), then writes the tempting three-table join and sees 154,470 and 3,693,132. Stop the room: "By what factor is units sold off, and why exactly that factor?" (Five: each SKU has five inventory rows.) The CTE fix, Steps 3 to 5, is homework; show the shape of the answer from the solution file for thirty seconds.</li>
+  <li>Goes home: the rest of <code class="inline">stock_vs_sales</code>, and <code class="inline">labs/module-14/l5_2-complex-queries/org_payroll_starter.py</code> (a recursive CTE that carries each branch's head down the tree, plus three NULL checks) as the stretch.</li>
+</ul>
+      </div>
+      <div class="blk"><div class="h">Start the lesson project (10 min)</div>
+<p>Open the lesson page at "Project: The Returns Investigation". Learners who finished the Lesson 4.7 project already know the ending (online footwear): say so, and say what is new. "Last week you found it with merges. This week you pin it down in SQL across four tables, and prove both routes agree." In the room: <b>Step 1</b> (read-only connection, return rate by channel with conditional aggregation: online 6.9%, store 3.4%) and a read-through of <b>Step 2</b>'s plan: why the CTE uses <code class="inline">DISTINCT</code> and why the link to products is a LEFT JOIN with COALESCE. Steps 2 to 6 are homework.</p>
+      </div>
+      <div class="blk"><div class="h">Checks for understanding</div>
+<p>Workbook self-check, Q7 to Q12. Good cold calls: Q7 (count the rows) and Q10 (where did 18,154 orders go?).</p><p style="font-size:.9rem;margin:.2rem 0">Answers: <b>Q7</b> <span data-sc="7">B) 19,563</span>; <b>Q8</b> <span data-sc="8"><code class="inline">350.0</code></span>; <b>Q9</b> <span data-sc="9">A) <code class="inline">SELECT c.* FROM customers AS c LEFT JOIN orders AS o ON o.customer_id = c.customer_id WHERE o.order_id IS NULL</code></span>; <b>Q10</b> <span data-sc="10">D) For the 18,154 orders with no code the comparison with NULL is unknown, and WHERE keeps only rows where the condition is true</span>; <b>Q11</b> <span data-sc="11"><code class="inline">(3, 3.5, 25)</code></span>; <b>Q12</b> <span data-sc="12">C) A round of the recursive part finds no new rows</span>. Full set with explanations in the Answer Key.</p>
+      </div>
+      <div class="blk"><div class="h">Differentiation</div>
+<p><b>Support:</b> pair anyone new to SQL with someone who is not, and let them stop after TODO 3 of <code class="inline">join_row_counts</code>; that lab alone covers the core skill. In the demo they may copy the recursive CTE from the lesson page. <b>Stretch:</b> finish <code class="inline">stock_vs_sales</code> in the room, then <code class="inline">org_payroll</code>. Ask: "Your CTE joins <code class="inline">products</code> to <code class="inline">on_hand</code> with an inner join and to <code class="inline">sold</code> with a left join. Why the difference?" (Every product has inventory rows; a product that never sold has no <code class="inline">sold</code> row and must still appear, with 0.)</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="sec"><h2>Closing</h2><span class="rule"></span></div>
+      <div class="blk"><div class="h">Exit ticket (3 questions; answers)</div>
+<ol class="steps">
+  <li>In one sentence each: what does WHERE filter, and what does HAVING filter? <b>Answer:</b> WHERE filters rows before they are grouped (so it cannot mention an aggregate). HAVING filters groups after GROUP BY (so it can).</li>
+  <li>Why do values go into SQL through placeholders and never through an f-string? <b>Answer:</b> With a placeholder the SQL text and the value travel separately, so a value can never be read as part of the command. An f-string pastes the value into the command: a quote in the input can change the query (SQL injection), and an honest name like O'Brien breaks it.</li>
+  <li><code class="inline">orders</code> has 20,302 rows and 739 have no matching customer. How many rows from <code class="inline">orders JOIN customers</code>, and how many from <code class="inline">orders LEFT JOIN customers</code>? <b>Answer:</b> 19,563 and 20,302. The inner join drops the unmatched rows silently; the left join keeps them with NULL on the customer side.</li>
+</ol>
+      </div>
+      <div class="blk"><div class="h">Homework (about 3 hours)</div>
+<ul class="tick">
+  <li><b>Lesson 5.1:</b> finish the Store Scorecard (Steps 3 to 6), Exercises 1 to 3 (4 is a stretch), the quiz and the journal. Read "Where PostgreSQL Differs" and "Common Mistakes".</li>
+  <li><b>Lesson 5.2:</b> the Returns Investigation, Steps 2 to 6 (about 40 minutes), Exercises 1 to 4 (5 is a stretch), the quiz and the journal. Read the sections on set operations and on <code class="inline">RIGHT</code> / <code class="inline">FULL OUTER JOIN</code>.</li>
+  <li><b>Kit labs:</b> <code class="inline">labs/module-14/l5_1-database-connections/save_summary_starter.py</code> and Steps 3 to 5 of <code class="inline">labs/module-14/l5_2-complex-queries/stock_vs_sales_starter.py</code>. Stretch: <code class="inline">labs/module-14/l5_2-complex-queries/org_payroll_starter.py</code>.</li>
+  <li><b>Keep:</b> your <code class="inline">show()</code> helper and the <code class="inline">ORG_CTE</code> string. Session 15 uses both.</li>
+  <li><b>Workbook:</b> self-check Q1 to Q12.</li>
+</ul>
+      </div>
+  <div class="note lab"><div class="t">Bring list for Session 15 (Lessons 5.3 and 5.4: SQL windows and query speed)</div>
+    <p>☐ <code class="inline">data/pinecrest.db</code>, untouched (Lesson 5.4 creates indexes, so it works on a copy; about 10 MB of free disk space). ☐ SQLite 3.25 or later for window functions: <code class="inline">python -c "import sqlite3; print(sqlite3.sqlite_version)"</code>. ☐ Your notebook from today with <code class="inline">show()</code> and <code class="inline">ORG_CTE</code>. ☐ A glance back at Lesson 2.8 (pandas <code class="inline">rolling</code>, <code class="inline">shift</code>, <code class="inline">cumsum</code>, <code class="inline">rank</code>): Lesson 5.3 is the SQL version of that lesson. ☐ Nothing to install, no server, no account.</p>
+  </div>
+
+  <div class="sec"><h2>If You Run Long or Short</h2><span class="rule"></span></div>
+<p><b>Long.</b> Cut in this order: (1) 5.1 demo step 3 (the cursor walk): say it, the lab practices it. (2) 5.1 step 6 (top N). (3) 5.1 step 11 becomes "here is a table I made earlier": keep the rollback in step 12. (4) 5.2 steps 7 and 8 (self join, query used as a table): say them. (5) The second lab of each block (<code class="inline">safe_lookup</code> TODO 3 and 4; <code class="inline">stock_vs_sales</code>) becomes homework. (6) "Start the project" shrinks to five minutes. Never cut: the injection demonstration, the 739 missing rows, the fan-out trap.</p><p><b>Short</b> (a group that has used SQL before). Run <code class="inline">save_summary</code> in the room after the first lab block, and all of <code class="inline">stock_vs_sales</code> after the second. Add the lesson's set-operations cell (2024 and 2025 buyers: 3,942 either year, 2,488 both, 431 lost) to the 5.2 demo, and give <code class="inline">org_payroll</code> to pairs. Experienced learners can rewrite one demo query for PostgreSQL using the lesson's comparison table.</p>
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 14 · Facilitator Guide · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -3,466 +3,1296 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Merging and Joining Datasets - Python Data Science Path</title>
-    <link rel="icon" href="/favicon.png" type="image/png">
+    <meta name="description" content="Combine tables with merge: the four join kinds, keys with no match, validate and indicator, row explosion, different key names, concat and merge_asof, always checking row counts. Python Data Science Lesson 2.5.">
+    <meta name="author" content="Ray de la Paz">
+    <title>Merging and Joining - Python Data Science</title>
     <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/enhanced.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid: rendered (and re-rendered on theme change) by js/course-enhancements.js -->
     <script type="module">
         import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({ startOnLoad: true });
+        window.__mermaid = mermaid;
+        mermaid.initialize({ startOnLoad: false });
+        document.dispatchEvent(new Event('mermaid-ready'));
     </script>
-    <style>
-        :root {
-            --primary-color: #2563eb;
-            --secondary-color: #1e40af;
-            --accent-color: #10b981;
-            --bg-dark: #1e293b;
-            --bg-light: #f8fafc;
-            --text-dark: #0f172a;
-            --text-light: #64748b;
-            --border-color: #e2e8f0;
-            --code-bg: #f1f5f9;
-            --join-inner: #3b82f6;
-            --join-left: #8b5cf6;
-            --join-right: #f59e0b;
-            --join-outer: #ef4444;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.6;
-            color: var(--text-dark);
-            background: linear-gradient(135deg, var(--bg-light) 0%, #e0f2fe 100%);
-            min-height: 100vh;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 1rem;
-        }
-
-        header {
-            background: white;
-            border-radius: 1rem;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            border-left: 5px solid var(--accent-color);
-        }
-
-        h1 {
-            color: var(--primary-color);
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .breadcrumb {
-            color: var(--text-light);
-            font-size: 0.9rem;
-            margin-bottom: 1rem;
-        }
-
-        .breadcrumb a {
-            color: var(--primary-color);
-            text-decoration: none;
-            transition: color 0.3s ease;
-        }
-
-        .breadcrumb a:hover {
-            color: var(--secondary-color);
-            text-decoration: underline;
-        }
-
-        .intro {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 2rem;
-            border-radius: 1rem;
-            margin-bottom: 2rem;
-            animation: slideIn 0.6s ease;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .join-visualization {
-            background: white;
-            border-radius: 1rem;
-            padding: 2rem;
-            margin: 2rem 0;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .join-types-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .join-card {
-            background: white;
-            border-radius: 1rem;
-            padding: 1.5rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            border-top: 4px solid var(--accent-color);
-        }
-
-        .join-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-        }
-
-        .join-card h3 {
-            color: var(--primary-color);
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .venn-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin: 1rem 0;
-            min-height: 150px;
-        }
-
-        .venn-diagram {
-            position: relative;
-            width: 200px;
-            height: 120px;
-        }
-
-        .venn-circle {
-            position: absolute;
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            opacity: 0.7;
-        }
-
-        .venn-left {
-            left: 0;
-            background: var(--join-left);
-        }
-
-        .venn-right {
-            right: 0;
-            background: var(--join-right);
-        }
-
-        .venn-label {
-            position: absolute;
-            font-weight: bold;
-            color: white;
-            font-size: 0.9rem;
-        }
-
-        .concept-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .concept-card {
-            background: white;
-            border-radius: 1rem;
-            padding: 1.5rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            border-top: 4px solid var(--accent-color);
-        }
-
-        .concept-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-        }
-
-        .concept-card h3 {
-            color: var(--primary-color);
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .table-example {
-            background: var(--code-bg);
-            border-radius: 0.5rem;
-            padding: 1rem;
-            margin: 1rem 0;
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.9rem;
-        }
-
-        th {
-            background: var(--primary-color);
-            color: white;
-            padding: 0.5rem;
-            text-align: left;
-        }
-
-        td {
-            padding: 0.5rem;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        tr:nth-child(even) {
-            background: rgba(0, 0, 0, 0.02);
-        }
-
-        .highlighted-row {
-            background: rgba(16, 185, 129, 0.2) !important;
-        }
-
-        .code-example {
-            background: var(--code-bg);
-            border-radius: 0.5rem;
-            padding: 1rem;
-            margin: 1rem 0;
-            border-left: 4px solid var(--primary-color);
-            overflow-x: auto;
-        }
-
-        pre {
-            margin: 0;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 0.9rem;
-        }
-
-        code {
-            background: var(--code-bg);
-            padding: 0.2rem 0.4rem;
-            border-radius: 0.25rem;
-            font-family: 'Courier New', Courier, monospace;
-            color: var(--secondary-color);
-        }
-
-        .interactive-demo {
-            background: white;
-            border-radius: 1rem;
-            padding: 2rem;
-            margin: 2rem 0;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        canvas {
-            border: 2px solid var(--border-color);
-            border-radius: 0.5rem;
-            margin: 1rem 0;
-            display: block;
-            width: 100%;
-            max-width: 800px;
-        }
-
-        .tip-box {
-            background: linear-gradient(135deg, #10b98120, #06b67420);
-            border-left: 4px solid var(--accent-color);
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin: 1rem 0;
-        }
-
-        .warning-box {
-            background: linear-gradient(135deg, #f5922020, #ef444420);
-            border-left: 4px solid #ef4444;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin: 1rem 0;
-        }
-
-        .navigation {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 3rem;
-            padding: 1rem;
-            background: white;
-            border-radius: 1rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .nav-button {
-            padding: 0.75rem 1.5rem;
-            background: var(--primary-color);
-            color: white;
-            text-decoration: none;
-            border-radius: 0.5rem;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .nav-button:hover {
-            background: var(--secondary-color);
-            transform: translateX(5px);
-        }
-
-        .nav-button.prev:hover {
-            transform: translateX(-5px);
-        }
-
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 1.8rem;
-            }
-
-            .join-types-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .concept-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .navigation {
-                flex-direction: column;
-                gap: 1rem;
-            }
-
-            .nav-button {
-                width: 100%;
-                justify-content: center;
-            }
-        }
-    </style>
-    <script src="/js/course-enhancements.js" defer></script>
-    <script src="/js/clipboard.js" defer></script>
-    <link rel="stylesheet" href="styles/standard.css">
 </head>
 <body>
-    <!-- Skip to main content for accessibility -->
     <a href="#main-content" class="skip-to-main">Skip to main content</a>
-    
-    <!-- Progress indicator -->
+
     <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
         <div class="progress-bar"></div>
     </div>
-    <div class="container">
-        <header>
-            <div class="breadcrumb">
-                <a href="index.html">Home</a> / 
-                <a href="foundation.html">Foundation Module</a> / 
-                <a href="pandas_essentials.html">Pandas Essentials</a> / 
-                Merging and Joining
+
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">📊 Python Data Science</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">☰</button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
             </div>
-            <h1>🔗 Merging and Joining Datasets</h1>
-
-    <!-- What You'll Learn (learning objectives) -->
-    <div class="card card-info">
-        <h2>📚 What You'll Learn</h2>
-        <p>By the end of this lesson, you will be able to:</p>
-        <ul>
-            <li>Distinguish when to use <code>pd.concat</code>, <code>pd.merge</code>, and <code>DataFrame.join</code></li>
-            <li>Perform inner, left, right, and outer joins with <code>pd.merge</code> and predict which rows each keeps</li>
-            <li>Merge on single keys, multiple keys, and on the index</li>
-            <li>Resolve overlapping column names with <code>suffixes</code> and check cardinality with the <code>validate</code> argument</li>
-            <li>Stack DataFrames vertically and horizontally using <code>pd.concat</code></li>
-            <li>Diagnose common merge problems such as duplicate keys, unexpected row explosion, and mismatched dtypes</li>
-        </ul>
-        <p><strong>⏱️ Estimated Time:</strong> 45–60 minutes</p>
-        <p><strong>🎯 Project:</strong> Combine separate customers, orders, and products tables into one unified analytical dataset using the appropriate join types.</p>
-    </div>
-            <p>Combine multiple DataFrames like puzzle pieces to create comprehensive datasets</p>
-        </header>
-
-        <div class="intro">
-            <h2>🌟 The Power of Data Relationships</h2>
-            <p>Imagine you're assembling a jigsaw puzzle where each piece represents a different dataset. Some pieces share edges that fit perfectly together (common keys), while others need creative arrangement. Merging and joining in pandas is like being a master puzzle solver!</p>
-            <p>In the real world, data rarely comes in a single, complete table. Customer information might be in one database, their orders in another, and product details in a third. Master these techniques, and you'll weave disparate data sources into a unified tapestry of insights!</p>
         </div>
+    </nav>
 
-    <!-- Learning Journal (REQUIRED per the Courseware Authoring Standard) -->
-    <section id="journal" class="lesson-section">
-        <h2>📓 Learning Journal</h2>
-        <div class="card card-info">
-            <p>Keep a learning journal — digital or physical. After this lesson, take a few minutes to write down:</p>
-            <ul>
-                <li><strong>Key concepts</strong> you learned</li>
-                <li><strong>Techniques that clicked</strong> for you</li>
-                <li><strong>Questions or confusion points</strong> to revisit</li>
-                <li><strong>Ideas you want to try</strong></li>
-                <li><strong>Your progress and feelings</strong> about learning this</li>
-            </ul>
-            <p><strong>✍️ This lesson's prompt:</strong> Real data usually lives in several tables connected by shared keys. Think of a situation you know (customers and orders, students and grades, players and matches) — which join type would you use to combine them, and why?</p>
-        </div>
-    </section>
+    <main id="main-content">
+        <div class="container">
+            <header>
+                <h1>🔗 Lesson 2.5: Merging and Joining</h1>
+                <p class="lead">Bring customers, orders, order lines and products together by their keys, and learn to notice when a merge quietly loses rows or multiplies them.</p>
 
-    <!-- Lesson Summary (full standard block) -->
-    <section id="summary" class="lesson-section">
-        <h2>📝 Lesson Summary</h2>
-        <div class="card card-success">
-            <h3>🎓 Key Takeaways</h3>
-            <ul>
-                <li>Use <code>pd.merge</code> to combine tables on shared keys, and <code>pd.concat</code> to stack tables that share structure.</li>
-                <li>The <code>how</code> argument (<code>inner</code>, <code>left</code>, <code>right</code>, <code>outer</code>) decides which unmatched rows survive the join.</li>
-                <li>Overlapping non-key columns get <code>suffixes</code>; the <code>validate</code> argument catches unexpected one-to-many or many-to-many relationships.</li>
-                <li>Duplicate keys cause row explosion — always know the cardinality of your join keys before merging.</li>
-            </ul>
-        </div>
-        <h3>🎉 What You've Accomplished</h3>
-        <p>You can now bring data together from multiple sources into a single, analysis-ready table — choosing the right join type, matching on the right keys, and avoiding the surprises that trip up beginners.</p>
-        <h3>❓ Common Questions at This Stage</h3>
-        <details>
-            <summary>What's the difference between a left join and an inner join?</summary>
-            <p>An inner join keeps only rows whose key appears in <em>both</em> tables. A left join keeps every row from the left table, filling in <code>NaN</code> where the right table has no match — useful when you don't want to lose any left-side records.</p>
-        </details>
-        <details>
-            <summary>My merge suddenly produced far more rows than either table. Why?</summary>
-            <p>That's row explosion from duplicate keys: if a key appears multiple times on both sides, pandas creates every matching combination. Deduplicate your keys or pass <code>validate='one_to_one'</code> (or <code>'one_to_many'</code>) so pandas raises an error instead of silently multiplying rows.</p>
-        </details>
-        <details>
-            <summary>When should I use <code>concat</code> instead of <code>merge</code>?</summary>
-            <p>Use <code>concat</code> to stack tables that already share the same columns (adding more rows) or the same index (adding more columns). Use <code>merge</code> when you need to align rows by matching values in key columns.</p>
-        </details>
-        <h3>🔭 Looking Ahead</h3>
-        <p>Combining tables and grouping them are the two halves of real analysis. With merges plus GroupBy in your toolkit, you're ready to move from wrangling data to visualizing and communicating what it reveals.</p>
-        <h3>✅ Before the Next Lesson</h3>
-        <ul>
-            <li>Create two small DataFrames and run all four join types (<code>inner</code>, <code>left</code>, <code>right</code>, <code>outer</code>), comparing the resulting row counts.</li>
-            <li>Deliberately introduce duplicate keys and observe the row explosion, then fix it with <code>validate</code>.</li>
-            <li>Write your Learning Journal entry for this lesson</li>
-        </ul>
-        <div class="card card-accent" style="text-align: center; padding: 2rem;">
-            <h3>🌟 Encouragement for the Journey</h3>
-            <p>Joining datasets is where isolated tables become a complete story. Master this, and no scattered data source can hide its insights from you. Keep connecting the pieces!</p>
-        </div>
-    </section>
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Combine two tables on a key with <code>merge()</code> and choose between inner, left, right and outer joins</li>
+                        <li>Find the keys that have no match on either side with <code>indicator=True</code>, and decide what to do about them</li>
+                        <li>State the relationship between two tables (one-to-one, many-to-one, many-to-many) and enforce it with <code>validate=</code></li>
+                        <li>Predict and check the row count of a merge, and avoid double counting after a one-to-many merge</li>
+                        <li>Merge on differently named or multiple keys, stack tables with <code>concat()</code>, and recognize when <code>merge_asof()</code> is the right tool</li>
+                    </ul>
+                </div>
 
-        <div class="navigation">
-            <a href="pandas_data_cleaning.html" class="nav-button prev">← Data Cleaning</a>
-            <a href="pandas_groupby_operations.html" class="nav-button">GroupBy Operations →</a>
-        </div>
-    </div>
+                <ul class="lesson-meta">
+                    <li><span class="meta-label">⏱️ Time</span> 95 minutes</li>
+                    <li><span class="meta-label">📋 Prerequisites</span> <a href="pandas_dataframes_series.html">Lesson 2.1: DataFrames and Series</a> and <a href="pandas_groupby_operations.html">Lesson 2.4: GroupBy Operations</a></li>
+                    <li><span class="meta-label">🛠️ You will build</span> A revenue-by-category report from three merged tables, with every unmatched row accounted for</li>
+                    <li><span class="meta-label">📂 Data</span> <code>data/orders.csv</code>, <code>data/customers.csv</code>, <code>data/order_items.csv</code>, <code>data/products.csv</code>, <code>data/daily_sales.csv</code>, <code>data/store_weather.csv</code>, <code>data/web_sessions.json</code></li>
+                </ul>
+            </header>
 
-    <!-- Footer -->
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#why" class="toc-link">Why Data Lives in Several Tables</a></li>
+                        <li><a href="#kinds" class="toc-link">Four Kinds of Join</a></li>
+                        <li><a href="#first" class="toc-link">A Real Merge, and the Rows It Lost</a></li>
+                        <li><a href="#indicator" class="toc-link">Finding the Unmatched Keys</a></li>
+                        <li><a href="#validate" class="toc-link">Relationships and validate=</a></li>
+                        <li><a href="#explosion" class="toc-link">When Rows Multiply</a></li>
+                        <li><a href="#keys" class="toc-link">Awkward Keys</a></li>
+                        <li><a href="#concat" class="toc-link">Stacking with concat</a></li>
+                        <li><a href="#asof" class="toc-link">Nearest Match: merge_asof</a></li>
+                        <li><a href="#mistakes" class="toc-link">Common Mistakes</a></li>
+                        <li><a href="#project" class="toc-link">Project: Revenue by Category</a></li>
+                        <li><a href="#exercises" class="toc-link">Hands-on Exercises</a></li>
+                        <li><a href="#quiz" class="toc-link">Quick Quiz</a></li>
+                        <li><a href="#faq" class="toc-link">Common Questions</a></li>
+                        <li><a href="#journal" class="toc-link">Learning Journal</a></li>
+                        <li><a href="#summary" class="toc-link">Lesson Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
+
+            <!-- ============================================================ -->
+            <section id="why" class="lesson-section">
+                <h2>🧩 Why Data Lives in Several Tables</h2>
+
+                <p>An order in <code>orders.csv</code> says customer 12673 bought something. It does not say that customer's name, state or loyalty tier. Those are in <code>customers.csv</code>, written down once per customer instead of once per order. The products an order contained are in <code>order_items.csv</code>, and what category each product belongs to is in <code>products.csv</code>. Storing each fact in one place keeps data small and consistent. The price is that most interesting questions ("revenue by category", "average order by loyalty tier") need columns from two or three tables at once.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Mental Model: The Claim Ticket</h4>
+                    <p>Leave skis for tuning at a Pinecrest store and you get a numbered ticket. The same number is tied to the skis. Nobody needs to write your name on the skis: the number connects the two. A <strong>key</strong> is that ticket number, a column that appears in both tables. A <strong>merge</strong> walks down one table and, for each row, finds the rows in the other table holding the same ticket. Two questions decide everything that follows: <em>what if a ticket has no match?</em> and <em>what if a ticket matches more than once?</em></p>
+                </div>
+
+                <div class="mermaid">
+            graph TD
+                C["customers: one row per customer"] -->|"customer_id"| O["orders: one row per order"]
+                O -->|"order_id"| I["order_items: one row per line"]
+                P["products: one row per product"] -->|"sku"| I
+                </div>
+
+                <p>Read each arrow as "one row here can match many rows there". One customer has many orders, one order has many lines, and one product appears on many lines. Keep this map in mind: it tells you what every merge in this lesson should do to the number of rows.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="kinds" class="lesson-section">
+                <h2>🔀 Four Kinds of Join</h2>
+
+                <p>Start a notebook called <code>lesson_2_5</code> and load the four core tables.</p>
+
+                <pre><code class="language-python">import numpy as np
+import pandas as pd
+
+pd.set_option("display.width", 150)
+pd.set_option("display.max_columns", 20)
+
+orders = pd.read_csv("data/orders.csv", parse_dates=["order_date"])
+customers = pd.read_csv("data/customers.csv")
+products = pd.read_csv("data/products.csv")
+items = pd.read_csv("data/order_items.csv")
+
+for name, table in [("orders", orders), ("customers", customers), ("products", products), ("items", items)]:
+    print(f"{name:&lt;10}{table.shape[0]:&gt;7,} rows {table.shape[1]:&gt;3} columns")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>orders     20,302 rows  11 columns
+customers   4,850 rows  12 columns
+products      242 rows  13 columns
+items      45,490 rows   5 columns</code></pre>
+                </div>
+
+                <p>Before the real data, two tiny tables where you can see every row. <code>left</code> has keys A, B, C. <code>right</code> has B, C, D. So B and C match, A exists only on the left and D only on the right.</p>
+
+                <pre><code class="language-python">left = pd.DataFrame({"sku": ["A", "B", "C"], "qty": [2, 1, 5]})
+right = pd.DataFrame({"sku": ["B", "C", "D"], "price": [10.0, 20.0, 30.0]})
+
+print(left.merge(right, on="sku"))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>  sku  qty  price
+0   B    1   10.0
+1   C    5   20.0</code></pre>
+                </div>
+
+                <p><code>left.merge(right, on="sku")</code> matched rows on <code>sku</code> and put the columns of both tables side by side. Only B and C appear: by default <code>merge</code> keeps only keys found in <strong>both</strong> tables. That default is called an <strong>inner</strong> join. The <code>how=</code> argument selects the other three kinds.</p>
+
+                <pre><code class="language-python">print(left.merge(right, on="sku", how="left"))
+print(left.merge(right, on="sku", how="right"))
+print(left.merge(right, on="sku", how="outer"))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>  sku  qty  price
+0   A    2    NaN
+1   B    1   10.0
+2   C    5   20.0
+  sku  qty  price
+0   B  1.0   10.0
+1   C  5.0   20.0
+2   D  NaN   30.0
+  sku  qty  price
+0   A  2.0    NaN
+1   B  1.0   10.0
+2   C  5.0   20.0
+3   D  NaN   30.0</code></pre>
+                </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>how=</th><th>Keeps</th><th>Keys in the result</th><th>Use it when</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="nowrap"><code>"inner"</code></td><td>Only keys in both tables</td><td>B, C</td><td>You want only complete matches, and have counted what you drop</td></tr>
+                            <tr><td class="nowrap"><code>"left"</code></td><td>Every row of the left table</td><td>A, B, C</td><td>You are adding columns to a table and must not lose its rows</td></tr>
+                            <tr><td class="nowrap"><code>"right"</code></td><td>Every row of the right table</td><td>B, C, D</td><td>Rarely: swap the tables and use left</td></tr>
+                            <tr><td class="nowrap"><code>"outer"</code></td><td>Every row of both</td><td>A, B, C, D</td><td>You are auditing how two tables overlap</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>Where a row has no partner, the columns from the other table are filled with <code>NaN</code>. (That is also why <code>qty</code> turned into floats in the last two results: an integer column cannot hold a <code>NaN</code>.) "Left" and "right" simply mean the table before <code>.merge</code> and the table inside the parentheses.</p>
+
+                <div class="card card-success">
+                    <h4>✅ The Working Default: A Left Join</h4>
+                    <p>Most merges in analysis are "take my main table and attach some columns". For that job use <code>how="left"</code>: your main table keeps every row, and missing matches show up as <code>NaN</code> you can see and count, instead of rows that silently vanish.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="first" class="lesson-section">
+                <h2>🚀 A Real Merge, and the Rows It Lost</h2>
+
+                <p>Attach each customer's name, state and loyalty tier to their orders. Select only the columns you need from the right-hand table first, key included, so the result is not cluttered with eleven extra columns.</p>
+
+                <pre><code class="language-python">slim_customers = customers[["customer_id", "first_name", "last_name", "state", "loyalty_tier"]]
+merged = orders.merge(slim_customers, on="customer_id")
+
+print(merged[["order_id", "customer_id", "order_total", "first_name", "state", "loyalty_tier"]].head(3))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>   order_id  customer_id  order_total first_name state loyalty_tier
+0    100001        12673        434.9     Xavier    AZ       Silver
+1    100002        10034        278.9       Aiko    OR         Gold
+2    100003        12448         75.9     Kareem    MT         Gold</code></pre>
+                </div>
+
+                <p>It looks perfect. Every order now carries its customer's details. Now do the one thing you should do after every merge for the rest of your career: <strong>count the rows</strong>.</p>
+
+                <pre><code class="language-python">print(len(orders), "orders before")
+print(len(merged), "rows after")
+print(len(orders) - len(merged), "orders lost")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>20302 orders before
+19563 rows after
+739 orders lost</code></pre>
+                </div>
+
+                <p>739 orders are gone. No error, no warning. The default inner join dropped every order whose <code>customer_id</code> has no row in <code>customers.csv</code>. Any revenue total computed from <code>merged</code> would be short, and nothing on screen would tell you.</p>
+
+                <pre><code class="language-python">with_names = orders.merge(slim_customers, on="customer_id", how="left")
+print(len(with_names))
+print(with_names["first_name"].isna().sum())
+print(with_names.loc[with_names["first_name"].isna(), ["order_id", "customer_id", "order_total", "first_name", "loyalty_tier"]].head(3))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>20302
+739
+    order_id  customer_id  order_total first_name loyalty_tier
+6     100007        12810       218.90        NaN          NaN
+78    100079        13819       423.77        NaN          NaN
+80    100081        12020        73.46        NaN          NaN</code></pre>
+                </div>
+
+                <p>With <code>how="left"</code> all 20,302 orders survive, and the 739 without a customer record have <code>NaN</code> in the borrowed columns. The four kinds on the real tables:</p>
+
+                <pre><code class="language-python">for how in ["inner", "left", "right", "outer"]:
+    result = orders.merge(slim_customers, on="customer_id", how=how)
+    print(f"{how:&lt;6}{len(result):&gt;7,} rows")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>inner  19,563 rows
+left   20,302 rows
+right  20,621 rows
+outer  21,360 rows</code></pre>
+                </div>
+
+                <p>The inner join is the smallest, the outer join the largest, and the differences between them are exactly the unmatched rows on each side: 20,302 − 19,563 = 739 orders without a customer, and 20,621 − 19,563 = 1,058 customers without an order.</p>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Count Before, Count After</h4>
+                    <p>Before a merge, say what the row count <em>should</em> be. "I am adding customer columns to orders, so I should still have 20,302 rows." After the merge, check. If the number went down, keys failed to match. If it went up, keys matched more than once. Either way you need to know why before you go on.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="indicator" class="lesson-section">
+                <h2>🔦 Finding the Unmatched Keys</h2>
+
+                <p><code>indicator=True</code> adds a column called <code>_merge</code> that says where each row came from: <code>both</code>, <code>left_only</code> or <code>right_only</code>. Combined with an outer join it is a complete audit of how two tables overlap.</p>
+
+                <pre><code class="language-python">audit = orders.merge(slim_customers, on="customer_id", how="outer", indicator=True)
+print(audit["_merge"].value_counts())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>_merge
+both          19563
+right_only     1058
+left_only       739
+Name: count, dtype: int64</code></pre>
+                </div>
+
+                <p>Now the unmatched rows are not a mystery but two tables you can inspect.</p>
+
+                <pre><code class="language-python">orphans = audit[audit["_merge"] == "left_only"]
+print(len(orphans), "orders,", orphans["customer_id"].nunique(), "customer ids")
+print(round(orphans["order_total"].sum(), 2))
+
+never = audit[audit["_merge"] == "right_only"]
+print(len(never), "customers with no orders")
+print(never[["customer_id", "first_name", "state", "loyalty_tier", "order_id"]].head(3))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>739 orders, 150 customer ids
+154273.8
+1058 customers with no orders
+    customer_id first_name state loyalty_tier  order_id
+33        10007       Hugo    NV        Basic       NaN
+36        10009      Idris    ID        Basic       NaN
+73        10019   Santiago    OR        Basic       NaN</code></pre>
+                </div>
+
+                <p>The 739 orphan orders belong to 150 customer ids and are worth $154,274. The data README explains them: those are closed accounts whose customer records were removed, while their order history was kept. They are real sales. Dropping them, as the inner join did, would understate revenue by about 4%. On the other side, 1,058 people have an account and no order in these two years, which is a list a marketing team would pay attention to.</p>
+
+                <p>When you only need to know which rows have no match, <code>isin()</code> answers without merging at all:</p>
+
+                <pre><code class="language-python">no_account = orders[~orders["customer_id"].isin(customers["customer_id"])]
+print(len(no_account))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>739</code></pre>
+                </div>
+
+                <div class="card card-info">
+                    <h4>💡 Unmatched Rows Are Findings</h4>
+                    <p>Each group of unmatched keys has a cause: closed accounts, discontinued products, a typo in an id, a file that is out of date. Find the cause, then decide: keep the rows with a label such as "closed account", repair the key, or exclude them and say so. What you should never do is let the default decide for you.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="validate" class="lesson-section">
+                <h2>📐 Relationships and validate=</h2>
+
+                <p>What a merge does to the row count depends on whether the key is <strong>unique</strong> on each side.</p>
+
+                <pre><code class="language-python">print(customers["customer_id"].is_unique)
+print(orders["customer_id"].is_unique)
+print(orders["customer_id"].value_counts().head(3))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>True
+False
+customer_id
+14475    41
+14516    39
+14680    37
+Name: count, dtype: int64</code></pre>
+                </div>
+
+                <p>Each <code>customer_id</code> appears once in <code>customers</code> and many times in <code>orders</code> (up to 41 times). From the orders side that is a <strong>many-to-one</strong> relationship, and it is the safe, common case: each order finds at most one customer, so the row count cannot grow.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Relationship</th><th>Key is unique in</th><th>Example</th><th>Rows after a left join</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>one-to-one</td><td>both tables</td><td>daily sales and weather, by date and store</td><td>Same as the left table</td></tr>
+                            <tr><td>many-to-one</td><td>the right table</td><td>orders to customers; order lines to products</td><td>Same as the left table</td></tr>
+                            <tr><td>one-to-many</td><td>the left table</td><td>orders to order lines</td><td>More: one per match</td></tr>
+                            <tr><td>many-to-many</td><td>neither</td><td>orders and web sessions, by customer</td><td>Many more: every pairing</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>You can make pandas check your belief. <code>validate=</code> states the relationship you expect, and the merge refuses to run if the keys say otherwise.</p>
+
+                <pre><code class="language-python">checked = orders.merge(slim_customers, on="customer_id", how="left", validate="many_to_one")
+print(len(checked))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>20302</code></pre>
+                </div>
+
+                <p>Passed: every <code>customer_id</code> is unique on the right. State something untrue and you get a <code>MergeError</code> that names the problem:</p>
+
+                <pre data-raises="Exception"><code class="language-python">orders.merge(slim_customers, on="customer_id", how="left", validate="one_to_one")</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>MergeError: Merge keys are not unique in left dataset; not a one-to-one merge
+...</code></pre>
+                </div>
+
+                <p>The accepted values are <code>"one_to_one"</code>, <code>"one_to_many"</code>, <code>"many_to_one"</code> and <code>"many_to_many"</code> (or the short forms <code>"1:1"</code>, <code>"1:m"</code>, <code>"m:1"</code>, <code>"m:m"</code>). Writing <code>validate=</code> on every merge costs a few characters and turns a silent wrong answer into a loud error on the day somebody hands you a customers file with a duplicated id.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="explosion" class="lesson-section">
+                <h2>💥 When Rows Multiply</h2>
+
+                <h3>One-to-Many: Correct, and Easy to Misuse</h3>
+
+                <p>Merge orders with their item lines. One order matches several lines, so the result has one row per <em>line</em>.</p>
+
+                <pre><code class="language-python">lines = orders[["order_id", "status", "order_total"]].merge(items, on="order_id", how="left", validate="one_to_many")
+print(len(orders), "-&gt;", len(lines))
+print(lines[lines["order_id"] == 100001])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>20302 -&gt; 45490
+   order_id     status  order_total  order_item_id       sku  quantity  unit_price
+0    100001  completed        434.9              1  SLP-1021         1      371.95
+1    100001  completed        434.9              2  KIT-1014         1       62.95</code></pre>
+                </div>
+
+                <p>20,302 orders became 45,490 rows, as the map predicted. Look at order 100001: it has two lines, so its order-level values, including <code>order_total</code> 434.90, now appear <strong>twice</strong>. Nothing is wrong yet. It goes wrong the moment you add up an order-level column in the merged table:</p>
+
+                <pre><code class="language-python">print(round(orders["order_total"].sum(), 2))
+print(round(lines["order_total"].sum(), 2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>3950701.45
+11039208.35</code></pre>
+                </div>
+
+                <p>$11.0 million instead of $4.0 million. Every order's total was counted once per line, so orders with many lines were counted many times. This is the most expensive merge mistake in practice, because the number looks plausible and the code raises nothing.</p>
+
+                <pre><code class="language-python">per_order = lines.drop_duplicates("order_id")
+print(round(per_order["order_total"].sum(), 2))
+
+lines["line_total"] = lines["quantity"] * lines["unit_price"]
+print(round(lines["line_total"].sum(), 2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>3950701.45
+3963530.35</code></pre>
+                </div>
+
+                <p>Two honest ways out. Either bring the table back to one row per order before summing an order-level column (the first figure matches the original), or sum a <em>line-level</em> quantity, which is what a table of lines is for. (The line totals come to slightly more than the order totals because order totals include discounts and shipping.)</p>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Know What One Row Means</h4>
+                    <p>After every merge, finish the sentence "one row of this table is one …". If the answer is "one order line", then order-level and customer-level columns are repeated, and summing or averaging them is wrong. Aggregate each table to the level you need <em>before</em> merging, or only total columns that belong to the row's own level.</p>
+                </div>
+
+                <h3>Many-to-Many: Usually a Mistake</h3>
+
+                <p>The web sessions file records visits, some by signed-in customers. Suppose you try to connect orders to sessions through <code>customer_id</code>. First prepare the sessions that have a customer.</p>
+
+                <pre><code class="language-python">import json
+
+with open("data/web_sessions.json", encoding="utf-8") as f:
+    sessions = pd.json_normalize(json.load(f)["sessions"])
+
+known = sessions[sessions["customer_id"].notna()][["session_id", "customer_id", "started_at"]].copy()
+known["customer_id"] = known["customer_id"].astype("int64")
+known["started_at"] = pd.to_datetime(known["started_at"])
+print(len(known), known["customer_id"].nunique(), known["customer_id"].is_unique)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>853 780 False</code></pre>
+                </div>
+
+                <p>853 sessions by 780 customers: the key is not unique here either. A customer can have many orders <em>and</em> many sessions.</p>
+
+                <pre><code class="language-python">pairs = orders[["order_id", "customer_id"]].merge(known, on="customer_id")
+print(len(orders), "orders,", len(known), "sessions -&gt;", len(pairs), "rows")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>20302 orders, 853 sessions -&gt; 4607 rows</code></pre>
+                </div>
+
+                <pre><code class="language-python">busiest = known["customer_id"].value_counts().index[0]
+n_orders = (orders["customer_id"] == busiest).sum()
+n_sessions = (known["customer_id"] == busiest).sum()
+print(n_orders, "orders x", n_sessions, "sessions =", (pairs["customer_id"] == busiest).sum(), "rows")
+print(pairs.loc[pairs["customer_id"] == busiest, ["order_id", "session_id"]].head(6))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>8 orders x 4 sessions = 32 rows
+      order_id session_id
+3319    115454     S00236
+3320    115454     S01659
+3321    115454     S02132
+3322    115454     S02237
+3466    116149     S00236
+3467    116149     S01659</code></pre>
+                </div>
+
+                <p>The merge paired <strong>every order of a customer with every session of that customer</strong>: 8 orders times 4 sessions makes 32 rows, none of which means anything, since a November visit has no connection to an order from the previous spring. With keys repeated on both sides, row counts multiply, and on large tables a careless many-to-many merge can produce billions of rows and exhaust your memory. <code>validate</code> would have stopped it:</p>
+
+                <pre data-raises="Exception"><code class="language-python">orders[["order_id", "customer_id"]].merge(known, on="customer_id", validate="many_to_one")</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>MergeError: Merge keys are not unique in right dataset; not a many-to-one merge
+...</code></pre>
+                </div>
+
+                <p>When you meet a many-to-many relationship, the fix is nearly always to find a better key (here, the <code>order_id</code> that a converted session carries) or to aggregate one side to one row per key first.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="keys" class="lesson-section">
+                <h2>🗝️ Awkward Keys</h2>
+
+                <h3>Different Names, and More Than One Column</h3>
+
+                <p>The daily sales and weather tables describe the same thing, a store on a day, but one calls the place <code>store</code> and the other <code>city</code>. And neither column alone identifies a row: the key is the <em>pair</em> (date, place).</p>
+
+                <pre><code class="language-python">daily = pd.read_csv("data/daily_sales.csv", parse_dates=["date"])
+weather = pd.read_csv("data/store_weather.csv", parse_dates=["date"])
+print(daily.columns.tolist())
+print(weather.columns.tolist())
+print(len(daily), len(weather))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>['date', 'store', 'visitors', 'transactions', 'units', 'revenue', 'staff_on_duty', 'promo_day']
+['date', 'city', 'high_f', 'low_f', 'precip_in']
+2903 2924</code></pre>
+                </div>
+
+                <p><code>left_on</code> and <code>right_on</code> name the key columns on each side, in matching order.</p>
+
+                <pre><code class="language-python">sales_weather = daily.merge(
+    weather,
+    left_on=["date", "store"],
+    right_on=["date", "city"],
+    how="left",
+    validate="one_to_one",
+)
+print(len(sales_weather))
+print(sales_weather[["date", "store", "city", "revenue", "high_f", "precip_in"]].head(3))
+
+sales_weather = sales_weather.drop(columns="city")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>2903
+        date      store       city  revenue  high_f  precip_in
+0 2024-01-01  Asheville  Asheville  5017.07      49        0.0
+1 2024-01-01       Bend       Bend  4132.92      37        0.0
+2 2024-01-01      Boise      Boise  5962.00      37        0.0</code></pre>
+                </div>
+
+                <p>2,903 rows in, 2,903 out, validated as one-to-one. Both key columns are kept when their names differ, so drop the spare. (Renaming first, <code>weather.rename(columns={"city": "store"})</code>, and merging with <code>on=["date", "store"]</code> is just as good.) The weather table has 21 more rows than the sales table. An outer join with an indicator shows what they are:</p>
+
+                <pre><code class="language-python">both = daily.merge(weather, left_on=["date", "store"], right_on=["date", "city"], how="outer", indicator=True)
+print(both["_merge"].value_counts())
+print(both.loc[both["_merge"] == "right_only", ["date", "city", "high_f"]].head(4))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>_merge
+both          2903
+right_only      21
+left_only        0
+Name: count, dtype: int64
+           date       city  high_f
+897  2024-08-12       Bend      73
+901  2024-08-13       Bend      73
+905  2024-08-14       Bend      73
+1328 2024-11-28  Asheville      49</code></pre>
+                </div>
+
+                <p>Weather exists for every day, but the stores have no sales row for 21 store-days: holidays when every store was closed, and a few days when an export failed. For "sales with weather attached", a left join from <code>daily</code> is right. For "find the days sales are missing", the <code>right_only</code> rows are the answer.</p>
+
+                <h3>Columns with the Same Name</h3>
+
+                <p>A converted web session carries the <code>order_id</code> it produced, which is a proper one-to-one key to <code>orders</code>. Both tables also have a <code>customer_id</code> column that is <em>not</em> part of the key.</p>
+
+                <pre><code class="language-python">converted = sessions.loc[sessions["converted"], ["session_id", "order_id", "customer_id", "cart.value"]].copy()
+converted["order_id"] = converted["order_id"].astype("int64")
+
+web_orders = orders.merge(converted, on="order_id")
+print(len(converted), len(web_orders))
+print(web_orders.columns.tolist())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>230 230
+['order_id', 'customer_id_x', 'order_date', 'channel', 'store', 'status', 'payment_method', 'promo_code', 'discount_pct', 'shipping_cost', 'order_total', 'session_id', 'customer_id_y', 'cart.value']</code></pre>
+                </div>
+
+                <p>pandas cannot have two columns with one name, so it renamed them <code>customer_id_x</code> (from the left) and <code>customer_id_y</code> (from the right). Those names tell a reader nothing. <code>suffixes=</code> lets you choose:</p>
+
+                <pre><code class="language-python">web_orders = orders.merge(converted, on="order_id", suffixes=("_order", "_session"), validate="one_to_one")
+print([c for c in web_orders.columns if "customer" in c])
+print((web_orders["customer_id_order"] == web_orders["customer_id_session"]).mean())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>['customer_id_order', 'customer_id_session']
+1.0</code></pre>
+                </div>
+
+                <p>And a free consistency check falls out: in all 230 matched rows, the session's customer is the order's customer.</p>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Missing Keys Match Each Other</h4>
+                    <p>The sessions were filtered to converted ones first for a reason. The other 2,170 sessions have a missing <code>order_id</code>, and in a pandas merge <strong>a missing key matches every other missing key</strong> (unlike SQL, where NULL matches nothing):</p>
+                    <pre><code class="language-python">la = pd.DataFrame({"k": [1.0, np.nan], "left_value": ["a", "b"]})
+rb = pd.DataFrame({"k": [np.nan, np.nan], "right_value": ["x", "y"]})
+print(la.merge(rb, on="k"))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>    k left_value right_value
+0 NaN          b           x
+1 NaN          b           y</code></pre>
+                    </div>
+                    <p>One left row with a missing key matched both right rows with missing keys. Remove or fill missing keys before merging on a column that has them.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="concat" class="lesson-section">
+                <h2>📚 Stacking with concat</h2>
+
+                <p><code>merge</code> puts tables <em>side by side</em>, matching rows by key. <code>pd.concat()</code> puts tables <em>on top of each other</em>: same columns, more rows. It is what you use when data arrives in pieces, one file per month or per store.</p>
+
+                <pre><code class="language-python">y2024 = orders[orders["order_date"].dt.year == 2024]
+y2025 = orders[orders["order_date"].dt.year == 2025]
+print(len(y2024), len(y2025))
+
+stacked = pd.concat([y2024, y2025], ignore_index=True)
+print(stacked.shape, stacked.equals(orders))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>9519 10783
+(20302, 11) True</code></pre>
+                </div>
+
+                <p>Two yearly pieces stacked back into the original 20,302 rows. <code>ignore_index=True</code> renumbers the rows from 0. Without it each piece keeps its old labels, and you can end up with duplicate index labels. Columns are matched <strong>by name</strong>, not position, and a column that one piece lacks is filled with <code>NaN</code>:</p>
+
+                <pre><code class="language-python">a = pd.DataFrame({"store": ["Boise", "Bend"], "revenue": [100, 80]})
+b = pd.DataFrame({"store": ["Flagstaff"], "revenue": [90], "visitors": [300]})
+print(pd.concat([a, b], ignore_index=True))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>       store  revenue  visitors
+0      Boise      100       NaN
+1       Bend       80       NaN
+2  Flagstaff       90     300.0</code></pre>
+                </div>
+
+                <p>That is helpful when files differ slightly and a trap when a column was renamed in one of them (<code>Revenue</code> and <code>revenue</code> become two half-empty columns). After a concat, check <code>.shape</code> and <code>.isna().sum()</code>. Collect the pieces in a list and call <code>concat</code> once at the end: calling it inside a loop copies the growing table every time, the same cost you measured for <code>np.append</code> in Lesson 1.1.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="asof" class="lesson-section">
+                <h2>⏱️ Nearest Match: merge_asof</h2>
+
+                <p>Sometimes there is no equal key to match on. "For each website visit by a known customer, what was that customer's most recent order <em>before</em> the visit?" The visit's timestamp equals no order date. You want the <strong>nearest earlier</strong> one. <code>pd.merge_asof()</code> does exactly that: for each left row it takes the last right row whose key is less than or equal to the left key. Both tables must be sorted by that key, and <code>by=</code> restricts matches to the same customer.</p>
+
+                <pre><code class="language-python">history = orders[["customer_id", "order_date", "order_id"]].sort_values("order_date")
+visits = known.sort_values("started_at")
+
+last_order = pd.merge_asof(
+    visits, history,
+    left_on="started_at", right_on="order_date",
+    by="customer_id",
+)
+last_order["days_since_order"] = (last_order["started_at"] - last_order["order_date"]).dt.days
+print(last_order[["session_id", "customer_id", "started_at", "order_date", "days_since_order"]].head(4))
+print(len(visits), len(last_order), last_order["order_date"].isna().sum())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>  session_id  customer_id          started_at order_date  days_since_order
+0     S00001        12003 2025-11-01 06:31:45 2025-06-26             128.0
+1     S00003        11550 2025-11-01 07:07:11 2025-11-01               0.0
+2     S00012        12784 2025-11-01 08:42:25 2025-09-01              61.0
+3     S00013        10940 2025-11-01 08:53:22        NaT               NaN
+853 853 172</code></pre>
+                </div>
+
+                <p>Every one of the 853 visits is kept (it behaves like a left join and never multiplies rows). The first visitor last ordered 128 days earlier, the second ordered the same day, and 172 visits were by customers with no earlier order at all, hence <code>NaT</code>. Typical uses are "the price in force on the order date", "the latest sensor reading before each event", or "the exchange rate at the time of each trade". A <code>tolerance=</code> argument limits how far back a match may reach. For now it is enough to know the tool exists. Working with dates in depth starts in <a href="pandas_time_series.html">Lesson 2.7</a>.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="mistakes" class="lesson-section">
+                <h2>⚠️ Common Mistakes</h2>
+
+                <p>Four of these raise an error, which is the easy kind. Mistakes 4 and 5 run without complaint and give a wrong number, so those are the two to remember.</p>
+
+                <h3>1. Keys of Different Types</h3>
+                <pre data-raises="ValueError"><code class="language-python">text_ids = orders.assign(customer_id=orders["customer_id"].astype("str"))
+text_ids.merge(customers, on="customer_id")</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>ValueError: You are trying to merge on str and int64 columns for key 'customer_id'. If you wish to proceed you should use pd.concat</code></pre>
+                </div>
+                <p><strong>What it means:</strong> the id is text in one table and an integer in the other, and <code>"12673"</code> is not <code>12673</code>. It typically happens when one file had a stray non-numeric value in the id column. <strong>Fix:</strong> convert one side so that the dtypes agree (<code>.astype("int64")</code>, or <code>pd.to_numeric</code> as in Lesson 2.3). Ignore the hint about <code>pd.concat</code>: it is not what you want here.</p>
+
+                <h3>2. A Key Column the Other Table Does Not Have</h3>
+                <pre data-raises="KeyError"><code class="language-python">daily.merge(weather, on=["date", "store"])</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>KeyError: 'store'</code></pre>
+                </div>
+                <p><strong>What it means:</strong> <code>on=</code> needs the same column names in both tables, and <code>weather</code> calls it <code>city</code>. <strong>Fix:</strong> <code>left_on=</code> and <code>right_on=</code>, or rename.</p>
+
+                <h3>3. A Relationship That Is Not What You Said</h3>
+                <pre data-raises="Exception"><code class="language-python">items.merge(products, on="sku", validate="one_to_many")</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>MergeError: Merge keys are not unique in left dataset; not a one-to-many merge
+...</code></pre>
+                </div>
+                <p><strong>What it means:</strong> you claimed each <code>sku</code> appears once in <code>items</code>, and it does not: the unique side is <code>products</code>. This is <code>validate</code> doing its job. <strong>Fix:</strong> think again about which table is the "one" side (<code>"many_to_one"</code> here). If the error surprises you, you have found duplicate keys, and that is worth an investigation.</p>
+
+                <h3>4. Averaging a Repeated Column</h3>
+                <pre><code class="language-python">print(round(orders.merge(items, on="order_id")["order_total"].mean(), 2))
+print(round(orders["order_total"].mean(), 2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>242.67
+194.6</code></pre>
+                </div>
+                <p><strong>What happened:</strong> after merging orders with their lines, "average order total" came out as $242.67 instead of $194.60, because orders with more lines are larger and were counted once per line. <strong>Fix:</strong> compute order-level statistics on the orders table, before the merge.</p>
+
+                <h3>5. An Inner Join Used as an Accidental Filter</h3>
+                <pre><code class="language-python">gold = customers[customers["loyalty_tier"] == "Gold"][["customer_id", "loyalty_tier"]]
+gold_orders = orders.merge(gold, on="customer_id")
+print(len(gold_orders), round(len(gold_orders) / len(orders), 3))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>8491 0.418</code></pre>
+                </div>
+                <p><strong>What happened:</strong> this is fine <em>if you meant it</em>: merging with a table of Gold customers kept only their 8,491 orders, 42% of the total. The mistake is doing it without noticing, then reporting "total orders" from the result. <strong>Fix:</strong> <code>how="left"</code> when you are adding columns, and a row count after every merge.</p>
+
+                <h3>6. merge_asof on Unsorted Data</h3>
+                <pre data-raises="ValueError"><code class="language-python">by_customer = known.sort_values("customer_id")
+pd.merge_asof(by_customer, history, left_on="started_at", right_on="order_date", by="customer_id")</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>ValueError: left keys must be sorted</code></pre>
+                </div>
+                <p><strong>What it means:</strong> the nearest-match search relies on both tables being in key order. <strong>Fix:</strong> <code>.sort_values()</code> each table by its <code>on</code> column first.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="project" class="lesson-section">
+                <h2>🛠️ Project: Revenue by Category</h2>
+
+                <p>"How much does each product category bring in?" sounds like one groupby. But revenue is in <code>order_items</code>, the order's status and date are in <code>orders</code>, and the category is in <code>products</code>. You will join the three, account for every row that does not match, and uncover a pricing trap along the way. Use a new notebook, <code>lesson_2_5_project</code>. Allow about 40 minutes.</p>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 1: Inspect the keys <span class="step-time">(5 min)</span></h3>
+                    <p>Before merging anything, check that the keys are unique where they should be, and count the keys that will not match.</p>
+                    <pre><code class="language-python">import numpy as np
+import pandas as pd
+
+pd.set_option("display.width", 150)
+pd.set_option("display.max_columns", 20)
+
+orders = pd.read_csv("data/orders.csv", parse_dates=["order_date"])
+items = pd.read_csv("data/order_items.csv")
+products = pd.read_csv("data/products.csv")
+
+print("orders.order_id unique :", orders["order_id"].is_unique)
+print("products.sku unique    :", products["sku"].is_unique)
+print("item lines with no order   :", (~items["order_id"].isin(orders["order_id"])).sum())
+print("item lines with no product :", (~items["sku"].isin(products["sku"])).sum())
+print("products never sold        :", (~products["sku"].isin(items["sku"])).sum())</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>orders.order_id unique : True
+products.sku unique    : True
+item lines with no order   : 0
+item lines with no product : 609
+products never sold        : 8</code></pre>
+                    </div>
+                    <p>The plan writes itself: lines to orders will match completely; lines to products will leave 609 lines unmatched; 8 products have never been sold.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 2: Lines + orders <span class="step-time">(5 min)</span></h3>
+                    <p>The lines table is the main table (revenue lives there), so it goes on the left. Many lines to one order.</p>
+                    <pre><code class="language-python">lines = items.merge(
+    orders[["order_id", "order_date", "status", "channel"]],
+    on="order_id", how="left", validate="many_to_one",
+)
+print(len(items), "-&gt;", len(lines))
+print(lines["order_date"].isna().sum(), "lines without an order")</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>45490 -&gt; 45490
+0 lines without an order</code></pre>
+                    </div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 3: + products, with an indicator <span class="step-time">(5 min)</span></h3>
+                    <p>Many lines to one product, again a left join so no line is lost.</p>
+                    <pre><code class="language-python">lines = lines.merge(
+    products[["sku", "name", "category", "price"]],
+    on="sku", how="left", validate="many_to_one", indicator=True,
+)
+print(len(lines))
+print(lines["_merge"].value_counts())
+
+unmatched = lines[lines["_merge"] == "left_only"]
+print(unmatched["sku"].value_counts())
+print(unmatched["order_date"].max().date())</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>45490
+_merge
+both          44881
+left_only       609
+right_only        0
+Name: count, dtype: int64
+sku
+KIT-1016    357
+APL-1033     93
+SNW-1007     73
+SNW-1018     37
+PCK-1015     31
+PCK-1025     18
+Name: count, dtype: int64
+2024-09-29</code></pre>
+                    </div>
+                    <p>Still 45,490 rows. The 609 unmatched lines use six SKUs that are not in the catalog, last sold in September 2024: discontinued products. Their sales were real.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 4: Repair what can be repaired <span class="step-time">(10 min)</span></h3>
+                    <p>A discontinued line has no category from the merge. But a SKU's first three letters encode its category, so the catalog itself provides the lookup. Build a prefix-to-category Series from <code>products</code>, then fill the gaps with <code>.map()</code>.</p>
+                    <pre><code class="language-python">prefix_to_category = (
+    products.assign(prefix=products["sku"].str[:3])
+    .drop_duplicates("prefix")
+    .set_index("prefix")["category"]
+)
+print(prefix_to_category)
+
+lines["category"] = lines["category"].fillna(lines["sku"].str[:3].map(prefix_to_category))
+lines["name"] = lines["name"].fillna("(discontinued)")
+print(lines["category"].isna().sum())</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>prefix
+TNT           Tents
+SLP        Sleeping
+PCK           Packs
+FTW        Footwear
+APL         Apparel
+CLM        Climbing
+KIT    Camp Kitchen
+SNW            Snow
+ACC     Accessories
+Name: category, dtype: str
+0</code></pre>
+                    </div>
+                    <p>Every line now has a category. This was a repair based on a rule you could verify, the same standard as in Lesson 2.3.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 5: Revenue by category <span class="step-time">(5 min)</span></h3>
+                    <p>Completed orders only, at the price actually charged.</p>
+                    <pre><code class="language-python">lines["line_total"] = lines["quantity"] * lines["unit_price"]
+sold = lines[lines["status"] == "completed"]
+
+by_category = sold.groupby("category").agg(
+    lines=("order_item_id", "count"),
+    units=("quantity", "sum"),
+    revenue=("line_total", "sum"),
+).sort_values("revenue", ascending=False)
+by_category["share"] = by_category["revenue"] / by_category["revenue"].sum()
+print(by_category.round(3))
+
+lost = sold.loc[sold["_merge"] == "left_only", "line_total"].sum()
+print(f"Revenue an inner join would have dropped: ${lost:,.2f}")</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>              lines  units    revenue  share
+category
+Accessories   11080  16294  567699.20  0.156
+Sleeping       3386   4531  516302.45  0.142
+Tents          2110   2485  447114.75  0.123
+Apparel        4641   6400  446058.00  0.123
+Packs          3150   3560  393466.00  0.108
+Footwear       4142   5902  391188.90  0.108
+Camp Kitchen   7628  12907  372869.10  0.103
+Climbing       3157   4106  272994.05  0.075
+Snow           2494   3663  228593.90  0.063
+Revenue an inner join would have dropped: $34,228.25</code></pre>
+                    </div>
+                    <p>Accessories leads with 16% of merchandise revenue. And the last line prices the lesson: an inner join to <code>products</code> would have silently removed $34,228 of real sales, mostly from Camp Kitchen.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 6: The pricing trap <span class="step-time">(5 min)</span></h3>
+                    <p>The merge brought in <code>price</code> from the catalog, sitting right beside <code>unit_price</code> from the order line. It is tempting to use it. Compare the two.</p>
+                    <pre><code class="language-python">listed = sold[sold["_merge"] == "both"].copy()
+listed["price_changed"] = ~np.isclose(listed["unit_price"], listed["price"])
+listed["period"] = np.where(listed["order_date"] &lt; "2025-03-01", "before March 2025", "from March 2025")
+print(listed.groupby("period")["price_changed"].mean().round(3))
+
+actual = listed["line_total"].sum()
+at_list = (listed["quantity"] * listed["price"]).sum()
+print(f"at the price charged : ${actual:,.2f}")
+print(f"at today's list price: ${at_list:,.2f}")
+print(f"overstatement        : {at_list / actual - 1:.1%}")</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>period
+before March 2025    0.615
+from March 2025      0.000
+Name: price_changed, dtype: float64
+at the price charged : $3,602,058.10
+at today's list price: $3,663,987.10
+overstatement        : 1.7%</code></pre>
+                    </div>
+                    <p>Before March 2025, 61.5% of lines were sold at a price different from today's catalog price. From March on, none were. List prices rose on 1 March 2025, and <code>products.csv</code> holds only the <em>current</em> price. Valuing past sales at today's price overstates revenue by 1.7%, about $62,000. A merged column is true as of the table it came from, which may not be the moment your row describes.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 7: Save and summarize <span class="step-time">(5 min)</span></h3>
+                    <pre><code class="language-python">from pathlib import Path
+
+Path("output").mkdir(exist_ok=True)
+lines.drop(columns="_merge").to_parquet("output/order_lines.parquet")
+by_category.round(4).to_csv("output/category_revenue.csv")
+
+top = by_category.index[0]
+print(f"Order lines            : {len(lines):,} (same as order_items.csv: {len(lines) == len(items)})")
+print(f"Completed merchandise  : ${by_category['revenue'].sum():,.2f}")
+print(f"Top category           : {top} ({by_category.loc[top, 'share']:.1%})")
+print(f"Discontinued-SKU lines : {len(unmatched)} kept, category recovered from the SKU prefix")</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>Order lines            : 45,490 (same as order_items.csv: True)
+Completed merchandise  : $3,636,286.35
+Top category           : Accessories (15.6%)
+Discontinued-SKU lines : 609 kept, category recovered from the SKU prefix</code></pre>
+                    </div>
+                </div>
+
+                <div class="card card-success">
+                    <h3>✅ Project Completion Checklist</h3>
+                    <ul class="checklist">
+                        <li>You checked key uniqueness and counted unmatched keys before merging</li>
+                        <li>Both merges are left joins with <code>validate="many_to_one"</code>, and <code>lines</code> has 45,490 rows after each</li>
+                        <li>You identified the 609 unmatched lines as six discontinued SKUs and recovered their category</li>
+                        <li>Category revenue uses <code>unit_price</code>, not the catalog <code>price</code>, and totals $3,636,286.35</li>
+                        <li>You can explain why list-price revenue is 1.7% too high</li>
+                        <li><code>output/order_lines.parquet</code> and <code>output/category_revenue.csv</code> exist</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="exercises" class="lesson-section">
+                <h2>🏋️ Hands-on Exercises</h2>
+
+                <p>For each merge, write down three things first: which table is on the left, the relationship you expect, and the row count you expect. Then check all three.</p>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 1: Satisfaction by Tier</h3>
+                    <p>Attach each survey respondent's <code>loyalty_tier</code> and <code>state</code> from <code>customers.csv</code> to <code>data/survey.csv</code>. Confirm that no response was lost or left unmatched, then compare the mean <code>sat_overall</code> and <code>recommend</code> by tier.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Survey on the left, <code>how="left"</code>, <code>validate="many_to_one"</code>. Count the missing tiers after the merge.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">survey = pd.read_csv("data/survey.csv")
+customers = pd.read_csv("data/customers.csv")
+
+rated = survey.merge(customers[["customer_id", "loyalty_tier", "state"]], on="customer_id",
+                     how="left", validate="many_to_one")
+print(len(survey), len(rated), rated["loyalty_tier"].isna().sum())
+print(rated.groupby("loyalty_tier").agg(responses=("response_id", "count"),
+                                        overall=("sat_overall", "mean"),
+                                        recommend=("recommend", "mean")).round(2))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>1800 1800 0
+              responses  overall  recommend
+loyalty_tier
+Basic               821     3.92       7.37
+Gold                351     3.83       7.16
+Silver              628     3.98       7.45</code></pre>
+                        </div>
+                        <p>All 1,800 responses matched. Gold customers, the biggest spenders, are slightly <em>less</em> satisfied than Silver ones. Whether that gap is more than noise is a question for Module 4.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 2: Who Never Ordered?</h3>
+                    <p>Flag every customer who has no order in <code>orders.csv</code>. How many are there? Does the share differ by <code>acquisition_channel</code>? Make sure your merge cannot multiply customers.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Customers on the left. On the right, use the distinct customer ids from orders (<code>.drop_duplicates()</code>), so the relationship is one-to-one. <code>indicator=True</code>, then <code>left_only</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">flagged = customers.merge(orders[["customer_id"]].drop_duplicates(), on="customer_id", how="left", indicator=True)
+never = flagged[flagged["_merge"] == "left_only"]
+print(len(customers), len(flagged), len(never))
+
+flagged["never_ordered"] = flagged["_merge"] == "left_only"
+print(flagged.groupby("acquisition_channel")["never_ordered"].agg(["sum", "mean"]).round(3))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>4850 4850 1058
+                     sum   mean
+acquisition_channel
+in_store             216  0.217
+organic              343  0.226
+paid_search          218  0.219
+referral             101  0.180
+social               180  0.230</code></pre>
+                        </div>
+                        <p>1,058 customers, about 22% of accounts, with referral customers the least likely to be inactive (18%). Without <code>drop_duplicates()</code> the merge would have returned one row per order and counted active customers many times.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 3: Does Rain Keep People Away?</h3>
+                    <p>Merge <code>daily_sales.csv</code> with <code>store_weather.csv</code> (rename <code>city</code> this time). Call a day rainy when <code>precip_in</code> is at least 0.10. For each store, compare average visitors on rainy and dry days, as a percentage change, and report what share of days are rainy.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Two-column key, one-to-one. Then a groupby on <code>["store", "rainy"]</code> and <code>.unstack()</code>, as in Lesson 2.4.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">daily = pd.read_csv("data/daily_sales.csv", parse_dates=["date"])
+weather = pd.read_csv("data/store_weather.csv", parse_dates=["date"])
+
+dw = daily.merge(weather.rename(columns={"city": "store"}), on=["date", "store"], how="left", validate="one_to_one")
+print(len(daily), len(dw), dw["precip_in"].isna().sum())
+
+dw["rainy"] = dw["precip_in"] &gt;= 0.10
+visitors = dw.groupby(["store", "rainy"])["visitors"].mean().unstack("rainy")
+visitors["change_pct"] = ((visitors[True] / visitors[False] - 1) * 100).round(1)
+visitors["rainy_days_pct"] = (dw.groupby("store")["rainy"].mean() * 100).round(1)
+print(visitors.round(1))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>2903 2903 0
+rainy      False   True  change_pct  rainy_days_pct
+store
+Asheville  286.8  236.4       -17.6            23.7
+Bend       339.5  272.7       -19.7             6.9
+Boise      497.4  366.7       -26.3             9.4
+Flagstaff  338.3  266.3       -21.3            13.7</code></pre>
+                        </div>
+                        <p>Rainy days bring 18% to 26% fewer visitors at every store. Asheville has rain on 24% of days and Bend on 7%, which is worth knowing before comparing the two stores' traffic.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 4: Actual Against Target</h3>
+                    <p>The <code>Targets</code> sheet of <code>data/sales_2025.xlsx</code> has a revenue target per store and quarter. Compute actual 2025 revenue per store and quarter from <code>daily</code>, merge it onto the targets, and report each store's average percentage of target.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Aggregate first, then merge: <code>groupby(["store", "quarter"], as_index=False)</code> gives a table with the same two key columns as the targets. Build the quarter label with <code>"Q" + date.dt.quarter.astype("str")</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">targets = pd.read_excel("data/sales_2025.xlsx", sheet_name="Targets")
+
+sales_2025 = daily[daily["date"].dt.year == 2025].copy()
+sales_2025["quarter"] = "Q" + sales_2025["date"].dt.quarter.astype("str")
+actual = sales_2025.groupby(["store", "quarter"], as_index=False)["revenue"].sum()
+
+versus = targets.merge(actual, on=["store", "quarter"], how="left", validate="one_to_one")
+versus["pct_of_target"] = (versus["revenue"] / versus["target_revenue"] * 100).round(1)
+print(len(targets), len(versus))
+print(versus.head(4))
+print(versus.groupby("store")["pct_of_target"].mean().round(1).sort_values(ascending=False))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>16 16
+   store quarter  target_revenue     revenue  pct_of_target
+0  Boise      Q1          757000   734494.37           97.0
+1  Boise      Q2         1001000   971525.54           97.1
+2  Boise      Q3         1138000  1104754.82           97.1
+3  Boise      Q4         1067000  1035631.13           97.1
+store
+Flagstaff    106.4
+Bend          98.0
+Boise         97.1
+Asheville     90.9
+Name: pct_of_target, dtype: float64</code></pre>
+                        </div>
+                        <p>Flagstaff beat its targets by 6%, and Asheville fell 9% short. Aggregating to one row per key <em>before</em> the merge is what made it a clean one-to-one join of 16 rows.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 5: Revenue by Tier, Losing Nothing (Stretch)</h3>
+                    <p>Compute completed revenue by loyalty tier so that the tiers add up to the full $3,624,306.27. The 739 orders from closed accounts must appear as their own group. Add revenue per customer and each tier's share.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Left join from orders, then <code>.fillna("closed account")</code> on the tier. Remember from Lesson 2.4 what <code>groupby</code> does with a missing key if you skip that step.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">orders_tier = orders.merge(customers[["customer_id", "loyalty_tier"]], on="customer_id", how="left", validate="many_to_one")
+orders_tier["loyalty_tier"] = orders_tier["loyalty_tier"].fillna("closed account")
+completed = orders_tier[orders_tier["status"] == "completed"]
+
+tiers = completed.groupby("loyalty_tier").agg(
+    customers=("customer_id", "nunique"),
+    orders=("order_id", "count"),
+    revenue=("order_total", "sum"),
+)
+tiers["per_customer"] = tiers["revenue"] / tiers["customers"]
+tiers["share"] = tiers["revenue"] / tiers["revenue"].sum()
+print(tiers.round(2))
+print(round(tiers["revenue"].sum(), 2), round(orders.loc[orders["status"] == "completed", "order_total"].sum(), 2))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>                customers  orders     revenue  per_customer  share
+loyalty_tier
+Basic                1710    3513   485534.50        283.94   0.13
+Gold                  734    7938  1724168.89       2349.00   0.48
+Silver               1294    6628  1270654.62        981.96   0.35
+closed account        146     683   143948.26        985.95   0.04
+3624306.27 3624306.27</code></pre>
+                        </div>
+                        <p>Gold customers are 734 of 3,884 buyers and bring in 48% of revenue. The totals agree to the cent, which proves no order fell out. An inner join, or a groupby on the unfilled tier, would each have lost the $143,948 from closed accounts without a word.</p>
+                    </details>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="quiz" class="lesson-section">
+                <h2>🎯 Quick Quiz</h2>
+                <div class="card quiz-container">
+                    <h3>🎯 Check Your Understanding</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> What does this print (the lengths of an inner, a left and an outer merge)?</p>
+                        <pre><code class="language-python">ql = pd.DataFrame({"k": [1, 2, 2, 3], "a": ["w", "x", "y", "z"]})
+qr = pd.DataFrame({"k": [2, 2, 4], "b": ["p", "q", "r"]})
+print(len(ql.merge(qr, on="k")), len(ql.merge(qr, on="k", how="left")), len(ql.merge(qr, on="k", how="outer")))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>4 6 7</code></pre>
+                        </div>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Key 2 appears twice on the left and twice on the right. How many pairings does that make?">
+                                A) <code>2 4 5</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="The inner count is right. For the left join, add the left rows with no match, keys 1 and 3. For the outer join, also add right key 4.">
+                                B) <code>4 4 5</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Key 2 is repeated on both sides, so it makes 2 x 2 = 4 rows: that is the inner join. A left join adds the unmatched left keys 1 and 3 for 6. An outer join also adds right key 4 for 7.">
+                                C) <code>4 6 7</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> You merge <code>orders</code> (20,302 rows) with <code>customers</code> using the default settings and get 19,563 rows. What happened?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="The default is an inner join, which keeps only keys present in both tables. 739 orders have a customer_id with no row in customers, so they were dropped without any message.">
+                                A) The default inner join dropped 739 orders whose customer has no row in <code>customers</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="merge never removes duplicate rows by itself. Think about which keys an inner join keeps.">
+                                B) pandas removed 739 duplicate orders during the merge
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Customers with no orders are missing from an inner join too, but they were never rows of the orders table. Which rows of orders disappeared?">
+                                C) 739 customers had no orders, so they were left out
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> After <code>orders.merge(items, on="order_id")</code>, the sum of <code>order_total</code> is $11.0 million, though the orders table sums to $4.0 million. Why?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Every order has at least one line, so no order failed to match. The total went up, not down.">
+                                A) Some orders had no matching item lines
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="The merge is one-to-many: each order row is repeated once per item line, and its order_total with it. Summing the repeated column counts an order with three lines three times.">
+                                B) Each order's total is repeated on every one of its item lines, so it is counted several times
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="order_total already includes every line of the order. The merge added no money, only repeated rows.">
+                                C) The item lines include revenue that the orders table left out
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 4:</strong> What does <code>validate="many_to_one"</code> check in <code>orders.merge(customers, on="customer_id", validate="many_to_one")</code>?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Unmatched keys are allowed by every validate setting. To see them you would use indicator=True.">
+                                A) That every order finds a matching customer
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="many refers to the left table, where repeats are allowed. Which side must have each key only once?">
+                                B) That <code>customer_id</code> is unique in <code>orders</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="many_to_one allows repeated keys on the left and requires each key to appear at most once on the right. If customers had a duplicated id the merge would raise a MergeError instead of silently duplicating orders.">
+                                C) That <code>customer_id</code> is unique in <code>customers</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 5:</strong> You have twelve monthly files with identical columns and want one table of all their rows. Which tool fits?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="concat stacks tables on top of each other, matching columns by name. Collect the twelve DataFrames in a list and call it once, with ignore_index=True to renumber the rows.">
+                                A) <code>pd.concat(list_of_tables, ignore_index=True)</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="merge places columns side by side for rows whose keys match. Here you want more rows, not more columns.">
+                                B) Eleven calls to <code>merge</code> on the date column
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="merge_asof finds the nearest earlier key for each row. Nothing here needs matching at all.">
+                                C) <code>pd.merge_asof</code> on the date column
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="faq" class="lesson-section">
+                <h2>❓ Common Questions at This Stage</h2>
+
+                <details>
+                    <summary>What is the difference between <code>merge</code>, <code>join</code> and <code>map</code>?</summary>
+                    <p><code>merge</code> is the general tool and the only one you need. <code>df.join(other)</code> is a shorthand that matches on the <em>index</em> of the other table and defaults to a left join. <code>series.map(lookup)</code>, which you used in Lessons 2.3 and 2.4, fetches a single column through a lookup Series: think of it as a one-column, many-to-one left join. Use <code>map</code> for one borrowed column and <code>merge</code> for several.</p>
+                </details>
+                <details>
+                    <summary>Should the bigger table go on the left?</summary>
+                    <p>Size does not matter. Put on the left the table whose rows you are keeping: the one that defines what "one row" means in your result. In the project that was the item lines, because the question was about line revenue.</p>
+                </details>
+                <details>
+                    <summary>Is this the same as a SQL JOIN?</summary>
+                    <p>Yes, the same four kinds with the same meaning: <code>INNER JOIN</code>, <code>LEFT JOIN</code> and so on, with <code>on=</code> playing the part of <code>ON</code>. Two differences are worth knowing: pandas matches missing keys to each other and SQL does not, and SQL has nothing like <code>validate</code>. You will write these joins in SQL in <a href="sql_complex_queries.html">Lesson 5.2</a>, and it will feel familiar.</p>
+                </details>
+                <details>
+                    <summary>My merge is slow or runs out of memory. What should I check?</summary>
+                    <p>First the relationship: an unintended many-to-many merge is the usual cause, and <code>validate</code> will tell you. Then trim before merging: select only the columns you need from each side, filter rows first, and aggregate to one row per key where you can. Category or integer keys merge faster than long text keys.</p>
+                </details>
+
+                <div class="card card-accent">
+                    <h3>🌟 Going Further: Bonus Challenge</h3>
+                    <p>The planted finding of this dataset: are online orders that contain footwear returned more often? Using <code>lines</code> from the project, flag each order that has at least one Footwear line (<code>groupby("order_id")</code> with <code>.any()</code> on a boolean column gives one row per order). Merge that flag onto <code>orders</code> with <code>validate="one_to_one"</code>, then compute the return rate by <code>channel</code> and the flag. What would you suggest to the people who run the online shop? Why did you have to aggregate to one row per order before merging?</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="journal" class="lesson-section">
+                <h2>📓 Learning Journal</h2>
+                <div class="card card-accent">
+                    <p>Take five minutes to write in your learning journal (the <code>journal.md</code> file you started in Lesson 0.1, or a paper notebook). Jot down:</p>
+                    <ul>
+                        <li><strong>Key concepts</strong> you learned today</li>
+                        <li><strong>Techniques that clicked</strong> (and the ones that have not, yet)</li>
+                        <li><strong>Questions or confusion</strong> to come back to</li>
+                        <li><strong>Ideas to try</strong> on your own</li>
+                        <li><strong>Progress and feelings</strong>: how did this lesson go for you?</li>
+                    </ul>
+                    <p><strong>✍️ This lesson's prompt:</strong> Write your own pre-merge and post-merge checklist, four or five lines you will actually follow. Then describe, in plain words for a colleague, how a merge turned $4.0 million into $11.0 million in this lesson and how to avoid it.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="summary" class="lesson-section">
+                <h2>📝 Lesson Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎓 Key Takeaways</h3>
+                    <ul>
+                        <li><code>merge</code> matches rows of two tables on a <strong>key</strong>; <code>how=</code> decides what happens to keys without a match: inner (default), left, right, outer</li>
+                        <li>The default inner join <strong>drops unmatched rows silently</strong>; use <code>how="left"</code> when adding columns to a main table</li>
+                        <li><strong>Count rows before and after every merge.</strong> Fewer means unmatched keys; more means repeated keys</li>
+                        <li><code>indicator=True</code> shows which rows matched; unmatched keys are findings with causes</li>
+                        <li>Know the relationship and state it with <code>validate=</code>; many-to-many multiplies rows and is usually a mistake</li>
+                        <li>After a one-to-many merge, columns from the "one" side are repeated: never sum or average them there</li>
+                        <li><code>left_on</code>/<code>right_on</code> for different key names, lists for multi-column keys, <code>suffixes=</code> for clashing names; missing keys match each other</li>
+                        <li><code>concat</code> stacks tables; <code>merge_asof</code> matches the nearest earlier key</li>
+                    </ul>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🏆 What You've Accomplished</h3>
+                    <ul>
+                        <li>You caught a merge that silently dropped 739 orders worth $154,274</li>
+                        <li>You audited both sides of a join and explained every unmatched key in four different table pairs</li>
+                        <li>You watched $4.0 million become $11.0 million through double counting, and fixed it</li>
+                        <li>You joined three tables into a 45,490-line analysis table with nothing lost</li>
+                        <li>You discovered that the catalog price misstates past revenue, a trap that catches experienced analysts</li>
+                    </ul>
+                </div>
+
+                <h3>🔭 Looking Ahead</h3>
+                <p>In <a href="pandas_pivot_tables.html"><strong>Lesson 2.6: Pivot Tables and Reshaping</strong></a> you will take long tables like <code>lines</code> and reshape them: categories down the side, months across the top, a total in each cell. You have already done it the long way with <code>groupby</code> and <code>unstack</code>. <code>pivot_table</code>, <code>melt</code> and <code>stack</code> give you full control over the shape of a table.</p>
+
+                <h3>📋 Before the Next Lesson</h3>
+                <ul>
+                    <li>Keep <code>output/order_lines.parquet</code>. A table with dates, categories, channels and revenue on every line is ideal raw material for pivoting.</li>
+                    <li>Open <code>data/sales_2025.xlsx</code> again and look at the <code>Monthly Sales</code> sheet. It is a "wide" table: one column per store. How would you compute total revenue per store if it were "long", with columns <code>month</code>, <code>store</code>, <code>revenue</code>?</li>
+                    <li>Go back to one merge you wrote today and add <code>validate=</code> to it from memory.</li>
+                </ul>
+
+                <div class="card card-accent">
+                    <h3>🌱 Encouragement for the Journey</h3>
+                    <p>Merging is where many analyses go quietly wrong, and you now have the habits that prevent it: say what one row means, predict the row count, check it, and chase down every key that does not match. If the four join kinds still blur together, that is ordinary. Draw the two tiny tables from the start of this lesson on paper whenever you are unsure. With loading, cleaning, grouping and merging behind you, you can already answer most questions a business asks of its data.</p>
+                </div>
+            </section>
+
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="pandas_groupby_operations.html" class="prev-lesson">← Previous: GroupBy Operations</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="pandas_pivot_tables.html" class="next-lesson">Next: Pivot Tables and Reshaping →</a>
+            </nav>
+        </div>
+    </main>
+
     <footer class="site-footer">
         <p>&copy; 2026 Ray de la Paz. Python Data Science. All rights reserved.</p>
         <div class="footer-links">
@@ -470,6 +1300,10 @@
             <a href="https://rays-home.netlify.app/contact">Contact</a>
             <a href="#" id="print-button">Print Page</a>
         </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
     </footer>
+
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
 </body>
 </html>

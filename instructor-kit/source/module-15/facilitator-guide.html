@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facilitator Guide: Session 15</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Instructor copy —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">contains answers &amp; timing · not for students</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Facilitator Guide</div>
+    <h1>Session 15: SQL Windows and Query Speed</h1>
+    <p class="sub">How to teach window functions (a row that can see its neighbors without giving up its place) and query optimization (reading the engine's plan and changing it with evidence), with every result checked by a second route.</p>
+    <div class="meta-row">
+      <span class="chip"><b>2</b> lessons</span>
+      <span class="chip"><b>3 hrs</b> session</span>
+      <span class="chip">Lessons <b>5.3–5.4</b></span>
+      <span class="chip">Session <b>15</b> of 21</span>
+    </div>
+  </header>
+
+  <div class="sec"><h2>How to Use This Guide</h2><span class="rule"></span></div>
+<ul class="tick">
+  <li>Two SQL lessons that look advanced and are not: window functions are the pandas <code class="inline">transform</code>, <code class="inline">rank</code>, <code class="inline">shift</code>, <code class="inline">cumsum</code> and <code class="inline">rolling</code> that learners already know, and query optimization is careful measuring. Say both of those things early.</li>
+  <li>Same rhythm as every session: <b>Frame</b> → <b>Live demo</b> (you type, they follow) → <b>Guided lab</b> (new practice from the kit) → <b>Start the project</b>. The lesson projects are finished at home.</li>
+  <li>Every code block below was run on the course data. Times in the 5.4 demo come from the author's machine: they are printed so you know the size of the effect, and yours will differ. Plans and row counts will not.</li>
+  <li>Labs live in <code class="inline">labs/module-15/</code>: starters for learners, solutions for you. Teal blocks are hands-on, amber blocks are watch-outs.</li>
+  <li>Keep <code class="inline">sql_window_functions.html</code> and <code class="inline">sql_query_optimization.html</code> open for the train picture, the frame table, the B-tree diagram and the seven-day moving-average chart (shown, not typed).</li>
+</ul>  <div class="note warn"><div class="t">The #1 risk of Session 15: answers that are wrong in one row, and speed claims from one stopwatch reading</div>
+    <p>A missing PARTITION BY or the default frame with ties produces a table that is right in almost every row. Teach the three questions (partition, order, frame) until the room says them with you. In 5.4 the risk is the opposite kind: learners will believe a single timing. The kit never asserts a time; it asserts plans and identical results. Hold the room to the same standard.</p>
+  </div>
+
+  <div class="sec"><h2>Before the Session</h2><span class="rule"></span></div>
+<ul class="tick">
+  <li>☐ From the <code class="inline">instructor-kit/</code> folder run <code class="inline">python3 labs/check_labs.py module-15</code>. Expect <code class="inline">10 passed, 0 failed</code>. (The 5.4 labs copy the database to a temporary folder; the checker fails any lab that touches <code class="inline">data/</code>.)</li>
+  <li>☐ Copy the <b>starter files only</b> to the shared folder: <code class="inline">labs/module-15/l5_3-sql-window-functions/*_starter.py</code> and <code class="inline">labs/module-15/l5_4-query-optimization/*_starter.py</code>. Keep every <code class="inline">*_solution.py</code> on your machine.</li>
+  <li>☐ Files: <code class="inline">data/pinecrest.db</code> only, untouched (check that it has no <code class="inline">idx_</code> indexes: <code class="inline">SELECT name FROM sqlite_master WHERE type = 'index'</code> should list only <code class="inline">sqlite_autoindex_...</code> entries). About 10 MB of free disk space per learner for working copies. No server, no internet, no accounts.</li>
+  <li>☐ SQLite 3.25 or later on every machine for window functions: <code class="inline">python -c "import sqlite3; print(sqlite3.sqlite_version)"</code>. The course Python bundles 3.53. Learners flagged in Session 14 with an old version need a newer Python before today.</li>
+  <li>☐ Projector: two empty notebooks, <code class="inline">session15_sql.ipynb</code> and <code class="inline">session15_tuning.ipynb</code>, in the folder that holds <code class="inline">data/</code>. Delete any old <code class="inline">pinecrest_tuning.db</code> there. Close other heavy programs: timing demos are noisier on a busy laptop.</li>
+  <li>☐ Board: a train car labeled PARTITION BY / ORDER BY / ROWS BETWEEN on the left; on the right, "Read the plan, form a guess, change one thing, measure."</li>
+  <li>☐ Skim the Session 14 homework: the Store Scorecard and the Returns Investigation (both should report matching SQL and pandas numbers), and who finished <code class="inline">stock_vs_sales</code>.</li>
+</ul>  <div class="note warn"><div class="t">Known environment traps</div>
+    <p><b>Plan wording.</b> SQLite 3.36 and later say <code class="inline">SCAN orders</code>; older versions say <code class="inline">SCAN TABLE orders</code>. Same meaning. <b>A stale plan</b> after <code class="inline">DROP INDEX</code>: Python's sqlite3 caches prepared statements by their text; connect with <code class="inline">cached_statements=0</code> (as the lesson, the demo and the labs do) or open a new connection. <b><code class="inline">index ... already exists</code></b> when a cell runs twice: use <code class="inline">CREATE INDEX IF NOT EXISTS</code>. <b>Windows and OneDrive folders</b>: a working copy inside a synced folder can be locked by the sync client (<code class="inline">database is locked</code>, or <code class="inline">PermissionError</code> on the copy). Work in a local folder. <b>Timings</b> on laptops in power-saving mode or on shared machines jump around; best-of-N absorbs most of it. Never let a learner conclude from a single number. <b>The shipped database changed</b>: if a learner ran <code class="inline">CREATE INDEX</code> on <code class="inline">data/pinecrest.db</code> itself, later lessons' plans will differ. Fix: unzip <code class="inline">pinecrest-data.zip</code> again (or <code class="inline">python data/make_data.py</code>).</p>
+  </div>
+
+  <div class="sec"><h2>Session 15 Agenda (3 hours)</h2><span class="rule"></span></div>
+  <table class="timing">
+    <thead><tr><th>Clock</th><th>Minutes</th><th>Segment</th><th>What happens</th></tr></thead>
+    <tbody>
+      <tr><td class="t">0:00</td><td class="t">10</td><td>Warm-up</td><td>Five retrieval questions on Session 14 (queries, joins, NULL), no notes. Homework check: the Scorecard and the Returns Investigation.</td></tr>
+      <tr><td class="t">0:10</td><td class="t">10</td><td><b>5.3</b> Frame and mental model</td><td>A seat on the train: partition, order, frame. GROUP BY collapses rows; a window keeps them.</td></tr>
+      <tr><td class="t">0:20</td><td class="t">30</td><td><b>5.3</b> Live demo</td><td><code class="inline">OVER (PARTITION BY ...)</code>, a share of the total, the three ranking functions, top N per group, <code class="inline">LAG</code>, running totals and year to date, moving averages and frames, the tie trap.</td></tr>
+      <tr><td class="t">0:50</td><td class="t">25</td><td><b>5.3</b> Guided lab</td><td><code class="inline">labs/module-15/l5_3-sql-window-functions/staff_rankings_starter.py</code>, then <code class="inline">silver_milestone_starter.py</code>.</td></tr>
+      <tr><td class="t">1:15</td><td class="t">10</td><td><b>5.3</b> Start the lesson project</td><td>The Store Performance Table: Step 1 in the room (120 rows: 5 stores × 24 months), Step 2 read together.</td></tr>
+      <tr><td class="t">1:25</td><td class="t">10</td><td>Break</td><td>Leave the train picture on the projector: partition, order, frame.</td></tr>
+      <tr><td class="t">1:35</td><td class="t">10</td><td><b>5.4</b> Frame and mental model</td><td>The book with no index. SCAN against SEARCH. Measure, then change one thing.</td></tr>
+      <tr><td class="t">1:45</td><td class="t">30</td><td><b>5.4</b> Live demo</td><td>A copy with <code class="inline">cached_statements=0</code>, <code class="inline">EXPLAIN QUERY PLAN</code>, one index and the stopwatch, join plans, a composite index and the leftmost prefix, a function that defeats an index, <code class="inline">ANALYZE</code>, asking for less.</td></tr>
+      <tr><td class="t">2:15</td><td class="t">25</td><td><b>5.4</b> Guided lab</td><td><code class="inline">labs/module-15/l5_4-query-optimization/customer_lookup_plans_starter.py</code>, then <code class="inline">n_plus_one_starter.py</code>.</td></tr>
+      <tr><td class="t">2:40</td><td class="t">10</td><td><b>5.4</b> Start the lesson project</td><td>The Tuning Report: Steps 1 and 2 in the room (the workload and its baseline plans).</td></tr>
+      <tr><td class="t">2:50</td><td class="t">10</td><td>Wrap-up</td><td>Exit ticket (3 questions), homework, bring list for Session 16.</td></tr>
+      <tr><td class="t"><b>Total</b></td><td class="t"><b>180</b></td><td></td><td>Ends at 3:00.</td></tr>
+    </tbody>
+  </table>
+<p><b>In the room:</b> both mental models; eleven window functions from a group average to the tie trap; nine cells from the first plan to "ask for less"; four labs (two per lesson) that each end in a check by a second route; the first step of each project.</p><p><b>Moves home, exactly:</b> <b>Lesson 5.3</b>: every "The pandas Way" block (the phrase book in the workbook summarizes them); the seven-day moving-average chart; NTILE, FIRST_VALUE and the named WINDOW clause (the Silver lab uses a named window, so learners see one); Common Mistakes 3 (LAST_VALUE) and 4; Store Performance Table Steps 2 to 5; Exercises 1 to 3 (4 is a stretch); the quiz and the journal. <b>Lesson 5.4</b>: covering indexes in detail; wildcard patterns and low-selectivity columns ("When an Index Does Not Help" cases 2 to 4); <code class="inline">sqlite_stat1</code>; "What Indexes Cost" (file size and insert speed); "Where PostgreSQL Differs"; Common Mistakes 1 to 5; Tuning Report Steps 3 to 6; Exercises 1 to 3 (4 is a stretch); the quiz and the journal. <b>Kit labs</b>: <code class="inline">weekly_trend</code>, the Silver lab's TODO 4, and <code class="inline">n_plus_one</code> if it was not reached. About three hours.</p><p><b>Protect:</b> top N per group (5.3 step 5), the frame cells and the tie trap (steps 9 and 10), the Silver lab's check against 2,028; in 5.4 reading plans (step 2), one index measured properly (step 3) and the function-on-a-column case (step 6). <b>Cut first:</b> see "If You Run Long or Short".</p>
+  <div class="sec"><h2>Warm-up</h2><span class="rule"></span></div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">0:00</span><h3>Warm-up: Retrieval from Session 14</h3><span class="dur">10 min</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Timing</div>
+<table class="timing"><tbody>
+<tr><td class="t">6m</td><td>Five retrieval questions on paper, no notes, then answers</td></tr>
+<tr><td class="t">3m</td><td>Homework check: did SQL and pandas agree?</td></tr>
+<tr><td class="t">1m</td><td>Roadmap</td></tr>
+</tbody></table>
+      </div>
+      <div class="blk"><div class="h">Five retrieval questions (Lessons 5.1 and 5.2)</div>
+<ol class="steps">
+  <li>In one sentence each: what does WHERE filter, and what does HAVING filter? <b>Answer:</b> WHERE filters rows before grouping; HAVING filters groups after GROUP BY. (Today adds a third stage: window functions run after both, in the SELECT step.)</li>
+  <li><code class="inline">orders</code> has 20,302 rows and 739 have no customer row. How many rows from <code class="inline">JOIN customers</code>, and from <code class="inline">LEFT JOIN customers</code>? <b>Answer:</b> 19,563 and 20,302.</li>
+  <li>Total revenue came out as $10.3 million instead of $3.7 million after joining <code class="inline">order_items</code>. What happened, and what is the rule? <b>Answer:</b> Fan-out: each order's total was repeated once per line, then summed. Sum a column at the level where it lives; aggregate first (a CTE), then join.</li>
+  <li>Why does <code class="inline">WHERE employee_id NOT IN (SELECT manager_id FROM employees)</code> return 0 rows? <b>Answer:</b> The list contains a NULL (the CEO's <code class="inline">manager_id</code>), and a comparison with NULL is unknown, so NOT IN is never true. Use <code class="inline">NOT EXISTS</code> or filter the NULLs out of the list.</li>
+  <li>A value travels into SQL through a placeholder. What can a placeholder NOT stand for, and what do you do then? <b>Answer:</b> A table name, a column name or a keyword. Check the name against a fixed list of allowed names in Python, and only then put it in the query text.</li>
+</ol>
+      </div>
+      <div class="blk"><div class="h">Homework check and roadmap</div>
+<p>Ask two learners what their project checks printed: the Store Scorecard's revenue match (True for five stores) and the Returns Investigation's four rows adding up to 20,302. "Two routes, one answer: today every lab ends that way." Ask who finished <code class="inline">stock_vs_sales</code> and what the factor was (five: each SKU has five inventory rows).</p><p>Roadmap: "Before the break, a row learns to see its neighbors: rankings, running totals, month over month, without losing the rows. After the break, the same queries, fast: how to ask the engine what it is doing and change it with evidence."</p>
+      </div>
+      <div class="blk warn"><div class="h">Watch-outs</div>
+<ul class="tick">
+  <li>Question 1 sets up the first half: if the room cannot say where WHERE and HAVING run, redraw the running order now; window functions go in at the SELECT step.</li>
+  <li>A learner with SQLite below 3.25 cannot run 5.3. Pair them with a neighbor for the first half; they do the 5.4 labs on their own machine.</li>
+</ul>
+      </div>
+    </div>
+  </section>
+
+  <div class="sec"><h2>Lesson Plans</h2><span class="rule"></span></div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">5.3</span><h3>SQL Window Functions</h3><span class="dur">75 min</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Objectives (from the lesson page)</div>
+<ul class="tick">
+  <li>Explain what OVER, PARTITION BY and the window's ORDER BY each control, and how a window function differs from GROUP BY</li>
+  <li>Number and rank rows with ROW_NUMBER, RANK and DENSE_RANK, and select the top N rows of every group</li>
+  <li>Compare a row with earlier or later rows using LAG and LEAD</li>
+  <li>Compute running totals and moving averages with an explicit window frame, and say what the default frame does</li>
+  <li>Translate each of these between SQL and pandas (transform, rank, shift, cumsum and expanding, rolling with min_periods)</li>
+</ul>
+      </div>
+      <div class="blk"><div class="h">Timing inside the block (75 minutes)</div>
+<table class="timing"><tbody>
+<tr><td class="t">10m</td><td>Frame and mental model</td></tr>
+<tr><td class="t">30m</td><td>Live demo, steps 1 to 11</td></tr>
+<tr><td class="t">25m</td><td>Guided lab: pay within each location, then the Silver milestone</td></tr>
+<tr><td class="t">10m</td><td>Start the Store Performance Table: Step 1</td></tr>
+</tbody></table>
+      </div>
+      <div class="blk"><div class="h">Mental model to say</div>
+<p>"GROUP BY is the conductor's report: 'car 3 has 48 passengers'. The passengers have become a number. A window function leaves you in your seat and lets you look around. Through the window you can see the rest of your car, your <b>partition</b>; you know who sits in front of you and behind you, the <b>order</b>; and you can choose to look only at the two seats ahead, the <b>frame</b>. You get your answer, and you are still a passenger with a seat."</p><p>Draw a train car on the board with three labels: PARTITION BY (which car), ORDER BY (seat order), ROWS BETWEEN (how far you look). Leave it up through the break.</p><p>Bridge to what they own: "You have done all of this in pandas. <code class="inline">transform</code> from Lesson 2.4; <code class="inline">rank</code>, <code class="inline">shift</code>, <code class="inline">cumsum</code>, <code class="inline">rolling</code> from Lesson 2.8. Today is the SQL spelling." The workbook has the two-column phrase book; put it on the projector after the demo.</p>
+      </div>
+      <div class="blk"><div class="h">Live demo (you type, they follow): eleven windows on Pinecrest's orders</div>
+<p>A notebook <code class="inline">session15_sql.ipynb</code> in the folder that holds <code class="inline">data/</code>. Read-only connection. The marked minutes add up to 30. For each window, say the three questions aloud before you type it: partition, order, frame.</p><ol class="steps">
+  <li><b>Setup and a version check (1m).</b> Say: "Read-only again, the same <code class="inline">show()</code> helper. Window functions need SQLite 3.25 or later; this line checks."
+<pre class="code"><span class="k">import</span> sqlite3
+<span class="k">import</span> pandas <span class="k">as</span> pd
+
+conn = sqlite3.connect(<span class="s">"file:data/pinecrest.db?mode=ro"</span>, uri=<span class="k">True</span>)
+
+<span class="k">def</span> show(sql, params=()):
+    <span class="s">"""Run a query and print the result as a table."""</span>
+    print(pd.read_sql(sql, conn, params=params).to_string(index=<span class="k">False</span>))
+
+print(sqlite3.sqlite_version_info &gt;= (<span class="s">3</span>, <span class="s">25</span>, <span class="s">0</span>))</pre>
+<pre class="out">True</pre></li>
+  <li><b>OVER (PARTITION BY): a group value on every row (3m).</b> Say: "Each order next to its own store's average. Five orders in, five rows out, each carrying a number computed from thousands of other rows."
+<pre class="code">show(<span class="s">"""
+    SELECT order_id, store, order_total,
+           ROUND(AVG(order_total) OVER (PARTITION BY store), 1) AS store_avg,
+           ROUND(order_total - AVG(order_total) OVER (PARTITION BY store), 2)
+               AS vs_avg
+    FROM orders
+    WHERE status = 'completed'
+    ORDER BY order_id
+    LIMIT 4
+"""</span>)</pre>
+<pre class="out"> order_id     store  order_total  store_avg  vs_avg
+   100001 Flagstaff        434.9      182.4  252.51
+   100002 Asheville        278.9      175.1  103.80
+   100003    Online         75.9      203.2 -127.30
+   100004    Online        399.8      203.2  196.60</pre>
+<p style="margin:.3rem 0 0">Write the comparison on the board: GROUP BY store gives 5 rows; OVER (PARTITION BY store) gives 18,762. pandas twin: <code class="inline">groupby("store")["order_total"].transform("mean")</code>.</p></li>
+  <li><b>An empty OVER (): a share of the whole (2m).</b> Say: "Windows run after GROUP BY, so they can work on grouped rows. An empty OVER() is one window holding every row."
+<pre class="code">show(<span class="s">"""
+    WITH by_store AS (
+        SELECT store, ROUND(SUM(order_total), 2) AS revenue
+        FROM orders
+        WHERE status = 'completed'
+        GROUP BY store
+    )
+    SELECT store, revenue,
+           ROUND(100.0 * revenue / SUM(revenue) OVER (), 1) AS pct_of_total
+    FROM by_store
+    ORDER BY revenue DESC
+"""</span>)</pre>
+<pre class="out">    store    revenue  pct_of_total
+   Online 2357984.45          65.1
+    Boise  443386.85          12.2
+Flagstaff  300580.35           8.3
+     Bend  284575.25           7.9
+Asheville  237779.37           6.6</pre></li>
+  <li><b>Three ways to rank, and what they do with ties (3m).</b> Say: "The two cheapest items in Tents share a price. Predict the three columns for those two rows."
+<pre class="code">show(<span class="s">"""
+    SELECT name, price,
+           ROW_NUMBER() OVER (ORDER BY price) AS row_number,
+           RANK()       OVER (ORDER BY price) AS rank,
+           DENSE_RANK() OVER (ORDER BY price) AS dense_rank
+    FROM products
+    WHERE category = 'Tents'
+    ORDER BY price, name
+    LIMIT 4
+"""</span>)</pre>
+<pre class="out">                              name  price  row_number  rank  dense_rank
+  Cedar Notch Cairn Tent Footprint  41.95           2     1           1
+ Quillback Foothill Tent Footprint  41.95           1     1           1
+Quillback Alpenglow Tent Footprint  67.95           3     3           2
+              Pinecrest Drift Tarp  94.95           4     4           3</pre>
+<p style="margin:.3rem 0 0">"RANK is a race: two golds, no silver. DENSE_RANK does not skip. ROW_NUMBER picks arbitrarily among ties unless the ORDER BY breaks them": point at the two footprints, numbered in an order nothing in the query decided. pandas: <code class="inline">rank(method="min" / "dense" / "first")</code>.</p></li>
+  <li><b>Top N per group: number, wrap, filter (4m).</b> Say: "The two best-selling products in every category. <code class="inline">ORDER BY ... LIMIT 2</code> gives two rows in total, not two per category. The recipe has three steps, and step 2 is not optional."
+<pre class="code">show(<span class="s">"""
+    WITH product_revenue AS (
+        SELECT p.category, p.name,
+               ROUND(SUM(i.quantity * i.unit_price), 2) AS revenue
+        FROM order_items AS i
+        JOIN orders AS o ON o.order_id = i.order_id
+        JOIN products AS p ON p.sku = i.sku
+        WHERE o.status = 'completed'
+        GROUP BY p.sku
+    ),
+    ranked AS (
+        SELECT *,
+               ROW_NUMBER() OVER (PARTITION BY category ORDER BY revenue DESC) AS rn
+        FROM product_revenue
+    )
+    SELECT category, rn, name, revenue
+    FROM ranked
+    WHERE rn &lt;= 2
+    ORDER BY category, rn
+    LIMIT 6
+"""</span>)</pre>
+<pre class="out">    category  rn                               name   revenue
+ Accessories   1 Cedar Notch Sawtooth First-Aid Kit 148120.20
+ Accessories   2      Larkspur Ridge Mesa Multitool  47968.95
+     Apparel   1   Granite Fork Cascade Rain Jacket 104981.25
+     Apparel   2        Tallgrass Drift Rain Jacket  51019.70
+Camp Kitchen   1 Quillback Timberline Insulated Mug  46581.65
+Camp Kitchen   2   Granite Fork Meadow Water Bottle  28923.80</pre>
+<p style="margin:.3rem 0 0">Then break it on purpose: move <code class="inline">rn &lt;= 2</code> into the first SELECT with the window. The engine answers <code class="inline">misuse of window function ROW_NUMBER()</code>. "WHERE runs before windows exist. The CTE turns the number into an ordinary column."</p></li>
+  <li><b>LAG and LEAD: the neighbors (3m).</b> Say: "Monthly revenue is the series for the next three steps. Store the CTE in a Python string so we never retype it."
+<pre class="code">MONTHLY = <span class="s">"""
+    WITH monthly AS (
+        SELECT strftime('%Y-%m', order_date) AS month,
+               ROUND(SUM(order_total), 2)    AS revenue
+        FROM orders
+        WHERE status = 'completed'
+        GROUP BY month
+    )
+"""</span>
+show(MONTHLY + <span class="s">"""
+    SELECT month, revenue,
+           LAG(revenue) OVER (ORDER BY month) AS prev_month,
+           ROUND(100.0 * (revenue - LAG(revenue) OVER (ORDER BY month))
+                 / LAG(revenue) OVER (ORDER BY month), 1) AS pct_change
+    FROM monthly
+    ORDER BY month
+    LIMIT 4
+"""</span>)</pre>
+<pre class="out">  month   revenue  prev_month  pct_change
+2024-01 106287.63         NaN         NaN
+2024-02 104687.91   106287.63        -1.5
+2024-03 128400.63   104687.91        22.7
+2024-04 129716.87   128400.63         1.0</pre>
+<p style="margin:.3rem 0 0">"January 2024 has nothing before it: NULL, the honest answer." pandas: <code class="inline">shift(1)</code> and <code class="inline">pct_change()</code>. One difference to say aloud: pandas shifts by position, so you must sort first; SQL takes the order from the OVER.</p></li>
+  <li><b>LAG within a group: days between a customer's orders (2m).</b> Say: "With PARTITION BY, 'previous' means previous within the group. <code class="inline">julianday()</code> turns a date into a day count."
+<pre class="code">show(<span class="s">"""
+    WITH gaps AS (
+        SELECT order_date,
+               LAG(order_date) OVER (PARTITION BY customer_id
+                                     ORDER BY order_date, order_id) AS prev_date
+        FROM orders
+    )
+    SELECT COUNT(*)         AS orders,
+           COUNT(prev_date) AS with_earlier,
+           ROUND(AVG(julianday(order_date) - julianday(prev_date)), 1) AS avg_days
+    FROM gaps
+"""</span>)</pre>
+<pre class="out"> orders  with_earlier  avg_days
+  20302         16360      83.1</pre>
+<p style="margin:.3rem 0 0">20,302 orders minus 3,942 first orders = 16,360 gaps, averaging about 83 days. "order_id breaks ties when a customer orders twice in one day, so the result is the same every run."</p></li>
+  <li><b>Running total and year to date (3m).</b> Say: "Give an aggregate window an ORDER BY and it covers the partition from the start to the current row: a running total. Partition by year and it restarts each January."
+<pre class="code">show(MONTHLY + <span class="s">"""
+    SELECT month, revenue,
+           ROUND(SUM(revenue) OVER (ORDER BY month
+             ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW), 2) AS running_total,
+           ROUND(SUM(revenue) OVER (PARTITION BY substr(month, 1, 4) ORDER BY month
+             ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW), 2) AS year_to_date
+    FROM monthly
+    ORDER BY month
+    LIMIT 4 OFFSET 10
+"""</span>)</pre>
+<pre class="out">  month   revenue  running_total  year_to_date
+2024-11 143304.56     1498118.16    1498118.16
+2024-12 185181.35     1683299.51    1683299.51
+2025-01 132423.89     1815723.40     132423.89
+2025-02 126414.41     1942137.81     258838.30</pre>
+<p style="margin:.3rem 0 0">"I wrote the frame out on purpose. In ten minutes you will see why." pandas: <code class="inline">cumsum()</code>, and <code class="inline">groupby(year).cumsum()</code> for year to date.</p></li>
+  <li><b>Frames: a moving average, and what the first rows do (3m).</b> Say: "The frame is the part of the partition the function looks at: from here to here. Three months, and a column that counts how many rows the frame really held."
+<pre class="code">show(MONTHLY + <span class="s">"""
+    SELECT month, revenue,
+           ROUND(AVG(revenue) OVER (ORDER BY month
+                 ROWS BETWEEN 2 PRECEDING AND CURRENT ROW), 2) AS moving_avg_3,
+           COUNT(*) OVER (ORDER BY month
+                 ROWS BETWEEN 2 PRECEDING AND CURRENT ROW)     AS rows_in_frame,
+           ROUND(AVG(revenue) OVER (ORDER BY month
+                 ROWS BETWEEN 3 PRECEDING AND 1 PRECEDING), 2) AS prior_3_avg
+    FROM monthly
+    ORDER BY month
+    LIMIT 4
+"""</span>)</pre>
+<pre class="out">  month   revenue  moving_avg_3  rows_in_frame  prior_3_avg
+2024-01 106287.63     106287.63              1          NaN
+2024-02 104687.91     105487.77              2    106287.63
+2024-03 128400.63     113125.39              3    105487.77
+2024-04 129716.87     120935.14              3    113125.39</pre>
+<p style="margin:.3rem 0 0">Two points. (1) SQL averages whatever part of the frame exists: January's "three-month average" is one month. pandas <code class="inline">rolling(3)</code> gives NaN there unless <code class="inline">min_periods=1</code>. (2) A frame that ends at <code class="inline">1 PRECEDING</code> never sees the current row: the leak-free feature from Lesson 2.8, <code class="inline">shift(1).rolling(3, min_periods=1)</code>.</p></li>
+  <li><b>The tie trap in the default frame (3m).</b> Say: "Bend's completed orders as a running total by date, written with the default frame and with an explicit one. Three orders share January 1."
+<pre class="code">show(<span class="s">"""
+    SELECT order_id, order_date, order_total,
+           ROUND(SUM(order_total) OVER (ORDER BY order_date), 2) AS default_frame,
+           ROUND(SUM(order_total) OVER (ORDER BY order_date, order_id
+             ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW), 2) AS explicit_rows
+    FROM orders
+    WHERE store = 'Bend' AND status = 'completed'
+    ORDER BY order_date, order_id
+    LIMIT 4
+"""</span>)</pre>
+<pre class="out"> order_id order_date  order_total  default_frame  explicit_rows
+   100011 2024-01-01        43.90         687.14          43.90
+   100015 2024-01-01       241.97         687.14         285.87
+   100017 2024-01-01       401.27         687.14         687.14
+   100036 2024-01-02       211.80         898.94         898.94</pre>
+<p style="margin:.3rem 0 0">"The default frame treats rows that tie in the window's order as arriving together, so all three January 1 rows show the same total. No error." The habit for the board: <b>aggregating over an ordered window? Write the ROWS frame.</b></p></li>
+  <li><b>Forgetting PARTITION BY with LAG (3m).</b> Say: "One more silent mistake. Two stores, one row per month, and a 'previous month' column with and without a partition. Look at the middle row."
+<pre class="code">show(<span class="s">"""
+    WITH store_month AS (
+        SELECT store, strftime('%Y-%m', order_date) AS month,
+               ROUND(SUM(order_total), 2) AS revenue
+        FROM orders
+        WHERE status = 'completed' AND store IN ('Asheville', 'Bend')
+        GROUP BY store, month
+    )
+    SELECT store, month, revenue,
+           LAG(revenue) OVER (ORDER BY store, month)             AS prev_wrong,
+           LAG(revenue) OVER (PARTITION BY store ORDER BY month) AS prev_right
+    FROM store_month
+    ORDER BY store, month
+    LIMIT 3 OFFSET 23
+"""</span>)</pre>
+<pre class="out">    store   month  revenue  prev_wrong  prev_right
+Asheville 2025-12  8253.61     8067.69     8067.69
+     Bend 2024-01  7563.67     8253.61         NaN
+     Bend 2024-02  7726.66     7563.67     7563.67</pre>
+<p style="margin:.3rem 0 0">"Bend's first month was compared with Asheville's last. The partition is the series." Close the demo with the three questions to ask of every window: <b>what is the partition, what is the order, does it need a frame?</b></p></li>
+</ol>
+      </div>
+      <div class="blk warn"><div class="h">Three mistakes to expect</div>
+<ul class="tick">
+  <li><b>Filtering on a window function in the same query.</b> <code class="inline">WHERE ROW_NUMBER() OVER (...) &lt;= 3</code> raises <code class="inline">OperationalError: misuse of window function ROW_NUMBER()</code>, and giving it an alias does not help. Coach with Session 14's running order: "Where do window functions run? After WHERE. So the filter needs another SELECT around it: a CTE."</li>
+  <li><b>A missing PARTITION BY.</b> LAG over several series without a partition compares one series with the last row of another (demo step 11). No error, one wrong row in the middle of a correct table. Coach: "How many series are in this table? Then what is the partition?"</li>
+  <li><b>The default frame with ties, and an order that does not decide.</b> A running total ordered by date gives tied rows the same total; ROW_NUMBER over a date with two orders on one day numbers them arbitrarily. Coach: "Is your ORDER BY unique? Add the key as a tiebreaker. Aggregating over an ordered window? Write the ROWS frame." The Silver lab depends on both.</li>
+</ul>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab (25 min)</div>
+<p>Learners open <code class="inline">labs/module-15/l5_3-sql-window-functions/staff_rankings_starter.py</code> first. Read-only; your references are the <code class="inline">_solution.py</code> files. Both labs end with a check against a second route (pandas, or a number already known).</p><ul class="tick">
+  <li><b>Minutes 0 to 10, pay within each location (<code class="inline">employees</code>).</b> TODO 1: Boise's ten employees next to the location average, 43,950: "ten rows; GROUP BY would give one." TODO 2 finds the tie at 39,000: RANK goes 5, 5, 7, DENSE_RANK 5, 5, 6. TODO 3 is the top-N recipe: 12 rows, two per location (HQ: Clara Soto 185,000, Tamar Kimura 140,700). Walk the room at TODO 3: someone will try the filter in the same SELECT.</li>
+  <li><b>Minutes 10 to 23, the Silver milestone (<code class="inline">labs/module-15/l5_3-sql-window-functions/silver_milestone_starter.py</code>).</b> The question is new: on which order does a customer's completed spend cross $600? TODO 1 builds the running total with a named WINDOW and an explicit frame (customer 10034 crosses on order 4, at 691.45). TODO 2: the first row per customer with <code class="inline">spent_so_far &gt;= 600</code> (MIN(n) grouped): 2,028 customers, on order 3.5 on average. TODO 3 is the moment to stop the room: the customers table has exactly 2,028 Silver and Gold customers. "Two routes, one number: your window reproduced the business rule."</li>
+  <li><b>Minutes 23 to 25.</b> TODO 4 (gaps before the 2nd, 3rd ... order: 118 days falling to 57) goes home, with its caution: later orders come only from customers who keep buying, so the table describes who gets that far, not a change in anyone.</li>
+  <li>Goes home: <code class="inline">labs/module-15/l5_3-sql-window-functions/weekly_trend_starter.py</code> (online orders week by week: two frames, the three sale-weekend spikes, a pandas check).</li>
+</ul>
+      </div>
+      <div class="blk"><div class="h">Start the lesson project (10 min)</div>
+<p>Open the lesson page at "Project: The Store Performance Table". The brief: the monthly table leadership rebuilds by hand (revenue, change from last month, year to date, trend, rank, growth over the same month last year), in one query, verified column by column against pandas. In the room: <b>Step 1</b>, the base CTE: <code class="inline">(120, 4)</code>, five stores × 24 months, first row Asheville 2024-01 with 40 orders and 7,259.22. Then read <b>Step 2</b> together and ask: "What is the partition for month-over-month change? For year to date?" (Store; store and year.) Steps 2 to 5 are homework.</p>
+      </div>
+      <div class="blk"><div class="h">Checks for understanding</div>
+<p>Workbook self-check, Q1 to Q6. Good cold calls: Q3 (why the filter fails) and Q5 (predict the tie).</p><p style="font-size:.9rem;margin:.2rem 0">Answers: <b>Q1</b> <span data-sc="1">B) <code class="inline">orders.groupby("store")["order_total"].transform("sum")</code></span>; <b>Q2</b> <span data-sc="2"><code class="inline">(40, 4, 4, 3)</code></span>; <b>Q3</b> <span data-sc="3">A) WHERE runs before window functions are computed; compute <code class="inline">rn</code> in a CTE and filter it in the outer query</span>; <b>Q4</b> <span data-sc="4">B) <code class="inline">ROWS BETWEEN 3 PRECEDING AND 1 PRECEDING</code></span>; <b>Q5</b> <span data-sc="5"><code class="inline">[30, 30, 35]</code></span>; <b>Q6</b> <span data-sc="6">D) On the first three rows: SQL averages the rows that exist, pandas gives NaN until four rows exist</span>. Full set with explanations in the Answer Key.</p>
+      </div>
+      <div class="blk"><div class="h">Differentiation</div>
+<p><b>Support:</b> give learners the three questions on a card (partition? order? frame?) and the phrase-book table, and let them do <code class="inline">staff_rankings</code> only, with the pandas Step 4 as their check. In the demo they may copy steps 5 and 8 from the lesson page. <b>Stretch:</b> <code class="inline">weekly_trend</code> in the room, then the lesson's bonus (a cohort table with <code class="inline">FIRST_VALUE</code>). Ask: "In the Silver lab, why join to <code class="inline">customers</code> at all?" (Closed accounts have no tier; without the join the count could not match.)</p>
+      </div>
+    </div>
+  </section>
+  <div class="note"><div class="t">Break (1:25 to 1:35)</div>
+    <p>Leave the train picture on the board. Over the break, open the second notebook and delete any old `pinecrest_tuning.db` so step 1 copies a clean file.</p>
+  </div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">5.4</span><h3>Query Optimization</h3><span class="dur">75 min</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Objectives (from the lesson page)</div>
+<ul class="tick">
+  <li>Describe how SQLite turns a query into a plan, and read EXPLAIN QUERY PLAN output line by line</li>
+  <li>Create single-column, composite and covering indexes, and show their effect on both the plan and the measured time</li>
+  <li>Recognize the situations where an index does not help, and rewrite a filter so that an index can be used</li>
+  <li>Measure what indexes cost in file size and write speed, and use ANALYZE to give the planner statistics</li>
+  <li>Decide what work belongs in SQL and what belongs in pandas, and fetch only what you need</li>
+</ul>
+      </div>
+      <div class="blk"><div class="h">Timing inside the block (75 minutes)</div>
+<table class="timing"><tbody>
+<tr><td class="t">10m</td><td>Frame and mental model</td></tr>
+<tr><td class="t">30m</td><td>Live demo, steps 1 to 9</td></tr>
+<tr><td class="t">25m</td><td>Guided lab: plans for a lookup screen, then one query instead of 300</td></tr>
+<tr><td class="t">10m</td><td>Start the Tuning Report: Steps 1 and 2</td></tr>
+</tbody></table>
+      </div>
+      <div class="blk"><div class="h">Mental model to say</div>
+<p>"A table is a thick reference book whose pages are in the order they were written. To find every mention of 'crampons' you have one strategy: start at page 1 and read to the end. That is a scan. An index is the alphabetical list at the back: each term, then the pages where it appears. Jump to 'crampons', turn straight to those pages. That is a search. The index is extra paper, and somebody has to update it every time a page changes."</p><p>Then the method, which matters more than any single index: "SQL says WHAT you want; the planner decides HOW. We will ask it how, change one thing, and measure again. <b>Read the plan, form a guess, change one thing, measure.</b>" Write that sentence on the board.</p><p>Set expectations about numbers: "On a 3.5 MB database everything is fast. We look at the plan first and the stopwatch second, and every time I print a time I will say: your numbers will differ."</p>
+      </div>
+      <div class="blk"><div class="h">Live demo (you type, they follow): plans, indexes and the stopwatch</div>
+<p>A second notebook, <code class="inline">session15_tuning.ipynb</code>. The demo creates indexes, so step 1 copies the database to <code class="inline">pinecrest_tuning.db</code> first. Nine cells; the marked minutes add up to 30. The times below are from the author's machine; yours will differ and that is the point of best-of-N.</p><ol class="steps">
+  <li><b>A copy, a plan printer, a stopwatch (3m).</b> Say: "This lesson creates indexes, so it works on a copy. Two helpers: <code class="inline">plan()</code> prints the engine's strategy, <code class="inline">timed()</code> runs a query many times and keeps the best. And one detail in the connect line, which I will explain in step 7."
+<pre class="code"><span class="k">import</span> os
+<span class="k">import</span> shutil
+<span class="k">import</span> sqlite3
+<span class="k">import</span> time
+<span class="k">import</span> pandas <span class="k">as</span> pd
+
+shutil.copy(<span class="s">"data/pinecrest.db"</span>, <span class="s">"pinecrest_tuning.db"</span>)
+conn = sqlite3.connect(<span class="s">"pinecrest_tuning.db"</span>, cached_statements=<span class="s">0</span>)
+
+<span class="k">def</span> plan(sql, params=()):
+    <span class="s">"""Print the query plan, one step per line."""</span>
+    <span class="k">for</span> row <span class="k">in</span> conn.execute(<span class="s">"EXPLAIN QUERY PLAN "</span> + sql, params):
+        print(<span class="s">"   "</span>, row[<span class="s">3</span>])
+
+<span class="k">def</span> timed(sql, param_list, repeat=<span class="s">5</span>):
+    <span class="s">"""Best time in milliseconds to run the query once per item of param_list."""</span>
+    best = float(<span class="s">"inf"</span>)
+    <span class="k">for</span> _ <span class="k">in</span> range(repeat):
+        start = time.perf_counter()
+        <span class="k">for</span> params <span class="k">in</span> param_list:
+            conn.execute(sql, params).fetchall()
+        best = min(best, time.perf_counter() - start)
+    <span class="k">return</span> best * <span class="s">1000</span></pre>
+<p style="margin:.3rem 0 0"><code class="inline">plan()</code> here prints the steps without indentation; the lesson's version indents nested steps.</p></li>
+  <li><b>Reading a plan: SCAN and SEARCH (3m).</b> Say: "EXPLAIN QUERY PLAN returns the strategy instead of running the query. Nothing is read or changed, so it is always safe. Two verbs do nearly all the work."
+<pre class="code">print(<span class="s">"by primary key"</span>)
+plan(<span class="s">"SELECT * FROM orders WHERE order_id = ?"</span>, (<span class="s">100500</span>,))
+print(<span class="s">"by another column"</span>)
+plan(<span class="s">"SELECT * FROM orders WHERE customer_id = ?"</span>, (<span class="s">12673</span>,))
+print(<span class="s">"filter, then sort"</span>)
+plan(<span class="s">"SELECT * FROM orders WHERE store = ? ORDER BY order_date"</span>, (<span class="s">"Bend"</span>,))</pre>
+<pre class="out">by primary key
+    SEARCH orders USING INTEGER PRIMARY KEY (rowid=?)
+by another column
+    SCAN orders
+filter, then sort
+    SCAN orders
+    USE TEMP B-TREE FOR ORDER BY</pre>
+<p style="margin:.3rem 0 0">SCAN: read every row and test each. SEARCH: jump. TEMP B-TREE: a separate sort. "SCAN is not a dirty word: for a yearly total it is the best plan. It is a problem when you wanted a few rows and paid for all of them."</p></li>
+  <li><b>One index, the plan and the stopwatch (4m).</b> Say: "The classic slow query here: the lines of one order. order_items has 45,490 rows and no index on order_id. Two hundred lookups, before and after."
+<pre class="code">ITEMS_SQL = <span class="s">"SELECT * FROM order_items WHERE order_id = ?"</span>
+order_ids = [(<span class="s">100000</span> + <span class="s">100</span> * k,) <span class="k">for</span> k <span class="k">in</span> range(<span class="s">1</span>, <span class="s">201</span>)]      <span class="c"># 200 different orders</span>
+plan(ITEMS_SQL, (<span class="s">100500</span>,))
+before = timed(ITEMS_SQL, order_ids)
+conn.execute(<span class="s">"CREATE INDEX idx_order_items_order_id ON order_items (order_id)"</span>)
+conn.commit()
+plan(ITEMS_SQL, (<span class="s">100500</span>,))
+after = timed(ITEMS_SQL, order_ids)
+print(<span class="s">f"200 lookups: {before:.1f} ms before, {after:.1f} ms after"</span>)</pre>
+<pre class="out">    SCAN order_items
+    SEARCH order_items USING INDEX idx_order_items_order_id (order_id=?)
+200 lookups: 151.8 ms before, 1.3 ms after</pre>
+<p style="margin:.3rem 0 0">Your timings will differ: say so every time, and read the plan line before the number. "SCAN became SEARCH ... USING INDEX. The query did not change; the planner found the index by itself."</p></li>
+  <li><b>Joins: the inner loop should be a SEARCH (3m).</b> Say: "A join runs as a nested loop: for each row of the outer table, find the matches in the inner one. The plan lists the outer table first. One customer's history, with one index, then two."
+<pre class="code">HISTORY_SQL = <span class="s">"""
+    SELECT o.order_id, o.order_date, i.sku, i.quantity
+    FROM orders AS o
+    JOIN order_items AS i ON i.order_id = o.order_id
+    WHERE o.customer_id = ?
+"""</span>
+print(<span class="s">"index on order_items(order_id) only:"</span>)
+plan(HISTORY_SQL, (<span class="s">12673</span>,))
+conn.execute(<span class="s">"CREATE INDEX idx_orders_customer_id ON orders (customer_id)"</span>)
+conn.commit()
+print(<span class="s">"plus an index on orders(customer_id):"</span>)
+plan(HISTORY_SQL, (<span class="s">12673</span>,))</pre>
+<pre class="out">index on order_items(order_id) only:
+    SCAN o
+    SEARCH i USING INDEX idx_order_items_order_id (order_id=?)
+plus an index on orders(customer_id):
+    SEARCH o USING INDEX idx_orders_customer_id (customer_id=?)
+    SEARCH i USING INDEX idx_order_items_order_id (order_id=?)</pre>
+<p style="margin:.3rem 0 0">"No scans at all: search for the customer's few orders, then search for each order's lines. This is the plan you want behind a 'show me one customer' page. And notice: the planner chose the outer table, not the order in your FROM clause."</p></li>
+  <li><b>Composite index and the leftmost prefix (4m).</b> Say: "A store manager's report filters on a store and a date range. One index on two columns, in the order a phone book uses: last name, then first name."
+<pre class="code">REPORT_SQL = (<span class="s">"SELECT order_id, order_total FROM orders "</span>
+              <span class="s">"WHERE store = ? AND order_date BETWEEN ? AND ?"</span>)
+plan(REPORT_SQL, (<span class="s">"Bend"</span>, <span class="s">"2025-07-01"</span>, <span class="s">"2025-07-07"</span>))
+conn.execute(<span class="s">"CREATE INDEX idx_orders_store_date ON orders (store, order_date)"</span>)
+conn.commit()
+plan(REPORT_SQL, (<span class="s">"Bend"</span>, <span class="s">"2025-07-01"</span>, <span class="s">"2025-07-07"</span>))
+print(<span class="s">"date only:"</span>)
+plan(<span class="s">"SELECT order_id FROM orders WHERE order_date = ?"</span>, (<span class="s">"2025-07-04"</span>,))</pre>
+<pre class="out">    SCAN orders
+    SEARCH orders USING INDEX idx_orders_store_date (store=? AND order_date&gt;? AND order_date&lt;?)
+date only:
+    SCAN orders USING COVERING INDEX idx_orders_store_date</pre>
+<p style="margin:.3rem 0 0">"Equality columns first, the range or the sort last. And the index is no help for the date alone: dates are sorted only within each store, like finding everyone named Maria in a phone book."</p></li>
+  <li><b>A function around the column hides it (3m).</b> Say: "Both of these count Bend's orders in July 2025. Same answer. Look at how much of the index each can use."
+<pre class="code">FUNC = (<span class="s">"SELECT COUNT(*) FROM orders "</span>
+        <span class="s">"WHERE store = ? AND strftime('%Y-%m', order_date) = ?"</span>)
+RANGE = (<span class="s">"SELECT COUNT(*) FROM orders "</span>
+         <span class="s">"WHERE store = ? AND order_date &gt;= ? AND order_date &lt; ?"</span>)
+plan(FUNC, (<span class="s">"Bend"</span>, <span class="s">"2025-07"</span>))
+plan(RANGE, (<span class="s">"Bend"</span>, <span class="s">"2025-07-01"</span>, <span class="s">"2025-08-01"</span>))
+print(conn.execute(FUNC, (<span class="s">"Bend"</span>, <span class="s">"2025-07"</span>)).fetchone()[<span class="s">0</span>],
+      conn.execute(RANGE, (<span class="s">"Bend"</span>, <span class="s">"2025-07-01"</span>, <span class="s">"2025-08-01"</span>)).fetchone()[<span class="s">0</span>])</pre>
+<pre class="out">    SEARCH orders USING COVERING INDEX idx_orders_store_date (store=?)
+    SEARCH orders USING COVERING INDEX idx_orders_store_date (store=? AND order_date&gt;? AND order_date&lt;?)
+83 83</pre>
+<p style="margin:.3rem 0 0">"The index is sorted by <code class="inline">order_date</code>, not by <code class="inline">strftime('%Y-%m', order_date)</code>. Keep the bare column on one side of the comparison." A pattern that starts with <code class="inline">%</code> and a column where most rows match (status: 92% completed) are the other two cases; they are in the lesson, as reading.</p></li>
+  <li><b>DROP INDEX and plan again: why cached_statements=0 (2m).</b> Say: "Experiments need undoing. Drop the composite index and ask for the same plan text again."
+<pre class="code">conn.execute(<span class="s">"DROP INDEX idx_orders_store_date"</span>)
+conn.commit()
+plan(REPORT_SQL, (<span class="s">"Bend"</span>, <span class="s">"2025-07-01"</span>, <span class="s">"2025-08-01"</span>))</pre>
+<pre class="out">    SCAN orders</pre>
+<p style="margin:.3rem 0 0">"Back to SCAN, as it should be. Python's sqlite3 normally caches prepared statements by their text, and a cached one can still carry the plan it was made with while the index existed. That is why this connection was opened with <code class="inline">cached_statements=0</code>. Harmless in normal work; confusing in a lesson about plans. A new connection does the same job."</p></li>
+  <li><b>ANALYZE: statistics for the planner (3m).</b> Say: "So far the planner has chosen with no knowledge of the data. ANALYZE measures it. Watch a date-only query on a three-column index."
+<pre class="code">conn.execute(<span class="s">"CREATE INDEX idx_orders_store_date_total "</span>
+             <span class="s">"ON orders (store, order_date, order_total)"</span>)
+conn.commit()
+DATE_SQL = <span class="s">"SELECT COUNT(*) FROM orders WHERE order_date = ?"</span>
+plan(DATE_SQL, (<span class="s">"2025-07-04"</span>,))
+conn.execute(<span class="s">"ANALYZE"</span>)
+conn.commit()
+plan(DATE_SQL, (<span class="s">"2025-07-04"</span>,))</pre>
+<pre class="out">    SCAN orders USING COVERING INDEX idx_orders_store_date_total
+    SEARCH orders USING COVERING INDEX idx_orders_store_date_total (ANY(store) AND order_date=?)</pre>
+<p style="margin:.3rem 0 0">"The statistics told the planner that store has only five values, so five small searches, one per store, beat a scan: a skip-scan, <code class="inline">ANY(store)</code>." The <code class="inline">sqlite_stat1</code> table and what indexes cost in file size and insert time are reading; the project measures the size.</p></li>
+  <li><b>Ask for less: aggregate where the data lives (5m).</b> Say: "The cheapest row is the one you never fetch. Item revenue by store, two ways."
+<pre class="code"><span class="k">def</span> pandas_way():
+    df = pd.read_sql(<span class="s">"SELECT * FROM order_items AS i "</span>
+                     <span class="s">"JOIN orders AS o ON o.order_id = i.order_id"</span>, conn)
+    df = df[df[<span class="s">"status"</span>] == <span class="s">"completed"</span>]
+    <span class="k">return</span> (df[<span class="s">"quantity"</span>] * df[<span class="s">"unit_price"</span>]).groupby(df[<span class="s">"store"</span>]).sum().round(<span class="s">2</span>)
+
+<span class="k">def</span> sql_way():
+    <span class="k">return</span> pd.read_sql(<span class="s">"""
+        SELECT o.store, ROUND(SUM(i.quantity * i.unit_price), 2) AS revenue
+        FROM order_items AS i JOIN orders AS o ON o.order_id = i.order_id
+        WHERE o.status = 'completed'
+        GROUP BY o.store"""</span>, conn).set_index(<span class="s">"store"</span>)[<span class="s">"revenue"</span>]
+
+<span class="k">for</span> func <span class="k">in</span> (pandas_way, sql_way):
+    start = time.perf_counter()
+    result = func()
+    print(<span class="s">f"{func.__name__}: {(time.perf_counter() - start) * 1000:.1f} ms"</span>)
+print(<span class="s">"same numbers:"</span>, (pandas_way() - sql_way()).abs().max() &lt; <span class="s">0.01</span>)</pre>
+<pre class="out">pandas_way: 143.0 ms
+sql_way: 14.0 ms
+same numbers: True</pre>
+<p style="margin:.3rem 0 0">"Same answer; one moved 45,490 rows into Python, the other five." Three habits for the board: <b>name your columns, LIMIT while exploring, one query not a loop of queries</b>. The second lab is about the third.</p></li>
+</ol>
+      </div>
+      <div class="blk warn"><div class="h">Three mistakes to expect</div>
+<ul class="tick">
+  <li><b>Assuming the index is used.</b> Creating an index proves nothing; the planner may ignore it (a function on the column, a wildcard at the start, a filter that matches most rows). Coach: "Show me the plan line for the query it was meant for. Which index does it name?" In the lab, the city-only query still scans after the composite index.</li>
+  <li><b>Trusting one timing.</b> A single before and after can show only the cache warming up. Coach: "How many times did you run it? Which number did you keep?" Both labs time with best-of-several and print "your numbers will differ"; nothing in the kit asserts a time.</li>
+  <li><b>A stale plan after DROP INDEX, or editing the shipped database.</b> Re-asking the same plan text on a connection that caches statements can show the old plan; the demo and labs connect with <code class="inline">cached_statements=0</code>. And an index created on <code class="inline">data/pinecrest.db</code> itself changes the file every later lesson expects. Coach: "Which file is your connection open on?" Always a copy.</li>
+</ul>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab (25 min)</div>
+<p>Learners open <code class="inline">labs/module-15/l5_4-query-optimization/customer_lookup_plans_starter.py</code>. Both labs copy the database into their output folder first and open the copy with <code class="inline">cached_statements=0</code>.</p><ul class="tick">
+  <li><b>Minutes 0 to 12, plans for a lookup screen (<code class="inline">customers</code>).</b> TODO 1: predictions first (in a comment), then three plans, all SCAN, one with a TEMP B-TREE. TODO 2: one index on <code class="inline">(state, city)</code>: state-and-city becomes a SEARCH; city alone is still a SCAN (of the index: the leftmost-prefix rule); the newest-first query still sorts. The speedup is modest (488 of 4,850 customers live in Boise, ID: an index pays most when it skips most of the table). TODO 3: a third column, <code class="inline">signup_date</code>, removes the sort step. TODO 4: DROP and plan again: SCAN.</li>
+  <li><b>Minutes 12 to 25, one query instead of 300 (<code class="inline">labs/module-15/l5_4-query-optimization/n_plus_one_starter.py</code>).</b> A colleague's script runs one query per Gold customer. TODO 1 plans it (SCAN orders) and times the loop. TODO 2 writes ONE <code class="inline">IN (...) GROUP BY</code> query (one placeholder per id, so values still travel as parameters) and checks "same answers: True". TODO 3 adds <code class="inline">idx_orders_customer_id</code> and times both again. Debrief: "Either fix works here. Which one survives a server database, where each loop query also pays a network round trip?" (The single query.)</li>
+  <li><b>If the room is slow</b>, stop after TODO 2 of the first lab; the second goes home whole. Its point (the N+1 problem) is one sentence in the lesson, so it is worth doing.</li>
+</ul>
+      </div>
+      <div class="blk"><div class="h">Start the lesson project (10 min)</div>
+<p>Open the lesson page at "Project: The Tuning Report". The brief: three dashboard queries, the fewest indexes that fix them, before-and-after plans and times, proof that results are unchanged, and the cost in file size. In the room: <b>Step 1</b> (a fresh <code class="inline">tuning_project.db</code> and the workload: <code class="inline">{'customer history': 100, 'product sales by month': 50, 'store daily report': 100}</code>) and <b>Step 2</b> (the baseline: every plan contains a SCAN of a large table). Ask the room to propose the indexes from the WHERE and ON clauses before anyone opens Step 3. Steps 3 to 6 are homework.</p>
+      </div>
+      <div class="blk"><div class="h">Checks for understanding</div>
+<p>Workbook self-check, Q7 to Q12. Good cold calls: Q8 (which filter cannot seek) and Q12 (one timing each).</p><p style="font-size:.9rem;margin:.2rem 0">Answers: <b>Q7</b> <span data-sc="7">C) <code class="inline">SEARCH orders USING COVERING INDEX idx_orders_store_date_total (store=? AND order_date&gt;? AND order_date&lt;?)</code></span>; <b>Q8</b> <span data-sc="8">A) <code class="inline">WHERE order_date = '2025-07-04'</code></span>; <b>Q9</b> <span data-sc="9">C) Python's sqlite3 reused its cached prepared statement, planned while the index existed; connect with <code class="inline">cached_statements=0</code> or open a new connection</span>; <b>Q10</b> <span data-sc="10"><code class="inline">SCAN t</code></span>; <b>Q11</b> <span data-sc="11">D) Slower inserts and a larger file, because every index is a sorted copy that must be kept up to date</span>; <b>Q12</b> <span data-sc="12">C) Repeat each measurement several times, take the best, and check the plan changed from SCAN to SEARCH</span>. Full set with explanations in the Answer Key.</p>
+      </div>
+      <div class="blk"><div class="h">Differentiation</div>
+<p><b>Support:</b> the plan-words table in the workbook is the whole vocabulary; learners who are lost read plans aloud with it ("SCAN customers: read every customer"). Let them do the first lab only, TODO 1 and 2. <b>Stretch:</b> the lesson's Exercise 4 (is a covering index worth it?) after <code class="inline">n_plus_one</code>, or measure the file-size cost of the lab's two indexes with <code class="inline">os.path.getsize</code>. Ask: "Why does the composite index put state before city, and could city first ever be better?"</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="sec"><h2>Closing</h2><span class="rule"></span></div>
+      <div class="blk"><div class="h">Exit ticket (3 questions; answers)</div>
+<ol class="steps">
+  <li><code class="inline">orders</code> has 20,302 rows and 5 stores. How many rows from <code class="inline">SELECT store, AVG(order_total) FROM orders GROUP BY store</code>, and from <code class="inline">SELECT store, AVG(order_total) OVER (PARTITION BY store) FROM orders</code>? <b>Answer:</b> 5 and 20,302. GROUP BY collapses the rows; a window function keeps every row and attaches the group value to it.</li>
+  <li>Give the three steps of "top N per group". <b>Answer:</b> Number the rows with ROW_NUMBER() OVER (PARTITION BY group ORDER BY measure DESC, tiebreaker); put that in a CTE; filter the CTE with WHERE rn &lt;= N. (WHERE cannot see a window function in the same SELECT.)</li>
+  <li>You have just created an index. Name two things you check before saying it helped. <b>Answer:</b> Any two of: the plan for the query it was meant for now says SEARCH ... USING INDEX (or COVERING INDEX) instead of SCAN; best-of-several timings before and after; the query returns exactly the same rows; what it costs in file size and write speed.</li>
+</ol>
+      </div>
+      <div class="blk"><div class="h">Homework (about 3 hours)</div>
+<ul class="tick">
+  <li><b>Lesson 5.3:</b> finish the Store Performance Table (Steps 2 to 5; all five window columns must match pandas), Exercises 1 to 3 (4 is a stretch), the quiz and the journal. Read the "pandas Way" blocks you did not see in the room.</li>
+  <li><b>Lesson 5.4:</b> the Tuning Report, Steps 3 to 6, including the written recommendation; Exercises 1 to 3 (4 is a stretch); the quiz and the journal. Read "What Indexes Cost".</li>
+  <li><b>Kit labs:</b> <code class="inline">labs/module-15/l5_3-sql-window-functions/weekly_trend_starter.py</code>; TODO 4 of the Silver lab; <code class="inline">labs/module-15/l5_4-query-optimization/n_plus_one_starter.py</code> if it was not finished.</li>
+  <li><b>Tidy up:</b> delete the working copies (<code class="inline">pinecrest_tuning.db</code>, <code class="inline">tuning_project.db</code>, the labs' <code class="inline">output/</code> folders), or keep them out of any shared folder.</li>
+  <li><b>Workbook:</b> self-check Q1 to Q12.</li>
+</ul>
+      </div>
+  <div class="note lab"><div class="t">Bring list for Session 16 (Lessons 5.5 and 6.1: documents and HTTP)</div>
+    <p>☐ <code class="inline">pymongo</code> and <code class="inline">mongomock</code> installed (both are in <code class="inline">requirements.txt</code>): <code class="inline">python -c "import pymongo, mongomock; print(pymongo.__version__, mongomock.__version__)"</code>. No MongoDB server is needed: Lesson 5.5 runs on mongomock. ☐ <code class="inline">requests</code> installed (also in <code class="inline">requirements.txt</code>): <code class="inline">python -c "import requests; print(requests.__version__)"</code>. ☐ The local mock API tested once: from the course folder run <code class="inline">python data/mock_api.py</code>, open http://127.0.0.1:8000/health in a browser (it answers <code class="inline">{"status": "ok"}</code>), then stop it with Ctrl+C. If port 8000 is taken, <code class="inline">python data/mock_api.py --port 8050</code>. ☐ <code class="inline">data/web_sessions.json</code> in your data folder (Lesson 5.4 asked you to look at the first session in a text editor). ☐ No accounts needed: the mock API's demo key and password are public teaching values given in Session 16.</p>
+  </div>
+
+  <div class="sec"><h2>If You Run Long or Short</h2><span class="rule"></span></div>
+<p><b>Long.</b> Cut in this order: (1) 5.3 step 3 (share of the total) and step 7 (days between orders): say them. (2) 5.3 step 11 (missing PARTITION BY) becomes a slide; the lab and Q-cards cover it. (3) 5.4 step 4 (join plans): show the output from the lesson page. (4) 5.4 step 8 (ANALYZE) becomes one sentence. (5) The second lab of each block (<code class="inline">silver_milestone</code> after TODO 3; <code class="inline">n_plus_one</code>) goes home. (6) "Start the project" shrinks to the first cell. Never cut: top N per group, the frame and tie cells, reading a plan, one index measured properly.</p><p><b>Short.</b> Run <code class="inline">weekly_trend</code> after the first lab block and the lesson's Exercise 4 (Pareto: 41 products make half of revenue) as a class discussion. In 5.4 add the lesson's "What Indexes Cost" cell (file size and insert time with 0, 1, 2 and 4 indexes) and have pairs propose the Tuning Report indexes before reading Step 3.</p>
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 15 · Facilitator Guide · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Participant Workbook: Session 8</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Student workbook —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">write in it · bring it to every session</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Participant Workbook</div>
+    <h1>Session 8: Features and First Charts</h1>
+    <p class="sub">Your working notebook for the session that finishes pandas and starts charting. Before the break you build features: columns designed so a pattern is easy to see, one row per customer or per order, with nothing leaking in from the future. After the break you turn tables into pictures with Matplotlib: a line, a scatter, bars and a histogram, each chosen because of the question it answers.</p>
+    <div class="meta-row">
+      <span class="chip">Lessons <b>2.9–3.1</b></span>
+      <span class="chip"><b>2</b> lessons</span>
+      <span class="chip">Session <b>8</b> · 3 hours</span>
+      <span class="chip">Name: ____________________</span>
+    </div>
+  </header>
+
+  <div class="note"><div class="t">How to use this workbook</div><p>Each lesson has <b>Key ideas</b>, a <b>Worked example</b> with its real output, the <b>Guided lab</b> you do in class, <b>Predict, then run</b> boxes, the start of the <b>lesson project</b>, a six-question <b>Self-check</b> and space for notes. The lab files are in <code class="inline">labs/module-08/</code>. The two chart labs save their pictures as PNG files in an <code class="inline">output/</code> folder next to the lab file: open them from there, or run the file cell by cell in VS Code to see each chart as you go.</p></div>
+  <div class="sec"><h2>Session Goals</h2><span class="rule"></span></div>
+  <ul class="tick">
+    <li>Decide what one row of a feature table represents, and build flags, ratios, date parts and bins for it</li>
+    <li>Summarize many rows per customer or per order, join the summary back, and fill missing values honestly</li>
+    <li>Encode an ordered category and an unordered one correctly</li>
+    <li>Apply the cutoff rule: every feature must be computable on the cutoff date from what existed then</li>
+    <li>Build any chart with <code class="inline">fig, ax = plt.subplots()</code> and methods on <code class="inline">ax</code>, with a title and labeled axes</li>
+    <li>Choose line, scatter, bar or histogram from the question, and spot a chart that draws without error and is wrong</li>
+  </ul>
+  <div class="sec"><h2>Progress Tracker</h2><span class="rule"></span></div>
+  <ul class="tick lab">
+    <li>☐ <b>2.9 lab</b> <code class="inline">order_features</code>: I found the one combination of features where returns jump</li>
+    <li>☐ <b>2.9 project</b> The Customer Feature Table: Step 1 runs in class; Steps 2 to 6 finished at home</li>
+    <li>☐ <b>3.1 lab</b> <code class="inline">four_questions</code>: four PNG files in my output folder, each answering its question</li>
+    <li>☐ <b>3.1 project</b> Does Rain Keep Shoppers Away?: Step 1 runs in class; Steps 2 to 6 finished at home</li>
+    <li>☐ I did each lesson's exercises and Quick Quiz, and wrote both journal entries</li>
+  </ul>
+  <div class="sec"><h2>Lessons</h2><span class="rule"></span></div>
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">2.9</span><h3>Feature Engineering Basics</h3><span class="dur">95 min solo</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Key ideas</div>
+        <ul class="tick">
+    <li><b>A feature is a column you build so a pattern becomes visible.</b> First decide the <b>unit of analysis</b>: what one row is. Every feature must be one fact about that unit.</li>
+    <li><b>Derived columns</b> come from four patterns: a flag (<code class="inline">.notna()</code>, <code class="inline">.isin()</code>, a comparison), arithmetic between columns, a choice (<code class="inline">np.where</code>), a lookup (<code class="inline">.map</code>). <b>Ratios</b> remove size and leave behavior.</li>
+    <li><b>Dates</b> become features as parts that repeat (<code class="inline">.dt.month</code>, a weekend flag) or as elapsed time from a <b>fixed reference date</b>. Never use today's date.</li>
+    <li><b><code class="inline">pd.cut</code></b>: you choose the edges; each bin includes its right edge; values outside the edges become <code class="inline">NaN</code>. <b><code class="inline">pd.qcut</code></b>: equal-sized groups, edges chosen from the data.</li>
+    <li><b>An ordered categorical</b> (<code class="inline">pd.CategoricalDtype([...], ordered=True)</code>) sorts, compares and takes <code class="inline">max()</code> in the real order, not the alphabet.</li>
+    <li><b>Per-customer features:</b> group and aggregate to one row each, then <b>left-merge</b> onto the table that defines the unit. Fill counts and sums with 0. Leave averages missing and add a flag.</li>
+    <li><b>Encoding:</b> ordinal categories → ordered integers (<code class="inline">.cat.codes</code>). Nominal categories → one yes/no column each (<code class="inline">pd.get_dummies</code>).</li>
+    <li><b>The cutoff rule:</b> could I have computed this value on the cutoff date, using only what existed then? If not, it leaks. Leaks raise no error; they give results that are too good.</li>
+  </ul>
+        <table class="timing"><thead><tr><th>You want</th><th>Write</th></tr></thead><tbody><tr><td class="t">A yes/no flag</td><td><code class="inline">df["col"].notna()</code> · <code class="inline">df["a"] == "x"</code> · <code class="inline">df["a"].isin([...])</code></td></tr><tr><td>A two-way choice</td><td><code class="inline">np.where(condition, "large", "regular")</code></td></tr><tr><td>Days since a date</td><td><code class="inline">(as_of - df["date"]).dt.days</code> with <code class="inline">as_of = pd.Timestamp("2025-12-31")</code></td></tr><tr><td>Bands with edges you choose</td><td><code class="inline">pd.cut(s, bins=[17, 24, 34, 120], labels=[...])</code></td></tr><tr><td>Edges that cover everything</td><td><code class="inline">bins=[-np.inf, 40, 60, 80, np.inf]</code></td></tr><tr><td>Four equal-sized groups</td><td><code class="inline">pd.qcut(s, q=4, labels=["low", "mid", "high", "top"])</code></td></tr><tr><td>One row per customer</td><td><code class="inline">orders.groupby("customer_id").agg(n_orders=("order_id", "count"), ...)</code></td></tr><tr><td>Join without losing anyone</td><td><code class="inline">base.merge(summary, on="customer_id", how="left", validate="one_to_one")</code></td></tr><tr><td>One-hot columns</td><td><code class="inline">pd.get_dummies(df["channel"], prefix="via", dtype=int)</code></td></tr><tr><td>Rate and size per group</td><td><code class="inline">df.groupby("feature")["target"].agg(["mean", "size"])</code></td></tr></tbody></table>
+      </div>
+      <div class="blk"><div class="h">Worked example: product features: does time on sale explain review counts?</div>
+        <p>One row is a product. The question: which products have many reviews? Two candidate features: how long the product has been on sale, and how expensive it is. (The lesson builds customer features; this example uses <code class="inline">data/products.csv</code>.)</p>
+        <p>Elapsed time from a fixed reference date, then bands with edges that mean something (under a year, one to three years, longer).</p>
+<pre class="code">products = pd.read_csv(<span class="s">"data/products.csv"</span>, parse_dates=[<span class="s">"launch_date"</span>])
+as_of = pd.Timestamp(<span class="s">"2025-12-31"</span>)
+products[<span class="s">"years_on_sale"</span>] = (as_of - products[<span class="s">"launch_date"</span>]).dt.days / <span class="s">365.25</span>
+products[<span class="s">"age_band"</span>] = pd.cut(products[<span class="s">"years_on_sale"</span>], bins=[<span class="s">0</span>, <span class="s">1</span>, <span class="s">3</span>, np.inf],
+                              labels=[<span class="s">"new"</span>, <span class="s">"established"</span>, <span class="s">"veteran"</span>])
+print(products[<span class="s">"age_band"</span>].value_counts(sort=<span class="k">False</span>, dropna=<span class="k">False</span>))</pre>
+<pre class="out">age_band
+new             13
+established     49
+veteran        180
+Name: count, dtype: int64</pre>
+        <p>No <code class="inline">NaN</code> row in that count, so every product landed in a band. Now check the feature against the thing we care about, with the group size beside it.</p>
+<pre class="code">print(products.groupby(<span class="s">"age_band"</span>, observed=<span class="k">True</span>)[<span class="s">"review_count"</span>]
+      .agg([<span class="s">"mean"</span>, <span class="s">"median"</span>, <span class="s">"size"</span>]).round(<span class="s">1</span>))</pre>
+<pre class="out">             mean  median  size
+age_band                       
+new          37.5     0.0    13
+established  56.8    34.0    49
+veteran      76.6    40.5   180</pre>
+        <p>The second feature: three equal-sized price bands, made by <code class="inline">qcut</code>.</p>
+<pre class="code">products[<span class="s">"price_band"</span>] = pd.qcut(products[<span class="s">"price"</span>], q=<span class="s">3</span>,
+                                 labels=[<span class="s">"low"</span>, <span class="s">"mid"</span>, <span class="s">"high"</span>])
+print(products.groupby(<span class="s">"price_band"</span>, observed=<span class="k">True</span>)[<span class="s">"review_count"</span>]
+      .agg([<span class="s">"mean"</span>, <span class="s">"median"</span>, <span class="s">"size"</span>]).round(<span class="s">1</span>))</pre>
+<pre class="out">            mean  median  size
+price_band                    
+low         99.5    61.0    81
+mid         56.8    26.0    81
+high        54.8    26.5    80</pre>
+        <p>Both features separate the products: review counts rise with time on sale, and the cheapest third of the catalog collects far more reviews than the rest. Notice <code class="inline">observed=True</code>: these are categoricals, and it keeps the output to the bands that exist. And notice the 13 new products with a median of 0 reviews: for a product launched last month, "no reviews" says nothing about quality.</p>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab</div>
+        <p>Two labs practice this lesson with a different unit of analysis than the lesson's. Do Lab 2.9-A in class. Lab 2.9-B is for early finishers and for homework.</p>
+        <p><b>Lab 2.9-A · Which orders come back?</b> (25 minutes, in class): open <code class="inline">labs/module-08/l2_9-feature-engineering/order_features_starter.py</code>. The returns desk asks which kinds of orders get returned. One row is an order. Build flags, per-order summaries from the order lines, and bins; check each against the return rate; then find the combination that stands out.</p>
+        <ol class="steps lab">
+    <li><b>TODO 1:</b> three flags: <code class="inline">is_online</code>, <code class="inline">used_promo</code>, <code class="inline">is_weekend</code>.</li>
+    <li><b>TODO 2:</b> group the order lines by <code class="inline">order_id</code>: number of lines, number of units, and whether any line is footwear.</li>
+    <li><b>TODO 3:</b> left-merge the summary onto the orders with <code class="inline">validate="one_to_one"</code>; the row count must stay 20,302.</li>
+    <li><b>TODO 4:</b> <code class="inline">value_band</code> with <code class="inline">qcut</code>, <code class="inline">lines_band</code> with <code class="inline">cut</code>; check that nothing became <code class="inline">NaN</code>.</li>
+    <li><b>TODO 5:</b> for each feature, the return rate and the group size.</li>
+    <li><b>TODO 6:</b> combine two flags into <code class="inline">online_footwear</code> and look again.</li>
+    <li><b>TODO 7:</b> name the column that must not be used as a feature, and say why.</li>
+  </ol>
+        <p><b>Done looks like:</b> an overall return rate near 5.6%; six small tables; one combination of two features with a return rate about three times any other; a sentence about <code class="inline">status</code>.</p>
+        <p><b>Lab 2.9-B · How busy will the store be tomorrow?</b> (20 minutes, early finishers or homework): open <code class="inline">labs/module-08/l2_9-feature-engineering/store_day_features_starter.py</code>. One row is a store on a day, and the thing to predict is <code class="inline">visitors</code>. The cutoff rule here is "known the evening before". Build a ratio, date parts, temperature bands and a same-weekday-last-week feature, then audit every candidate column.</p>
+        <ol class="steps lab">
+    <li><b>TODO 1:</b> <code class="inline">rel_visitors</code>: visitors divided by the store's own average (1.0 is a normal day).</li>
+    <li><b>TODO 2:</b> <code class="inline">weekday</code>, <code class="inline">is_weekend</code>, <code class="inline">rainy</code>.</li>
+    <li><b>TODO 3:</b> <code class="inline">temp_band</code> with <code class="inline">pd.cut</code> and outer edges of <code class="inline">-np.inf</code> and <code class="inline">np.inf</code>.</li>
+    <li><b>TODO 4:</b> relative traffic, with group sizes, for each feature.</li>
+    <li><b>TODO 5:</b> "the same weekday last week" two ways: 7 rows back, and 7 days back on the completed calendar. Count the rows where they differ.</li>
+    <li><b>TODO 6:</b> correlate each candidate with <code class="inline">visitors</code> and give a verdict: feature or leak.</li>
+  </ol>
+        <p><b>Done looks like:</b> 2,903 rows throughout; four temperature bands with no missing values; relative traffic rising from cold to hot days; a count of rows where the two lag columns disagree; a verdict for seven columns.</p>
+      </div>
+      <div class="blk"><div class="h">Predict, then run</div>
+        <p>Write your prediction on the line <b>before</b> you run the code. Being wrong here is useful: it shows you exactly which idea to revisit.</p>
+        <p><b>Predict 2.9.1</b> The same three values, binned twice. What does each line print?</p>
+<pre class="code">v = pd.Series([<span class="s">10</span>, <span class="s">20</span>, <span class="s">30</span>])
+edges, names = [<span class="s">0</span>, <span class="s">10</span>, <span class="s">20</span>, <span class="s">30</span>], [<span class="s">"a"</span>, <span class="s">"b"</span>, <span class="s">"c"</span>]
+print(pd.cut(v, bins=edges, labels=names).tolist())
+print(pd.cut(v, bins=edges, labels=names, right=<span class="k">False</span>).tolist())</pre>
+        <div class="write"></div>
+        <p><b>Predict 2.9.2</b> Three customers, one of whom never ordered. What are the two lists?</p>
+<pre class="code">people = pd.DataFrame({<span class="s">"id"</span>: [<span class="s">1</span>, <span class="s">2</span>, <span class="s">3</span>]})
+bought = pd.DataFrame({<span class="s">"id"</span>: [<span class="s">1</span>, <span class="s">1</span>, <span class="s">3</span>], <span class="s">"total"</span>: [<span class="s">10.0</span>, <span class="s">20.0</span>, <span class="s">7.0</span>]})
+per = bought.groupby(<span class="s">"id"</span>).agg(n=(<span class="s">"total"</span>, <span class="s">"count"</span>), avg=(<span class="s">"total"</span>, <span class="s">"mean"</span>))
+t = people.merge(per, on=<span class="s">"id"</span>, how=<span class="s">"left"</span>)
+t[<span class="s">"n"</span>] = t[<span class="s">"n"</span>].fillna(<span class="s">0</span>).astype(int)
+print(t[<span class="s">"n"</span>].tolist(), t[<span class="s">"avg"</span>].tolist())</pre>
+        <div class="write"></div>
+        <p><b>Predict 2.9.3</b> What are the column names, and what does each column add up to?</p>
+<pre class="code">d = pd.get_dummies(pd.Series([<span class="s">"web"</span>, <span class="s">"store"</span>, <span class="s">"web"</span>]), dtype=int)
+print(d.columns.tolist(), d.sum().tolist(), d.sum(axis=<span class="s">1</span>).tolist())</pre>
+        <div class="write"></div>
+      </div>
+      <div class="blk lab"><div class="h">Project start: The Customer Feature Table</div>
+        <p>Lesson 2.9's project builds the table that answers marketing's question: one row per customer, features describing everything known on July 1, 2025, and a target saying whether the customer ordered in the following six months. In class you do <b>Step 1</b> in a new notebook called <code class="inline">lesson_2_9_project</code>: choose the unit, the cutoff and the target.</p><p><b>You are done with Step 1 when</b> your output shows <code class="inline">4850 4474</code>, then <code class="inline">14497 5805</code>, then <code class="inline">2025-06-30 2025-07-01</code>.</p><p><b>At home:</b> Steps 2 to 6. Check numbers: <code class="inline">(4474, 19)</code> after Step 3 and a target rate of 0.569. In Step 5 you break the cutoff rule on purpose and measure what a leak does. Keep <code class="inline">customer_features.csv</code>.</p>
+      </div>
+      <div class="blk"><div class="h">Self-check (answers are with your instructor)</div>
+        <div class="q" data-sc="1"><div class="qn">Q1</div><div class="qt">Marketing asks which customers will order again, so one row of the feature table is a customer. Which of these is <b>not</b> a valid column for that table as it stands?</div><div class="opts"><div class="opt">A) Days from the customer's signup to the cutoff date</div><div class="opt">B) The <code class="inline">order_total</code> of each of the customer's orders</div><div class="opt">C) The number of orders the customer placed before the cutoff</div><div class="opt">D) The share of the customer's orders that were placed online</div></div></div>
+        <div class="q" data-sc="2" data-kind="short"><div class="qn">Q2</div><div class="qt">What does this print?</div><pre class="code">ages = pd.Series([<span class="s">18</span>, <span class="s">24</span>, <span class="s">25</span>, <span class="s">40</span>])
+bands = pd.cut(ages, bins=[<span class="s">17</span>, <span class="s">24</span>, <span class="s">34</span>, <span class="s">120</span>], labels=[<span class="s">"18-24"</span>, <span class="s">"25-34"</span>, <span class="s">"35+"</span>])
+print(bands.tolist())</pre><div class="write"></div></div>
+        <div class="q" data-sc="3"><div class="qn">Q3</div><div class="qt">What does this print?</div><pre class="code">x = pd.Series([<span class="s">0</span>, <span class="s">10</span>, <span class="s">20</span>, <span class="s">30</span>])
+print(pd.cut(x, bins=[<span class="s">0</span>, <span class="s">10</span>, <span class="s">20</span>]).isna().sum())</pre><div class="opts"><div class="opt">A) <code class="inline">0</code></div><div class="opt">B) <code class="inline">1</code></div><div class="opt">C) <code class="inline">2</code></div><div class="opt">D) <code class="inline">4</code></div></div></div>
+        <div class="q" data-sc="4"><div class="qn">Q4</div><div class="qt"><code class="inline">customers</code> has 4,850 rows. <code class="inline">per_customer</code>, built with <code class="inline">orders.groupby("customer_id").agg(...)</code>, has 3,942 rows. What does <code class="inline">customers.merge(per_customer, on="customer_id")</code> return with the default settings?</div><div class="opts"><div class="opt">A) 4,850 rows, with <code class="inline">NaN</code> for customers who never ordered</div><div class="opt">B) 3,942 rows, one for every customer id in the orders</div><div class="opt">C) 8,792 rows, every row of both tables</div><div class="opt">D) 3,792 rows: every customer who never ordered is gone</div></div></div>
+        <div class="q" data-sc="5"><div class="qn">Q5</div><div class="qt">A method needs numbers. You have <code class="inline">loyalty_tier</code> (Basic, Silver, Gold) and <code class="inline">acquisition_channel</code> (five values with no order). Which encoding is appropriate?</div><div class="opts"><div class="opt">A) Ordered integer codes for the tier; one yes/no column per channel with <code class="inline">pd.get_dummies</code></div><div class="opt">B) Integer codes 0 to 4 for the channel, in alphabetical order; one yes/no column per tier</div><div class="opt">C) Integer codes for both, because they take the least space</div><div class="opt">D) Standardize both columns to mean 0 and standard deviation 1</div></div></div>
+        <div class="q" data-sc="6"><div class="qn">Q6</div><div class="qt">You build features as of the cutoff 2025-07-01 to predict who orders in the following six months. A colleague's <code class="inline">n_orders</code> counts <b>all</b> of each customer's orders in the file. What happens?</div><div class="opts"><div class="opt">A) An error: pandas refuses to aggregate rows dated after the cutoff</div><div class="opt">B) Nothing important: more data makes a better feature</div><div class="opt">C) The feature looks more predictive than it is, because orders after the cutoff are in both the feature and the target</div><div class="opt">D) The feature becomes useless, because the extra rows add noise</div></div></div>
+      </div>
+      <div class="blk"><div class="h">My notes for this lesson</div>
+        <div class="notes-lines"></div>
+      </div>
+    </div>
+  </section>
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">3.1</span><h3>Line, Scatter and Bar Charts</h3><span class="dur">90 min solo</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Key ideas</div>
+        <ul class="tick">
+    <li><b>A chart is an answer to a question.</b> Decide the question first; the chart type follows.</li>
+    <li><b>Figure</b> = the whole canvas (it has a size, and it is what gets saved). <b>Axes</b> = one chart on it. Create both with <code class="inline">fig, ax = plt.subplots(figsize=(7, 3.5), layout="constrained")</code>.</li>
+    <li><b>One rule:</b> <code class="inline">plt</code> creates figures and shows them. Everything else is a method on <code class="inline">ax</code> or <code class="inline">fig</code>: <code class="inline">ax.plot</code>, <code class="inline">ax.set_title</code>, <code class="inline">ax.set_xlabel</code>, <code class="inline">ax.legend</code>, <code class="inline">fig.savefig</code>.</li>
+    <li><b>Most of a chart is made in pandas first.</b> Aggregate to the level the question needs, then plot.</li>
+    <li><b>Line</b> (<code class="inline">ax.plot</code>): change over time. One call per line; <code class="inline">label=</code> feeds <code class="inline">ax.legend()</code>.</li>
+    <li><b>Scatter</b> (<code class="inline">ax.scatter</code>): do two numbers move together? A small <code class="inline">s</code> and an <code class="inline">alpha</code> below 1 fix overplotting. It shows a pattern, not a cause.</li>
+    <li><b>Bar</b> (<code class="inline">ax.bar</code>, <code class="inline">ax.barh</code>): which group is bigger? <code class="inline">ax.bar</code> <b>never aggregates</b>: one number per bar, and you compute it. Bars start at zero.</li>
+    <li><b>Histogram</b> (<code class="inline">ax.hist</code>): what is typical, how spread out? It <b>always</b> counts: give it the raw rows. <code class="inline">bins</code> and <code class="inline">range</code> are your decisions; say what you left out.</li>
+  </ul>
+        <table class="timing"><thead><tr><th>Your question</th><th>Chart</th><th>Method</th><th>Prepare with</th></tr></thead><tbody><tr><td>How did it change over time?</td><td>Line</td><td><code class="inline">ax.plot(x, y)</code></td><td><code class="inline">resample</code> or group by a period</td></tr><tr><td>Do two numbers move together?</td><td>Scatter</td><td><code class="inline">ax.scatter(x, y, s=8, alpha=0.3)</code></td><td>Usually nothing: plot the rows</td></tr><tr><td>Which group is bigger?</td><td>Bar</td><td><code class="inline">ax.bar(names, values)</code> · <code class="inline">ax.barh</code></td><td><code class="inline">groupby</code> or <code class="inline">value_counts</code>, then sort</td></tr><tr><td>What is typical? How spread out?</td><td>Histogram</td><td><code class="inline">ax.hist(column, bins=40)</code></td><td>Nothing: it counts for you</td></tr><tr><td>You see <code class="inline">plt.title(...)</code></td><td></td><td><code class="inline">ax.set_title(...)</code></td><td></td></tr><tr><td>You see <code class="inline">plt.savefig(...)</code></td><td></td><td><code class="inline">fig.savefig(...)</code></td><td></td></tr></tbody></table>
+      </div>
+      <div class="blk"><div class="h">Worked example: how did the number of orders per month change, online and in stores?</div>
+        <p>The question is about change over time, so the answer is a line chart, and most of the work happens in pandas before any plotting. (The lesson charts store revenue; this example counts orders by channel.)</p>
+        <p>Aggregate first: one row per month, one column per channel, each cell a count of orders.</p>
+<pre class="code">orders = pd.read_csv(<span class="s">"data/orders.csv"</span>, parse_dates=[<span class="s">"order_date"</span>])
+orders[<span class="s">"month"</span>] = orders[<span class="s">"order_date"</span>].dt.to_period(<span class="s">"M"</span>).dt.to_timestamp()
+per_month = orders.pivot_table(index=<span class="s">"month"</span>, columns=<span class="s">"channel"</span>,
+                               values=<span class="s">"order_id"</span>, aggfunc=<span class="s">"count"</span>)
+print(per_month.iloc[[<span class="s">0</span>, -<span class="s">1</span>]])</pre>
+<pre class="out">channel     online  store
+month                    
+2024-01-01     409    204
+2025-12-01     769    376</pre>
+        <p>Then the five-line pattern, with one <code class="inline">ax.plot</code> call per column. A solid line and a dashed line, so the chart still works without color.</p>
+<pre class="code">fig, ax = plt.subplots(figsize=(<span class="s">8</span>, <span class="s">3.6</span>), layout=<span class="s">"constrained"</span>)
+ax.plot(per_month.index, per_month[<span class="s">"online"</span>], marker=<span class="s">"o"</span>, markersize=<span class="s">3</span>,
+        color=<span class="s">"#667eea"</span>, label=<span class="s">"Online"</span>)
+ax.plot(per_month.index, per_month[<span class="s">"store"</span>], marker=<span class="s">"s"</span>, markersize=<span class="s">3</span>,
+        color=<span class="s">"#d95f02"</span>, linestyle=<span class="s">"--"</span>, label=<span class="s">"Store (account holders)"</span>)
+ax.set_title(<span class="s">"Orders per month by channel"</span>)
+ax.set_ylabel(<span class="s">"Number of orders"</span>)
+ax.set_ylim(bottom=<span class="s">0</span>)
+ax.legend()
+plt.show()
+print(len(fig.axes), len(ax.lines))</pre>
+<pre class="out">1 2</pre>
+<figure class="fig"><img src="data:image/png;base64,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" alt="chart" style="max-width:520px;width:100%;height:auto;border:1px solid var(--line);border-radius:8px"><figcaption>The chart this code draws.</figcaption></figure>
+        <p>Both channels grow, and both spike in December. Online runs at about twice the store count throughout. The label on the store line matters: <code class="inline">orders.csv</code> holds store orders by signed-in account holders only, and a chart should say what it is counting.</p>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab</div>
+        <p>Two labs practice this lesson on questions the lesson did not ask. Do Lab 3.1-A in class. Lab 3.1-B is for early finishers and for homework. Chart labs save PNG files to an <code class="inline">output/</code> folder next to the lab file and never call <code class="inline">plt.show()</code>.</p>
+        <p><b>Lab 3.1-A · Four questions, four charts</b> (25 minutes, in class): open <code class="inline">labs/module-08/l3_1-line-scatter-bar/four_questions_starter.py</code>. Four questions about Pinecrest's customers and products. For each one, decide the chart type from the question before you read the TODO, draw it with a title and labeled axes, and save it.</p>
+        <ol class="steps lab">
+    <li><b>Question 1:</b> how did the number of new accounts change from year to year? Save <code class="inline">q1_signups.png</code>.</li>
+    <li><b>Question 2:</b> which acquisition channel brought in the most customers? Save <code class="inline">q2_channels.png</code>.</li>
+    <li><b>Question 3:</b> do heavier products cost more? Save <code class="inline">q3_weight_price.png</code> and print the correlation.</li>
+    <li><b>Question 4:</b> what does a typical product cost, and how spread out are the prices? Save <code class="inline">q4_prices.png</code>.</li>
+  </ol>
+        <p><b>Done looks like:</b> four PNG files in <code class="inline">output/</code>; a line with 7 points; 5 horizontal bars with the longest on top; a scatter of the products that have a weight; a histogram with a dashed line at the median price.</p>
+        <p><b>Lab 3.1-B · Chart repair</b> (20 minutes, early finishers or homework): open <code class="inline">labs/module-08/l3_1-line-scatter-bar/chart_repair_starter.py</code>. The starter runs with no error and draws three charts that are wrong. For each, read the printed clue, say what the chart is really showing, fix the cause and save the fixed chart.</p>
+        <ol class="steps lab">
+    <li><b>Chart 1:</b> December 2025 revenue by payment method. 1,145 bars were drawn for 4 methods. Save <code class="inline">fixed_1_payment.png</code>.</li>
+    <li><b>Chart 2:</b> Flagstaff visitors in late January 2025. 17 rows for 19 days. Save <code class="inline">fixed_2_visitors.png</code>.</li>
+    <li><b>Chart 3:</b> Boise's daily high temperature. 731 tick labels. Save <code class="inline">fixed_3_temperature.png</code>.</li>
+  </ol>
+        <p><b>Done looks like:</b> 4 sorted bars showing totals; a line that breaks on January 21 and 22; a handful of date ticks.</p>
+      </div>
+      <div class="blk"><div class="h">Predict, then run</div>
+        <p>Write your prediction on the line <b>before</b> you run the code. Being wrong here is useful: it shows you exactly which idea to revisit.</p>
+        <p><b>Predict 3.1.1</b> One figure, a loop that plots three columns. What are the two numbers?</p>
+<pre class="code">t = pd.DataFrame({<span class="s">"a"</span>: [<span class="s">1</span>, <span class="s">2</span>], <span class="s">"b"</span>: [<span class="s">2</span>, <span class="s">1</span>], <span class="s">"c"</span>: [<span class="s">3</span>, <span class="s">3</span>]})
+fig, ax = plt.subplots()
+<span class="k">for</span> col <span class="k">in</span> t.columns:
+    ax.plot(t.index, t[col], label=col)
+print(len(fig.axes), len(ax.lines))
+plt.close(fig)</pre>
+        <div class="write"></div>
+        <p><b>Predict 3.1.2</b> No error. How many bars, and how tall is the tallest thing you can see?</p>
+<pre class="code">fig, ax = plt.subplots()
+bars = ax.bar([<span class="s">"x"</span>, <span class="s">"y"</span>, <span class="s">"x"</span>], [<span class="s">5</span>, <span class="s">2</span>, <span class="s">9</span>])
+print(len(bars), max(bar.get_height() <span class="k">for</span> bar <span class="k">in</span> bars))
+plt.close(fig)</pre>
+        <div class="write"></div>
+        <p><b>Predict 3.1.3</b> Three dates given as text, out of order. Where does Matplotlib put them on the x axis?</p>
+<pre class="code">fig, ax = plt.subplots()
+ax.plot([<span class="s">"2025-01-03"</span>, <span class="s">"2025-01-01"</span>, <span class="s">"2025-01-02"</span>], [<span class="s">3</span>, <span class="s">1</span>, <span class="s">2</span>])
+print(list(ax.get_xticks()))
+plt.close(fig)</pre>
+        <div class="write"></div>
+      </div>
+      <div class="blk lab"><div class="h">Project start: Does Rain Keep Shoppers Away?</div>
+        <p>Lesson 3.1's project answers one question with all four chart types. Store managers believe rainy days are slow days; you have door-counter data and a weather file for every store city. In class you do <b>Step 1</b> in a new notebook called <code class="inline">lesson_3_1_project</code>: merge the two files and add a <code class="inline">rainy</code> column.</p><p><b>You are done with Step 1 when</b> your output shows <code class="inline">(2903, 13)</code> and a rainy share of 0.134.</p><p><b>At home:</b> Steps 2 to 6: a line with the rainy days marked, a scatter, two histograms on one Axes, grouped bars for every store, and a written finding. Check: a rainy-day drop at all four stores, between -17.6% and -26.3%. Your finding must include one thing the charts do <b>not</b> prove.</p>
+      </div>
+      <div class="blk"><div class="h">Self-check (answers are with your instructor)</div>
+        <div class="q" data-sc="7"><div class="qn">Q7</div><div class="qt">Question: "Do products with more reviews tend to have higher ratings?" Which chart answers it?</div><div class="opts"><div class="opt">A) A line chart of rating against review count</div><div class="opt">B) A scatter plot: one dot per product, review count against rating</div><div class="opt">C) A bar chart with one bar per product</div><div class="opt">D) A histogram of the ratings</div></div></div>
+        <div class="q" data-sc="8" data-kind="short"><div class="qn">Q8</div><div class="qt">What does this print?</div><pre class="code">fig, ax = plt.subplots()
+bars = ax.bar([<span class="s">"a"</span>, <span class="s">"b"</span>, <span class="s">"a"</span>, <span class="s">"b"</span>, <span class="s">"a"</span>], [<span class="s">1</span>, <span class="s">5</span>, <span class="s">3</span>, <span class="s">2</span>, <span class="s">2</span>])
+print(len(bars), len(fig.axes))
+plt.close(fig)</pre><div class="write"></div></div>
+        <div class="q" data-sc="9"><div class="qn">Q9</div><div class="qt">A tutorial writes <code class="inline">plt.title("Revenue")</code>. You are holding the chart in a variable <code class="inline">ax</code>. What do you write?</div><div class="opts"><div class="opt">A) <code class="inline">ax.set_title("Revenue")</code></div><div class="opt">B) <code class="inline">ax.title("Revenue")</code></div><div class="opt">C) <code class="inline">fig.set_title("Revenue")</code></div><div class="opt">D) <code class="inline">ax.title = "Revenue"</code></div></div></div>
+        <div class="q" data-sc="10"><div class="qn">Q10</div><div class="qt">A histogram of 20,302 order totals with <code class="inline">bins=40</code> shows almost everything in three bars, on an axis that runs to $5,000. What is the best fix?</div><div class="opts"><div class="opt">A) <code class="inline">bins=400</code>, so that the bars are narrower</div><div class="opt">B) Delete the large orders from the DataFrame before plotting</div><div class="opt">C) <code class="inline">range=(0, 1000)</code>, and say in the title how many orders are not shown</div><div class="opt">D) Switch to a bar chart with one bar per order</div></div></div>
+        <div class="q" data-sc="11" data-kind="short"><div class="qn">Q11</div><div class="qt">What does this print?</div><pre class="code">fig, ax = plt.subplots()
+counts, edges, patches = ax.hist([<span class="s">1</span>, <span class="s">2</span>, <span class="s">2</span>, <span class="s">3</span>, <span class="s">3</span>, <span class="s">3</span>, <span class="s">9</span>], bins=<span class="s">4</span>, range=(<span class="s">0</span>, <span class="s">8</span>))
+print(counts.tolist(), len(edges))
+plt.close(fig)</pre><div class="write"></div></div>
+        <div class="q" data-sc="12"><div class="qn">Q12</div><div class="qt">A scatter plot of 2,903 store-days shows a solid blob in the lower left: you cannot tell 5 overlapping dots from 500. Which change fixes it?</div><div class="opts"><div class="opt">A) A larger <code class="inline">figsize</code></div><div class="opt">B) <code class="inline">linewidth=0.8</code> and <code class="inline">linestyle="--"</code></div><div class="opt">C) <code class="inline">bins=40</code> and <code class="inline">range=(0, 1000)</code></div><div class="opt">D) A smaller <code class="inline">s</code> and an <code class="inline">alpha</code> below 1</div></div></div>
+      </div>
+      <div class="blk"><div class="h">My notes for this lesson</div>
+        <div class="notes-lines"></div>
+      </div>
+    </div>
+  </section>
+  <div class="sec"><h2>Exit Ticket</h2><span class="rule"></span></div>
+  <p>Answer on a sticky note or a scrap of paper, and hand it in on the way out.</p>
+  <ol class="steps">
+    <li>Before you build any feature, what is the first thing you decide?</li>
+    <li>State the cutoff rule in one sentence.</li>
+    <li>Name the chart for each question: (a) how did it change over time, (b) do two numbers move together, (c) which group is bigger, (d) what values are typical and how spread out are they?</li>
+  </ol>
+  <div class="sec"><h2>Homework Checklist</h2><span class="rule"></span></div>
+  <ul class="tick lab">
+    <li>☐ Finish the Lesson 2.9 project, <b>The Customer Feature Table</b> (Steps 2 to 6). Check: <code class="inline">(4474, 19)</code> after Step 3, a target rate of 0.569, and <code class="inline">customer_features.csv</code> with 20 columns.</li>
+    <li>☐ Finish the Lesson 3.1 project, <b>Does Rain Keep Shoppers Away?</b> (Steps 2 to 6). Check: a rainy-day drop at all four stores, between -17.6% and -26.3%, and a written finding that says one thing the charts do not prove.</li>
+    <li>☐ Lesson 2.9: Exercises 1 to 3 (Exercise 4 is a stretch), the Quick Quiz and the journal prompt. Read <b>Scaling by Hand</b>: it was only mentioned in the room.</li>
+    <li>☐ Lesson 3.1: Exercises 1 to 3 (Exercise 4 is a stretch), the Quick Quiz and the journal prompt. Read <b>What a Line Does with Missing Days</b> and <b>Points with a Range</b>.</li>
+    <li>☐ Kit labs not reached in the room: <code class="inline">labs/module-08/l2_9-feature-engineering/store_day_features_starter.py</code> and <code class="inline">labs/module-08/l3_1-line-scatter-bar/chart_repair_starter.py</code> (about 20 minutes each).</li>
+    <li>☐ From Lesson 3.1, "Before the Next Lesson": find one pyplot-style example (<code class="inline">plt.plot</code>, <code class="inline">plt.title</code>) and rewrite it with <code class="inline">fig, ax = plt.subplots()</code>.</li>
+  </ul>
+  <div class="note lab"><div class="t">Bring to Session 9</div><p>Your Lesson 3.1 notebook (Lesson 3.2 uses its <code class="inline">daily</code> and <code class="inline">monthly</code> tables again) and the pyplot-style example you rewrote. Nothing new to install.</p></div>
+  <div class="sec"><h2>Glossary</h2><span class="rule"></span></div>
+  <table class="timing"><thead><tr><th>Term</th><th>Meaning</th></tr></thead><tbody><tr><td class="t">Feature</td><td>A column you build so that a pattern becomes visible: orders so far, days since last order, share bought online.</td></tr><tr><td>Unit of analysis</td><td>What one row of a table represents. The question decides it: a customer, an order, a store-day.</td></tr><tr><td>Derived column</td><td>A column computed from other columns in the same row: a flag, a difference, a ratio, a choice.</td></tr><tr><td>Reference date</td><td>A fixed date, written down, from which elapsed time is measured. Never today's date.</td></tr><tr><td class="t">Binning</td><td>Turning a number into a group. <code class="inline">pd.cut</code>: you choose the edges. <code class="inline">pd.qcut</code>: equal-sized groups from the data.</td></tr><tr><td class="t">Categorical</td><td>A column that can hold only values from a fixed list. Ordered categoricals sort and compare correctly.</td></tr><tr><td>Ordinal / nominal</td><td>A category with a meaningful order (tiers, age bands) / one without (store, channel).</td></tr><tr><td>One-hot encoding</td><td>One yes/no column per category, made with <code class="inline">pd.get_dummies</code>. For nominal categories.</td></tr><tr><td class="t">Scaling</td><td>Putting numeric columns on a common footing: min-max (0 to 1), z-score (mean 0, std 1), <code class="inline">np.log1p</code> for skew.</td></tr><tr><td class="t">Cutoff date</td><td>The date you pretend to stand on. Features come from before it; the target comes from after it.</td></tr><tr><td class="t">Leakage</td><td>A feature that uses information not available on the cutoff date. No error; results that are too good.</td></tr><tr><td class="t">Figure</td><td>The whole picture: the sheet of paper. It has a size and it is what gets saved.</td></tr><tr><td class="t">Axes</td><td>One chart on a Figure, with its own x axis, y axis, title and data. Not the plural of axis.</td></tr><tr><td class="t">Overplotting</td><td>So many dots on top of each other that density is invisible. Fix with a small <code class="inline">s</code> and <code class="inline">alpha</code>.</td></tr><tr><td>Bin (histogram)</td><td>One of the equal intervals a histogram cuts the range into; the bar shows how many rows fall in it.</td></tr><tr><td>Object-oriented interface</td><td>Drawing with methods on <code class="inline">ax</code> and <code class="inline">fig</code>. <code class="inline">plt</code> is used only to create and show figures.</td></tr></tbody></table>
+
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 8 · Participant Workbook · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

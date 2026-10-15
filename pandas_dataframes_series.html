@@ -1,680 +1,1543 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Build, inspect, select from, filter, extend and sort pandas Series and DataFrames, and understand copy-on-write. Python Data Science Lesson 2.1.">
+    <meta name="author" content="Ray de la Paz">
     <title>DataFrames and Series - Python Data Science</title>
-    <link href="styles/main.css" rel="stylesheet"/>
-    <link href="/styles/enhanced.css" rel="stylesheet"/>
-    <link href="/favicon.png" rel="icon" type="image/png"/>
-    <script type="module">
-        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({ startOnLoad: true });
-    </script>
-    <style>
-        .breadcrumb {
-            background: #f8f9fa;
-            padding: 1rem;
-            border-radius: 5px;
-            margin-bottom: 2rem;
-            font-size: 0.9rem;
-        }
-        
-        .breadcrumb a {
-            color: #667eea;
-            text-decoration: none;
-        }
-        
-        .breadcrumb a:hover {
-            text-decoration: underline;
-        }
-        
-        .navigation-links {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 2rem 0;
-            margin-top: 3rem;
-            border-top: 2px solid #e0e0e0;
-        }
-        
-        .navigation-links a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 500;
-            padding: 0.5rem 1rem;
-            border-radius: 5px;
-            transition: all 0.3s ease;
-        }
-        
-        .navigation-links a:hover {
-            background: #f0f0f0;
-        }
-        
-        .nav-prev, .nav-next {
-            flex: 1;
-        }
-        
-        .nav-next {
-            text-align: right;
-        }
-        
-        .nav-home {
-            text-align: center;
-        }
-        
-        canvas {
-            display: block;
-            margin: 20px auto;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background: white;
-        }
-        
-        .dataframe-visual {
-            margin: 20px auto;
-            max-width: 100%;
-            overflow-x: auto;
-        }
-        
-        .dataframe-visual table {
-            border-collapse: collapse;
-            width: 100%;
-            margin: 0 auto;
-        }
-        
-        .dataframe-visual th {
-            background: #667eea;
-            color: white;
-            padding: 10px;
-            border: 1px solid #ddd;
-            text-align: left;
-        }
-        
-        .dataframe-visual td {
-            padding: 8px;
-            border: 1px solid #ddd;
-            background: white;
-        }
-        
-        .dataframe-visual tr:hover {
-            background: #f0f9ff;
-        }
-        
-        .series-visual {
-            display: inline-block;
-            margin: 10px;
-            padding: 15px;
-            background: #f9f9f9;
-            border: 2px solid #4ecdc4;
-            border-radius: 8px;
-        }
-        
-        .concept-comparison {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin: 20px 0;
-        }
-        
-        .concept-box {
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        .dataframe-box {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        
-        .series-box {
-            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
-            color: white;
-        }
-        
-        .concept-box h3 {
-            margin: 0 0 10px 0;
-            background: none;
-            color: white;
-            padding: 0;
-        }
-        
-        .indexing-demo {
-            background: #f0f9ff;
-            border: 2px solid #0284c7;
-            padding: 20px;
-            border-radius: 10px;
-            margin: 20px 0;
-        }
-        
-        .operation-flow {
-            display: flex;
-            align-items: center;
-            justify-content: space-around;
-            margin: 20px 0;
-            flex-wrap: wrap;
-        }
-        
-        .operation-step {
-            padding: 15px;
-            background: white;
-            border: 2px solid #667eea;
-            border-radius: 8px;
-            margin: 10px;
-            text-align: center;
-        }
-        
-        .arrow-right {
-            font-size: 24px;
-            color: #667eea;
-            margin: 0 10px;
-        }
-        
-        .tip-box {
-            background: #fef3c7;
-            border-left: 4px solid #f59e0b;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 0 8px 8px 0;
-        }
-        
-        .warning-box {
-            background: #fee2e2;
-            border-left: 4px solid #ef4444;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 0 8px 8px 0;
-        }
-    </style>
-    <script src="/js/course-enhancements.js" defer></script>
-    <script src="/js/clipboard.js" defer></script>
-    <link rel="stylesheet" href="styles/standard.css">
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/png" href="favicon.png">
 </head>
 <body>
-    <!-- Skip to main content for accessibility -->
     <a href="#main-content" class="skip-to-main">Skip to main content</a>
-    
-    <!-- Progress indicator -->
+
     <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
         <div class="progress-bar"></div>
     </div>
-    <nav class="breadcrumb">
-        <a href="index.html">Home</a> &gt; 
-        <a href="index.html#foundation">Foundation Module</a> &gt; 
-        <a href="index.html#pandas-essentials">Pandas Essentials</a> &gt;
-        <span>DataFrames and Series</span>
+
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">📊 Python Data Science</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">☰</button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
     </nav>
 
-
     <main id="main-content">
-    <h1>📊 DataFrames and Series: Your Data's Best Friends</h1>
+        <div class="container">
+            <header>
+                <h1>🐼 Lesson 2.1: DataFrames and Series</h1>
+                <p class="lead">Meet the two objects you will use in every remaining lesson of this course: the labeled column and the labeled table.</p>
 
-    <!-- What You'll Learn (learning objectives) -->
-    <div class="card card-info">
-        <h2>📚 What You'll Learn</h2>
-        <p>By the end of this lesson, you will be able to:</p>
-        <ul>
-            <li>Explain the difference between a Series (1D labeled array) and a DataFrame (2D labeled table)</li>
-            <li>Create Series and DataFrames from lists, dictionaries, and NumPy arrays</li>
-            <li>Inspect structure with <code>shape</code>, <code>index</code>, <code>columns</code>, <code>dtypes</code>, and <code>memory_usage()</code></li>
-            <li>Select, add, and drop columns, and filter and sort rows by condition</li>
-            <li>Apply vectorized and statistical operations such as <code>sum</code>, <code>mean</code>, <code>describe</code>, <code>value_counts</code>, and rolling windows</li>
-            <li>Use the <code>.str</code> accessor for text and a datetime index for time-series data</li>
-        </ul>
-        <p><strong>⏱️ Estimated Time:</strong> 45–60 minutes</p>
-        <p><strong>🎯 Project:</strong> Build a small sales DataFrame, add a computed revenue column, then filter high-sales rows and rank products by revenue.</p>
-    </div>
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Describe a Series as a labeled array and a DataFrame as a set of Series that share one index</li>
+                        <li>Inspect any table with <code>shape</code>, <code>head()</code>, <code>info()</code>, <code>dtypes</code> and <code>describe()</code>, and read the dtypes pandas reports</li>
+                        <li>Select columns with <code>[]</code>, rows and cells by label with <code>.loc</code> and by position with <code>.iloc</code>, and filter rows with boolean masks</li>
+                        <li>Add and change columns in a way that works under copy-on-write, and explain why chained assignment never does</li>
+                        <li>Sort a table and count the values in a column with <code>sort_values()</code> and <code>value_counts()</code></li>
+                    </ul>
+                </div>
 
-    <p>Imagine you're managing a bustling restaurant. You need to track orders (Series: what each table ordered) and manage your entire operation (DataFrame: all tables, orders, times, and payments). That's Pandas! 🍽️ It's like Excel on steroids, giving you the power to manipulate, analyze, and understand data with the elegance of Python. If NumPy is the engine, Pandas is the luxury car built on top of it.</p>
+                <ul class="lesson-meta">
+                    <li><span class="meta-label">⏱️ Time</span> 90 minutes</li>
+                    <li><span class="meta-label">📋 Prerequisites</span> <a href="numpy_arrays_vs_lists.html">Lesson 1.1: Arrays vs Lists</a> and <a href="numpy_vectorized_operations.html">Lesson 1.2: Vectorized Operations</a> (dtypes, whole-array arithmetic, boolean masks)</li>
+                    <li><span class="meta-label">🛠️ You will build</span> A catalog health check for Pinecrest's 242 products</li>
+                    <li><span class="meta-label">📂 Data</span> <code>data/products.csv</code>, <code>data/customers.csv</code>, <code>data/orders.csv</code></li>
+                </ul>
+            </header>
 
-    <h2>The Pandas Universe: Where Data Comes to Life 🌟</h2>
-    
-    <p>Pandas transforms raw data into insights. It's the bridge between messy real-world data and clean analysis. Series handle one-dimensional data (like a single column), while DataFrames manage two-dimensional data (like a spreadsheet). Together, they're the dynamic duo of data analysis!</p>
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#why" class="toc-link">From Arrays to Tables</a></li>
+                        <li><a href="#series" class="toc-link">The Series: An Array with Labels</a></li>
+                        <li><a href="#dataframe" class="toc-link">The DataFrame</a></li>
+                        <li><a href="#inspect" class="toc-link">Inspecting a Table</a></li>
+                        <li><a href="#index" class="toc-link">The Index</a></li>
+                        <li><a href="#selecting" class="toc-link">Selecting: [], .loc and .iloc</a></li>
+                        <li><a href="#filtering" class="toc-link">Filtering Rows</a></li>
+                        <li><a href="#columns" class="toc-link">Adding and Changing Columns</a></li>
+                        <li><a href="#cow" class="toc-link">Copy-on-Write</a></li>
+                        <li><a href="#sorting" class="toc-link">Sorting and Counting</a></li>
+                        <li><a href="#mistakes" class="toc-link">Common Mistakes</a></li>
+                        <li><a href="#project" class="toc-link">Project: Catalog Health Check</a></li>
+                        <li><a href="#exercises" class="toc-link">Hands-on Exercises</a></li>
+                        <li><a href="#quiz" class="toc-link">Quick Quiz</a></li>
+                        <li><a href="#faq" class="toc-link">Common Questions</a></li>
+                        <li><a href="#journal" class="toc-link">Learning Journal</a></li>
+                        <li><a href="#summary" class="toc-link">Lesson Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
 
-    <div class="mermaid">
-    graph TB
-        A[Pandas Data Structures] --> B[Series]
-        A --> C[DataFrame]
-        
-        B --> D[1D Labeled Array]
-        B --> E[Like a Column]
-        B --> F[Index + Values]
-        
-        C --> G[2D Labeled Table]
-        C --> H[Like a Spreadsheet]
-        C --> I[Rows + Columns]
-        
-        D --> J[Time Series]
-        E --> K[Single Variable]
-        F --> L[Fast Lookups]
-        
-        G --> M[Datasets]
-        H --> N[SQL Tables]
-        I --> O[Multi-Variable Analysis]
-        
-        style A fill:#667eea
-        style B fill:#4ecdc4
-        style C fill:#ffd93d
-    </div>
+            <!-- ============================================================ -->
+            <section id="why" class="lesson-section">
+                <h2>🧭 From Arrays to Tables</h2>
 
-    <h3>The Spreadsheet Evolution 📈</h3>
-    
-    <p>Think of Excel as a bicycle and Pandas as a sports car. Both get you there, but Pandas does it with style, speed, and the ability to handle millions of rows without breaking a sweat. <strong>Series</strong> is like a single column with superpowers, while <strong>DataFrame</strong> is your entire spreadsheet on steroids!</p>
+                <p>In Module 1 you worked with NumPy arrays: fast blocks of numbers of one type. They have two limits that real business data runs into immediately. An array holds <em>one</em> type, but a product has a name (text), a price (a decimal), a review count (a whole number) and a launch date. And an array knows its values only by position: position 5 means nothing until you remember what you put there.</p>
 
-    <canvas id="pandasCanvas" width="800" height="400"></canvas>
-    <script>
-        const canvas = document.getElementById('pandasCanvas');
-        const ctx = canvas.getContext('2d');
-        
-        let animFrame = 0;
-        
-        function drawPandasVisualization() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Title
-            ctx.fillStyle = '#333';
-            ctx.font = 'bold 16px Arial';
-            ctx.fillText('Series vs DataFrame Visualization', 250, 30);
-            
-            // Series visualization (left)
-            ctx.fillStyle = '#4ecdc4';
-            ctx.font = '14px Arial';
-            ctx.fillText('Series (1D)', 150, 70);
-            
-            // Draw Series structure
-            let seriesData = ['Apple', 'Banana', 'Cherry', 'Date', 'Elderberry'];
-            let seriesValues = [120, 85, 95, 110, 75];
-            
-            for(let i = 0; i < 5; i++) {
-                // Index
-                ctx.fillStyle = '#667eea';
-                ctx.fillRect(100, 90 + i*40, 40, 30);
-                ctx.fillStyle = 'white';
-                ctx.font = '12px Arial';
-                ctx.fillText(String(i), 115, 108 + i*40);
-                
-                // Value
-                ctx.fillStyle = '#4ecdc4';
-                ctx.fillRect(145, 90 + i*40, 100, 30);
-                ctx.fillStyle = 'white';
-                ctx.fillText(seriesData[i], 155, 108 + i*40);
-                
-                // Animated bar
-                let barWidth = (seriesValues[i] / 120) * 80 * (Math.min(animFrame, 60) / 60);
-                ctx.fillStyle = 'rgba(255, 217, 61, 0.7)';
-                ctx.fillRect(250, 90 + i*40, barWidth, 30);
-            }
-            
-            // DataFrame visualization (right)
-            ctx.fillStyle = '#ffd93d';
-            ctx.font = '14px Arial';
-            ctx.fillText('DataFrame (2D)', 500, 70);
-            
-            // Draw DataFrame structure
-            let columns = ['Product', 'Price', 'Stock'];
-            let data = [
-                ['Apple', '1.20', '50'],
-                ['Banana', '0.85', '120'],
-                ['Cherry', '2.50', '30'],
-                ['Date', '3.00', '45']
-            ];
-            
-            // Column headers
-            for(let j = 0; j < 3; j++) {
-                ctx.fillStyle = '#667eea';
-                ctx.fillRect(420 + j*90, 90, 85, 30);
-                ctx.fillStyle = 'white';
-                ctx.font = '12px Arial';
-                ctx.fillText(columns[j], 430 + j*90, 108);
-            }
-            
-            // Data cells
-            for(let i = 0; i < 4; i++) {
-                // Index
-                ctx.fillStyle = '#667eea';
-                ctx.fillRect(375, 125 + i*35, 40, 30);
-                ctx.fillStyle = 'white';
-                ctx.fillText(String(i), 390, 143 + i*35);
-                
-                for(let j = 0; j < 3; j++) {
-                    // Animate cell appearance
-                    let alpha = Math.min(animFrame - (i * 10 + j * 5), 60) / 60;
-                    ctx.fillStyle = `rgba(255, 217, 61, ${alpha})`;
-                    ctx.fillRect(420 + j*90, 125 + i*35, 85, 30);
-                    
-                    if(alpha > 0.5) {
-                        ctx.fillStyle = '#333';
-                        ctx.font = '11px Arial';
-                        ctx.fillText(data[i][j], 430 + j*90, 143 + i*35);
-                    }
-                }
-            }
-            
-            // Labels
-            ctx.fillStyle = '#666';
-            ctx.font = '12px Arial';
-            ctx.fillText('Index', 50, 105);
-            ctx.fillText('Values', 170, 105);
-            ctx.fillText('Index', 375, 105);
-            
-            animFrame = (animFrame + 1) % 120;
-        }
-        
-        function animate() {
-            drawPandasVisualization();
-            requestAnimationFrame(animate);
-        }
-        
-        animate();
-    </script>
+                <p><strong>pandas</strong> removes both limits. It gives every value a <strong>label</strong>, and it lets columns of different types sit side by side in one table. Underneath, each column is still an array, so everything you learned about dtypes and whole-array arithmetic still applies. You are adding names to the race cars, not giving them up.</p>
 
-    <pre><code>import pandas as pd
-import numpy as np
+                <div class="card card-info">
+                    <h4>💡 Mental Model: The Labeled Shelf</h4>
+                    <p>Picture the stockroom at a Pinecrest store. A <strong>Series</strong> is one shelf of bins, and every bin has a label on the front: you can ask for "the bin labeled TNT-1002" instead of "the second bin from the left". A <strong>DataFrame</strong> is a whole shelving unit: several shelves (columns) lined up so that the same label runs across all of them. Pull the label TNT-1002 and you get that product's name, price and rating together.</p>
+                </div>
 
-# Welcome to Pandas: Your Data Analysis Powerhouse! 🚀
+                <div class="diagram">
+                    <svg viewBox="0 0 440 250" width="440" height="250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Anatomy of a DataFrame: an index of row labels down the left side, column names across the top, and three columns of values. Each column is a Series with its own dtype, and all columns share the same index.">
+                        <text x="10" y="18" class="svg-text" font-size="14" font-weight="bold">A DataFrame: Series that share one index</text>
+                        <text x="150" y="46" class="svg-muted" font-size="12">columns (the column names)</text>
+                        <rect x="110" y="54" width="130" height="28" class="svg-box-2"/>
+                        <rect x="240" y="54" width="90" height="28" class="svg-box-2"/>
+                        <rect x="330" y="54" width="90" height="28" class="svg-box-2"/>
+                        <text x="175" y="73" text-anchor="middle" class="svg-text svg-mono" font-size="12">category</text>
+                        <text x="285" y="73" text-anchor="middle" class="svg-text svg-mono" font-size="12">price</text>
+                        <text x="375" y="73" text-anchor="middle" class="svg-text svg-mono" font-size="12">reviews</text>
 
-def series_fundamentals():
-    """
-    Series: The building block of Pandas.
-    Think of it as a supercharged list with an index!
-    """
-    print("🔷 Pandas Series Fundamentals")
-    print("=" * 60)
-    
-    # Creating Series - Multiple Ways
-    print("Creating Series:")
-    
-    # From list
-    fruits = pd.Series(['apple', 'banana', 'cherry', 'date'])
-    print(f"\n1. From list:\n{fruits}")
-    
-    # From dictionary
-    sales = pd.Series({
-        'Monday': 120,
-        'Tuesday': 135,
-        'Wednesday': 155,
-        'Thursday': 142,
-        'Friday': 198
-    })
-    print(f"\n2. From dictionary:\n{sales}")
-    
-    # From NumPy array with custom index
-    temperatures = pd.Series(
-        np.random.normal(20, 5, 7),
-        index=['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-    )
-    print(f"\n3. From NumPy array:\n{temperatures.round(1)}")
-    
-    # Series attributes
-    print("\n📊 Series Attributes:")
-    print(f"  Values: {sales.values}")
-    print(f"  Index: {sales.index.tolist()}")
-    print(f"  Shape: {sales.shape}")
-    print(f"  Size: {sales.size}")
-    print(f"  Data type: {sales.dtype}")
-    
-    # Basic operations
-    print("\n🔧 Basic Operations:")
-    print(f"  Sum: {sales.sum()}")
-    print(f"  Mean: {sales.mean():.2f}")
-    print(f"  Max: {sales.max()}")
-    print(f"  Best day: {sales.idxmax()}")
-    
-    # Indexing and slicing
-    print("\n🎯 Indexing and Slicing:")
-    print(f"  sales['Monday']: {sales['Monday']}")
-    print(f"  sales[0]: {sales.iloc[0]}")  # Position-based
-    print(f"  sales['Tuesday':'Thursday']:\n{sales['Tuesday':'Thursday']}")
-    
-    # Vectorized operations (like NumPy!)
-    print("\n⚡ Vectorized Operations:")
-    sales_doubled = sales * 2
-    print(f"  Sales doubled:\n{sales_doubled}")
-    
-    above_150 = sales[sales > 150]
-    print(f"  Days with sales > 150:\n{above_150}")
+                        <rect x="10" y="82" width="100" height="28" class="svg-box-3"/>
+                        <rect x="10" y="110" width="100" height="28" class="svg-box-3"/>
+                        <rect x="10" y="138" width="100" height="28" class="svg-box-3"/>
+                        <text x="60" y="101" text-anchor="middle" class="svg-text svg-mono" font-size="12">TNT-1001</text>
+                        <text x="60" y="129" text-anchor="middle" class="svg-text svg-mono" font-size="12">TNT-1002</text>
+                        <text x="60" y="157" text-anchor="middle" class="svg-text svg-mono" font-size="12">SLP-1001</text>
 
-def dataframe_fundamentals():
-    """
-    DataFrame: The star of the show!
-    Your spreadsheet, database table, and more - all in one.
-    """
-    print("\n🔶 DataFrame Fundamentals")
-    print("=" * 60)
-    
-    # Creating DataFrames - Multiple Ways
-    print("Creating DataFrames:")
-    
-    # From dictionary
-    data = {
-        'Product': ['Laptop', 'Mouse', 'Keyboard', 'Monitor', 'Headphones'],
-        'Price': [999.99, 29.99, 79.99, 299.99, 149.99],
-        'Stock': [25, 150, 85, 40, 60],
-        'Category': ['Electronics', 'Accessories', 'Accessories', 'Electronics', 'Audio']
-    }
-    
-    df = pd.DataFrame(data)
-    print(f"\n1. From dictionary:\n{df}")
-    
-    # From list of dictionaries
-    records = [
-        {'name': 'Alice', 'age': 28, 'city': 'NYC'},
-        {'name': 'Bob', 'age': 35, 'city': 'LA'},
-        {'name': 'Charlie', 'age': 42, 'city': 'Chicago'}
-    ]
-    
-    df_records = pd.DataFrame(records)
-    print(f"\n2. From list of dicts:\n{df_records}")
-    
-    # From NumPy array
-    random_data = np.random.randn(4, 3)
-    df_numpy = pd.DataFrame(
-        random_data,
-        columns=['A', 'B', 'C'],
-        index=['row1', 'row2', 'row3', 'row4']
-    )
-    print(f"\n3. From NumPy array:\n{df_numpy.round(2)}")
-    
-    # DataFrame info
-    print("\n📈 DataFrame Information:")
-    print(f"Shape: {df.shape}")
-    print(f"Columns: {df.columns.tolist()}")
-    print(f"Index: {df.index.tolist()}")
-    print(f"\nData types:")
-    print(df.dtypes)
-    print(f"\nMemory usage:")
-    print(df.memory_usage())
+                        <rect x="110" y="82" width="130" height="28" class="svg-box"/>
+                        <rect x="110" y="110" width="130" height="28" class="svg-box"/>
+                        <rect x="110" y="138" width="130" height="28" class="svg-box"/>
+                        <rect x="240" y="82" width="90" height="28" class="svg-box-1"/>
+                        <rect x="240" y="110" width="90" height="28" class="svg-box-1"/>
+                        <rect x="240" y="138" width="90" height="28" class="svg-box-1"/>
+                        <rect x="330" y="82" width="90" height="28" class="svg-box"/>
+                        <rect x="330" y="110" width="90" height="28" class="svg-box"/>
+                        <rect x="330" y="138" width="90" height="28" class="svg-box"/>
+                        <text x="175" y="101" text-anchor="middle" class="svg-text svg-mono" font-size="12">Tents</text>
+                        <text x="175" y="129" text-anchor="middle" class="svg-text svg-mono" font-size="12">Tents</text>
+                        <text x="175" y="157" text-anchor="middle" class="svg-text svg-mono" font-size="12">Sleeping</text>
+                        <text x="285" y="101" text-anchor="middle" class="svg-text svg-mono" font-size="12">299.95</text>
+                        <text x="285" y="129" text-anchor="middle" class="svg-text svg-mono" font-size="12">217.95</text>
+                        <text x="285" y="157" text-anchor="middle" class="svg-text svg-mono" font-size="12">307.95</text>
+                        <text x="375" y="101" text-anchor="middle" class="svg-text svg-mono" font-size="12">8</text>
+                        <text x="375" y="129" text-anchor="middle" class="svg-text svg-mono" font-size="12">3</text>
+                        <text x="375" y="157" text-anchor="middle" class="svg-text svg-mono" font-size="12">3</text>
 
-# Run fundamentals
-series_fundamentals()
-dataframe_fundamentals()</code></pre>
+                        <text x="175" y="186" text-anchor="middle" class="svg-muted" font-size="12">dtype str</text>
+                        <text x="285" y="186" text-anchor="middle" class="svg-accent" font-size="12">dtype float64</text>
+                        <text x="375" y="186" text-anchor="middle" class="svg-muted" font-size="12">dtype int64</text>
+                        <text x="60" y="186" text-anchor="middle" class="svg-muted" font-size="12">index</text>
+                        <text x="10" y="216" class="svg-muted" font-size="12">Each column is one Series with one dtype (the shaded one</text>
+                        <text x="10" y="232" class="svg-muted" font-size="12">is the price Series). The index labels every row of every column.</text>
+                    </svg>
+                </div>
 
-    <h2>Series vs DataFrame: Understanding the Difference 🔍</h2>
-    
-    <div class="concept-comparison">
-        <div class="concept-box series-box">
-            <h3>📍 Series</h3>
-            <ul>
-                <li>1-dimensional labeled array</li>
-                <li>Single column of data</li>
-                <li>Has index and values</li>
-                <li>Like a dictionary with order</li>
-                <li>Homogeneous data type</li>
-            </ul>
+                <h3>🤔 Why This Matters</h3>
+                <p>Loading, cleaning, grouping, merging, plotting, statistics, SQL results, scraped pages: in this course they all arrive as a DataFrame or leave as one. The handful of moves in this lesson (look at it, pick columns, pick rows, add a column, sort, count) are the ones you will type hundreds of times. Learn them slowly here and everything after gets easier.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="series" class="lesson-section">
+                <h2>🏷️ The Series: An Array with Labels</h2>
+
+                <p>Open a new notebook called <code>lesson_2_1</code> in your project folder. pandas is imported as <code>pd</code>, by the same universal convention that makes NumPy <code>np</code>. The two <code>set_option</code> lines only affect how wide tables are printed.</p>
+
+                <pre><code class="language-python">import numpy as np
+import pandas as pd
+
+pd.set_option("display.width", 150)        # let wide tables use the full line
+pd.set_option("display.max_columns", 20)
+
+print(pd.__version__)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>3.0.6</code></pre>
+                </div>
+
+                <p>Hand a list to <code>pd.Series()</code> and you get a Series. These are the seven Boise revenue figures you used in Lesson 1.1.</p>
+
+                <pre><code class="language-python">week = pd.Series([5962.00, 6583.13, 3866.59, 7667.88, 9570.46, 12388.57, 9361.59])
+print(week)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>0     5962.00
+1     6583.13
+2     3866.59
+3     7667.88
+4     9570.46
+5    12388.57
+6     9361.59
+dtype: float64</code></pre>
+                </div>
+
+                <p>Two columns printed, but only the right one is your data. The left one, 0 to 6, is the <strong>index</strong>: the label of each value. You did not supply labels, so pandas numbered the rows. The last line reports the dtype, and it is the same <code>float64</code> NumPy would choose.</p>
+
+                <p>Labels become useful when they mean something.</p>
+
+                <pre><code class="language-python">days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+boise = pd.Series([5962.00, 6583.13, 3866.59, 7667.88, 9570.46, 12388.57, 9361.59],
+                  index=days, name="boise")
+print(boise)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>Mon     5962.00
+Tue     6583.13
+Wed     3866.59
+Thu     7667.88
+Fri     9570.46
+Sat    12388.57
+Sun     9361.59
+Name: boise, dtype: float64</code></pre>
+                </div>
+
+                <pre><code class="language-python">print(boise["Sat"])          # by label
+print(boise.index)
+print(boise.to_numpy())      # the NumPy array underneath
+print(boise.dtype, boise.shape, boise.name)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>12388.57
+Index(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], dtype='str')
+[ 5962.    6583.13  3866.59  7667.88  9570.46 12388.57  9361.59]
+float64 (7,) boise</code></pre>
+                </div>
+
+                <p>A Series is therefore three things bundled together: an array of <strong>values</strong>, an <strong>index</strong> of labels of the same length, and an optional <strong>name</strong>. <code>.to_numpy()</code> hands you the array whenever you need plain NumPy.</p>
+
+                <h3>Everything from NumPy Still Works</h3>
+
+                <pre><code class="language-python">print(boise.mean().round(2))
+print((boise * 1.08).round(2).head(3))
+print(boise[boise &gt; 9000])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>7914.32
+Mon    6438.96
+Tue    7109.78
+Wed    4175.92
+Name: boise, dtype: float64
+Fri     9570.46
+Sat    12388.57
+Sun     9361.59
+Name: boise, dtype: float64</code></pre>
+                </div>
+
+                <p>Summaries, whole-array arithmetic and boolean masks behave as they did in Module 1, with one improvement: the labels travel with the values. The filtered result still knows that its three numbers are Friday, Saturday and Sunday.</p>
+
+                <h3>The New Idea: Alignment by Label</h3>
+
+                <p>Here is the first thing a Series does that an array cannot. Suppose Bend's figures arrive for only four days, and in a different order.</p>
+
+                <pre><code class="language-python">bend = pd.Series([6719.33, 7083.36, 4132.92, 3675.57],
+                 index=["Sun", "Sat", "Mon", "Tue"], name="bend")
+print(boise + bend)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>Fri         NaN
+Mon    10094.92
+Sat    19471.93
+Sun    16080.92
+Thu         NaN
+Tue    10258.70
+Wed         NaN
+dtype: float64</code></pre>
+                </div>
+
+                <p>pandas did not add the first value to the first value. It matched <strong>labels</strong>: Monday with Monday, Saturday with Saturday, wherever they sat. Days that exist in only one Series have nothing to be added to, so the result is <code>NaN</code>, pandas's marker for "missing" (the same <code>nan</code> you met in Lesson 1.1). Two NumPy arrays of lengths 7 and 4 would simply have raised an error.</p>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Alignment Is a Feature and a Trap</h4>
+                    <p>Alignment protects you from adding Monday to Sunday by accident. It also means that if two Series have labels that do not match (different spellings, or one was re-sorted and renumbered), arithmetic quietly fills the result with <code>NaN</code>. When a calculation produces unexpected <code>NaN</code>s, compare the two indexes first.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="dataframe" class="lesson-section">
+                <h2>📋 The DataFrame</h2>
+
+                <p>A DataFrame is a table: several Series standing side by side, sharing one index. The most direct way to build one by hand is from a dictionary whose keys become the column names.</p>
+
+                <pre><code class="language-python">stores = pd.DataFrame({
+    "store": ["Boise", "Bend", "Flagstaff", "Asheville"],
+    "state": ["ID", "OR", "AZ", "NC"],
+    "week1_revenue": [55400.22, 38128.49, 32769.02, 35696.85],
+    "open_sundays": [True, True, False, True],
+})
+print(stores)
+print(type(stores["state"]))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>       store state  week1_revenue  open_sundays
+0      Boise    ID       55400.22          True
+1       Bend    OR       38128.49          True
+2  Flagstaff    AZ       32769.02         False
+3  Asheville    NC       35696.85          True
+&lt;class 'pandas.Series'&gt;</code></pre>
+                </div>
+
+                <p>Four columns, three different types, one table. And pulling a single column out with square brackets gives you back a Series, which confirms the mental model: a DataFrame is a collection of Series.</p>
+
+                <p>You will rarely type data in. Tables come from files, and <code>pd.read_csv()</code> is the function you met briefly in Lesson 0.1. Pinecrest's product catalog is a friendly size for learning: 242 rows.</p>
+
+                <pre><code class="language-python">products = pd.read_csv("data/products.csv")
+print(products.shape)
+print(products.head(3))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>(242, 13)
+        sku                                 name category   product_type         brand   price    cost  weight_kg         color  rating  \
+0  TNT-1001     Granite Fork Drift 1-Person Tent    Tents  1-Person Tent  Granite Fork  299.95  187.74       1.34          Moss     4.0
+1  TNT-1002  Cedar Notch Ridgeline 2-Person Tent    Tents  2-Person Tent   Cedar Notch  217.95  131.94       1.79          Sand     3.7
+2  TNT-1003     Pinecrest Solstice 3-Person Tent    Tents  3-Person Tent     Pinecrest  459.95  301.97       3.05  Glacier Blue     4.7
+
+   review_count stock_status launch_date
+0             8    low_stock  2025-08-23
+1             3     in_stock  2020-06-01
+2            85     in_stock  2021-12-18</code></pre>
+                </div>
+
+                <p><code>.shape</code> is rows first, then columns, exactly as for a 2-D array. <code>.head(3)</code> shows the first three rows (<code>.tail()</code> shows the last ones, and with no number both show five). The table is wider than the page, so pandas wrapped it: the backslash at the end of the first chunk means "continued below". <a href="pandas_data_loading.html">Lesson 2.2</a> is all about getting data in; today you only need this one line.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="inspect" class="lesson-section">
+                <h2>🔎 Inspecting a Table</h2>
+
+                <p>Before you compute anything on a table you did not create, look at it. Four commands answer nearly every "what am I holding?" question. Make them a habit.</p>
+
+                <pre><code class="language-python">products.info()</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>&lt;class 'pandas.DataFrame'&gt;
+RangeIndex: 242 entries, 0 to 241
+Data columns (total 13 columns):
+ #   Column        Non-Null Count  Dtype
+---  ------        --------------  -----
+ 0   sku           242 non-null    str
+ 1   name          242 non-null    str
+ 2   category      242 non-null    str
+ 3   product_type  242 non-null    str
+ 4   brand         242 non-null    str
+ 5   price         242 non-null    float64
+ 6   cost          242 non-null    float64
+ 7   weight_kg     228 non-null    float64
+ 8   color         242 non-null    str
+ 9   rating        234 non-null    float64
+ 10  review_count  242 non-null    int64
+ 11  stock_status  242 non-null    str
+ 12  launch_date   242 non-null    str
+dtypes: float64(4), int64(1), str(8)
+memory usage: 47.1 KB</code></pre>
+                </div>
+
+                <p><code>.info()</code> is the best single overview: the number of rows, every column with its count of non-missing values and its dtype, and the memory used. Read the <strong>Non-Null Count</strong> column carefully. Most columns say 242, but <code>weight_kg</code> says 228 and <code>rating</code> says 234: those columns have 14 and 8 missing values.</p>
+
+                <h3>Reading the dtypes</h3>
+
+                <pre><code class="language-python">print(products.dtypes)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>sku                 str
+name                str
+category            str
+product_type        str
+brand               str
+price           float64
+cost            float64
+weight_kg       float64
+color               str
+rating          float64
+review_count      int64
+stock_status        str
+launch_date         str
+dtype: object</code></pre>
+                </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>dtype</th><th>Holds</th><th>In this table</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="nowrap"><code>int64</code></td><td>Whole numbers</td><td class="nowrap"><code>review_count</code></td></tr>
+                            <tr><td class="nowrap"><code>float64</code></td><td>Decimals, and any numeric column with missing values</td><td><code>price</code>, <code>cost</code>, <code>weight_kg</code>, <code>rating</code></td></tr>
+                            <tr><td class="nowrap"><code>str</code></td><td>Text</td><td><code>sku</code>, <code>name</code>, <code>category</code> and five more</td></tr>
+                            <tr><td class="nowrap"><code>bool</code></td><td class="nowrap"><code>True</code> / <code>False</code></td><td>none here; <code>customers.csv</code> has one</td></tr>
+                            <tr><td class="nowrap"><code>datetime64[us]</code></td><td>Dates and times</td><td>none yet: <code>launch_date</code> was read as text</td></tr>
+                            <tr><td class="nowrap"><code>object</code></td><td>Anything: a mix of Python objects</td><td>none, and that is what you want</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>Three things are worth understanding here.</p>
+                <ul>
+                    <li><strong>Text columns are <code>str</code>.</strong> pandas has a dedicated string dtype and uses it for text automatically. Older tutorials and older versions of pandas show <code>object</code> for text columns. If you see <code>object</code> on a column today, it usually means the column holds a mixture of types, which is a problem to investigate.</li>
+                    <li><strong>A date is not a date until you say so.</strong> <code>launch_date</code> is <code>str</code>: pandas does not guess that text is a date. You will convert it in the project, and Lesson 2.2 shows how to do it while loading.</li>
+                    <li><strong>The last line, <code>dtype: object</code>, is not about your data.</strong> <code>products.dtypes</code> is itself a Series (column names as the index, dtype objects as the values), and that line is the dtype of <em>that</em> Series.</li>
+                </ul>
+
+                <h3>A Statistical Summary</h3>
+
+                <pre><code class="language-python">print(products.describe().round(2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>        price    cost  weight_kg  rating  review_count
+count  242.00  242.00     228.00  234.00        242.00
+mean   121.80   66.40       0.79    4.14         70.45
+std    117.14   64.77       1.19    0.39         88.57
+min      8.50    3.96       0.02    2.80          0.00
+25%     39.95   22.92       0.17    3.90         14.00
+50%     82.95   43.06       0.35    4.10         39.00
+75%    155.95   86.29       0.86    4.40         89.75
+max    616.95  360.49       8.37    5.00        561.00</code></pre>
+                </div>
+
+                <p><code>.describe()</code> summarizes every numeric column: count, mean, standard deviation, minimum, quartiles and maximum. Scan it for things that look wrong. Prices from $8.50 to $616.95 are plausible for an outdoor shop. The median price (the <code>50%</code> row, $82.95) is well under the mean ($121.80), so a few expensive products pull the average up. And <code>review_count</code> has a minimum of 0: some products have never been reviewed, which is exactly why <code>rating</code> has 8 missing values. Module 4 studies these statistics properly.</p>
+
+                <div class="card card-success">
+                    <h4>✅ The Four-Line Greeting</h4>
+                    <p><code>df.shape</code>, <code>df.head()</code>, <code>df.info()</code>, <code>df.describe()</code>. Run them on every new table, every time, before anything else. Analysts with twenty years of experience still do exactly this.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="index" class="lesson-section">
+                <h2>🔖 The Index</h2>
+
+                <p>Every DataFrame has two sets of labels: the <strong>index</strong> for rows and the <strong>columns</strong> for, well, columns.</p>
+
+                <pre><code class="language-python">print(products.index)
+print(products.columns)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>RangeIndex(start=0, stop=242, step=1)
+Index(['sku', 'name', 'category', 'product_type', 'brand', 'price', 'cost', 'weight_kg', 'color', 'rating', 'review_count', 'stock_status',
+       'launch_date'],
+      dtype='str')</code></pre>
+                </div>
+
+                <p>The default index is a <code>RangeIndex</code>: the row numbers 0 to 241. That is perfectly good, and most of the time you will leave it alone. But when one column identifies each row uniquely, as <code>sku</code> does here, you can promote it to be the index and then look rows up by that label.</p>
+
+                <pre><code class="language-python">by_sku = products.set_index("sku")
+print(by_sku[["name", "price"]].head(3))
+print(by_sku.index[:3])
+print(products.shape, by_sku.shape)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>                                         name   price
+sku
+TNT-1001     Granite Fork Drift 1-Person Tent  299.95
+TNT-1002  Cedar Notch Ridgeline 2-Person Tent  217.95
+TNT-1003     Pinecrest Solstice 3-Person Tent  459.95
+Index(['TNT-1001', 'TNT-1002', 'TNT-1003'], dtype='str', name='sku')
+(242, 13) (242, 12)</code></pre>
+                </div>
+
+                <p><code>set_index()</code> returned a <em>new</em> DataFrame, <code>by_sku</code>, and left <code>products</code> as it was. That is the normal pattern in pandas: methods return a new object, and you keep it by assigning it to a name. Notice that <code>sku</code> is no longer one of the columns (12 instead of 13): it moved to the index. <code>reset_index()</code> moves it back.</p>
+
+                <pre><code class="language-python">print(by_sku.reset_index().columns[:3])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>Index(['sku', 'name', 'category'], dtype='str')</code></pre>
+                </div>
+
+                <div class="card card-info">
+                    <h4>💡 Row Labels Are Not Row Numbers</h4>
+                    <p>With the default index, a row's label and its position are the same number, so it is easy to believe they are the same thing. They are not. After you filter or sort, the labels travel with their rows, and the row labeled 19 may now be sitting first. The next section gives you one tool for labels and another for positions, so you can always say which you mean.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="selecting" class="lesson-section">
+                <h2>🎯 Selecting: [], .loc and .iloc</h2>
+
+                <p>There are three selection tools, and each has one job.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Tool</th><th>Selects by</th><th>Example</th><th>Returns</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="nowrap"><code>df["col"]</code></td><td>one column name</td><td class="nowrap"><code>products["price"]</code></td><td>Series</td></tr>
+                            <tr><td class="nowrap"><code>df[["a", "b"]]</code></td><td>a list of column names</td><td class="nowrap"><code>products[["sku", "price"]]</code></td><td>DataFrame</td></tr>
+                            <tr><td class="nowrap"><code>df.loc[rows, cols]</code></td><td><strong>labels</strong></td><td class="nowrap"><code>by_sku.loc["TNT-1002", "price"]</code></td><td>value, Series or DataFrame</td></tr>
+                            <tr><td class="nowrap"><code>df.iloc[rows, cols]</code></td><td>integer <strong>positions</strong></td><td class="nowrap"><code>products.iloc[0, 5]</code></td><td>value, Series or DataFrame</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>Columns with Square Brackets</h3>
+
+                <pre><code class="language-python">prices = products["price"]
+print(type(prices), prices.shape)
+
+small = products[["sku", "name", "price"]]
+print(type(small), small.shape)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>&lt;class 'pandas.Series'&gt; (242,)
+&lt;class 'pandas.DataFrame'&gt; (242, 3)</code></pre>
+                </div>
+
+                <p>One name gives a Series. A <em>list</em> of names gives a DataFrame, which is why you see double brackets: the outer pair is "select", the inner pair is the list. <code>products[["price"]]</code>, a list with one name in it, is a one-column DataFrame.</p>
+
+                <h3>Rows and Cells by Label: .loc</h3>
+
+                <p><code>.loc</code> takes row labels, then a comma, then column labels, in the same "rows, comma, columns" order as a 2-D NumPy array.</p>
+
+                <pre><code class="language-python">print(by_sku.loc["TNT-1002", "price"])                 # one row label, one column label
+print(by_sku.loc["TNT-1002", ["name", "price", "rating"]])
+print(by_sku.loc["TNT-1001":"TNT-1003", "category":"brand"])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>217.95
+name      Cedar Notch Ridgeline 2-Person Tent
+price                                  217.95
+rating                                    3.7
+Name: TNT-1002, dtype: object
+         category   product_type         brand
+sku
+TNT-1001    Tents  1-Person Tent  Granite Fork
+TNT-1002    Tents  2-Person Tent   Cedar Notch
+TNT-1003    Tents  3-Person Tent     Pinecrest</code></pre>
+                </div>
+
+                <p>Read the three results in turn. One row label and one column label give a single value. One row label and a list of columns give a Series, whose index is the column names. (Its dtype is <code>object</code> because a row mixes text and numbers: the legitimate use of that dtype.) And two slices give a DataFrame.</p>
+
+                <div class="card card-warning">
+                    <h4>⚠️ A .loc Slice Includes Its End</h4>
+                    <p><code>"TNT-1001":"TNT-1003"</code> returned three rows, including TNT-1003, and <code>"category":"brand"</code> included <code>brand</code>. Label slices are inclusive at both ends, because with labels there is no obvious "one past the end". This is the one place where Python's usual stop-is-excluded rule does not hold.</p>
+                </div>
+
+                <h3>Rows and Cells by Position: .iloc</h3>
+
+                <pre><code class="language-python">print(products.iloc[0, 5])              # row 0, column 5
+print(products.iloc[:3, :2])            # first 3 rows, first 2 columns
+print(products.iloc[-1, 0])             # last row, first column</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>299.95
+        sku                                 name
+0  TNT-1001     Granite Fork Drift 1-Person Tent
+1  TNT-1002  Cedar Notch Ridgeline 2-Person Tent
+2  TNT-1003     Pinecrest Solstice 3-Person Tent
+ACC-1032</code></pre>
+                </div>
+
+                <p><code>.iloc</code> ignores labels completely and counts from 0, with negative numbers counting from the end and slices that exclude their stop. It behaves exactly like indexing a NumPy array.</p>
+
+                <p>The two rules meet in this one-line experiment on the default index, where labels and positions happen to be the same numbers:</p>
+
+                <pre><code class="language-python">print(len(products.loc[0:3]), len(products.iloc[0:3]))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>4 3</code></pre>
+                </div>
+
+                <p><code>.loc[0:3]</code> means "labels 0 through 3", four rows. <code>.iloc[0:3]</code> means "positions 0 up to but not including 3", three rows. Neither is wrong. They are answering different questions, and now you know which is which.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="filtering" class="lesson-section">
+                <h2>🔍 Filtering Rows</h2>
+
+                <p>The question you will ask most often is "which rows satisfy this condition?". The answer is the boolean mask from Lesson 1.2, now with labels. It takes two steps: a comparison builds a Series of <code>True</code>/<code>False</code>, and that Series, placed in square brackets, keeps the rows where it is <code>True</code>.</p>
+
+                <pre><code class="language-python">is_tent = products["category"] == "Tents"
+print(is_tent.head(3))
+print(is_tent.sum())
+
+tents = products[is_tent]
+print(tents.shape)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>0    True
+1    True
+2    True
+Name: category, dtype: bool
+24
+(24, 13)</code></pre>
+                </div>
+
+                <p>Because <code>True</code> counts as 1, <code>.sum()</code> of a mask counts the matching rows and <code>.mean()</code> gives the fraction that match. You will use both constantly.</p>
+
+                <h3>Combining Conditions</h3>
+
+                <p>Join conditions with <code>&amp;</code> (and), <code>|</code> (or) and <code>~</code> (not), and put <strong>each condition in its own parentheses</strong>.</p>
+
+                <pre><code class="language-python">cheap_tents = products[(products["category"] == "Tents") &amp; (products["price"] &lt; 200)]
+print(cheap_tents[["sku", "name", "price"]])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>         sku                                    name   price
+6   TNT-1007                Quillback Wayfinder Tarp  132.95
+7   TNT-1008      Quillback Alpenglow Tent Footprint   67.95
+14  TNT-1015                    Quillback Talus Tarp  119.95
+15  TNT-1016       Quillback Foothill Tent Footprint   41.95
+16  TNT-1017  Larkspur Ridge Ridgeline 1-Person Tent  153.95
+22  TNT-1023                    Pinecrest Drift Tarp   94.95
+23  TNT-1024        Cedar Notch Cairn Tent Footprint   41.95</code></pre>
+                </div>
+
+                <p>The seven "tents" under $200 turn out to be mostly tarps and footprints, with one real tent. A filter is a quick way to discover that a category is broader than its name suggests.</p>
+
+                <p>Four helper methods cover the conditions that are awkward to write with comparison operators:</p>
+
+                <pre><code class="language-python">sleep_out = products[products["category"].isin(["Tents", "Sleeping"])]
+mid_price = products[products["price"].between(50, 100)]
+not_in_stock = products[~(products["stock_status"] == "in_stock")]
+has_jacket = products[products["name"].str.contains("Jacket")]
+print(len(sleep_out), len(mid_price), len(not_in_stock), len(has_jacket))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>48 70 44 8</code></pre>
+                </div>
+
+                <ul>
+                    <li><code>.isin([...])</code>: the value is one of a list (cleaner than a chain of <code>|</code>)</li>
+                    <li><code>.between(a, b)</code>: from <code>a</code> to <code>b</code>, both ends included</li>
+                    <li><code>~</code>: flips a mask, so "not in stock" is the 44 products that are low or out</li>
+                    <li><code>.str.contains("...")</code>: the text contains this. The <code>.str</code> accessor opens up string methods for a whole column, and <a href="pandas_data_cleaning.html">Lesson 2.3</a> uses it heavily</li>
+                </ul>
+
+                <p>The <code>.str</code> accessor has many more methods. Two you will meet again soon are <code>.str.startswith()</code> and <code>.str.endswith()</code>: every tent's SKU begins with <code>TNT</code>, so this finds the same 24 products as the category filter did.</p>
+
+                <pre><code class="language-python">tent_skus = products[products["sku"].str.startswith("TNT")]
+print(len(tent_skus))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>24</code></pre>
+                </div>
+
+                <h3>Missing Values Need Their Own Test</h3>
+
+                <pre><code class="language-python">unrated = products[products["rating"].isna()]
+print(unrated[["sku", "rating", "review_count"]].head(3))
+print(len(unrated), products["rating"].notna().sum())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>         sku  rating  review_count
+49  PCK-1002     NaN             0
+56  PCK-1009     NaN             0
+89  FTW-1018     NaN             0
+8 234</code></pre>
+                </div>
+
+                <p><code>.isna()</code> is <code>True</code> where a value is missing and <code>.notna()</code> is its opposite. The eight unrated products are the eight with zero reviews. You cannot find them with <code>== np.nan</code>, for a reason you will see in <a href="#mistakes">Common Mistakes</a>.</p>
+
+                <h3>Filter Rows and Choose Columns in One Step</h3>
+
+                <p><code>.loc</code> accepts a mask in the row position, so "these rows, those columns" is a single expression. This form matters a great deal in the next two sections.</p>
+
+                <pre><code class="language-python">print(products.loc[products["price"] &gt; 550, ["name", "price"]])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>                                         name   price
+12  Tallgrass Timberline 6-Person Family Tent  585.95
+19            Quillback Cascade 4-Person Tent  616.95
+20   Juniper Vane Meadow 6-Person Family Tent  574.95</code></pre>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="columns" class="lesson-section">
+                <h2>➕ Adding and Changing Columns</h2>
+
+                <p>Assign to a column name that does not exist yet and pandas creates it. The right-hand side is usually arithmetic on other columns, done on every row at once.</p>
+
+                <pre><code class="language-python">products["margin"] = products["price"] - products["cost"]
+products["margin_pct"] = (products["margin"] / products["price"] * 100).round(1)
+print(products[["sku", "price", "cost", "margin", "margin_pct"]].head(3))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>        sku   price    cost  margin  margin_pct
+0  TNT-1001  299.95  187.74  112.21        37.4
+1  TNT-1002  217.95  131.94   86.01        39.5
+2  TNT-1003  459.95  301.97  157.98        34.3</code></pre>
+                </div>
+
+                <p>No loop. <code>products["price"] - products["cost"]</code> subtracts two Series row by row (aligned on the index), and the result is stored as a new column on the right-hand edge of the table.</p>
+
+                <h3>A Column That Depends on a Condition</h3>
+
+                <p><code>np.where(condition, value_if_true, value_if_false)</code> is the vectorized <code>if</code>/<code>else</code>.</p>
+
+                <pre><code class="language-python">products["price_band"] = np.where(products["price"] &gt;= 200, "premium", "standard")
+print(products["price_band"].value_counts())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>price_band
+standard    198
+premium      44
+Name: count, dtype: int64</code></pre>
+                </div>
+
+                <p>To change <em>some</em> rows of an existing column, use <code>.loc</code> with a mask for the rows and the column name, on the left of the <code>=</code>:</p>
+
+                <pre><code class="language-python">products.loc[products["price"] &lt; 25, "price_band"] = "budget"
+print(products["price_band"].value_counts())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>price_band
+standard    166
+premium      44
+budget       32
+Name: count, dtype: int64</code></pre>
+                </div>
+
+                <p>Read <code>products.loc[mask, "price_band"] = "budget"</code> as "in <code>products</code>, for the rows where the mask is true, in the <code>price_band</code> column, store this". One object, one <code>.loc</code>, one assignment. Remember this shape: it is the answer to the trap in the next section.</p>
+
+                <h3>assign(): A New Table with an Extra Column</h3>
+
+                <pre><code class="language-python">with_tax = products.assign(price_with_tax=(products["price"] * 1.06).round(2))
+print(with_tax.shape, products.shape)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>(242, 17) (242, 16)</code></pre>
+                </div>
+
+                <p><code>.assign()</code> returns a new DataFrame with the extra column and leaves the original untouched (16 columns still). Use it when you want to try something without changing the table you are working on, or when you chain several steps together.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="cow" class="lesson-section">
+                <h2>🧬 Copy-on-Write</h2>
+
+                <p>In Lesson 1.1 you learned that a slice of a NumPy array is a <em>view</em>: a window onto the same memory, so writing through the window changes the original. For arrays that is efficient. For tables it used to be a constant source of bugs, because it was hard to predict whether a filtered piece of a DataFrame was a window or a photocopy.</p>
+
+                <p>pandas settles the question with one rule, called <strong>copy-on-write</strong>:</p>
+
+                <div class="card card-info">
+                    <h4>💡 The Rule</h4>
+                    <p><strong>Every DataFrame or Series you derive from another one behaves as an independent copy.</strong> Changing one object never changes another. The only way to change a DataFrame is to operate on that DataFrame itself.</p>
+                </div>
+
+                <p>Watch the rule at work. Take the tents out, put them on sale, and check the catalog.</p>
+
+                <pre><code class="language-python">tents = products[products["category"] == "Tents"]
+tents["price"] = tents["price"] * 0.9          # a 10% sale, on the subset only
+print(tents["price"].head(2).round(2).tolist())
+print(products.loc[products["category"] == "Tents", "price"].head(2).tolist())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>[269.96, 196.16]
+[299.95, 217.95]</code></pre>
+                </div>
+
+                <p>The subset changed. The catalog did not. <code>tents</code> behaves as its own table from the moment it is created, no warning, no surprise.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Why "Copy-on-Write"?</h4>
+                    <p>Copying a large table every time you filter it would be slow and wasteful. So pandas cheats, safely: a derived object may quietly <em>share</em> memory with its parent for as long as nobody changes anything. The moment you <em>write</em> to one of them, pandas makes the real copy first. You get the speed of a view and the safety of a copy, and you never have to think about which one you have.</p>
+                </div>
+
+                <h3>The Consequence: Chained Assignment Never Works</h3>
+
+                <p>The rule has one consequence that catches everybody once. This line looks like it sets every tent's price to zero:</p>
+
+                <pre><code class="language-python">import warnings
+
+with warnings.catch_warnings(record=True) as caught:
+    warnings.simplefilter("always")
+    products[products["category"] == "Tents"]["price"] = 0      # chained assignment
+print(caught[0].category.__name__)
+print(str(caught[0].message).splitlines()[1])
+print(products.loc[products["category"] == "Tents", "price"].head(2).tolist())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>ChainedAssignmentError
+Such chained assignment never works to update the original DataFrame or Series, because the intermediate object on which we are setting values always behaves as a copy (due to Copy-on-Write).
+[299.95, 217.95]</code></pre>
+                </div>
+
+                <p>It does nothing to <code>products</code>, and pandas raises a <code>ChainedAssignmentError</code> warning to tell you so. (The <code>warnings</code> code around it is only there to capture the warning so that the lesson can print it. In your notebook you would simply see the warning in red.) Here is why. The line is really two steps:</p>
+
+                <ol>
+                    <li><code>products[products["category"] == "Tents"]</code> creates a <strong>new, temporary</strong> DataFrame of 24 tents.</li>
+                    <li><code>["price"] = 0</code> writes into that temporary table, which is then thrown away.</li>
+                </ol>
+
+                <p>Two sets of brackets, one after the other, with an <code>=</code> at the end: that is <strong>chained assignment</strong>, and under copy-on-write it can never reach the original. The fix is the shape you already learned, a single <code>.loc</code> on the table you want to change:</p>
+
+                <pre><code class="language-python">demo = products.copy()
+demo.loc[demo["category"] == "Tents", "price"] = demo["price"] * 0.9
+print(demo.loc[demo["category"] == "Tents", "price"].head(2).round(2).tolist())
+print(products.loc[products["category"] == "Tents", "price"].head(2).tolist())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>[269.96, 196.16]
+[299.95, 217.95]</code></pre>
+                </div>
+
+                <p>This time the change lands on <code>demo</code>. (We worked on <code>demo</code>, a deliberate full copy made with <code>.copy()</code>, so that <code>products</code> keeps its real prices for the rest of the lesson.)</p>
+
+                <div class="card card-success">
+                    <h4>✅ Two Sentences to Keep</h4>
+                    <p>To change a table, write <code>df.loc[rows, "column"] = value</code> or <code>df["column"] = ...</code> on that table. To work on a piece without touching the original, just take the piece: it is already independent.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="sorting" class="lesson-section">
+                <h2>🔢 Sorting and Counting</h2>
+
+                <h3>sort_values()</h3>
+
+                <pre><code class="language-python">top = products.sort_values("price", ascending=False)
+print(top[["sku", "name", "price"]].head(3))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>         sku                                       name   price
+19  TNT-1020            Quillback Cascade 4-Person Tent  616.95
+12  TNT-1013  Tallgrass Timberline 6-Person Family Tent  585.95
+20  TNT-1021   Juniper Vane Meadow 6-Person Family Tent  574.95</code></pre>
+                </div>
+
+                <p><code>sort_values()</code> returns a new, sorted DataFrame. Smallest first is the default, and <code>ascending=False</code> reverses it. Look at the index on the left: 19, 12, 20. The row labels traveled with their rows, as promised.</p>
+
+                <p>Sort by several columns with a list, and give each its own direction. For "the top few by one column", <code>nlargest()</code> and <code>nsmallest()</code> are shorter.</p>
+
+                <pre><code class="language-python">ranked = products.sort_values(["category", "price"], ascending=[True, False])
+print(ranked[["category", "name", "price"]].head(4))
+print(products.nlargest(3, "margin")[["name", "margin"]])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>        category                                 name   price
+231  Accessories       Quillback Ember Trekking Poles  176.95
+240  Accessories  Pinecrest Switchback Trekking Poles  113.95
+219  Accessories       Larkspur Ridge Tundra Headlamp   98.95
+223  Accessories        Tallgrass Ridgeline Multitool   97.95
+                                         name  margin
+12  Tallgrass Timberline 6-Person Family Tent  312.37
+4        Quillback Talus 6-Person Family Tent  285.27
+20   Juniper Vane Meadow 6-Person Family Tent  266.64</code></pre>
+                </div>
+
+                <p>If you want the row labels renumbered 0, 1, 2 after sorting, add <code>.reset_index(drop=True)</code>. (<code>drop=True</code> discards the old labels instead of keeping them as a column.) Missing values always sort to the end, in either direction.</p>
+
+                <pre><code class="language-python">print(top.index[:5].tolist())
+print(top.reset_index(drop=True).index[:5].tolist())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>[19, 12, 20, 26, 4]
+[0, 1, 2, 3, 4]</code></pre>
+                </div>
+
+                <p>When you want to know <em>where</em> the largest value is, not what it is, use <code>.idxmax()</code> (or <code>.idxmin()</code>). It returns the index <strong>label</strong> of that row, which you can hand straight to <code>.loc</code>.</p>
+
+                <pre><code class="language-python">print(products["price"].max(), products["price"].idxmax())
+print(products.loc[products["price"].idxmax(), "name"])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>616.95 19
+Quillback Cascade 4-Person Tent</code></pre>
+                </div>
+
+                <h3>value_counts()</h3>
+
+                <p>For a column of categories, the first question is "what values are there, and how many of each?". <code>value_counts()</code> answers it, most common first.</p>
+
+                <pre><code class="language-python">print(products["category"].value_counts())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>category
+Apparel         35
+Accessories     32
+Camp Kitchen    29
+Footwear        28
+Tents           24
+Sleeping        24
+Packs           24
+Climbing        24
+Snow            22
+Name: count, dtype: int64</code></pre>
+                </div>
+
+                <p>The result is a Series: the categories are its index and the counts are its values. <code>normalize=True</code> gives proportions instead of counts, <code>.nunique()</code> gives the number of distinct values, and <code>.unique()</code> lists them.</p>
+
+                <pre><code class="language-python">print(products["stock_status"].value_counts(normalize=True).round(3))
+print(products["brand"].nunique())
+print(products["brand"].unique())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>stock_status
+in_stock        0.818
+low_stock       0.120
+out_of_stock    0.062
+Name: proportion, dtype: float64
+8
+&lt;ArrowStringArray&gt;
+['Granite Fork', 'Cedar Notch', 'Pinecrest', 'Wrenfield', 'Quillback', 'Juniper Vane', 'Tallgrass', 'Larkspur Ridge']
+Length: 8, dtype: str</code></pre>
+                </div>
+
+                <p>About 82% of the catalog is in stock, and there are 8 brands. One detail to remember: <code>value_counts()</code> leaves missing values out unless you ask with <code>dropna=False</code>.</p>
+
+                <pre><code class="language-python">print(products["rating"].value_counts(dropna=False).head(3))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>rating
+4.2    27
+4.0    26
+4.1    26
+Name: count, dtype: int64</code></pre>
+                </div>
+
+                <p>The most common rating is 4.2, on 27 products. Counting within groups ("how many products per category <em>and</em> stock status?") is the job of <code>groupby</code>, which gets its own lesson in <a href="pandas_groupby_operations.html">Lesson 2.4</a>.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="mistakes" class="lesson-section">
+                <h2>⚠️ Common Mistakes</h2>
+
+                <p>These are the six messages (and one silence) that nearly every pandas learner meets in the first week. Each one is pandas telling you precisely what it could not do. Read from the bottom of the traceback, as you practiced in Lesson 0.1.</p>
+
+                <h3>1. A Column Name That Is Almost Right</h3>
+                <pre data-raises="KeyError"><code class="language-python">products["Price"]</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>KeyError: 'Price'</code></pre>
+                </div>
+                <p><strong>What it means:</strong> there is no column with exactly that name. Names are case-sensitive, and a stray space counts. <strong>Fix:</strong> print the real names and copy one.</p>
+                <pre><code class="language-python">print(products.columns.tolist())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>['sku', 'name', 'category', 'product_type', 'brand', 'price', 'cost', 'weight_kg', 'color', 'rating', 'review_count', 'stock_status', 'launch_date', 'margin', 'margin_pct', 'price_band']</code></pre>
+                </div>
+
+                <h3>2. Using and / or Between Masks</h3>
+                <pre data-raises="ValueError"><code class="language-python">products[products["price"] &gt; 100 and products["rating"] &gt; 4.5]</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>ValueError: The truth value of a Series is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().</code></pre>
+                </div>
+                <p><strong>What it means:</strong> Python's <code>and</code> wants one <code>True</code> or <code>False</code> on each side, and a Series is 242 of them. It is the same message NumPy gave you in Lesson 1.1. <strong>Fix:</strong> use <code>&amp;</code>, <code>|</code> and <code>~</code>, which work element by element.</p>
+
+                <h3>3. Forgetting the Parentheses</h3>
+                <pre data-raises="TypeError"><code class="language-python">products[products["price"] &gt; 100 &amp; products["rating"] &gt; 4.5]</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>TypeError: Cannot perform 'rand_' with a dtyped [float64] array and scalar of type [bool]</code></pre>
+                </div>
+                <p><strong>What it means:</strong> <code>&amp;</code> binds more tightly than <code>&gt;</code>, so Python tried to compute <code>100 &amp; products["rating"]</code> first. The message is cryptic; the cause is always missing parentheses. <strong>Fix:</strong> wrap every condition.</p>
+                <pre><code class="language-python">picks = products[(products["price"] &gt; 100) &amp; (products["rating"] &gt; 4.5)]
+print(len(picks))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>14</code></pre>
+                </div>
+
+                <h3>4. A Position Where a Label Was Expected</h3>
+                <pre data-raises="KeyError"><code class="language-python">by_sku.loc[0]</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>KeyError: 0</code></pre>
+                </div>
+                <p><strong>What it means:</strong> <code>.loc</code> looks for a row <em>labeled</em> 0, and the labels of <code>by_sku</code> are SKUs. <strong>Fix:</strong> <code>.iloc</code> for positions, <code>.loc</code> for labels.</p>
+                <pre><code class="language-python">print(by_sku.iloc[0]["name"])
+print(by_sku.loc["TNT-1001", "name"])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>Granite Fork Drift 1-Person Tent
+Granite Fork Drift 1-Person Tent</code></pre>
+                </div>
+
+                <h3>5. A New Column of the Wrong Length</h3>
+                <pre data-raises="ValueError"><code class="language-python">products["on_sale"] = [True, False, True]</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>ValueError: Length of values (3) does not match length of index (242)</code></pre>
+                </div>
+                <p><strong>What it means:</strong> a list assigned to a column must have one value per row. <strong>Fix:</strong> build the column from other columns (<code>products["price"] &lt; 50</code> has 242 values automatically), or assign a single value, which is repeated for every row.</p>
+
+                <h3>6. Comparing with NaN</h3>
+                <pre><code class="language-python">print(products["rating"].mean().round(3))
+print((products["rating"] == np.nan).sum(), products["rating"].isna().sum())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>4.138
+0 8</code></pre>
+                </div>
+                <p><strong>What happened:</strong> no error, but a wrong answer. <code>== np.nan</code> found 0 missing ratings when there are 8, because <code>NaN</code> is defined as not equal to anything, itself included. <strong>Fix:</strong> always test with <code>.isna()</code> or <code>.notna()</code>. (The first line also shows that <code>.mean()</code> quietly skips missing values, unlike NumPy's <code>mean</code>.)</p>
+
+                <h3>7. Chained Assignment</h3>
+                <p>You saw this one in <a href="#cow">Copy-on-Write</a>: <code>df[mask]["col"] = value</code> changes nothing and raises a <code>ChainedAssignmentError</code> warning. A warning does not stop your program, so it is easy to scroll past. <strong>Fix:</strong> <code>df.loc[mask, "col"] = value</code>.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="project" class="lesson-section">
+                <h2>🛠️ Project: Catalog Health Check</h2>
+
+                <p>Pinecrest's merchandising manager wants a one-page answer to "what shape is our catalog in?": margins, products that need attention, and best sellers we can promote. You will build it from <code>products.csv</code> using only the moves from this lesson. Work in a new notebook called <code>lesson_2_1_project</code> (or a script, <code>catalog_check.py</code>). Allow about 30 minutes.</p>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 1: Load and greet the table <span class="step-time">(5 min)</span></h3>
+                    <p>Start fresh so the project stands on its own. <code>parse_dates</code> asks pandas to turn <code>launch_date</code> into real dates as it loads. Then count the dtypes and find the columns with missing values.</p>
+                    <pre><code class="language-python">import numpy as np
+import pandas as pd
+
+pd.set_option("display.width", 150)
+pd.set_option("display.max_columns", 20)
+
+catalog = pd.read_csv("data/products.csv", parse_dates=["launch_date"])
+print(catalog.shape)
+print(catalog.dtypes.value_counts())
+print(catalog.isna().sum()[catalog.isna().sum() &gt; 0])</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>(242, 13)
+str               7
+float64           4
+int64             1
+datetime64[us]    1
+Name: count, dtype: int64
+weight_kg    14
+rating        8
+dtype: int64</code></pre>
+                    </div>
+                    <p><code>catalog.isna().sum()</code> counts missing values per column; the mask in brackets keeps only the columns where that count is above zero. Two columns have gaps, and you know why <code>rating</code> does.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 2: Add the business columns <span class="step-time">(5 min)</span></h3>
+                    <p>Margin in dollars, margin as a percentage of price, and the launch year. A datetime column has a <code>.dt</code> accessor in the same way a text column has <code>.str</code>.</p>
+                    <pre><code class="language-python">catalog["margin"] = (catalog["price"] - catalog["cost"]).round(2)
+catalog["margin_pct"] = (catalog["margin"] / catalog["price"] * 100).round(1)
+catalog["launch_year"] = catalog["launch_date"].dt.year
+
+print(catalog[["sku", "price", "cost", "margin", "margin_pct", "launch_year"]].head(3))
+print(catalog["margin_pct"].describe().round(1))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>        sku   price    cost  margin  margin_pct  launch_year
+0  TNT-1001  299.95  187.74  112.21        37.4         2025
+1  TNT-1002  217.95  131.94   86.01        39.5         2020
+2  TNT-1003  459.95  301.97  157.98        34.3         2021
+count    242.0
+mean      45.5
+std        6.8
+min       34.1
+25%       39.6
+50%       45.4
+75%       51.3
+max       57.7
+Name: margin_pct, dtype: float64</code></pre>
+                    </div>
+                    <p>Margins run from 34% to 58% of the price, centered near 45%.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 3: Flag the products that need attention <span class="step-time">(5 min)</span></h3>
+                    <p>Start every product at <code>"ok"</code>, then overwrite the flag for each problem with <code>.loc</code>. The order matters: a later line wins when a product has two problems, so put the most urgent last.</p>
+                    <pre><code class="language-python">catalog["flag"] = "ok"
+catalog.loc[catalog["rating"] &lt; 3.5, "flag"] = "low rating"
+catalog.loc[catalog["rating"].isna(), "flag"] = "no reviews"
+catalog.loc[catalog["stock_status"] == "out_of_stock", "flag"] = "out of stock"
+
+print(catalog["flag"].value_counts())</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>flag
+ok              213
+out of stock     15
+no reviews        8
+low rating        6
+Name: count, dtype: int64</code></pre>
+                    </div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 4: Find the star products <span class="step-time">(5 min)</span></h3>
+                    <p>A "star" is highly rated (4.7 or better), by plenty of customers (100 or more reviews), and available to sell right now. Three conditions, three pairs of parentheses.</p>
+                    <pre><code class="language-python">stars = catalog[(catalog["rating"] &gt;= 4.7) &amp; (catalog["review_count"] &gt;= 100)
+                &amp; (catalog["stock_status"] == "in_stock")]
+stars = stars.sort_values(["rating", "review_count"], ascending=False)
+print(len(stars))
+print(stars[["sku", "name", "price", "rating", "review_count"]].head(5))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>8
+          sku                                name  price  rating  review_count
+136  CLM-1002  Quillback Sawtooth Climbing Helmet  92.95     5.0           307
+161  KIT-1003  Quillback Timberline Insulated Mug  24.95     4.9           443
+166  KIT-1008    Juniper Vane Drift Fuel Canister   8.50     4.9           163
+107  APL-1008           Tallgrass Solstice Beanie  36.95     4.9           127
+81   FTW-1010  Tallgrass Backcountry Hiking Socks  20.95     4.8           105</code></pre>
+                    </div>
+                    <p>Passing <code>ascending=False</code> once applies it to both sort columns.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 5: Where is stock missing? <span class="step-time">(5 min)</span></h3>
+                    <p>Count the out-of-stock products by category, then list the three whose absence costs the most margin per sale.</p>
+                    <pre><code class="language-python">print(catalog["category"].value_counts().head(3))
+
+lost = catalog[catalog["stock_status"] == "out_of_stock"]
+print(lost["category"].value_counts())
+print(lost.nlargest(3, "margin")[["sku", "name", "margin", "rating"]])</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>category
+Apparel         35
+Accessories     32
+Camp Kitchen    29
+Name: count, dtype: int64
+category
+Packs           3
+Footwear        2
+Apparel         2
+Snow            2
+Accessories     2
+Tents           1
+Sleeping        1
+Climbing        1
+Camp Kitchen    1
+Name: count, dtype: int64
+          sku                               name  margin  rating
+119  APL-1020  Larkspur Ridge Tundra Down Jacket  175.41     4.2
+57   PCK-1010   Wrenfield Wayfinder 50L Backpack  150.65     4.4
+11   TNT-1012  Quillback Ridgeline 4-Person Tent  139.61     4.1</code></pre>
+                    </div>
+                    <p>Packs has the most gaps, and the costliest gap is a down jacket with a good rating. That is a concrete thing to tell a manager.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 6: Print the report <span class="step-time">(5 min)</span></h3>
+                    <p>Every figure comes from the table, none typed by hand. (The mask's <code>.sum()</code> counts rows; <code>.iloc[-1]</code> after sorting by date is the newest product.)</p>
+                    <pre><code class="language-python">report = f"""Pinecrest catalog health check
+Products                 : {len(catalog)}
+Categories / brands      : {catalog["category"].nunique()} / {catalog["brand"].nunique()}
+Median price             : ${catalog["price"].median():.2f}
+Median margin            : {catalog["margin_pct"].median():.1f}%
+Products with no reviews : {(catalog["flag"] == "no reviews").sum()}
+Out of stock             : {(catalog["stock_status"] == "out_of_stock").sum()}
+Star products in stock   : {len(stars)}
+Newest product           : {catalog.sort_values("launch_date").iloc[-1]["name"]}"""
+print(report)</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>Pinecrest catalog health check
+Products                 : 242
+Categories / brands      : 9 / 8
+Median price             : $82.95
+Median margin            : 45.5%
+Products with no reviews : 8
+Out of stock             : 15
+Star products in stock   : 8
+Newest product           : Juniper Vane Sawtooth 30L Daypack</code></pre>
+                    </div>
+                </div>
+
+                <div class="card card-success">
+                    <h3>✅ Project Completion Checklist</h3>
+                    <ul class="checklist">
+                        <li><code>catalog</code> has 242 rows, and <code>launch_date</code> is a <code>datetime64</code> column, not text</li>
+                        <li>You found the two columns with missing values (14 weights, 8 ratings)</li>
+                        <li><code>margin</code>, <code>margin_pct</code> and <code>launch_year</code> were created without a loop</li>
+                        <li>The <code>flag</code> column was filled with <code>.loc[mask, "flag"] = ...</code>, with no warnings</li>
+                        <li>Your star filter uses <code>&amp;</code> with each condition in parentheses and returns 8 products</li>
+                        <li>The report prints from variables, and its numbers match the ones above</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="exercises" class="lesson-section">
+                <h2>🏋️ Hands-on Exercises</h2>
+
+                <p>These use <code>customers.csv</code> and <code>orders.csv</code>, so you practice on tables you have not been walked through. Try each before opening the solution. "Not yet" is a fine answer on the first attempt.</p>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 1: Greet a New Table</h3>
+                    <p>Load <code>data/customers.csv</code> into <code>customers</code>. How many rows and columns? Which column is <code>bool</code>, and which numeric column is <code>float64</code> even though it holds whole years? How many customers are in each loyalty tier?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>.shape</code>, <code>.dtypes</code> and <code>value_counts()</code>. A whole-number column becomes <code>float64</code> when some of its values are missing.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">customers = pd.read_csv("data/customers.csv")
+print(customers.shape)
+print(customers.dtypes)
+print(customers["loyalty_tier"].value_counts())</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>(4850, 12)
+customer_id              int64
+first_name                 str
+last_name                  str
+email                      str
+phone                      str
+city                       str
+state                      str
+signup_date                str
+birth_year             float64
+acquisition_channel        str
+loyalty_tier               str
+marketing_opt_in          bool
+dtype: object
+loyalty_tier
+Basic     2822
+Silver    1294
+Gold       734
+Name: count, dtype: int64</code></pre>
+                        </div>
+                        <p><code>birth_year</code> is <code>float64</code> because 442 customers did not give one, and the default integer dtype has no way to store "missing". <code>marketing_opt_in</code> is the boolean.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 2: Three Filters</h3>
+                    <p>Count: (a) Gold-tier customers who live in Idaho (<code>"ID"</code>); (b) customers who opted in to marketing <em>and</em> have a phone number on file; (c) customers who live outside the four store states (ID, OR, AZ, NC), as a count and as a percentage of all customers.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>A <code>bool</code> column is already a mask, so it can go straight into a filter. For (c), <code>~</code> in front of <code>.isin([...])</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">gold_id = customers[(customers["loyalty_tier"] == "Gold") &amp; (customers["state"] == "ID")]
+print(len(gold_id))
+
+reachable = customers[customers["marketing_opt_in"] &amp; customers["phone"].notna()]
+print(len(reachable))
+
+away = customers[~customers["state"].isin(["ID", "OR", "AZ", "NC"])]
+print(len(away), round(len(away) / len(customers) * 100, 1))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>149
+2623
+1345 27.7</code></pre>
+                        </div>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 3: Labels and Positions</h3>
+                    <p>Make <code>by_id</code> by setting <code>customer_id</code> as the index. Then get: (a) the first name, city, state and tier of customer 10034, using labels; (b) the signup date of the <em>last</em> row, using a position; (c) the shape of <code>by_id.loc[10001:10005]</code>. Before running (c), predict the number of rows.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>.loc[row_label, [column names]]</code> for (a), <code>.iloc[-1]</code> for (b). For (c), remember what is special about a <code>.loc</code> slice.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">by_id = customers.set_index("customer_id")
+print(by_id.loc[10034, ["first_name", "city", "state", "loyalty_tier"]])
+print(by_id.iloc[-1]["signup_date"])
+print(by_id.loc[10001:10005].shape)</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>first_name      Aiko
+city            Bend
+state             OR
+loyalty_tier    Gold
+Name: 10034, dtype: str
+2025-07-19
+(5, 11)</code></pre>
+                        </div>
+                        <p>The slice returned 5 rows because <code>.loc</code> includes both ends and all five ids exist. The columns shrank to 11 because <code>customer_id</code> moved into the index.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 4: New Columns</h3>
+                    <p>Add three columns to <code>customers</code>: <code>full_name</code> (first and last name with a space between), <code>age_2025</code> (2025 minus the birth year), and <code>generation</code>: <code>"Gen Z"</code> for birth years from 1997, <code>"Millennial"</code> for 1981 to 1996, <code>"Gen X"</code> for 1965 to 1980, <code>"Boomer or older"</code> for 1964 and earlier, and <code>"unknown"</code> when the birth year is missing. Count the generations. Which full names are the most common?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>+</code> joins text columns. Start <code>generation</code> at <code>"unknown"</code> and overwrite with <code>.loc[mask, "generation"] = ...</code>. A comparison with a missing value is <code>False</code>, so the unknowns stay unknown.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">customers["full_name"] = customers["first_name"] + " " + customers["last_name"]
+customers["age_2025"] = 2025 - customers["birth_year"]
+customers["generation"] = "unknown"
+customers.loc[customers["birth_year"] &gt;= 1997, "generation"] = "Gen Z"
+customers.loc[customers["birth_year"].between(1981, 1996), "generation"] = "Millennial"
+customers.loc[customers["birth_year"].between(1965, 1980), "generation"] = "Gen X"
+customers.loc[customers["birth_year"] &lt;= 1964, "generation"] = "Boomer or older"
+
+print(customers[["full_name", "birth_year", "age_2025", "generation"]].head(3))
+print(customers["generation"].value_counts())
+print(customers["full_name"].value_counts().head(2))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>        full_name  birth_year  age_2025  generation
+0     Odessa Kato         NaN       NaN     unknown
+1  Silas Faulkner      1989.0      36.0  Millennial
+2      Ana Kaplan      1995.0      30.0  Millennial
+generation
+Boomer or older    1252
+Gen X              1217
+Millennial         1195
+Gen Z               744
+unknown             442
+Name: count, dtype: int64
+full_name
+Asha Reyes       4
+Bodhi Leclerc    4
+Name: count, dtype: int64</code></pre>
+                        </div>
+                        <p>Four different customers are named Asha Reyes: a name does not identify a person, which is why the table has <code>customer_id</code>.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 5: The Big Orders (Stretch)</h3>
+                    <p>Load <code>data/orders.csv</code> with <code>parse_dates=["order_date"]</code>. Find the orders over $2,000, largest first. How many are there, and what do they have in common (look at <code>channel</code> and <code>status</code>)? Then predict what this prints, and explain it in one sentence in your journal before you run it:</p>
+                    <pre data-norun><code class="language-python">subset = orders[orders["status"] == "returned"]
+subset["order_total"] = 0
+print(orders.loc[orders["status"] == "returned", "order_total"].head(2).tolist())</code></pre>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">orders = pd.read_csv("data/orders.csv", parse_dates=["order_date"])
+big = orders[orders["order_total"] &gt; 2000].sort_values("order_total", ascending=False)
+print(len(big))
+print(big[["order_id", "order_date", "channel", "status", "order_total"]].head(3))
+print(big["channel"].value_counts())
+print(big["status"].value_counts())
+
+subset = orders[orders["status"] == "returned"]
+subset["order_total"] = 0
+print(orders.loc[orders["status"] == "returned", "order_total"].head(2).tolist())</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>12
+       order_id order_date channel     status  order_total
+6478     106479 2024-09-15  online  completed       4893.0
+14267    114268 2025-06-24  online  completed       4184.9
+13835    113836 2025-06-11  online  completed       4150.4
+channel
+online    12
+Name: count, dtype: int64
+status
+completed    12
+Name: count, dtype: int64
+[89.06, 239.58]</code></pre>
+                        </div>
+                        <p>All 12 are completed online orders: bulk purchases like the $4,893 order flagged in Lesson 0.1. And the returned orders in <code>orders</code> kept their totals, because <code>subset</code> is an independent table under copy-on-write. Setting its totals to 0 changed <code>subset</code> only.</p>
+                    </details>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="quiz" class="lesson-section">
+                <h2>🎯 Quick Quiz</h2>
+                <div class="card quiz-container">
+                    <h3>🎯 Check Your Understanding</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> What does this print?</p>
+                        <pre><code class="language-python">qa = pd.Series([10, 20, 30], index=["a", "b", "c"])
+qb = pd.Series([1, 2, 3], index=["b", "c", "d"])
+print((qa + qb).tolist())</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>[nan, 21.0, 32.0, nan]</code></pre>
+                        </div>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="That would be adding by position, as NumPy does. A Series matches something else before it adds.">
+                                A) <code>[11, 22, 33]</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Series arithmetic aligns on labels. Only b and c exist in both, giving 21 and 32. Labels a and d exist in one Series only, so the result there is NaN, and the NaNs make the whole result float.">
+                                B) <code>[nan, 21.0, 32.0, nan]</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="pandas does not treat a missing partner as zero. What does it put where a label exists on only one side?">
+                                C) <code>[10.0, 21.0, 32.0, 3.0]</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> Which expression returns a <strong>DataFrame</strong> rather than a Series?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="A list of column names inside the brackets always returns a DataFrame, even when the list holds a single name.">
+                                A) <code>products[["price"]]</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="One column name in single brackets pulls out one column. What is a single column called?">
+                                B) <code>products["price"]</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="This picks one row by position. One row comes back as a Series whose index is the column names.">
+                                C) <code>products.iloc[0]</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> What does this print?</p>
+                        <pre><code class="language-python">qdf = pd.DataFrame({"n": [1, 2, 3, 4, 5]}, index=[10, 20, 30, 40, 50])
+print(len(qdf.loc[10:30]), len(qdf.iloc[0:2]))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>3 2</code></pre>
+                        </div>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="One of these two slices includes its end point and the other does not. Which tool works with labels?">
+                                A) <code>2 2</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="iloc behaves like NumPy and Python slicing: the stop position is left out.">
+                                B) <code>3 3</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="loc slices by label and includes both ends: labels 10, 20 and 30 make three rows. iloc slices by position and excludes the stop: positions 0 and 1 make two rows.">
+                                C) <code>3 2</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 4:</strong> What does this print?</p>
+                        <pre><code class="language-python">qorig = pd.DataFrame({"x": [1, 2, 3]})
+qpart = qorig[qorig["x"] &gt; 1]
+qpart["x"] = 0
+print(qorig["x"].tolist())</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>[1, 2, 3]</code></pre>
+                        </div>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="Under copy-on-write qpart behaves as an independent copy from the moment it is created, so writing to it changes qpart only. qorig keeps 1, 2, 3.">
+                                A) <code>[1, 2, 3]</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="That is what a NumPy view would do. What is the pandas rule about objects derived from other objects?">
+                                B) <code>[1, 0, 0]</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="The assignment is to qpart, and qpart only ever held two of the three rows. Does writing to qpart reach qorig at all?">
+                                C) <code>[0, 0, 0]</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 5:</strong> You want the products that cost more than $100 <em>and</em> are out of stock. Which line is correct?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Python's and needs a single True or False on each side, and each side here is a whole Series. This raises a ValueError.">
+                                A) <code>products[products["price"] &gt; 100 and products["stock_status"] == "out_of_stock"]</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Without parentheses Python evaluates the ampersand before the comparisons, so it tries to combine 100 with a column of text.">
+                                B) <code>products[products["price"] &gt; 100 &amp; products["stock_status"] == "out_of_stock"]</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Each condition sits in its own parentheses and they are joined with the element-by-element and operator, so the result is one mask with a True or False per row.">
+                                C) <code>products[(products["price"] &gt; 100) &amp; (products["stock_status"] == "out_of_stock")]</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="faq" class="lesson-section">
+                <h2>❓ Common Questions at This Stage</h2>
+
+                <details>
+                    <summary>Tutorials I find online show <code>object</code> for text columns and talk about a SettingWithCopyWarning. Why does mine look different?</summary>
+                    <p>Those were written for earlier versions of pandas. Text columns now get the dedicated <code>str</code> dtype, and copy-on-write replaced the old, unpredictable view-or-copy behavior, so that warning no longer exists. Advice such as "add <code>.copy()</code> after every filter to silence the warning" is no longer needed: a filtered table is already independent. The code in such tutorials usually still runs. When it does not, the fix is nearly always the single <code>.loc</code> assignment from this lesson.</p>
+                </details>
+                <details>
+                    <summary>Can I write <code>products.price</code> instead of <code>products["price"]</code>?</summary>
+                    <p>For reading, yes, when the name is a valid Python identifier and does not collide with a DataFrame method. It fails for names with spaces (<code>Order Total</code>), and for names such as <code>count</code> or <code>shape</code> it silently gives you the method or attribute instead of the column. You also cannot create a new column that way. This course uses square brackets everywhere because they always work.</p>
+                </details>
+                <details>
+                    <summary>When should I set an index, and when should I leave the default?</summary>
+                    <p>Leave the default unless you have a reason. A meaningful index earns its place when you look rows up by a key often (<code>by_sku.loc["TNT-1002"]</code>), when you want arithmetic between tables to line up on that key, or for dates in time series, which <a href="pandas_time_series.html">Lesson 2.7</a> covers. For filtering, sorting and grouping, an ordinary column works just as well.</p>
+                </details>
+                <details>
+                    <summary>Is there a way to loop over the rows?</summary>
+                    <p>There is (<code>for row in df.itertuples():</code>), and you should treat it as a last resort. A loop over rows gives up the compiled, whole-column speed you measured in Module 1, often by a factor of a hundred. Almost anything you would do in a row loop can be written as column arithmetic, a mask, <code>np.where</code> or, soon, a <code>groupby</code>. If you catch yourself writing a row loop, pause and ask what the column version would be.</p>
+                </details>
+
+                <div class="card card-accent">
+                    <h3>🌟 Going Further: Bonus Challenge</h3>
+                    <p>pandas has a second way to write filters: <code>products.query("price &gt; 100 and rating &gt; 4.5")</code>. Read its entry in the pandas documentation, then rewrite the star-product filter from the project with <code>.query()</code> and confirm that you get the same 8 rows (<code>.equals()</code> compares two DataFrames). Which version do you find easier to read? Which would be easier to build when the threshold lives in a variable? (Hint: look up the <code>@</code> prefix.)</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="journal" class="lesson-section">
+                <h2>📓 Learning Journal</h2>
+                <div class="card card-accent">
+                    <p>Take five minutes to write in your learning journal (the <code>journal.md</code> file you started in Lesson 0.1, or a paper notebook). Jot down:</p>
+                    <ul>
+                        <li><strong>Key concepts</strong> you learned today</li>
+                        <li><strong>Techniques that clicked</strong> (and the ones that have not, yet)</li>
+                        <li><strong>Questions or confusion</strong> to come back to</li>
+                        <li><strong>Ideas to try</strong> on your own</li>
+                        <li><strong>Progress and feelings</strong>: how did this lesson go for you?</li>
+                    </ul>
+                    <p><strong>✍️ This lesson's prompt:</strong> In your own words, explain to a colleague why <code>df[mask]["col"] = 0</code> changes nothing and what to write instead. Then write down the difference between <code>.loc</code> and <code>.iloc</code> in one sentence each, with an example from the product catalog.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="summary" class="lesson-section">
+                <h2>📝 Lesson Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎓 Key Takeaways</h3>
+                    <ul>
+                        <li>A <strong>Series</strong> is an array plus an index of labels; a <strong>DataFrame</strong> is a set of Series sharing one index, each with its own dtype</li>
+                        <li>Arithmetic between Series <strong>aligns on labels</strong>, and labels without a partner produce <code>NaN</code></li>
+                        <li>Greet every table with <code>shape</code>, <code>head()</code>, <code>info()</code> and <code>describe()</code>; text is <code>str</code>, and dates stay text until converted</li>
+                        <li><code>df["col"]</code> is a Series, <code>df[["a", "b"]]</code> a DataFrame; <code>.loc</code> selects by label (slices include the end), <code>.iloc</code> by position (slices exclude it)</li>
+                        <li>Filter with a boolean mask; combine conditions with <code>&amp;</code>, <code>|</code>, <code>~</code> and parentheses; test for missing values with <code>.isna()</code></li>
+                        <li>New columns come from whole-column arithmetic; change selected rows with <code>df.loc[mask, "col"] = value</code></li>
+                        <li><strong>Copy-on-write:</strong> every derived object behaves as a copy, so chained assignment never changes the original</li>
+                        <li><code>sort_values()</code> orders rows (labels travel with them) and <code>value_counts()</code> counts categories</li>
+                    </ul>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🏆 What You've Accomplished</h3>
+                    <ul>
+                        <li>You built Series and DataFrames by hand and loaded three real tables from files</li>
+                        <li>You selected cells, rows and columns by label and by position, and can say which is which</li>
+                        <li>You wrote multi-condition filters and met the error messages that come from getting them slightly wrong</li>
+                        <li>You changed data the way copy-on-write expects, and saw for yourself what happens when you do not</li>
+                        <li>You produced a catalog health check with flags, star products and stock gaps, with no loop anywhere</li>
+                    </ul>
+                </div>
+
+                <h3>🔭 Looking Ahead</h3>
+                <p>In <a href="pandas_data_loading.html"><strong>Lesson 2.2: Loading Data</strong></a> you will go well beyond the one-line <code>read_csv</code>: choosing columns and dtypes as you load, parsing dates, reading an Excel workbook whose header is not on the first row, flattening nested JSON, handling files too big for memory, and writing your results back out.</p>
+
+                <h3>📋 Before the Next Lesson</h3>
+                <ul>
+                    <li>Keep your project notebook: the <code>margin</code> columns come back in later lessons.</li>
+                    <li>Run the four-line greeting on <code>data/order_items.csv</code>. Which column would you use to connect it to <code>products</code>?</li>
+                    <li>Open <code>data/sales_2025.xlsx</code> in a spreadsheet program, if you have one, and notice where the header row is. Lesson 2.2 deals with it.</li>
+                </ul>
+
+                <div class="card card-accent">
+                    <h3>🌱 Encouragement for the Journey</h3>
+                    <p>You now hold the core vocabulary of pandas. It is normal for <code>.loc</code> versus <code>.iloc</code> and the bracket-inside-bracket syntax to feel fiddly for a few days: everyone looks them up at first, and then one day you notice you did not. The copy-on-write rule you learned today took the pandas community years to arrive at, and you get to start with the clear version. Well done.</p>
+                </div>
+            </section>
+
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="numpy_linear_algebra.html" class="prev-lesson">← Previous: Linear Algebra Essentials</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="pandas_data_loading.html" class="next-lesson">Next: Loading Data →</a>
+            </nav>
         </div>
-        <div class="concept-box dataframe-box">
-            <h3>📋 DataFrame</h3>
-            <ul>
-                <li>2-dimensional labeled table</li>
-                <li>Multiple columns (Series)</li>
-                <li>Has index and columns</li>
-                <li>Like a spreadsheet or SQL table</li>
-                <li>Can have mixed data types</li>
-            </ul>
-        </div>
-    </div>
-
-    <pre><code>import pandas as pd
-import numpy as np
-
-class PandasDataStructures:
-    """
-    Master class for understanding Pandas data structures.
-    Your guide to Series and DataFrames!
-    """
-    
-    def __init__(self):
-        np.random.seed(42)
-    
-    def series_deep_dive(self):
-        """Deep dive into Series capabilities"""
-        print("🔍 Series Deep Dive")
-        print("=" * 60)
-        
-        # Create a Series with datetime index
-        dates = pd.date_range('2024-01-01', periods=30)
-        daily_sales = pd.Series(
-            np.random.randint(100, 500, 30),
-            index=dates,
-            name='Daily Sales'
-        )
-        
-        print("Time Series Example:")
-        print(daily_sales.head())
-        
-        # Series methods
-        print("\n📊 Powerful Series Methods:")
-        
-        # Statistical summary
-        print(f"\nDescribe:\n{daily_sales.describe().round(2)}")
-        
-        # Rolling window
-        rolling_avg = daily_sales.rolling(window=7).mean()
-        print(f"\n7-day Rolling Average (last 5 days):\n{rolling_avg.tail().round(2)}")
-        
-        # Cumulative operations
-        cumulative = daily_sales.cumsum()
-        print(f"\nCumulative Sales (last 5 days):\n{cumulative.tail()}")
-        
-        # Value counts
-        categories = pd.Series(['A', 'B', 'A', 'C', 'B', 'A', 'C', 'C', 'B', 'A'])
-        print(f"\nValue Counts:\n{categories.value_counts()}")
-        
-        # String operations
-        names = pd.Series(['alice', 'bob', 'charlie', 'diana'])
-        print(f"\nString Operations:")
-        print(f"  Uppercase: {names.str.upper().tolist()}")
-        print(f"  Length: {names.str.len().tolist()}")
-        print(f"  Contains 'a': {names.str.contains('a').tolist()}")
-    
-    def dataframe_operations(self):
-        """Essential DataFrame operations"""
-        print("\n🎯 DataFrame Operations")
-        print("=" * 60)
-        
-        # Create a sample DataFrame
-        df = pd.DataFrame({
-            'Date': pd.date_range('2024-01-01', periods=10),
-            'Product': ['A', 'B', 'A', 'C', 'B', 'A', 'C', 'B', 'A', 'C'],
-            'Sales': np.random.randint(100, 1000, 10),
-            'Quantity': np.random.randint(1, 50, 10),
-            'Region': ['North', 'South', 'North', 'East', 'West', 
-                      'North', 'East', 'South', 'West', 'East']
-        })
-        
-        print("Sample DataFrame:")
-        print(df)
-        
-        # Column operations
-        print("\n📊 Column Operations:")
-        
-        # Add new column
-        df['Revenue'] = df['Sales'] * df['Quantity']
-        print(f"Added 'Revenue' column")
-        
-        # Select columns
-        print(f"\nSelecting columns:")
-        print(f"  Single column (Series): df['Product']")
-        print(f"  Multiple columns (DataFrame): df[['Product', 'Sales']]")
-        
-        # Drop column
-        df_dropped = df.drop('Region', axis=1)
-        print(f"  Dropped 'Region' column")
-        
-        # Row operations
-        print("\n📊 Row Operations:")
-        
-        # Filter rows
-        high_sales = df[df['Sales'] > 500]
-        print(f"Rows with Sales > 500:\n{high_sales}")
-        
-        # Sort values
-        sorted_df = df.sort_values('Revenue', ascending=False)
-        print(f"\nSorted by Revenue (descending):\n{sorted_df.head(3)}")
-
-        # Unique</code></pre>
-
-    <!-- Learning Journal (REQUIRED per the Courseware Authoring Standard) -->
-    <section id="journal" class="lesson-section">
-        <h2>📓 Learning Journal</h2>
-        <div class="card card-info">
-            <p>Keep a learning journal — digital or physical. After this lesson, take a few minutes to write down:</p>
-            <ul>
-                <li><strong>Key concepts</strong> you learned</li>
-                <li><strong>Techniques that clicked</strong> for you</li>
-                <li><strong>Questions or confusion points</strong> to revisit</li>
-                <li><strong>Ideas you want to try</strong></li>
-                <li><strong>Your progress and feelings</strong> about learning this</li>
-            </ul>
-            <p><strong>✍️ This lesson's prompt:</strong> A DataFrame is just a collection of Series sharing an index. How does thinking about your data as "labeled columns with a shared index" change the way you'd approach a spreadsheet you already know well?</p>
-        </div>
-    </section>
-
-    <!-- Lesson Summary (full standard block) -->
-    <section id="summary" class="lesson-section">
-        <h2>📝 Lesson Summary</h2>
-        <div class="card card-success">
-            <h3>🎓 Key Takeaways</h3>
-            <ul>
-                <li>A Series is a one-dimensional labeled array; a DataFrame is a two-dimensional table whose columns are Series sharing one index.</li>
-                <li>You can build both from lists, dictionaries, or NumPy arrays, and inspect them with <code>shape</code>, <code>dtypes</code>, and <code>info()</code>.</li>
-                <li>Selecting one column returns a Series; selecting a list of columns returns a DataFrame.</li>
-                <li>Vectorized and statistical methods (<code>mean</code>, <code>describe</code>, <code>value_counts</code>, <code>rolling</code>) let you operate on whole columns without loops.</li>
-            </ul>
-        </div>
-        <h3>🎉 What You've Accomplished</h3>
-        <p>You now understand the two core pandas data structures and can create, inspect, and manipulate them — selecting columns, filtering and sorting rows, and computing new values. Every later pandas skill builds directly on this foundation.</p>
-        <h3>❓ Common Questions at This Stage</h3>
-        <details>
-            <summary>When do I get a Series back versus a DataFrame?</summary>
-            <p><code>df['col']</code> (single label) returns a Series; <code>df[['col']]</code> or <code>df[['a', 'b']]</code> (a list of labels) returns a DataFrame. The double brackets are the giveaway.</p>
-        </details>
-        <details>
-            <summary>What is the index really for?</summary>
-            <p>The index labels each row and powers fast, alignment-aware lookups. When you combine Series or DataFrames, pandas aligns them by index automatically — a huge convenience once you rely on it.</p>
-        </details>
-        <details>
-            <summary>Should I use <code>loc</code> or <code>iloc</code>?</summary>
-            <p>Use <code>loc</code> to select by label (e.g. <code>df.loc['Monday']</code>) and <code>iloc</code> to select by integer position (e.g. <code>df.iloc[0]</code>). Mixing them up is the most common early indexing bug.</p>
-        </details>
-        <h3>🔭 Looking Ahead</h3>
-        <p>Now that you can create and shape data structures by hand, the next step is loading real data into them from files and databases — CSV, Excel, JSON, and SQL.</p>
-        <h3>✅ Before the Next Lesson</h3>
-        <ul>
-            <li>Recreate the sales DataFrame from memory, add a computed column, and sort by it.</li>
-            <li>Take one column as a Series and try <code>describe()</code>, <code>value_counts()</code>, and a <code>.str</code> operation on it.</li>
-            <li>Write your Learning Journal entry for this lesson</li>
-        </ul>
-        <div class="card card-accent" style="text-align: center; padding: 2rem;">
-            <h3>🌟 Encouragement for the Journey</h3>
-            <p>Series and DataFrames will be your daily companions from here on. Get comfortable with them now and every future lesson will feel like a natural extension of what you already know. You've got this!</p>
-        </div>
-    </section>
-
     </main>
 
-    <!-- Footer -->
     <footer class="site-footer">
         <p>&copy; 2026 Ray de la Paz. Python Data Science. All rights reserved.</p>
         <div class="footer-links">
@@ -682,6 +1545,10 @@ class PandasDataStructures:
             <a href="https://rays-home.netlify.app/contact">Contact</a>
             <a href="#" id="print-button">Print Page</a>
         </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
     </footer>
+
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
 </body>
 </html>

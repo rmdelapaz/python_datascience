@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facilitator Guide: Session 19</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Instructor copy —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">contains answers &amp; timing · not for students</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Facilitator Guide</div>
+    <h1>Session 19: Seaborn and Plotly</h1>
+    <p class="sub">How to teach the session where charts start doing statistics and then start answering back. Before the break, seaborn: describe a chart by naming columns, and learn to say exactly what an error bar shows. After it, Plotly: a chart the reader can hover, zoom and filter, in one HTML file that carries its data with it.</p>
+    <div class="meta-row">
+      <span class="chip"><b>2</b> lessons</span>
+      <span class="chip"><b>3 hrs</b> session</span>
+      <span class="chip">Lessons <b>7.1–7.2</b></span>
+      <span class="chip">Session <b>19</b> of 21</span>
+    </div>
+  </header>
+
+  <div class="sec"><h2>How to Use This Guide</h2><span class="rule"></span></div>
+  <ul class="tick">
+          <li><b>Same rhythm as every session:</b> warm-up, then for each lesson a frame (the goal and a mental model), a live demo (you type, they type along), a guided lab from the kit, and the first step of the lesson's own project. The rest of each project, the lesson exercises, quiz and journal are homework.</li>
+          <li><b>The lessons are the reference.</b> Keep <code class="inline">visualization_seaborn.html</code> and <code class="inline">visualization_plotly.html</code> open in browser tabs for the diagrams (the function-family tree, the figure-to-browser flow, the "who will read it?" chooser). The kit's labs for today live in <code class="inline">labs/module-19/</code>: starters for learners, solutions for you.</li>
+          <li><b>Type, do not paste.</b> Every code block in the two demos is what to type live; every output was produced by running it on the course data with the course environment (seaborn 0.13.2, Plotly 7.1.0, pandas 3.0). Break something on purpose once per lesson and read the message aloud.</li>
+          <li><b>Teal blocks are hands-on, amber blocks are watch-outs.</b></li>
+        </ul>
+  <div class="note warn"><div class="t">The one risk of Session 19: charts that look right and say something else</div>
+    <p>Both libraries will happily compute or skip a statistic without telling you. Seaborn <b>aggregates silently</b> (<code class="inline">lineplot</code>, <code class="inline">barplot</code> and <code class="inline">pointplot</code> draw a mean and an interval you did not ask for). Plotly Express <b>does not aggregate at all</b> (<code class="inline">px.bar</code> stacks every row). Neither raises an error. Say the two rules early and keep pointing at them: "In seaborn, ask what the bar shows. In Plotly, aggregate first." The second risk comes at the end: an HTML chart carries its data. Learners are two sessions from a capstone they may publish, so the habit of passing a figure only the columns it needs starts today.</p>
+  </div>
+  <div class="sec"><h2>Before the Session</h2><span class="rule"></span></div>
+  <ul class="tick">
+          <li>☐ Run the kit check from the kit folder: <code class="inline">python3 labs/check_labs.py module-19</code>. Expect <code class="inline">8 passed, 0 failed</code> (four starters, four solutions).</li>
+          <li>☐ Hand out <b>starters only</b>: <code class="inline">labs/module-19/l7_1-seaborn/tier_order_sizes_starter.py</code>, <code class="inline">website_by_age_starter.py</code>, <code class="inline">labs/module-19/l7_2-plotly/product_map_starter.py</code>, <code class="inline">promo_share_trend_starter.py</code>, together with <code class="inline">labs/labs_paths.py</code>. Keep every <code class="inline">*_solution.py</code> on your machine.</li>
+          <li>☐ Projector machine: JupyterLab or VS Code started <b>from the course folder</b> (the one that holds <code class="inline">data/</code>), font at 18 pt or larger, a browser for the two lesson pages. Check versions: <code class="inline">python -c "import seaborn, plotly; print(seaborn.__version__, plotly.__version__)"</code> should print <code class="inline">0.13.2 7.1.0</code> (any 0.13 and any 7.x is fine).</li>
+          <li>☐ <b>Plotly in the room's notebooks.</b> Run one <code class="inline">px.line(...).show()</code> on a learner machine before class. If the cell shows a blank box, restart the kernel; if it still does, <code class="inline">import plotly.io as pio; pio.renderers.default = "browser"</code> sends every chart to a browser tab. <code class="inline">fig.write_html("chart.html")</code> is the fallback that cannot fail. Write that line on the board.</li>
+          <li>☐ <b>No internet in the room?</b> <code class="inline">include_plotlyjs="cdn"</code> files open blank offline. For the demo's last step and both Plotly labs tell learners to write <code class="inline">include_plotlyjs=True</code> instead (files of about 4.7 MB). Everything else today is offline already: no servers, no accounts, no API.</li>
+          <li>☐ <b>Static images are optional today.</b> <code class="inline">fig.write_image</code> needs Kaleido (installed) plus a Chrome it can drive. Do not spend class time on it: the lab skips it with a message. If you want to show it, run <code class="inline">plotly_get_chrome</code> on your machine beforehand.</li>
+          <li>☐ Whiteboard, before learners arrive: the two boxes (<b>axes-level</b> | <b>figure-level</b>), "What does this bar show: spread, or uncertainty?", and for after the break "figure = data + layout" and "Aggregate first."</li>
+          <li>☐ Skim the Session 18 homework: the Lesson 6.5 project file <code class="inline">orders_since_november.csv</code> (2,056 orders, pulled through an interruption). One volunteer explains in the warm-up how the job knew where to resume.</li>
+          <li>☐ Sticky notes or cards for the exit ticket.</li>
+        </ul>
+  <div class="sec"><h2>Session 19 Agenda (3 hours)</h2><span class="rule"></span></div>
+  <table class="timing">
+    <thead><tr><th>Clock</th><th>Minutes</th><th>Segment</th><th>What happens</th></tr></thead>
+    <tbody>
+      <tr><td class="t">0:00</td><td class="t">10</td><td>Warm-up</td><td>Five retrieval questions on Session 18 (keys, tokens, 429, backoff), no notes. Homework check: the resumable order pull.</td></tr>
+      <tr><td class="t">0:10</td><td class="t">12</td><td><b>7.1</b> Frame and mental model</td><td>The drafting assistant: name the columns, seaborn groups, computes and draws on a Matplotlib Axes.</td></tr>
+      <tr><td class="t">0:22</td><td class="t">28</td><td><b>7.1</b> Live demo</td><td>One call instead of a loop, the theme, lineplot's hidden mean, error bars four ways, axes-level against figure-level.</td></tr>
+      <tr><td class="t">0:50</td><td class="t">25</td><td><b>7.1</b> Guided lab</td><td><code class="inline">labs/module-19/l7_1-seaborn/tier_order_sizes_starter.py</code>, then <code class="inline">website_by_age_starter.py</code> for those who finish.</td></tr>
+      <tr><td class="t">1:15</td><td class="t">10</td><td><b>7.1</b> Start the lesson project</td><td>The Store Performance Brief: read the brief, run Step 1 (the two tables), sketch the four panels.</td></tr>
+      <tr><td class="t">1:25</td><td class="t">10</td><td>Break</td><td>Leave the four-error-bar figure on the projector. Ask: which panel would you put in front of a manager?</td></tr>
+      <tr><td class="t">1:35</td><td class="t">12</td><td><b>7.2</b> Frame and mental model</td><td>The wall map and the map app: Python builds a description, the browser draws it.</td></tr>
+      <tr><td class="t">1:47</td><td class="t">28</td><td><b>7.2</b> Live demo</td><td>First figure, a figure is data, aggregate before px.bar, design the hover, finish the layout, write_html and what is inside it.</td></tr>
+      <tr><td class="t">2:15</td><td class="t">25</td><td><b>7.2</b> Guided lab</td><td><code class="inline">labs/module-19/l7_2-plotly/product_map_starter.py</code>, then <code class="inline">promo_share_trend_starter.py</code>.</td></tr>
+      <tr><td class="t">2:40</td><td class="t">10</td><td><b>7.2</b> Start the lesson project</td><td>The Sales Explorer: Step 1 (tidy, minimal tables) and the first chart with a unified hover.</td></tr>
+      <tr><td class="t">2:50</td><td class="t">10</td><td>Wrap-up</td><td>Exit ticket (3 questions), homework, bring list for Session 20.</td></tr>
+      <tr><td class="t"><b>Total</b></td><td class="t"><b>180</b></td><td></td><td>Ends at 3:00.</td></tr>
+    </tbody>
+  </table>
+  <p>The two lesson pages are timed at 90 + 90 = 180 minutes for a solo learner; after the warm-up, break and wrap-up the room has 150. <b>Protect</b> in each lesson: the mental model, the demo steps marked as the heart (7.1 error bars four ways; 7.2 <code class="inline">px.bar</code> does not aggregate, and the look inside the HTML file), the first guided lab, and starting the project. <b>Goes home:</b> the remaining project steps, all lesson exercises, both quizzes and journals, and the second lab of each lesson for anyone who did not reach it: about three hours.</p>
+  <div class="sec"><h2>Warm-up</h2><span class="rule"></span></div>
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">0:00</span><h3>Warm-up: Retrieval from Session 18</h3><span class="dur">10 min</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">How to run it</div>
+        <p>Six minutes, no notes, answers on paper, then two minutes of answers called out and two for the homework check. These reach back to Lessons 6.4 and 6.5: the point is retrieval, not a grade.</p>
+      </div>
+      <div class="blk"><div class="h">Five questions (with answers)</div>
+        <ol class="steps">
+          <li>A request comes back <b>401</b>. Another comes back <b>403</b>. What does each one tell you, and what should your client do next? <b>Answer:</b> 401: the server does not know who you are (no token, or <code class="inline">token_expired</code>): log in again and repeat the request once. 403: it knows who you are and refuses: stop and fix the credential or the permission. Neither is retried in a loop.</li>
+          <li>Where does an API key live while you work on a notebook you will share, and where in the request does it travel? <b>Answer:</b> In an environment variable (or typed at a prompt), read at run time; never in the code. It travels in a header (<code class="inline">X-API-Key</code>), not in the URL, because URLs end up in logs and browser history.</li>
+          <li>The server answers <b>429</b> with the header <code class="inline">Retry-After: 4</code>. What does a polite client do? What if the header is missing? <b>Answer:</b> Wait at least 4 seconds, then send the same request again. With no header, fall back to a default wait (exponential backoff with jitter), with a maximum number of tries.</li>
+          <li>What does this print?
+<pre class="code">print([min(<span class="s">4.0</span>, <span class="s">1.0</span> * <span class="s">2</span> ** n) <span class="k">for</span> n <span class="k">in</span> range(<span class="s">4</span>)])</pre> <b>Answer:</b> <code class="inline">[1.0, 2.0, 4.0, 4.0]</code>: the delay doubles (1, 2, 4) and then the cap of 4.0 holds it. That is exponential backoff with a ceiling; real clients add random jitter on top.</li>
+          <li>Name two failures a retry policy should retry and two it never should. Then: what made the Lesson 6.5 download resumable? <b>Answer:</b> Retry: 429, 5xx, timeouts (temporary). Never: 400, 401, 403, 404 (the same request will fail the same way). Resumable: each page is saved to its own file as soon as it arrives, written completely or not at all, and pages whose files exist are skipped.</li>
+        </ol>
+      </div>
+      <div class="blk"><div class="h">Homework check (2 min)</div>
+        <p>Hands up: whose <code class="inline">orders_since_november.csv</code> has 2,056 rows? Ask one volunteer: "You interrupted the job. How did it know what was left?" (One file per page; pages whose files exist are skipped.) Then the bridge: "Five lessons getting data. From today, showing it. Open the notebook from Module 3 in your head: <code class="inline">fig, ax = plt.subplots()</code>. Seaborn draws on that <code class="inline">ax</code>."</p>
+      </div>
+    </div>
+  </section>
+  <div class="sec"><h2>Lesson Plans</h2><span class="rule"></span></div>
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">7.1</span><h3>Statistical Graphics with Seaborn</h3><span class="dur">75 min</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Objectives (from the lesson page)</div>
+        <ul class="tick">
+          <li>Draw relational, distribution and categorical charts from a tidy DataFrame with one seaborn call each</li>
+          <li>Tell an axes-level function from a figure-level one, and choose the right one for a job</li>
+          <li>Split a chart by <code class="inline">hue</code>, <code class="inline">col</code> and <code class="inline">row</code> instead of writing loops</li>
+          <li>Say exactly what an error bar or shaded band represents, and set it with <code class="inline">errorbar=</code></li>
+          <li>Finish a seaborn chart with Matplotlib, and recognize when plain Matplotlib is the better tool</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">In the room / at home</div>
+        <p><b>Room (75 min):</b> the frame, the eleven-step demo, lab 7.1-A (and 7.1-B for fast finishers), and Step 1 of the Store Performance Brief. <b>Home:</b> the rest of the project (four panel functions, the assembled <code class="inline">store_brief.png</code>, three sentences for the manager), Exercises 1 to 5, the quiz and the journal. Heatmaps and pair plots are not demonstrated: learners read that section at home and meet <code class="inline">sns.heatmap</code> in the project's Step 4.</p>
+      </div>
+      <div class="blk"><div class="h">Mental model to say (12 min frame)</div>
+        <p>"Matplotlib is a drawing table with excellent pens: put a dot here, a line there. Seaborn is an <b>assistant at the same table</b> who takes orders at a higher level: revenue against visitors, one color per store. The assistant splits the table into groups, picks colors, computes any averages and intervals, draws with the same pens and writes the legend. When the assistant is done, you can still pick up a pen."</p><p>Draw two boxes on the board, <b>axes-level</b> (takes <code class="inline">ax=</code>, returns an Axes) and <b>figure-level</b> (<code class="inline">relplot</code>, <code class="inline">displot</code>, <code class="inline">catplot</code>: makes its own figure, <code class="inline">col=</code> / <code class="inline">row=</code>, returns a FacetGrid), and leave them up all session. Then write the second idea under them: <b>"What does this bar show: spread, or uncertainty?"</b> Show the lesson page's function-family diagram for thirty seconds; do not read the theme table aloud.</p>
+      </div>
+      <div class="blk"><div class="h">Live demo (you type, they follow) · 28 min</div>
+        <p>Work in one notebook, <code class="inline">session19_seaborn.ipynb</code>, started from the course folder so that <code class="inline">data/</code> resolves. Every output below is from a real run. End each chart cell with <code class="inline">plt.show()</code> as written.</p><ol class="steps">
+          <li><b>Load and look (2m).</b> Say: "Same table as Module 3. One row per store per day, one column per variable: that is tidy, and tidy is the shape seaborn wants."
+<pre class="code"><span class="k">import</span> matplotlib.pyplot <span class="k">as</span> plt
+<span class="k">import</span> numpy <span class="k">as</span> np
+<span class="k">import</span> pandas <span class="k">as</span> pd
+<span class="k">import</span> seaborn <span class="k">as</span> sns
+
+sales = pd.read_csv(<span class="s">"data/daily_sales.csv"</span>, parse_dates=[<span class="s">"date"</span>])
+sales[<span class="s">"year"</span>] = sales[<span class="s">"date"</span>].dt.year
+sales[<span class="s">"month"</span>] = sales[<span class="s">"date"</span>].dt.month
+sales[<span class="s">"weekday"</span>] = sales[<span class="s">"date"</span>].dt.day_name().str[:<span class="s">3</span>]
+print(sns.__version__, sales.shape)
+print(sales[[<span class="s">"date"</span>, <span class="s">"store"</span>, <span class="s">"visitors"</span>, <span class="s">"revenue"</span>, <span class="s">"weekday"</span>]].head(<span class="s">3</span>))</pre>
+<pre class="out">0.13.2 (2903, 11)
+        date      store  visitors  revenue weekday
+0 2024-01-01  Asheville       201  5017.07     Mon
+1 2024-01-01       Bend       200  4132.92     Mon
+2 2024-01-01      Boise       333  5962.00     Mon</pre></li>
+          <li><b>The Module 3 way: you do the grouping (2m).</b> Type the loop slowly. Say: "Four lines of bookkeeping before any thinking. Count them."
+<pre class="code">fig, ax = plt.subplots(figsize=(<span class="s">8</span>, <span class="s">4</span>), layout=<span class="s">"constrained"</span>)
+<span class="k">for</span> store, group <span class="k">in</span> sales.groupby(<span class="s">"store"</span>):
+    ax.scatter(group[<span class="s">"visitors"</span>], group[<span class="s">"revenue"</span>], s=<span class="s">8</span>, alpha=<span class="s">0.5</span>, label=store)
+ax.set_xlabel(<span class="s">"visitors"</span>)
+ax.set_ylabel(<span class="s">"revenue"</span>)
+ax.legend(title=<span class="s">"store"</span>)
+plt.show()
+print(len(ax.collections), <span class="s">"scatter collections, one per store"</span>)</pre>
+<pre class="out">4 scatter collections, one per store</pre></li>
+          <li><b>The seaborn way: name the roles (3m).</b> Say: "Name the table, then say which column plays which role. Watch what comes back." Ask before running the print: "Is <code class="inline">returned</code> something new, or our own <code class="inline">ax</code>?"
+<pre class="code">fig, ax = plt.subplots(figsize=(<span class="s">8</span>, <span class="s">4</span>), layout=<span class="s">"constrained"</span>)
+returned = sns.scatterplot(data=sales, x=<span class="s">"visitors"</span>, y=<span class="s">"revenue"</span>, hue=<span class="s">"store"</span>,
+                           s=<span class="s">12</span>, alpha=<span class="s">0.5</span>, ax=ax)
+plt.show()
+print(type(returned).__name__, returned <span class="k">is</span> ax, <span class="s">"| x label:"</span>, ax.get_xlabel())</pre>
+<pre class="out">Axes True | x label: visitors</pre>
+It is the same Axes: seaborn drew on <b>your</b> canvas and labeled the axes from the column names. Everything from Module 3 still works on <code class="inline">ax</code>.</li>
+          <li><b>Set the theme once (2m).</b> Say: "Importing seaborn changes nothing. <code class="inline">set_theme</code> changes Matplotlib's global settings, so every later figure gets it, plain Matplotlib included." Re-run the scatter cell to show the grid and the colorblind palette.
+<pre class="code">sns.set_theme(style=<span class="s">"whitegrid"</span>, palette=<span class="s">"colorblind"</span>)
+print(plt.rcParams[<span class="s">"axes.grid"</span>], plt.rcParams[<span class="s">"axes.facecolor"</span>])</pre>
+<pre class="out">True white</pre></li>
+          <li><b>lineplot computes something you did not ask for (4m).</b> Draw it first and let the room look. Ask: "Nobody computed a mean. What is the line? What is the shaded band?" Then check against pandas.
+<pre class="code">fig, ax = plt.subplots(figsize=(<span class="s">8</span>, <span class="s">4</span>), layout=<span class="s">"constrained"</span>)
+sns.lineplot(data=sales, x=<span class="s">"month"</span>, y=<span class="s">"revenue"</span>, hue=<span class="s">"store"</span>, ax=ax)
+ax.set(xticks=range(<span class="s">1</span>, <span class="s">13</span>), ylabel=<span class="s">"daily revenue ($)"</span>)
+plt.show()
+boise = sales[sales[<span class="s">"store"</span>] == <span class="s">"Boise"</span>]
+print(boise.groupby(<span class="s">"month"</span>)[<span class="s">"revenue"</span>].agg([<span class="s">"count"</span>, <span class="s">"mean"</span>]).round(<span class="s">0</span>).head(<span class="s">3</span>))</pre>
+<pre class="out">       count    mean
+month               
+1         62  7585.0
+2         57  7277.0
+3         62  8494.0</pre>
+Say: "About 60 days per store and month. A line needs one y per x, so seaborn took the <b>mean</b> and shaded a <b>95% confidence interval</b> for it. A band you did not expect means seaborn found several rows per x."</li>
+          <li><b>Aggregate yourself when the total is the point (3m).</b> Say: "If the chart is total revenue per month, compute it with groupby and plot that table. One row per x: nothing left to average."
+<pre class="code">sales[<span class="s">"month_start"</span>] = sales[<span class="s">"date"</span>].dt.to_period(<span class="s">"M"</span>).dt.to_timestamp()
+monthly = sales.groupby([<span class="s">"store"</span>, <span class="s">"month_start"</span>], as_index=<span class="k">False</span>)[<span class="s">"revenue"</span>].sum()
+per_x = monthly.groupby([<span class="s">"store"</span>, <span class="s">"month_start"</span>]).size().max()
+print(monthly.shape, <span class="s">"| rows per store and month:"</span>, per_x)
+fig, ax = plt.subplots(figsize=(<span class="s">8</span>, <span class="s">4</span>), layout=<span class="s">"constrained"</span>)
+sns.lineplot(data=monthly, x=<span class="s">"month_start"</span>, y=<span class="s">"revenue"</span>, hue=<span class="s">"store"</span>, ax=ax)
+plt.show()</pre>
+<pre class="out">(96, 3) | rows per store and month: 1</pre></li>
+          <li><b>A skewed distribution, two groups (3m).</b> Say: "Order totals are right-skewed (Lesson 4.2). <code class="inline">log_scale=True</code> is the fix, and an ECDF needs no bins at all." Point at where each curve crosses 0.5.
+<pre class="code">orders = pd.read_csv(<span class="s">"data/orders.csv"</span>, parse_dates=[<span class="s">"order_date"</span>])
+completed = orders[orders[<span class="s">"status"</span>] == <span class="s">"completed"</span>]
+fig, axes = plt.subplots(<span class="s">1</span>, <span class="s">2</span>, figsize=(<span class="s">10</span>, <span class="s">3.6</span>), layout=<span class="s">"constrained"</span>)
+sns.histplot(data=completed, x=<span class="s">"order_total"</span>, hue=<span class="s">"channel"</span>, log_scale=<span class="k">True</span>,
+             bins=<span class="s">50</span>, element=<span class="s">"step"</span>, stat=<span class="s">"density"</span>, common_norm=<span class="k">False</span>, ax=axes[<span class="s">0</span>])
+sns.ecdfplot(data=completed, x=<span class="s">"order_total"</span>, hue=<span class="s">"channel"</span>, log_scale=<span class="k">True</span>,
+             ax=axes[<span class="s">1</span>])
+axes[<span class="s">1</span>].axhline(<span class="s">0.5</span>, color=<span class="s">"gray"</span>, linewidth=<span class="s">1</span>, linestyle=<span class="s">"--"</span>)
+plt.show()
+print(completed.groupby(<span class="s">"channel"</span>)[<span class="s">"order_total"</span>].median().round(<span class="s">2</span>).to_dict())</pre>
+<pre class="out">{'online': 153.95, 'store': 133.46}</pre></li>
+          <li><b>Same means, four error bars (5m). This is the heart of the lesson.</b> Build the loop, run it, then stop talking for ten seconds. Ask: "Four panels, identical dots. Which panel says Asheville is different? Which says customers disagree with each other?"
+<pre class="code">survey = pd.read_csv(<span class="s">"data/survey.csv"</span>)
+stores = [<span class="s">"Boise"</span>, <span class="s">"Bend"</span>, <span class="s">"Flagstaff"</span>, <span class="s">"Asheville"</span>]
+in_store = survey[survey[<span class="s">"store"</span>].isin(stores)]
+choices = [(<span class="s">"ci"</span>, <span class="s">95</span>), <span class="s">"se"</span>, <span class="s">"sd"</span>, (<span class="s">"pi"</span>, <span class="s">50</span>)]
+fig, axes = plt.subplots(<span class="s">1</span>, <span class="s">4</span>, figsize=(<span class="s">10</span>, <span class="s">3.4</span>), sharey=<span class="k">True</span>, layout=<span class="s">"constrained"</span>)
+<span class="k">for</span> ax, choice <span class="k">in</span> zip(axes, choices):
+    sns.pointplot(data=in_store, x=<span class="s">"store"</span>, y=<span class="s">"sat_staff"</span>, order=stores,
+                  errorbar=choice, seed=<span class="s">42</span>, linestyle=<span class="s">"none"</span>, capsize=<span class="s">0.2</span>, ax=ax)
+    ax.set_title(<span class="s">f"errorbar={choice!r}"</span>, fontsize=<span class="s">10</span>)
+    ax.tick_params(axis=<span class="s">"x"</span>, rotation=<span class="s">45</span>)
+plt.show()
+by_store = in_store.groupby(<span class="s">"store"</span>)[<span class="s">"sat_staff"</span>]
+summary = by_store.agg(n=<span class="s">"count"</span>, mean=<span class="s">"mean"</span>, sd=<span class="s">"std"</span>, se=<span class="s">"sem"</span>)
+print(summary.loc[stores].round(<span class="s">2</span>))</pre>
+<pre class="out">             n  mean    sd    se
+store                           
+Boise      320  4.11  0.82  0.05
+Bend       228  4.16  0.86  0.06
+Flagstaff  206  4.02  0.86  0.06
+Asheville  193  3.62  1.02  0.07</pre>
+Say: "Short bars: how well we know the mean. Long bars: how much people vary. Both are true. The bar you draw decides which one the reader hears, so the caption must say which it is." Note <code class="inline">seed=42</code>: the default interval is bootstrapped, so without a seed it wiggles between runs.</li>
+          <li><b>Figure-level: seaborn builds the grid (3m).</b> Say: "With four stores on one scatter the points pile up. <code class="inline">col=</code> gives one panel per store." Ask the room to predict the two printed values before you run.
+<pre class="code">g = sns.relplot(data=sales, x=<span class="s">"visitors"</span>, y=<span class="s">"revenue"</span>, col=<span class="s">"store"</span>, col_wrap=<span class="s">2</span>,
+                hue=<span class="s">"promo_day"</span>, s=<span class="s">12</span>, alpha=<span class="s">0.6</span>, height=<span class="s">2.8</span>, aspect=<span class="s">1.5</span>)
+g.set_axis_labels(<span class="s">"visitors per day"</span>, <span class="s">"revenue ($)"</span>)
+g.set_titles(<span class="s">"{col_name}"</span>)
+plt.show()
+print(type(g).__name__, g.axes.shape, type(g.figure).__name__)</pre>
+<pre class="out">FacetGrid (4,) Figure</pre>
+Size is <code class="inline">height</code> and <code class="inline">aspect</code> per panel, not <code class="inline">figsize</code>. The grid has its own methods (<code class="inline">set_titles</code>, <code class="inline">set_axis_labels</code>); for anything else reach in through <code class="inline">g.figure</code> and <code class="inline">g.axes</code>.</li>
+          <li><b>Break it on purpose, twice (3m).</b> Say: "Two mistakes everyone makes this week. First: handing my own Axes to a figure-level function." Read the warning aloud. "Second: treating the grid like an Axes."
+<pre class="code"><span class="k">import</span> warnings
+fig, ax = plt.subplots(figsize=(<span class="s">6</span>, <span class="s">3</span>))
+<span class="k">with</span> warnings.catch_warnings(record=<span class="k">True</span>) <span class="k">as</span> caught:
+    warnings.simplefilter(<span class="s">"always"</span>)
+    sns.relplot(data=sales, x=<span class="s">"visitors"</span>, y=<span class="s">"revenue"</span>, ax=ax)
+print(caught[<span class="s">0</span>].category.__name__ + <span class="s">":"</span>, caught[<span class="s">0</span>].message)
+g = sns.catplot(data=sales, x=<span class="s">"store"</span>, y=<span class="s">"revenue"</span>, kind=<span class="s">"box"</span>, height=<span class="s">3</span>)
+<span class="k">try</span>:
+    g.set_title(<span class="s">"Revenue by store"</span>)
+<span class="k">except</span> AttributeError <span class="k">as</span> error:
+    print(<span class="s">"AttributeError:"</span>, error)</pre>
+<pre class="out">UserWarning: relplot is a figure-level function and does not accept the `ax` parameter. You may wish to try scatterplot
+AttributeError: 'FacetGrid' object has no attribute 'set_title'</pre>
+Say: "When a seaborn object lacks a method you expected, print <code class="inline">type(obj)</code>. It tells you which of the two kinds you are holding."</li>
+          <li><b>Finish with Matplotlib, and save (3m).</b> Say: "Seaborn got us most of a chart in one line. The last part, a title that states the finding, dollars on the axis, the legend moved, is Module 3 work on the Axes that came back."
+<pre class="code"><span class="k">from</span> matplotlib.ticker <span class="k">import</span> StrMethodFormatter
+days = [<span class="s">"Mon"</span>, <span class="s">"Tue"</span>, <span class="s">"Wed"</span>, <span class="s">"Thu"</span>, <span class="s">"Fri"</span>, <span class="s">"Sat"</span>, <span class="s">"Sun"</span>]
+fig, ax = plt.subplots(figsize=(<span class="s">8</span>, <span class="s">4</span>), layout=<span class="s">"constrained"</span>)
+sns.barplot(data=sales, x=<span class="s">"weekday"</span>, y=<span class="s">"revenue"</span>, hue=<span class="s">"year"</span>, order=days,
+            errorbar=(<span class="s">"ci"</span>, <span class="s">95</span>), seed=<span class="s">42</span>, ax=ax)
+ax.set_title(<span class="s">"Saturday is the biggest day of the week, in both years"</span>, loc=<span class="s">"left"</span>)
+ax.set(xlabel=<span class="s">""</span>, ylabel=<span class="s">"mean daily revenue per store (bars: 95% CI)"</span>)
+ax.yaxis.set_major_formatter(StrMethodFormatter(<span class="s">"${x:,.0f}"</span>))
+sns.move_legend(ax, <span class="s">"upper left"</span>, title=<span class="s">"Year"</span>)
+fig.savefig(<span class="s">"weekday_revenue.png"</span>, dpi=<span class="s">150</span>)
+by_day = sales.groupby(<span class="s">"weekday"</span>)[<span class="s">"revenue"</span>].mean()
+print(by_day.loc[[<span class="s">"Tue"</span>, <span class="s">"Sat"</span>]].round(<span class="s">0</span>).to_dict())</pre>
+<pre class="out">{'Tue': 5716.0, 'Sat': 10933.0}</pre></li>
+        </ol>
+      </div>
+      <div class="blk warn"><div class="h">Three mistakes to expect</div>
+        <ul class="tick">
+          <li><b>Passing `ax=` to `relplot`, `displot` or `catplot`</b> (or the reverse: expecting <code class="inline">col=</code> to work on <code class="inline">scatterplot</code>). Symptom: two figures, one empty, and a UserWarning that scrolls by unread. Coach: "Read the last sentence of the warning. Who owns the figure in your plan, you or seaborn?" Point at the two boxes on the board.</li>
+          <li><b>Reading a band or bar without knowing what it is.</b> A learner draws <code class="inline">lineplot</code> on daily rows and describes the band as "the range". Coach: "How many rows share each x? Print <code class="inline">groupby(...).size()</code>. What did seaborn have to do to get one y?" Then: "Which <code class="inline">errorbar=</code> would give you the range you had in mind?" (<code class="inline">("pi", 100)</code>.)</li>
+          <li><b>Categories in first-seen order.</b> Weekdays come out Mon, Tue, ... only by luck of the file; age groups come out 65+, 18-24, 25-34. There is no error, so it reaches the saved figure. Coach: "Read your x axis aloud, left to right. Is that the order you would say them in?" Fix: <code class="inline">order=</code>, <code class="inline">hue_order=</code>, <code class="inline">col_order=</code>.</li>
+        </ul>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab · 25 min</div>
+        <p><b>Lab 7.1-A</b> <code class="inline">labs/module-19/l7_1-seaborn/tier_order_sizes_starter.py</code> (everyone; reference: <code class="inline">tier_order_sizes_solution.py</code>). Question: do Gold members get to their spend with bigger orders or with more of them? Two axes-level calls in one <code class="inline">plt.subplots(1, 2)</code> figure, finished with Matplotlib and saved to <code class="inline">OUTPUT</code>.</p><ul class="tick">
+          <li><b>Minutes 0 to 5:</b> everyone runs the starter as shipped and reads the merge check line aloud: 18,762 completed orders, 18,079 with a customer row. Ask: "Where did 683 orders go?" (Closed accounts: the README's 150 missing customer ids.) This is the capstone habit, rehearsed.</li>
+          <li><b>Minutes 5 to 18:</b> TODO 1 to 5. Walk the room during TODO 2: the common stall is <code class="inline">hue=</code> spelled <code class="inline">color=</code> (next lesson's word) or a missing <code class="inline">ax=axes[0]</code>, which draws both charts on the last Axes.</li>
+          <li><b>Minutes 18 to 25:</b> TODO 6 and the debrief. Ask two pairs for their panel titles. A good title states the finding: "Gold orders are somewhat larger... but mostly there are many more of them."</li>
+          <li><b>Expected numbers:</b> Merge check: 18,762 completed orders, 18,079 with a customer row, 683 dropped (closed accounts). 3,738 customers. Median order total: Basic $110.66, Silver $146.98, Gold $162.28. Mean completed orders per customer: Basic 2.05, Silver 5.12, Gold 10.81. Gold against Basic: order size ×1.47, orders per customer ×5.26.</li>
+          <li><b>Lab 7.1-B</b> <code class="inline">labs/module-19/l7_1-seaborn/website_by_age_starter.py</code> (fast finishers now, everyone at home; reference: <code class="inline">website_by_age_solution.py</code>). 1,800 responses, 472 with no website rating. Means by age group: 3.69, 3.67, 3.67, 3.66, 3.72 and 65+ 3.04 (n = 291, 95% CI 2.94 to 3.15); everyone else 3.68, a gap of 0.64 points. The gap is the same for online shoppers (65+ 3.06) and store shoppers (65+ 3.02). catplot returns a FacetGrid with axes shape (1, 2). No website rating: 3% of online shoppers, 46% of store shoppers.</li>
+          <li>Debrief line for 7.1-B: the caveat in Step 4 is the point. Nearly half of store shoppers skipped the website question, so the store panel describes the store shoppers who use the website.</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Start the lesson project · 10 min</div>
+        <p>Open the lesson at <b>Project: The Store Performance Brief</b>. Read the brief aloud (one page for the regional manager: trend, busy times, rain). Everyone types and runs <b>Step 1</b> only; the check is the printed <code class="inline">(96, 3) (2903, 17)</code> and the weather counts <code class="inline">dry 2514</code>, <code class="inline">rainy 389</code>. Then two minutes on paper: sketch the 2 by 2 layout and write which seaborn function each panel needs. Say: "Each panel is a function that takes <code class="inline">ax</code>. That is the pattern from Lesson 3.2, and it is why axes-level functions exist." Steps 2 to 5 are homework.</p>
+      </div>
+      <div class="blk"><div class="h">Checks for understanding</div>
+        <p>Use the workbook self-check, items Q1 to Q6, in the last five minutes of the lab or as a cold-call round after the break.</p><p style="font-size:.9rem;margin:.2rem 0">Answers: <b>Q1</b> <span data-sc="1">C) <code class="inline">sns.displot</code></span>; <b>Q2</b> <span data-sc="2">A) <code class="inline">Axes</code></span>; <b>Q3</b> <span data-sc="3"><code class="inline">(4,)</code></span>; <b>Q4</b> <span data-sc="4">B) One line per store through the monthly means, with no band</span>; <b>Q5</b> <span data-sc="5">D) One standard deviation either side of each mean</span>; <b>Q6</b> <span data-sc="6"><code class="inline">['M', 'S', 'L'] [3.0, 3.0, 2.0]</code></span>. Full set with explanations in the Answer Key.</p>
+      </div>
+      <div class="blk"><div class="h">Differentiation</div>
+        <p><b>Support:</b> pair programming for the lab with one keyboard; give the pair the two-box board picture as a printed card and have them write <code class="inline">axes-level</code> or <code class="inline">figure-level</code> as a comment above every seaborn call. Offer the first <code class="inline">sns.ecdfplot</code> line complete and let them write the second chart. <b>Stretch:</b> in lab 7.1-A replace the point plot with <code class="inline">sns.boxplot</code> of orders per customer and say what the box plot shows that the mean hides; in 7.1-B redo Step 1 with <code class="inline">errorbar=("pi", 50)</code> and explain why every bar now covers whole numbers only; or start Exercise 5 (the Spearman heatmap with a mask).</p>
+      </div>
+    </div>
+  </section>
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">7.2</span><h3>Interactive Charts with Plotly</h3><span class="dur">75 min</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Objectives (from the lesson page)</div>
+        <ul class="tick">
+          <li>Build line, scatter, bar, box and heatmap charts with one Plotly Express call each</li>
+          <li>Control what a reader sees on hover, and format axes, legends and facet titles</li>
+          <li>Decide when animation helps and when small multiples say the same thing better</li>
+          <li>Drop down to graph objects to combine trace types, add a second y axis and annotate</li>
+          <li>Save a chart as a standalone HTML file, export a static image, and explain what data travels inside the file</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">In the room / at home</div>
+        <p><b>Room (75 min):</b> the frame, the eleven-step demo, lab 7.2-A (and 7.2-B for fast finishers), and Step 1 plus the first chart of the Sales Explorer. <b>Home:</b> the rest of the project (three charts assembled into <code class="inline">sales_explorer.html</code>), Exercises 1 to 4, the quiz and the journal. Not demonstrated in the room: facets and trendlines, animation, the dual-axis chart and <code class="inline">write_image</code>. Say so, and say where they are in the lesson; the animation section's table (when animation helps) is worth two sentences in the wrap-up.</p>
+      </div>
+      <div class="blk"><div class="h">Mental model to say (12 min frame)</div>
+        <p>"A static chart is a <b>map printed on the wall</b>: beautifully composed, the same for everyone, fixed. An interactive chart is a <b>map app</b>: the reader pinches to zoom, taps a pin, switches layers. You, the mapmaker, still decide what is on the map and what the default view is. The reader decides where to look next."</p><p>Then the mechanism, in one breath, with the lesson's flow diagram on screen: "Your Python does not draw anything. It builds a <b>figure</b>: traces (the data) plus a layout (titles, axes, legend). That description goes, as JSON text, to a JavaScript library, plotly.js, which draws it in a browser. A notebook is a web page. An HTML file is a web page. That is why the chart works in both, and why <b>the data is in the file</b>." Write on the board: <b>figure = data + layout</b> and <b>aggregate first</b>.</p>
+      </div>
+      <div class="blk"><div class="h">Live demo (you type, they follow) · 28 min</div>
+        <p>New notebook, <code class="inline">session19_plotly.ipynb</code>. In a notebook <code class="inline">fig.show()</code> draws under the cell. The outputs below were produced on a machine with no screen, where <code class="inline">fig.show()</code> does nothing; the printed lines are what learners should see under each cell as well as the chart. If charts do not appear in the room's notebooks, see Before the Session.</p><ol class="steps">
+          <li><b>Imports and a monthly table (2m).</b> Say: "Two interfaces. Plotly Express, <code class="inline">px</code>, is the seaborn-style one: name the columns. We start there."
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+<span class="k">import</span> pandas <span class="k">as</span> pd
+<span class="k">import</span> plotly
+<span class="k">import</span> plotly.express <span class="k">as</span> px
+
+sales = pd.read_csv(<span class="s">"data/daily_sales.csv"</span>, parse_dates=[<span class="s">"date"</span>])
+sales[<span class="s">"month_start"</span>] = sales[<span class="s">"date"</span>].dt.to_period(<span class="s">"M"</span>).dt.to_timestamp()
+monthly = sales.groupby([<span class="s">"store"</span>, <span class="s">"month_start"</span>], as_index=<span class="k">False</span>)[
+    [<span class="s">"revenue"</span>, <span class="s">"visitors"</span>, <span class="s">"transactions"</span>]].sum()
+print(plotly.__version__, monthly.shape)</pre>
+<pre class="out">7.1.0 (96, 5)</pre></li>
+          <li><b>The first figure, and why nothing appears (3m).</b> Run the first two lines only. Wait. Say: "Nothing. <code class="inline">px.line</code> returned a Figure object. Python has built a description; nothing has drawn it yet." Then run <code class="inline">fig.show()</code> and spend a full minute on the live chart: hover, click a legend entry, double-click one, drag a box, double-click to reset.
+<pre class="code">fig = px.line(monthly, x=<span class="s">"month_start"</span>, y=<span class="s">"revenue"</span>, color=<span class="s">"store"</span>,
+              title=<span class="s">"Monthly revenue by store"</span>)
+print(type(fig).__name__, <span class="s">"with"</span>, len(fig.data), <span class="s">"traces"</span>)
+fig.show()</pre>
+<pre class="out">Figure with 4 traces</pre></li>
+          <li><b>A figure is data (2m).</b> Say: "Because a figure is a description, you can inspect it like any object. This habit is what makes Plotly debuggable."
+<pre class="code">trace = fig.data[<span class="s">0</span>]
+print(trace.type, <span class="s">"|"</span>, trace.name, <span class="s">"|"</span>, trace.mode, <span class="s">"|"</span>, len(trace.x), <span class="s">"points"</span>)
+print(fig.layout.title.text, <span class="s">"|"</span>, fig.layout.xaxis.title.text)
+print(list(fig.to_dict()))</pre>
+<pre class="out">scatter | Asheville | lines | 24 points
+Monthly revenue by store | month_start
+['data', 'layout']</pre>
+A line chart is a <code class="inline">scatter</code> trace in <code class="inline">lines</code> mode. The whole figure is two things, <code class="inline">data</code> and <code class="inline">layout</code>, and everything else today changes one or the other.</li>
+          <li><b>px.bar does not aggregate (3m).</b> Ask first: "<code class="inline">sns.barplot(data=sales, x=\"store\", y=\"revenue\")</code> gave four bars at the mean. What will <code class="inline">px.bar</code> do with the same table?" Take guesses, then run.
+<pre class="code">wrong = px.bar(sales, x=<span class="s">"store"</span>, y=<span class="s">"revenue"</span>)
+print(len(wrong.data[<span class="s">0</span>].x), <span class="s">"bar segments"</span>)
+by_store = sales.groupby(<span class="s">"store"</span>, as_index=<span class="k">False</span>)[<span class="s">"revenue"</span>].mean()
+by_store = by_store.sort_values(<span class="s">"revenue"</span>, ascending=<span class="k">False</span>)
+right = px.bar(by_store, x=<span class="s">"store"</span>, y=<span class="s">"revenue"</span>, text_auto=<span class="s">",.0f"</span>)
+print(len(right.data[<span class="s">0</span>].x), <span class="s">"bars:"</span>, by_store.round(<span class="s">0</span>).to_dict(<span class="s">"records"</span>)[<span class="s">0</span>])</pre>
+<pre class="out">2903 bar segments
+4 bars: {'store': 'Boise', 'revenue': 10144.0}</pre>
+Say: "No error. The first chart looks like four bars and is 2,903 slivers stacked up. In Plotly you aggregate with pandas first, then plot."</li>
+          <li><b>The default hover is rarely the one you want (3m).</b> Say: "Here is what Express wrote for a scatter. It is a small template with placeholders. It does not say the one thing I want to know about an odd point: which day is it?"
+<pre class="code">fig = px.scatter(sales, x=<span class="s">"visitors"</span>, y=<span class="s">"revenue"</span>, color=<span class="s">"store"</span>)
+print(fig.data[<span class="s">0</span>].type, <span class="s">"|"</span>, fig.data[<span class="s">0</span>].hovertemplate)</pre>
+<pre class="out">scattergl | store=Asheville&lt;br&gt;visitors=%{x}&lt;br&gt;revenue=%{y}&lt;extra&gt;&lt;/extra&gt;</pre>
+Note the trace type: above a thousand points Express switches to a WebGL trace (<code class="inline">scattergl</code>) by itself.</li>
+          <li><b>Design the hover (4m).</b> Say: "<code class="inline">hover_name</code> is the bold first line. <code class="inline">hover_data</code> is a dictionary: True adds a column, a string starting with a colon adds it with a number format." Show the chart and hover the top point: the Saturday of the 2024 Labor Day sale, in Boise.
+<pre class="code">stores = [<span class="s">"Boise"</span>, <span class="s">"Bend"</span>, <span class="s">"Flagstaff"</span>, <span class="s">"Asheville"</span>]
+sales[<span class="s">"day"</span>] = sales[<span class="s">"date"</span>].dt.strftime(<span class="s">"%a %b %d, %Y"</span>)
+fig = px.scatter(sales, x=<span class="s">"visitors"</span>, y=<span class="s">"revenue"</span>, color=<span class="s">"store"</span>, opacity=<span class="s">0.5</span>,
+                 category_orders={<span class="s">"store"</span>: stores}, hover_name=<span class="s">"day"</span>,
+                 hover_data={<span class="s">"store"</span>: <span class="k">True</span>, <span class="s">"revenue"</span>: <span class="s">":$,.0f"</span>, <span class="s">"visitors"</span>: <span class="s">":,"</span>},
+                 labels={<span class="s">"visitors"</span>: <span class="s">"Visitors"</span>, <span class="s">"revenue"</span>: <span class="s">"Revenue"</span>})
+print(fig.data[<span class="s">0</span>].hovertemplate)
+best = sales.loc[sales[<span class="s">"revenue"</span>].idxmax()]
+print(best[<span class="s">"day"</span>], <span class="s">"|"</span>, best[<span class="s">"store"</span>], <span class="s">"|"</span>, <span class="s">f"${best['revenue']:,.0f}"</span>)
+fig.show()</pre>
+<pre class="out">&lt;b&gt;%{hovertext}&lt;/b&gt;&lt;br&gt;&lt;br&gt;store=%{customdata[0]}&lt;br&gt;Visitors=%{x:,}&lt;br&gt;Revenue=%{y:$,.0f}&lt;extra&gt;&lt;/extra&gt;
+Sat Aug 31, 2024 | Boise | $27,677</pre></li>
+          <li><b>Time series: one box per date (3m).</b> Say: "For lines compared at the same dates, write the template yourself and unify the hover."
+<pre class="code">fig = px.line(monthly, x=<span class="s">"month_start"</span>, y=<span class="s">"revenue"</span>, color=<span class="s">"store"</span>,
+              category_orders={<span class="s">"store"</span>: stores}, template=<span class="s">"plotly_white"</span>,
+              labels={<span class="s">"month_start"</span>: <span class="s">""</span>, <span class="s">"revenue"</span>: <span class="s">""</span>, <span class="s">"store"</span>: <span class="s">""</span>})
+fig.update_traces(hovertemplate=<span class="s">"%{y:$,.0f}"</span>)
+fig.update_layout(hovermode=<span class="s">"x unified"</span>)
+print(fig.layout.hovermode, <span class="s">"|"</span>, fig.data[<span class="s">0</span>].hovertemplate)
+fig.show()</pre>
+<pre class="out">x unified | %{y:$,.0f}</pre></li>
+          <li><b>Finish the layout (3m).</b> Say: "Three methods do the finishing. <code class="inline">update_layout</code> for the whole figure, <code class="inline">update_xaxes</code> / <code class="inline">update_yaxes</code> for axes, <code class="inline">update_traces</code> for the series. The title is still the message."
+<pre class="code">fig.update_layout(
+    title_text=<span class="s">"Flagstaff has overtaken Bend; Asheville is drifting down"</span>,
+    height=<span class="s">450</span>, legend=dict(orientation=<span class="s">"h"</span>, yanchor=<span class="s">"bottom"</span>, y=<span class="s">1.0</span>, x=<span class="s">0</span>))
+fig.update_yaxes(tickprefix=<span class="s">"$"</span>, tickformat=<span class="s">",.0f"</span>, rangemode=<span class="s">"tozero"</span>)
+fig.update_xaxes(dtick=<span class="s">"M3"</span>, rangeslider_visible=<span class="k">True</span>)
+y_axis = fig.layout.yaxis
+print(y_axis.tickprefix, fig.layout.xaxis.dtick, y_axis.rangemode)
+fig.show()</pre>
+<pre class="out">$ M3 tozero</pre></li>
+          <li><b>Break it on purpose: a misspelled property (2m).</b> Say: "Plotly checks every property name. The real message is about five hundred lines. Read the first lines and the last three, nothing in between."
+<pre class="code"><span class="k">try</span>:
+    fig.update_layout(tittle=<span class="s">"Monthly revenue"</span>)
+<span class="k">except</span> ValueError <span class="k">as</span> error:
+    lines = str(error).splitlines()
+    print(lines[<span class="s">0</span>])
+    print([ln <span class="k">for</span> ln <span class="k">in</span> lines <span class="k">if</span> <span class="s">"Did you mean"</span> <span class="k">in</span> ln][<span class="s">0</span>])
+    print(len(lines), <span class="s">"lines in the full message"</span>)</pre>
+<pre class="out">Invalid property specified for object of type plotly.graph_objs.Layout: 'tittle'
+Did you mean "title"?
+511 lines in the full message</pre></li>
+          <li><b>Point at something: shapes and annotations (2m).</b> Say: "Reference lines and shaded regions live in the layout, so they zoom and pan with the data."
+<pre class="code">boise = sales[(sales[<span class="s">"store"</span>] == <span class="s">"Boise"</span>) &amp; (sales[<span class="s">"date"</span>] &gt;= <span class="s">"2025-10-01"</span>)]
+fig = px.line(boise, x=<span class="s">"date"</span>, y=<span class="s">"revenue"</span>, template=<span class="s">"plotly_white"</span>,
+              title=<span class="s">"Boise, fourth quarter of 2025"</span>)
+fig.add_hline(y=boise[<span class="s">"revenue"</span>].mean(), line_dash=<span class="s">"dash"</span>, line_color=<span class="s">"gray"</span>,
+              annotation_text=<span class="s">"quarter average"</span>)
+fig.add_vrect(x0=<span class="s">"2025-11-28"</span>, x1=<span class="s">"2025-12-01"</span>, fillcolor=<span class="s">"orange"</span>, opacity=<span class="s">0.25</span>,
+              line_width=<span class="s">0</span>)
+print(len(fig.layout.shapes), <span class="s">"shapes,"</span>, len(fig.layout.annotations), <span class="s">"annotation"</span>)
+fig.show()</pre>
+<pre class="out">2 shapes, 1 annotation</pre></li>
+          <li><b>Save it, and look inside the file (4m).</b> Say: "One file, no Python needed to open it. Where the plotly.js library comes from decides the size." Then open the small file in a text editor and search for Asheville.
+<pre class="code"><span class="k">from</span> pathlib <span class="k">import</span> Path
+fig = px.line(monthly, x=<span class="s">"month_start"</span>, y=<span class="s">"revenue"</span>, color=<span class="s">"store"</span>,
+              title=<span class="s">"Monthly revenue by store"</span>)
+fig.write_html(<span class="s">"revenue_full.html"</span>)
+fig.write_html(<span class="s">"revenue_cdn.html"</span>, include_plotlyjs=<span class="s">"cdn"</span>)
+<span class="k">for</span> name <span class="k">in</span> [<span class="s">"revenue_full.html"</span>, <span class="s">"revenue_cdn.html"</span>]:
+    print(<span class="s">f"{name:&lt;20} {Path(name).stat().st_size / 1024:8,.0f} KB"</span>)
+text = Path(<span class="s">"revenue_cdn.html"</span>).read_text(encoding=<span class="s">"utf-8"</span>)
+print(<span class="s">"Asheville"</span> <span class="k">in</span> text, <span class="s">'"x":'</span> <span class="k">in</span> text)</pre>
+<pre class="out">revenue_full.html       4,716 KB
+revenue_cdn.html           13 KB
+True True</pre>
+Say, slowly: "An HTML chart is not a picture of your data. It <b>contains</b> your data. Plot one point per customer and you have sent the reader your customer table."</li>
+        </ol>
+      </div>
+      <div class="blk warn"><div class="h">Three mistakes to expect</div>
+        <ul class="tick">
+          <li><b>Handing `px.bar` or `px.line` unaggregated rows.</b> Fresh from seaborn, learners expect a mean. They get 2,903 stacked slivers, or a line that scribbles back and forth. No error. Coach: "Print <code class="inline">len(fig.data[0].x)</code>. How many bars did you mean to draw?" Then: "Which pandas line makes that table?"</li>
+          <li><b>Seaborn words in a Plotly call:</b> <code class="inline">hue=</code> for <code class="inline">color=</code>, <code class="inline">col=</code> for <code class="inline">facet_col=</code>, <code class="inline">order=</code> for <code class="inline">category_orders={...}</code>. The TypeError names the unexpected argument. Coach: point at the workbook's two-column translation table; do not supply the word.</li>
+          <li><b>Nothing appears, or the wrong thing is sent.</b> A cell that ends with <code class="inline">fig = px...</code> shows nothing (no <code class="inline">fig.show()</code>); a script that calls <code class="inline">fig.show()</code> in the lab opens browser tabs for every run. And at the end, a learner writes the full <code class="inline">sales</code> table into an HTML file when the chart needed three columns. Coach: "Open your file in a text editor and search for a column you did not plot."</li>
+        </ul>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab · 25 min</div>
+        <p><b>Lab 7.2-A</b> <code class="inline">labs/module-19/l7_2-plotly/product_map_starter.py</code> (everyone; reference: <code class="inline">product_map_solution.py</code>). Question: do pricier products get better ratings, and which products are the odd ones out? One Express call with a designed hover, a finished layout, <code class="inline">write_html</code> to <code class="inline">OUTPUT</code>, and a look inside the file. The lab files never call <code class="inline">fig.show()</code>: learners open <code class="inline">output/product_map.html</code> from the file manager.</p><ul class="tick">
+          <li><b>Minutes 0 to 4:</b> run the starter as shipped. Ask: "Why does the starter cut the table to five columns before the chart exists?" (Whatever goes into the figure goes into the file. <code class="inline">cost</code> is commercially sensitive.)</li>
+          <li><b>Minutes 4 to 16:</b> TODO 1 to 3. The common stall is the <code class="inline">hover_data</code> format strings: the colon is part of the string (<code class="inline">":$,.2f"</code>). Have learners print <code class="inline">fig.data[0].hovertemplate</code> and read it.</li>
+          <li><b>Minutes 16 to 25:</b> TODO 4 and 5, then everyone opens the HTML file and finds the lowest-rated product by hovering. Debrief: the title. "Price tells you almost nothing about rating" is a finding; "Price vs rating" is a topic.</li>
+          <li><b>Expected numbers:</b> 242 products, 8 with no rating, 234 rows in the chart. Figure with 9 traces of type scatter. Spearman correlation of price and rating: −0.01. Lowest rated: Juniper Vane Trailhead Down Jacket, $372.95, rating 2.8, 4 reviews. product_map.html is about 31 KB with the CDN link; a product name is inside the file (True) and the cost column is not (False).</li>
+          <li><b>Lab 7.2-B</b> <code class="inline">labs/module-19/l7_2-plotly/promo_share_trend_starter.py</code> (fast finishers now, everyone at home; reference: <code class="inline">promo_share_trend_solution.py</code>). 20,302 orders, 2,148 with a promo code. Weekly table (210, 4); median weekly share 6.6% online, 7.9% in store. 2 traces, hover mode x unified. Six sale weekends shaded, each four days (Friday to Monday). Share of orders using a code: 51.0% on sale-weekend days, 8.0% on all other days. January 2024 is 25.3% with no sale on: the data starts there and WELCOME10 marks a customer's first order in the data.</li>
+          <li>The solution's last cell exports a PNG with <code class="inline">write_image</code> only when it can find Chrome (the environment variable <code class="inline">BROWSER_PATH</code>, or a Chrome on the PATH) and prints <code class="inline">static image skipped: ...</code> otherwise. That message is expected on most classroom machines and under <code class="inline">check_labs.py</code>.</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Start the lesson project · 10 min</div>
+        <p>Open the lesson at <b>Project: The Sales Explorer</b>. Read the brief: the manager liked the store brief and sent five follow-up questions; send her one file she can explore. Everyone runs <b>Step 1</b> (check: <code class="inline">(96, 3) (2897, 5) (7, 12)</code>) and <b>Step 2</b>, the trend chart with a unified hover and a range slider, and looks at it. Ask: "Why does <code class="inline">points</code> have 2,897 rows when <code class="inline">sales</code> has 2,903?" (<code class="inline">dropna</code>: six store-days have no revenue.) Steps 3 to 5 are homework; tell them the finished file is about 174 KB with three charts and one library link.</p>
+      </div>
+      <div class="blk"><div class="h">Checks for understanding</div>
+        <p>Workbook self-check, items Q7 to Q12.</p><p style="font-size:.9rem;margin:.2rem 0">Answers: <b>Q7</b> <span data-sc="7">A) The call only builds a Figure object; it is displayed when you call <code class="inline">fig.show()</code> (or write it to a file)</span>; <b>Q8</b> <span data-sc="8"><code class="inline">8</code></span>; <b>Q9</b> <span data-sc="9">C) <code class="inline">"revenue": ":$,.0f"</code></span>; <b>Q10</b> <span data-sc="10">B) One hover box appears for the x position under the mouse, listing all four stores</span>; <b>Q11</b> <span data-sc="11"><code class="inline">bar 4</code></span>; <b>Q12</b> <span data-sc="12">D) Aggregate to what you mean to publish, pass only the columns the chart needs, then <code class="inline">fig.write_html("chart.html", include_plotlyjs="cdn")</code></span>. Full set with explanations in the Answer Key.</p>
+      </div>
+      <div class="blk"><div class="h">Differentiation</div>
+        <p><b>Support:</b> give the Express call in lab 7.2-A with the <code class="inline">hover_data</code> dictionary left empty, so the whole task is the hover. Let pairs keep the lesson's seaborn-to-Express table open. <b>Stretch:</b> the lesson's bonus challenge (a dropdown that switches the trend chart between revenue and visitors with <code class="inline">updatemenus</code>); or in lab 7.2-B add <code class="inline">facet_row="channel"</code> and clean the facet titles with <code class="inline">for_each_annotation</code>; or export the chart with <code class="inline">write_image</code> after running <code class="inline">plotly_get_chrome</code>.</p>
+      </div>
+    </div>
+  </section>
+  <div class="sec"><h2>Closing</h2><span class="rule"></span></div>
+      <div class="blk"><div class="h">Exit ticket · 5 min (answers)</div>
+        <ol class="steps">
+          <li>You call <code class="inline">sns.barplot(data=sales, x="store", y="revenue")</code> and black lines appear on the bars. What are they, by default, and which argument changes them? <b>Answer:</b> A bootstrapped 95% confidence interval for the mean of each bar (uncertainty of the estimate, not spread of the days). <code class="inline">errorbar=</code> changes it: <code class="inline">"sd"</code>, <code class="inline">"se"</code>, <code class="inline">("pi", 50)</code> or <code class="inline">None</code>. Say which one in the caption.</li>
+          <li>Give one job for an axes-level function and one for a figure-level function. <b>Answer:</b> Axes-level (<code class="inline">scatterplot</code>, <code class="inline">histplot</code>, <code class="inline">barplot</code>): one panel inside your own <code class="inline">plt.subplots()</code> layout, with <code class="inline">ax=</code>. Figure-level (<code class="inline">relplot</code>, <code class="inline">displot</code>, <code class="inline">catplot</code>): seaborn builds a grid of panels from a column with <code class="inline">col=</code> / <code class="inline">row=</code> and returns a FacetGrid.</li>
+          <li>You plot one point per customer with <code class="inline">email</code> in <code class="inline">hover_data</code> and send the HTML file to a colleague. What have you sent? <b>Answer:</b> The customer table: every x, y and hover column is stored as readable text inside the file. Aggregate first and pass Plotly only the columns the chart needs.</li>
+        </ol><p>Collect the cards. Anyone who misses the first question gets a one-line note back next session; anyone who misses the third hears it again before the capstone.</p>
+      </div>
+  <div class="note"><div class="t">Homework before Session 20 (about 3 hours)</div>
+    <ul class="tick">
+          <li>Finish <b>The Store Performance Brief</b> (Lesson 7.1 project): four panel functions, <code class="inline">store_brief.png</code>, and three sentences for the manager, each with a number, saying what the bars in panels B and C are.</li>
+          <li>Finish <b>The Sales Explorer</b> (Lesson 7.2 project): <code class="inline">sales_explorer.html</code> with three charts. Email it to yourself and open it on a phone.</li>
+          <li>Lesson exercises: 7.1 Exercises 1 to 4 (5 is a stretch), 7.2 Exercises 1 to 3 (4 is a stretch). Both lesson quizzes and journals.</li>
+          <li>Whichever kit lab you did not finish: <code class="inline">website_by_age_starter.py</code>, <code class="inline">promo_share_trend_starter.py</code>.</li>
+          <li><b>Read the four capstone questions</b> at the top of Lesson 8.1 (<code class="inline">capstone_project.html</code>, the section Choose Your Question). You will choose one at the end of Session 20. Do not start the analysis yet.</li>
+        </ul>
+  </div>
+  <div class="note lab"><div class="t">Bring list for Session 20 (Bokeh and Streamlit)</div>
+    <ul class="tick">
+          <li><code class="inline">store_brief.png</code> and <code class="inline">sales_explorer.html</code> from the homework (the Streamlit dashboard reuses both ideas).</li>
+          <li>Check the two installs: <code class="inline">python -c "import bokeh, streamlit; print(bokeh.__version__, streamlit.__version__)"</code> should print versions starting with 3 and 1 (the course environment has 3.10.0 and 1.65.0). Both are in the course <code class="inline">requirements.txt</code>; nothing new to install.</li>
+          <li>A terminal you are comfortable in: Streamlit apps are started with <code class="inline">streamlit run dashboard.py</code> from the course folder, not from a notebook cell. Port 8501 must be free.</li>
+          <li>A web browser. No accounts, no API keys, no servers to start beforehand. The practice API from Module 6 is not needed again.</li>
+          <li>One sentence, written down: which of the four capstone questions you are leaning toward, and why.</li>
+        </ul>
+  </div>
+  <div class="sec"><h2>If You Run Long or Short</h2><span class="rule"></span></div>
+  <p><b>Long, in 7.1:</b> cut demo step 7 (the skewed distribution: it is Lesson 4.2 again) and step 6 (aggregate yourself: say it in one sentence instead). Never cut step 8 (error bars) or the lab's merge check. <b>Long, in 7.2:</b> cut step 10 (shapes and annotations) and step 9 (the misspelled property); shorten step 8 to the title and the dollar axis. Never cut step 4 (<code class="inline">px.bar</code>) or step 11 (the data is in the file). If the whole session is ten minutes behind at the break, start each project by reading the brief only and move Step 1 to homework. <b>Short:</b> run lab 7.1-B and 7.2-B in the room; then the lesson's facet-and-trendline example (<code class="inline">trendline="ols"</code>, the slopes are about $21 per visitor in every store) with the question "does one more visitor cause $21 of revenue?"; or have pairs trade <code class="inline">product_map.html</code> files and find one thing in the other pair's hover that a reader would not understand.</p>
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 19 · Facilitator Guide · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

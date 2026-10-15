@@ -1,1152 +1,1232 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Build features with pandas: derived columns, date parts, binning with cut and qcut, categoricals, per-customer aggregates, encoding, scaling by hand, and a cutoff date that keeps leakage out. Python Data Science Lesson 2.9.">
+    <meta name="author" content="Ray de la Paz">
     <title>Feature Engineering Basics - Python Data Science</title>
-    <link href="styles/main.css" rel="stylesheet"/>
-    <link href="/favicon.png" rel="icon" type="image/png"/>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid: rendered (and re-rendered on theme change) by js/course-enhancements.js -->
     <script type="module">
         import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({ startOnLoad: true });
+        window.__mermaid = mermaid;
+        mermaid.initialize({ startOnLoad: false });
+        document.dispatchEvent(new Event('mermaid-ready'));
     </script>
-    <style>
-        .breadcrumb {
-            background: #f8f9fa;
-            padding: 1rem;
-            border-radius: 5px;
-            margin-bottom: 2rem;
-            font-size: 0.9rem;
-        }
-        
-        .breadcrumb a {
-            color: #667eea;
-            text-decoration: none;
-        }
-        
-        .breadcrumb a:hover {
-            text-decoration: underline;
-        }
-        
-        .navigation-links {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 2rem 0;
-            margin-top: 3rem;
-            border-top: 2px solid #e0e0e0;
-        }
-        
-        .navigation-links a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 500;
-            padding: 0.5rem 1rem;
-            border-radius: 5px;
-            transition: all 0.3s ease;
-        }
-        
-        .navigation-links a:hover {
-            background: #f0f0f0;
-        }
-        
-        .nav-prev, .nav-next {
-            flex: 1;
-        }
-        
-        .nav-next {
-            text-align: right;
-        }
-        
-        .nav-home {
-            text-align: center;
-        }
-        
-        .feature-comparison {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin: 20px 0;
-        }
-        
-        .feature-card {
-            padding: 20px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            background: #f8f9fa;
-        }
-        
-        .feature-card h4 {
-            margin-top: 0;
-            color: #667eea;
-        }
-        
-        .warning-box {
-            background: #fff3e0;
-            border-left: 4px solid #ff9800;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 4px;
-        }
-        
-        .tip-box {
-            background: #e8f5e9;
-            border-left: 4px solid #4caf50;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 4px;
-        }
-    </style>
-    <link rel="stylesheet" href="styles/standard.css">
 </head>
 <body>
-    <nav class="breadcrumb">
-        <a href="index.html">Home</a> &gt; 
-        <a href="index.html#module2">Pandas Data Manipulation</a> &gt; 
-        <span>Feature Engineering Basics</span>
+    <a href="#main-content" class="skip-to-main">Skip to main content</a>
+
+    <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
+        <div class="progress-bar"></div>
+    </div>
+
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">📊 Python Data Science</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">☰</button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
     </nav>
 
-    <h1>🔧 Feature Engineering Basics: Preparing Data for Machine Learning</h1>
+    <main id="main-content">
+        <div class="container">
+            <header>
+                <h1>🔧 Lesson 2.9: Feature Engineering Basics</h1>
+                <p class="lead">Turn raw tables into columns that make a pattern easy to see: derived values, date parts, bins, categories, per-customer summaries and encodings, all built so that nothing leaks in from the future.</p>
 
-    <!-- What You'll Learn (learning objectives) -->
-    <div class="card card-info">
-        <h2>📚 What You'll Learn</h2>
-        <p>By the end of this lesson, you will be able to:</p>
-        <ul>
-            <li>Scale numeric features with <code>StandardScaler</code>, <code>MinMaxScaler</code>, and <code>RobustScaler</code>, and choose the right one for your data</li>
-            <li>Encode categorical variables correctly with one-hot, ordinal, and target encoding — and avoid creating false ordinal relationships</li>
-            <li>Create new features through mathematical transforms, temporal and cyclical date features, rolling/lag windows, and interactions</li>
-            <li>Select the most useful features using F-tests, mutual information, RFE, and tree-based importances</li>
-            <li>Address class imbalance with resampling techniques (SMOTE, undersampling) and imbalance-aware metrics</li>
-            <li>Assemble preprocessing and modeling into a scikit-learn <code>Pipeline</code> and <code>ColumnTransformer</code> to prevent data leakage</li>
-        </ul>
-        <p><strong>⏱️ Estimated Time:</strong> 45–60 minutes</p>
-        <p><strong>🎯 Project:</strong> Engineer a rich feature set from a year of daily sales data, then wrap scaling and encoding into a leakage-free pipeline and evaluate it with cross-validation.</p>
-    </div>
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Decide what one row of a feature table represents, and build derived columns and date parts for it</li>
+                        <li>Turn numbers into groups with <code>pd.cut()</code> and <code>pd.qcut()</code>, and work with ordered and unordered categoricals</li>
+                        <li>Summarize many rows per customer and join the summaries back, handling customers with no rows correctly</li>
+                        <li>Encode categories as numbers and rescale numeric columns by hand, and say when each is needed</li>
+                        <li>Audit a feature table for leakage using a cutoff date</li>
+                    </ul>
+                </div>
 
-    <p>Imagine you're a chef preparing ingredients for a gourmet meal. You wouldn't throw raw potatoes and whole fish into a pot and expect magic to happen! Similarly, machine learning models need properly prepared features to work their magic. Feature engineering is the art and science of transforming raw data into features that better represent the underlying patterns for machine learning algorithms. Let's master the essential techniques! 🎯</p>
+                <ul class="lesson-meta">
+                    <li><span class="meta-label">⏱️ Time</span> 95 minutes</li>
+                    <li><span class="meta-label">📋 Prerequisites</span> <a href="pandas_window_functions.html">Lesson 2.8: Window Functions</a> (this lesson draws on all of Module 2, especially <a href="pandas_groupby_operations.html">2.4</a> and <a href="pandas_merging_joining.html">2.5</a>)</li>
+                    <li><span class="meta-label">🛠️ You will build</span> A leak-free customer feature table with a "will they order again?" target, saved as <code>customer_features.csv</code></li>
+                    <li><span class="meta-label">📂 Data</span> <code>data/customers.csv</code>, <code>data/orders.csv</code>, <code>data/daily_sales.csv</code>, <code>data/products.csv</code></li>
+                </ul>
+            </header>
 
-    <h2>The Feature Engineering Pipeline 🏗️</h2>
-    
-    <p>Feature engineering sits at the heart of the machine learning workflow. It's where domain knowledge meets data science, and where good models become great ones. Studies show that feature engineering can improve model performance by 20-50% - often more than algorithm selection!</p>
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#what" class="toc-link">What a Feature Is</a></li>
+                        <li><a href="#derived" class="toc-link">Derived Columns</a></li>
+                        <li><a href="#dates" class="toc-link">Features from Dates</a></li>
+                        <li><a href="#binning" class="toc-link">Binning with cut and qcut</a></li>
+                        <li><a href="#categoricals" class="toc-link">Categoricals</a></li>
+                        <li><a href="#aggregates" class="toc-link">Per-Customer Aggregates</a></li>
+                        <li><a href="#encoding" class="toc-link">Encoding Categories as Numbers</a></li>
+                        <li><a href="#scaling" class="toc-link">Scaling by Hand</a></li>
+                        <li><a href="#leakage" class="toc-link">Leakage: The Cutoff Rule</a></li>
+                        <li><a href="#mistakes" class="toc-link">Common Mistakes</a></li>
+                        <li><a href="#project" class="toc-link">Project: The Customer Feature Table</a></li>
+                        <li><a href="#exercises" class="toc-link">Hands-on Exercises</a></li>
+                        <li><a href="#quiz" class="toc-link">Quick Quiz</a></li>
+                        <li><a href="#faq" class="toc-link">Common Questions</a></li>
+                        <li><a href="#journal" class="toc-link">Learning Journal</a></li>
+                        <li><a href="#summary" class="toc-link">Lesson Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
 
-    <div class="mermaid">
-    graph LR
-        A[Raw Data] --> B[Data Cleaning]
-        B --> C[Feature Engineering]
-        C --> D[Feature Selection]
-        D --> E[Model Training]
-        
-        C --> F[Scaling/Normalization]
-        C --> G[Encoding Categoricals]
-        C --> H[Creating Features]
-        C --> I[Handling Imbalance]
-        
-        F --> D
-        G --> D
-        H --> D
-        I --> D
-        
-        style C fill:#667eea,color:#fff
-        style F fill:#4caf50
-        style G fill:#2196f3
-        style H fill:#ff9800
-        style I fill:#e91e63
-    </div>
+            <!-- ============================================================ -->
+            <section id="what" class="lesson-section">
+                <h2>🧱 What a Feature Is</h2>
 
-    <h2>Feature Scaling: Getting Everyone on the Same Page 📏</h2>
-    
-    <p>Different features often have vastly different scales. Age might range from 0-100, while income ranges from 0-1,000,000. Many algorithms (like SVM, KNN, Neural Networks) are sensitive to feature scales. Let's fix that!</p>
+                <p>Pinecrest's marketing lead asks: "Which customers are likely to order again in the next six months?" Look at what you have. <code>customers.csv</code> says who people are. <code>orders.csv</code> says what they bought, one row per order. Neither table has a column called "likely to come back", or even "how often does this person buy". The answer is in the data, but not in a form anyone can read.</p>
 
-    <pre><code>import numpy as np
+                <p>A <strong>feature</strong> is a column you build so that a pattern becomes visible. "Number of orders so far", "days since last order" and "share of orders placed online" are features. <strong>Feature engineering</strong> is the craft of building them, and you already know every tool it needs. This lesson is where Module 2 comes together.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Mental Model: Prep Before Cooking</h4>
+                    <p>A restaurant kitchen does not cook from whole sacks of onions. Before service, the cooks wash, peel, chop and measure, and set each ingredient out in its own container, ready to use. Raw tables are the sacks. Features are the prepared containers. A chart, a statistical test or a machine-learning model is the cooking, and it goes well or badly mostly because of the prep.</p>
+                </div>
+
+                <h3>First Decision: What Is One Row?</h3>
+
+                <p>Every feature table starts with a choice that is easy to skip: <strong>what does one row represent?</strong> This is called the unit of analysis. The marketing question is about customers, so the table needs exactly one row per customer, and every feature must be a fact about <em>that customer</em>. An order's total is not a customer feature. A customer's <em>average</em> order total is.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Question</th><th>One row is</th><th>Example features</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Will this customer order again?</td><td>A customer</td><td>Orders so far, days since last order, tenure</td></tr>
+                            <tr><td>Will this order be returned?</td><td>An order</td><td>Contains footwear, channel, order value, weekday</td></tr>
+                            <tr><td>How busy will this store be tomorrow?</td><td>A store-day</td><td>Weekday, same weekday last week, promotion flag</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>🤔 Why This Matters</h3>
+                <p>Analysts spend far more time preparing features than fitting models, and a simple method on well-built features usually beats a sophisticated method on raw columns. You saw that in Lesson 2.8, where "same weekday last week" out-forecast every honest (leak-free) smoother. Good features come from understanding the business, which is why a person, not an algorithm, has to build them.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="derived" class="lesson-section">
+                <h2>➗ Derived Columns</h2>
+
+                <p>The simplest features are computed from other columns in the same row. Load the two tables and build a few on the orders.</p>
+
+                <pre><code class="language-python">import numpy as np
 import pandas as pd
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, Normalizer
-from sklearn.model_selection import train_test_split
-import matplotlib.pyplot as plt
-import seaborn as sns
 
-# Set style for beautiful plots
-sns.set_style("whitegrid")
-plt.rcParams['figure.figsize'] = (12, 6)
+pd.set_option("display.width", 150)
+pd.set_option("display.max_columns", 20)
 
-# Create sample data with different scales
-np.random.seed(42)
-n_samples = 1000
+customers = pd.read_csv("data/customers.csv", parse_dates=["signup_date"])
+orders = pd.read_csv("data/orders.csv", parse_dates=["order_date"])
+print(customers.shape, orders.shape)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>(4850, 12) (20302, 11)</code></pre>
+                </div>
 
-# Simulate a dataset with features at different scales
-data = pd.DataFrame({
-    'age': np.random.randint(18, 80, n_samples),  # 18-80 range
-    'income': np.random.exponential(50000, n_samples),  # Right-skewed, large values
-    'credit_score': np.random.normal(700, 100, n_samples),  # Normal distribution
-    'num_purchases': np.random.poisson(5, n_samples),  # Count data
-    'account_balance': np.random.lognormal(8, 2, n_samples),  # Log-normal, very skewed
-})
+                <pre><code class="language-python">feat = orders[["order_id", "customer_id", "order_date", "channel", "promo_code",
+               "shipping_cost", "order_total"]].copy()
 
-print("🔍 Original Data Statistics:")
-print(data.describe().round(2))
-print(f"\n📊 Scale Differences:")
-print(f"Age range: {data['age'].min():.0f} - {data['age'].max():.0f}")
-print(f"Income range: ${data['income'].min():.0f} - ${data['income'].max():.0f}")
-print(f"Balance range: ${data['account_balance'].min():.0f} - ${data['account_balance'].max():.0f}")
+feat["used_promo"] = feat["promo_code"].notna()                     # a yes/no flag
+feat["is_online"] = feat["channel"] == "online"                     # a comparison
+feat["merch_total"] = feat["order_total"] - feat["shipping_cost"]   # arithmetic
+feat["size"] = np.where(feat["merch_total"] &gt;= 250, "large", "regular")   # two-way choice
 
-# Visualize the scale problem
-fig, axes = plt.subplots(2, 3, figsize=(15, 8))
-fig.suptitle("Original Data Distributions - Notice the Different Scales!", fontsize=16)
+print(feat[["order_id", "promo_code", "used_promo", "is_online", "merch_total", "size"]].head(4))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>   order_id promo_code  used_promo  is_online  merch_total     size
+0    100001        NaN       False      False       434.90    large
+1    100002        NaN       False      False       278.90    large
+2    100003        NaN       False       True        60.95  regular
+3    100004        NaN       False       True       399.80    large</code></pre>
+                </div>
 
-for idx, col in enumerate(data.columns):
-    ax = axes[idx // 3, idx % 3]
-    ax.hist(data[col], bins=30, color='steelblue', alpha=0.7, edgecolor='black')
-    ax.set_title(f'{col}')
-    ax.set_ylabel('Frequency')
-    
-# Hide the extra subplot
-axes[1, 2].axis('off')
-plt.tight_layout()
-plt.show()
+                <p>Four patterns cover most derived columns:</p>
+                <ul>
+                    <li><strong>A flag</strong> from a test: <code>.notna()</code>, <code>.isin([...])</code>, <code>.str.contains(...)</code>, or a comparison. The result is True/False.</li>
+                    <li><strong>Arithmetic</strong> between columns: a difference, a ratio, a product. <code>merch_total</code> removes shipping so that online and store orders are comparable.</li>
+                    <li><strong>A choice</strong>: <code>np.where(condition, value_if_true, value_if_false)</code>.</li>
+                    <li><strong>A lookup</strong>: <code>.map({...})</code> with a dictionary, which you will use for encoding below.</li>
+                </ul>
 
-# Now let's apply different scaling techniques!
-print("\n" + "="*60)
-print("⚡ SCALING TECHNIQUES COMPARISON")
-print("="*60)</code></pre>
+                <p>A feature earns its place by separating things. Check each new column against something you care about.</p>
 
-    <h3>1. StandardScaler: The Z-Score Transformation 📊</h3>
-    
-    <pre><code># StandardScaler: Mean = 0, Std = 1
-# Best for: Normally distributed features, algorithms that assume normality
+                <pre><code class="language-python">print(feat.groupby("used_promo")["merch_total"].agg(["mean", "median", "count"]).round(2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>              mean  median  count
+used_promo
+False       195.54   147.9  18154
+True        171.30   130.1   2148</code></pre>
+                </div>
 
-from sklearn.preprocessing import StandardScaler
+                <p>Orders with a promo code are smaller on average, by about $24. The flag separates two groups that behave differently, so it is worth keeping.</p>
 
-# Create a copy for transformation
-data_standard = data.copy()
+                <h3>Ratios Are Often the Best Features</h3>
 
-# Initialize and fit the scaler
-standard_scaler = StandardScaler()
-data_standard_scaled = standard_scaler.fit_transform(data_standard)
-data_standard_scaled = pd.DataFrame(data_standard_scaled, columns=data.columns)
+                <p>Raw counts mostly measure size. Boise has more transactions than Asheville because Boise has more visitors, which tells you nothing about how well either store sells. Dividing one by the other removes size and leaves behavior.</p>
 
-print("📐 StandardScaler Results:")
-print(data_standard_scaled.describe().round(2))
+                <pre><code class="language-python">daily = pd.read_csv("data/daily_sales.csv", parse_dates=["date"])
+daily["conversion"] = daily["transactions"] / daily["visitors"]     # share of visitors who buy
+daily["basket"] = daily["revenue"] / daily["transactions"]          # dollars per transaction
 
-# Key insights
-print("\n💡 StandardScaler Properties:")
-print(f"✓ All features now have mean ≈ 0")
-print(f"✓ All features now have std ≈ 1")
-print(f"✓ Preserves outliers (can be negative)")
-print(f"✓ Not bounded to specific range")
+print(daily.groupby("store")[["visitors", "transactions", "conversion", "basket"]].mean().round(3))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>           visitors  transactions  conversion  basket
+store
+Asheville   274.898        64.536       0.235  88.444
+Bend        334.872        78.992       0.235  88.706
+Boise       485.166       114.513       0.236  88.655
+Flagstaff   328.462        77.746       0.236  88.774</code></pre>
+                </div>
 
-# When to use StandardScaler
-use_cases_standard = """
-🎯 Use StandardScaler when:
-• Your data is approximately normally distributed
-• You're using algorithms like SVM, Neural Networks, or PCA
-• You want to preserve the shape of the original distribution
-• Outliers are meaningful and should be preserved
+                <p>The raw columns differ by store by a factor of almost two. The ratios are nearly identical: about 24 buyers per 100 visitors and a similar basket everywhere. Whatever is different about Asheville, it is not that its visitors are less willing to buy. That is a finding the raw columns could not show.</p>
+            </section>
 
-⚠️ Avoid StandardScaler when:
-• Your data has significant outliers that should be suppressed
-• You need values in a specific range (use MinMaxScaler instead)
-• Your data is not normally distributed (consider RobustScaler)
-"""
-print(use_cases_standard)</code></pre>
+            <!-- ============================================================ -->
+            <section id="dates" class="lesson-section">
+                <h2>📅 Features from Dates</h2>
 
-    <h3>2. MinMaxScaler: The Range Compression 🎚️</h3>
-    
-    <pre><code># MinMaxScaler: Scale to [0, 1] range
-# Best for: When you know the min/max bounds, neural networks with sigmoid
+                <p>A timestamp is useless to most analyses as it stands, because every value is different. It becomes useful when you split it into parts that repeat, or turn it into a length of time. You met the tools in Lesson 2.7.</p>
 
-from sklearn.preprocessing import MinMaxScaler
+                <pre><code class="language-python">feat["month"] = feat["order_date"].dt.month
+feat["weekday"] = feat["order_date"].dt.dayofweek          # Monday is 0
+feat["is_weekend"] = feat["weekday"] &gt;= 5
+feat["quarter"] = feat["order_date"].dt.quarter
 
-data_minmax = data.copy()
-minmax_scaler = MinMaxScaler()
-data_minmax_scaled = minmax_scaler.fit_transform(data_minmax)
-data_minmax_scaled = pd.DataFrame(data_minmax_scaled, columns=data.columns)
+per_day = feat.groupby("is_weekend")["order_date"].agg(orders="count", days="nunique")
+per_day["orders_per_day"] = (per_day["orders"] / per_day["days"]).round(1)
+print(per_day)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>            orders  days  orders_per_day
+is_weekend
+False        13690   523            26.2
+True          6612   208            31.8</code></pre>
+                </div>
 
-print("📏 MinMaxScaler Results:")
-print(data_minmax_scaled.describe().round(2))
+                <p>Weekend days carry noticeably more orders than weekdays, so <code>is_weekend</code> is a feature worth having. Notice the care in that comparison: there are more than twice as many weekdays as weekend days, so comparing raw counts would have pointed the wrong way. Dividing by the number of days is a ratio feature again.</p>
 
-# Custom range example
-minmax_scaler_custom = MinMaxScaler(feature_range=(-1, 1))  # Scale to [-1, 1]
-data_custom_range = minmax_scaler_custom.fit_transform(data)
+                <h3>Elapsed Time Needs a Reference Date</h3>
 
-print("\n🎯 Custom Range [-1, 1]:")
-print(pd.DataFrame(data_custom_range, columns=data.columns).describe().round(2))
+                <p>"How long has this person been a customer?" and "how old are they?" are differences between two dates. One of the two is a reference date that <em>you</em> choose and write down.</p>
 
-# When to use MinMaxScaler
-use_cases_minmax = """
-🎯 Use MinMaxScaler when:
-• You need features in a bounded range [0, 1] or [-1, 1]
-• You're using algorithms that expect bounded inputs (e.g., neural networks)
-• You know the theoretical min/max of your features
-• You're working with image data (pixel values)
+                <pre><code class="language-python">as_of = pd.Timestamp("2025-12-31")
 
-⚠️ Avoid MinMaxScaler when:
-• Your data has outliers (they'll compress the "normal" values)
-• You're getting new data that might exceed training min/max
-• Your test set might have different ranges than training
-"""
-print(use_cases_minmax)</code></pre>
+customers["tenure_days"] = (as_of - customers["signup_date"]).dt.days
+customers["age"] = as_of.year - customers["birth_year"]
+print(customers[["customer_id", "signup_date", "tenure_days", "birth_year", "age"]].head(4))
+print(int(customers["age"].isna().sum()))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>   customer_id signup_date  tenure_days  birth_year   age
+0        10001  2023-08-07          877         NaN   NaN
+1        10002  2020-10-10         1908      1989.0  36.0
+2        10003  2023-06-11          934      1995.0  30.0
+3        10004  2025-10-29           63      1959.0  66.0
+442</code></pre>
+                </div>
 
-    <h3>3. RobustScaler: The Outlier-Resistant Hero 💪</h3>
-    
-    <pre><code># RobustScaler: Uses median and IQR, resistant to outliers
-# Best for: Data with outliers, skewed distributions
+                <div class="card card-warning">
+                    <h4>⚠️ Do Not Use Today's Date</h4>
+                    <p>It is tempting to write <code>pd.Timestamp.today()</code>. Then every tenure and age changes each time the notebook runs, results stop being reproducible, and features quietly use a "now" that is later than the data. Fix the reference date in a variable, as <code>as_of</code> does here. In the project it will have a second job: it becomes the cutoff that keeps the future out of your features.</p>
+                </div>
 
-from sklearn.preprocessing import RobustScaler
+                <p>The 442 customers with no birth year have no age. That is correct: a missing input gives a missing feature. Do not fill it with 0 or with the average without thinking about what that claims.</p>
+            </section>
 
-# Add some outliers to demonstrate
-data_with_outliers = data.copy()
-outlier_indices = np.random.choice(n_samples, 50, replace=False)
-data_with_outliers.loc[outlier_indices, 'income'] *= 10  # Make some incomes 10x larger
+            <!-- ============================================================ -->
+            <section id="binning" class="lesson-section">
+                <h2>📦 Binning with cut and qcut</h2>
 
-robust_scaler = RobustScaler()
-data_robust_scaled = robust_scaler.fit_transform(data_with_outliers)
-data_robust_scaled = pd.DataFrame(data_robust_scaled, columns=data.columns)
+                <p><strong>Binning</strong> turns a number into a group: an age into an age band, an order value into "small", "medium", "large". You lose detail, and you gain a column you can group by, put in a pivot, and explain to anyone.</p>
 
-print("🛡️ RobustScaler Results (with outliers):")
-print(data_robust_scaled.describe().round(2))
+                <h3>cut: You Choose the Edges</h3>
 
-# Compare scaling methods on outlier data
-fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+                <p>The customer survey reports ages in six bands. To compare survey answers with customer records you need the same bands, so the edges are dictated by the survey.</p>
 
-# Original with outliers
-axes[0].boxplot(data_with_outliers['income'])
-axes[0].set_title('Original Income (with outliers)')
-axes[0].set_ylabel('Income ($)')
+                <pre><code class="language-python">edges = [17, 24, 34, 44, 54, 64, 120]
+labels = ["18-24", "25-34", "35-44", "45-54", "55-64", "65+"]
 
-# StandardScaler
-standard_scaled_outliers = StandardScaler().fit_transform(data_with_outliers[['income']])
-axes[1].boxplot(standard_scaled_outliers)
-axes[1].set_title('StandardScaler (outliers affect scale)')
-axes[1].set_ylabel('Scaled Value')
+customers["age_group"] = pd.cut(customers["age"], bins=edges, labels=labels)
+print(customers[["age", "age_group"]].head(5))
+print(customers["age_group"].value_counts(sort=False, dropna=False))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>    age age_group
+0   NaN       NaN
+1  36.0     35-44
+2  30.0     25-34
+3  66.0       65+
+4  65.0       65+
+age_group
+18-24    466
+25-34    693
+35-44    780
+45-54    788
+55-64    717
+65+      964
+NaN      442
+Name: count, dtype: int64</code></pre>
+                </div>
 
-# RobustScaler  
-robust_scaled_outliers = RobustScaler().fit_transform(data_with_outliers[['income']])
-axes[2].boxplot(robust_scaled_outliers)
-axes[2].set_title('RobustScaler (outliers handled better)')
-axes[2].set_ylabel('Scaled Value')
+                <p>Seven edges make six bins. By default each bin <strong>includes its right edge and excludes its left</strong>: the first bin is "above 17, up to and including 24", written <code>(17, 24]</code>. That is why the first edge is 17 and not 18. Customers with no age stay <code>NaN</code>. If you would rather write the lower bounds, <code>right=False</code> flips the rule: <code>bins=[18, 25, 35, 45, 55, 65, 121]</code> gives the same groups.</p>
 
-plt.suptitle('Impact of Outliers on Different Scalers', fontsize=14)
-plt.tight_layout()
-plt.show()
+                <h3>qcut: Equal-Sized Groups</h3>
 
-use_cases_robust = """
-🎯 Use RobustScaler when:
-• Your data contains outliers
-• You want to reduce the impact of outliers
-• Your data is not normally distributed
-• You're unsure about the data distribution
+                <p>Sometimes there are no natural edges and you simply want "the bottom quarter, the next quarter" and so on. <code>qcut</code> picks the edges from the data so that each bin holds the same number of rows.</p>
 
-⚠️ Avoid RobustScaler when:
-• Outliers are important signals (e.g., fraud detection)
-• You need a specific range like [0, 1]
-"""
-print(use_cases_robust)</code></pre>
+                <pre><code class="language-python">print(pd.qcut(feat["merch_total"], q=4).value_counts(sort=False))
 
-    <h2>Encoding Categorical Variables: Teaching Numbers to Understand Categories 🏷️</h2>
-    
-    <p>Machine learning algorithms work with numbers, not text. But real-world data is full of categories: colors, countries, product types. Let's transform them properly!</p>
+feat["value_band"] = pd.qcut(feat["merch_total"], q=4, labels=["low", "mid", "high", "top"])
+print(feat["value_band"].value_counts(sort=False))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>merch_total
+(5.999, 75.95]      5101
+(75.95, 145.95]     5065
+(145.95, 264.63]    5060
+(264.63, 4893.0]    5076
+Name: count, dtype: int64
+value_band
+low     5101
+mid     5065
+high    5060
+top     5076
+Name: count, dtype: int64</code></pre>
+                </div>
 
-    <pre><code>import pandas as pd
-from sklearn.preprocessing import LabelEncoder, OneHotEncoder, OrdinalEncoder
-from sklearn.feature_extraction import FeatureHasher
+                <p>Without labels, the bins are named by their intervals, which shows you the edges <code>qcut</code> chose: the quartiles of the column. Each bin has about 5,075 orders. Look at how wide the top one is. A quarter of all orders sit between roughly $265 and $4,900, because order values are heavily skewed.</p>
 
-# Create sample categorical data
-categorical_data = pd.DataFrame({
-    'color': ['red', 'blue', 'green', 'red', 'blue', 'green', 'yellow', 'red'] * 125,  # Nominal
-    'size': ['small', 'medium', 'large', 'medium', 'small', 'large', 'medium', 'large'] * 125,  # Ordinal
-    'city': ['NYC', 'LA', 'Chicago', 'NYC', 'Houston', 'LA', 'Phoenix', 'Chicago'] * 125,  # Nominal, high cardinality
-    'rating': ['bad', 'good', 'excellent', 'good', 'bad', 'excellent', 'good', 'excellent'] * 125,  # Ordinal
-    'price': [10.5, 20.3, 15.8, 10.5, 25.0, 15.8, 30.2, 20.3] * 125  # Numeric (for reference)
-})
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th></th><th><code>pd.cut</code></th><th><code>pd.qcut</code></th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>You specify</td><td>The edges (or a number of equal-width bins)</td><td>The number of bins</td></tr>
+                            <tr><td>Bins have equal</td><td>Width, if you ask for a number of bins</td><td>Row counts</td></tr>
+                            <tr><td>Edges come from</td><td>You: a standard, a policy, a round number</td><td>The data: its quantiles</td></tr>
+                            <tr><td>Use when</td><td>The bands mean something (age groups, price tiers, tax brackets)</td><td>You want a ranking: bottom, middle, top</td></tr>
+                            <tr><td>Watch out for</td><td>Values outside the edges become <code>NaN</code></td><td>Edges change whenever the data changes</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
 
-print("📊 Original Categorical Data:")
-print(categorical_data.head(10))
-print(f"\nData shape: {categorical_data.shape}")
-print(f"Unique values per column:")
-for col in categorical_data.select_dtypes(include=['object']).columns:
-    print(f"  {col}: {categorical_data[col].nunique()} unique values")
+            <!-- ============================================================ -->
+            <section id="categoricals" class="lesson-section">
+                <h2>🏷️ Categoricals</h2>
 
-print("\n" + "="*60)
-print("🔄 ENCODING TECHNIQUES")
-print("="*60)</code></pre>
+                <p>Look at the dtype of the column <code>cut</code> just made.</p>
 
-    <h3>1. Label Encoding: Simple but Dangerous ⚠️</h3>
-    
-    <pre><code># Label Encoding: Assigns each category a number
-# WARNING: Creates ordinal relationship where none exists!
+                <pre><code class="language-python">print(customers["age_group"].dtype)
+print(customers["age_group"].cat.categories.tolist())
+print(customers["loyalty_tier"].dtype)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>category
+['18-24', '25-34', '35-44', '45-54', '55-64', '65+']
+str</code></pre>
+                </div>
 
-from sklearn.preprocessing import LabelEncoder
+                <p><code>age_group</code> is a <strong>categorical</strong>: a column that can only hold values from a fixed list, its <em>categories</em>. <code>loyalty_tier</code> is plain text that happens to repeat three values. Converting it to a categorical does two useful things. The first is memory: pandas stores each category once and keeps a small integer per row.</p>
 
-# DON'T do this for nominal categories (but let's see why)
-label_encoder = LabelEncoder()
-color_labeled = label_encoder.fit_transform(categorical_data['color'])
+                <pre><code class="language-python">as_text = customers["loyalty_tier"]
+as_category = customers["loyalty_tier"].astype("category")
+print(as_text.memory_usage(deep=True), as_category.memory_usage(deep=True))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>63742 5022</code></pre>
+                </div>
 
-print("🏷️ Label Encoding Results:")
-print(f"Original colors: {categorical_data['color'].unique()}")
-print(f"Encoded values: {np.unique(color_labeled)}")
-print(f"Mapping: {dict(zip(label_encoder.classes_, label_encoder.transform(label_encoder.classes_)))}")
+                <p>The second is <strong>order</strong>. Text sorts alphabetically: Basic, Gold, Silver. That is wrong for tiers, and it will be wrong in every table and chart you make. An <em>ordered</em> categorical carries the real order with it.</p>
 
-# The problem with label encoding
-problem_demo = pd.DataFrame({
-    'color': ['red', 'blue', 'green'],
-    'label_encoded': label_encoder.transform(['red', 'blue', 'green'])
-})
-print(f"\n⚠️ THE PROBLEM:")
-print(problem_demo)
-print("\nModel thinks: green (1) < red (2) < blue (0) ???")
-print("This creates a false ordinal relationship!")
+                <pre><code class="language-python">tier_type = pd.CategoricalDtype(["Basic", "Silver", "Gold"], ordered=True)
+customers["loyalty_tier"] = customers["loyalty_tier"].astype(tier_type)
 
-# When to use Label Encoding
-use_cases_label = """
-✅ Use Label Encoding ONLY when:
-• Target variable in classification (y)
-• Tree-based models with high cardinality features
-• When you'll immediately embed in neural networks
+print(customers["loyalty_tier"].value_counts(sort=False))
+print((customers["loyalty_tier"] &gt;= "Silver").sum())
+print(customers["loyalty_tier"].max())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>loyalty_tier
+Basic     2822
+Silver    1294
+Gold       734
+Name: count, dtype: int64
+2028
+Gold</code></pre>
+                </div>
 
-❌ Never use Label Encoding for:
-• Nominal categories in linear models
-• Features where order doesn't matter
-• As input to distance-based algorithms (KNN, SVM)
-"""
-print(use_cases_label)</code></pre>
+                <p>Tables now list the tiers in rank order, comparisons such as "Silver or better" work, and <code>.max()</code> knows that Gold is the top. Statisticians call a category with a meaningful order <strong>ordinal</strong> (tiers, age bands, satisfaction scores) and one without <strong>nominal</strong> (store, acquisition channel, color). The distinction decides how you encode them later.</p>
 
-    <h3>2. One-Hot Encoding: The Safe Choice 🔐</h3>
-    
-    <pre><code># One-Hot Encoding: Creates binary columns for each category
-# Safe for nominal categories, no false relationships
+                <h3>Categories That Have No Rows</h3>
 
-# Method 1: pandas get_dummies (easiest)
-color_one_hot = pd.get_dummies(categorical_data['color'], prefix='color')
-print("🔥 One-Hot Encoding with pandas:")
-print(color_one_hot.head())
-print(f"Shape: {color_one_hot.shape}")
+                <p>A categorical remembers all its categories even when a filter leaves some of them empty. <code>groupby</code> then has to decide whether to show the empty ones.</p>
 
-# Method 2: sklearn OneHotEncoder (more control)
-from sklearn.preprocessing import OneHotEncoder
+                <pre><code class="language-python">young = customers[customers["age"] &lt; 35]
+print(young.groupby("age_group").size())
+print(young.groupby("age_group", observed=False).size())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>age_group
+18-24    466
+25-34    693
+dtype: int64
+age_group
+18-24    466
+25-34    693
+35-44      0
+45-54      0
+55-64      0
+65+        0
+dtype: int64</code></pre>
+                </div>
 
-ohe = OneHotEncoder(sparse=False, handle_unknown='ignore')
-color_sklearn = ohe.fit_transform(categorical_data[['color']])
-color_sklearn_df = pd.DataFrame(
-    color_sklearn, 
-    columns=[f'color_{cat}' for cat in ohe.categories_[0]]
+                <p>By default <code>groupby</code> shows only the categories that are <em>observed</em> in the data. <code>observed=False</code> shows every category, with zeros. You want the second form for a report that must always have the same rows, such as a monthly table of all six age bands. (Older pandas had the opposite default, so you will see <code>observed=True</code> written out in a lot of code. It does no harm.)</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="aggregates" class="lesson-section">
+                <h2>🧮 Per-Customer Aggregates</h2>
+
+                <p>The most valuable customer features are not in the customer table at all. They are summaries of what each customer <em>did</em>, and those live in <code>orders</code>, many rows per customer. The recipe has two steps you know well: <strong>group and aggregate</strong> down to one row per customer (Lesson 2.4), then <strong>merge</strong> that back onto the customer table (Lesson 2.5).</p>
+
+                <pre><code class="language-python">per_customer = orders.groupby("customer_id").agg(
+    n_orders=("order_id", "count"),
+    total_spend=("order_total", "sum"),
+    avg_order=("order_total", "mean"),
+    last_order=("order_date", "max"),
 )
+print(per_customer.head(3).round({"total_spend": 2, "avg_order": 2}))
+print(len(per_customer))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>             n_orders  total_spend  avg_order last_order
+customer_id
+10001               8      2129.65     266.21 2025-06-25
+10002               4      1013.40     253.35 2025-12-18
+10003               9      1873.75     208.19 2025-12-06
+3942</code></pre>
+                </div>
 
-print(f"\n🔧 One-Hot with sklearn (handles unknown categories):")
-print(color_sklearn_df.head())
+                <p>3,942 rows: one for every customer id that appears in <code>orders</code>. Now attach them to the 4,850 customers. Which kind of merge?</p>
 
-# Demonstration: Why one-hot is safe
-print("\n✅ Why One-Hot is Safe:")
-print("Each color is equidistant from others in feature space:")
-print("Distance(red, blue) = Distance(blue, green) = sqrt(2)")
+                <pre><code class="language-python">table = customers[["customer_id", "acquisition_channel", "loyalty_tier", "tenure_days"]].merge(
+    per_customer, on="customer_id", how="left", validate="one_to_one")
 
-# The dummy variable trap
-print("\n⚠️ The Dummy Variable Trap:")
-print("With k categories, you only need k-1 columns!")
-print("The last category is represented by all zeros.")
+print(len(table))
+print(table[["n_orders", "total_spend", "avg_order"]].isna().sum())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>4850
+n_orders       1058
+total_spend    1058
+avg_order      1058
+dtype: int64</code></pre>
+                </div>
 
-# Drop first to avoid multicollinearity
-color_one_hot_safe = pd.get_dummies(categorical_data['color'], prefix='color', drop_first=True)
-print(f"\nDropping first category: {color_one_hot_safe.shape[1]} columns instead of {color_one_hot.shape[1]}")
+                <p>A <strong>left</strong> merge keeps every customer. The 1,058 who have never ordered have no row in <code>per_customer</code>, so their new columns are <code>NaN</code>. An inner merge would have silently deleted them, and "customers who never ordered" is exactly the group marketing most wants to know about. Now decide what each <code>NaN</code> should become.</p>
 
-use_cases_onehot = """
-✅ Use One-Hot Encoding when:
-• Dealing with nominal categories (no order)
-• Using linear models, neural networks, or distance-based algorithms  
-• Number of categories is reasonable (<20-50)
-• You need interpretable features
+                <pre><code class="language-python">table["n_orders"] = table["n_orders"].fillna(0).astype(int)
+table["total_spend"] = table["total_spend"].fillna(0)
+table["has_ordered"] = table["n_orders"] &gt; 0
+# avg_order and last_order stay NaN / NaT: there is no average of zero orders
 
-❌ Avoid One-Hot Encoding when:
-• High cardinality (100s of categories) - causes dimension explosion
-• Tree-based models (they can handle label encoding)
-• Text data (use TF-IDF or embeddings instead)
-"""
-print(use_cases_onehot)</code></pre>
+print(table[["customer_id", "n_orders", "total_spend", "avg_order", "has_ordered"]].head(4).round(2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>   customer_id  n_orders  total_spend  avg_order  has_ordered
+0        10001         8      2129.65     266.21         True
+1        10002         4      1013.40     253.35         True
+2        10003         9      1873.75     208.19         True
+3        10004         1       138.85     138.85         True</code></pre>
+                </div>
 
-    <h3>3. Ordinal Encoding: When Order Matters 📈</h3>
-    
-    <pre><code># Ordinal Encoding: For categories with meaningful order
-from sklearn.preprocessing import OrdinalEncoder
+                <div class="card card-warning">
+                    <h4>⚠️ Fill Counts and Sums with 0, Not Averages</h4>
+                    <p>"Zero orders" and "$0 spent" are true statements about a customer who never ordered. "Average order of $0.00" is not: it would pull the group's average order down and suggest tiny purchases that never happened. Leave it missing, and add an explicit flag such as <code>has_ordered</code> so the fact is not lost.</p>
+                </div>
 
-# Define the correct order for our ordinal features
-size_order = ['small', 'medium', 'large']
-rating_order = ['bad', 'good', 'excellent']
+                <p>Also notice the row counts. The table started with 4,850 rows and has 4,850 after the merge. That check, together with <code>validate="one_to_one"</code>, is how you know the join did not multiply or drop anyone.</p>
+            </section>
 
-# Create ordinal encoder with specified order
-ordinal_encoder = OrdinalEncoder(categories=[size_order])
-categorical_data['size_encoded'] = ordinal_encoder.fit_transform(categorical_data[['size']])
+            <!-- ============================================================ -->
+            <section id="encoding" class="lesson-section">
+                <h2>🔢 Encoding Categories as Numbers</h2>
 
-# Manual mapping for more control
-rating_map = {'bad': 0, 'good': 1, 'excellent': 2}
-categorical_data['rating_encoded'] = categorical_data['rating'].map(rating_map)
+                <p>People read "referral" and "Gold" happily. Most statistical and machine-learning methods cannot: they need every input to be a number. <strong>Encoding</strong> is the translation, and the right method depends on whether the category is ordinal or nominal.</p>
 
-print("📈 Ordinal Encoding Results:")
-print(categorical_data[['size', 'size_encoded', 'rating', 'rating_encoded']].head(10))
+                <h3>Ordinal: Use the Order</h3>
 
-print("\n✅ Preserves Natural Order:")
-print(f"size: small (0) < medium (1) < large (2) ✓")
-print(f"rating: bad (0) < good (1) < excellent (2) ✓")
+                <p>An ordered categorical already has integer codes in rank order.</p>
 
-# Advanced: Custom distance encoding for ordinal
-# Sometimes categories aren't equally spaced
-custom_rating_map = {
-    'bad': 0,
-    'good': 5,      # Good is much better than bad
-    'excellent': 7  # Excellent is only a bit better than good
-}
-categorical_data['rating_custom'] = categorical_data['rating'].map(custom_rating_map)
+                <pre><code class="language-python">table["tier_code"] = table["loyalty_tier"].cat.codes
+print(table[["loyalty_tier", "tier_code"]].drop_duplicates().sort_values("tier_code"))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>  loyalty_tier  tier_code
+3        Basic          0
+1       Silver          1
+0         Gold          2</code></pre>
+                </div>
 
-print("\n🎯 Custom Distance Encoding:")
-print("Sometimes ordinal categories aren't equally spaced!")
-print(categorical_data[['rating', 'rating_encoded', 'rating_custom']].value_counts().sort_index())</code></pre>
+                <p>0, 1, 2 says "Gold is above Silver is above Basic", which is true. (It also quietly says the step from Basic to Silver is the same size as from Silver to Gold, which is an assumption. It is usually acceptable for a few ordered levels.) When you want specific numbers, write the mapping yourself: <code>.map({"Basic": 0, "Silver": 600, "Gold": 1500})</code> would encode each tier by its spending threshold.</p>
 
-    <h3>4. Target Encoding: Using the Target Information 🎯</h3>
-    
-    <pre><code># Target Encoding: Replace category with target mean
-# Powerful but dangerous - can cause overfitting!
+                <h3>Nominal: One Column per Category</h3>
 
-# Simulate a target variable
-np.random.seed(42)
-# Cities have different average incomes (our target)
-city_income_map = {'NYC': 75000, 'LA': 70000, 'Chicago': 65000, 
-                   'Houston': 62000, 'Phoenix': 58000}
-categorical_data['target_income'] = (
-    categorical_data['city'].map(city_income_map) + 
-    np.random.normal(0, 10000, len(categorical_data))
+                <p>Acquisition channel has no order. If you coded organic = 0, paid_search = 1, referral = 2, a model would read "referral is twice paid search", which is nonsense you invented. The safe translation is <strong>one-hot encoding</strong>: one yes/no column per category.</p>
+
+                <pre><code class="language-python">dummies = pd.get_dummies(table["acquisition_channel"], prefix="via")
+print(table["acquisition_channel"].head(3).tolist())
+print(dummies.head(3))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>['paid_search', 'social', 'social']
+   via_in_store  via_organic  via_paid_search  via_referral  via_social
+0         False        False             True         False       False
+1         False        False            False         False        True
+2         False        False            False         False        True</code></pre>
+                </div>
+
+                <p>Each row has exactly one <code>True</code>. No category is "bigger" than another. Two options are worth knowing:</p>
+
+                <pre><code class="language-python">print(pd.get_dummies(table["acquisition_channel"], prefix="via", dtype=int, drop_first=True).head(3))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>   via_organic  via_paid_search  via_referral  via_social
+0            0                1             0           0
+1            0                0             0           1
+2            0                0             0           1</code></pre>
+                </div>
+
+                <p><code>dtype=int</code> gives 1 and 0 instead of True and False. <code>drop_first=True</code> leaves out the first category (<code>in_store</code>): a row of all zeros means "in store", so the dropped column carried no extra information. Some statistical models require this, and you will see why in the statistics module. To add the new columns to the table, use <code>pd.concat([table, dummies], axis=1)</code>, or hand the whole frame to <code>pd.get_dummies(table, columns=["acquisition_channel"])</code>.</p>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Count the Categories First</h4>
+                    <p>One-hot encoding five channels adds five columns. Check before you encode something bigger:</p>
+                    <pre><code class="language-python">print(customers["acquisition_channel"].nunique(), customers["state"].nunique(), customers["city"].nunique())</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>5 14 35</code></pre>
+                    </div>
+                    <p>One-hot encoding <code>city</code> would add 35 columns, most of them almost entirely zeros, and real customer files often have thousands of cities. For a column with many categories, keep the common ones and group the rest as "Other", or replace the category with a number that describes it (the city's distance to the nearest store, for example).</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="scaling" class="lesson-section">
+                <h2>📏 Scaling by Hand</h2>
+
+                <p>Your features now live on very different scales: <code>total_spend</code> runs into the thousands, <code>n_orders</code> into the tens, a flag is 0 or 1. For a pivot table that does not matter. For any method that measures <em>distance</em> or adds features together, the column with the biggest numbers dominates simply because of its units. <strong>Scaling</strong> puts columns on a common footing. The two standard recipes are one line of pandas each.</p>
+
+                <pre><code class="language-python">spend = table["total_spend"]
+
+table["spend_minmax"] = (spend - spend.min()) / (spend.max() - spend.min())    # 0 to 1
+table["spend_z"] = (spend - spend.mean()) / spend.std()                        # mean 0, std 1
+
+print(table[["total_spend", "spend_minmax", "spend_z"]].describe().loc[["mean", "std", "min", "max"]].round(2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>      total_spend  spend_minmax  spend_z
+mean       782.77          0.09    -0.00
+std        929.84          0.11     1.00
+min          0.00          0.00    -0.84
+max       8305.39          1.00     8.09</code></pre>
+                </div>
+
+                <ul>
+                    <li><strong>Min-max scaling</strong> squeezes a column into the range 0 to 1. Easy to read, but one extreme value compresses everyone else toward 0.</li>
+                    <li><strong>Standardizing</strong> (the z-score) subtracts the mean and divides by the standard deviation. A value of 2 means "two standard deviations above average", whatever the original units were.</li>
+                </ul>
+
+                <p>Neither changes the <em>shape</em> of the data, and spend is badly skewed: most customers spend a little and a few spend a great deal. For that, take a logarithm first. <code>np.log1p(x)</code> computes log(1 + x), which is safe when x is 0.</p>
+
+                <pre><code class="language-python">print(round(orders["order_total"].skew(), 2), round(np.log1p(orders["order_total"]).skew(), 2))
+print(orders["order_total"].describe().loc[["50%", "max"]].round(2).tolist())
+print(np.log1p(orders["order_total"]).describe().loc[["50%", "max"]].round(2).tolist())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>5.48 -0.38
+[146.85, 4893.0]
+[5.0, 8.5]</code></pre>
+                </div>
+
+                <p>Skewness measures lopsidedness, with 0 meaning symmetric (Module 4 covers it properly). Raw order totals have a long right tail: the largest order is more than 30 times the median. After the log the largest is only about 1.7 times the median, and the column is close to symmetric. A log turns "times as much" into "this much more", which is usually how people think about money anyway.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Where This Goes Next</h4>
+                    <p>Scaling matters most for machine-learning models, and the library used for those, scikit-learn, has ready-made tools that do exactly the arithmetic above (<code>MinMaxScaler</code>, <code>StandardScaler</code>) with one important addition: they <em>remember</em> the minimum, mean and standard deviation they learned, so that the same numbers can be applied to new data later. That is taught in the machine-learning course, which you can find from <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>. For this course, knowing what the arithmetic is and why it is done is the goal. Trees and pivot tables do not need scaling at all, so do not scale by reflex.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="leakage" class="lesson-section">
+                <h2>🚨 Leakage: The Cutoff Rule</h2>
+
+                <p>In Lesson 2.8 a rolling average leaked because it contained the day it was judging. Feature tables leak in the same way on a larger scale, and it is the most common reason a model that looked excellent in testing fails in use.</p>
+
+                <p>Return to the marketing question: who will order in the next six months? To <em>test</em> any answer you need a period whose outcome you already know. So you pretend to stand at a past date, the <strong>cutoff</strong>, build features from what was known then, and check them against what happened afterward.</p>
+
+                <div class="diagram">
+                    <svg viewBox="0 0 440 190" width="440" height="190" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A timeline from January 2024 to December 2025 with a cutoff at July 1, 2025. Features may use only the period before the cutoff. The target is measured only in the period after it.">
+                        <defs>
+                            <marker id="arrow-cutoff" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                                <path d="M0,0 L8,4 L0,8 Z" class="svg-arrow"/>
+                            </marker>
+                        </defs>
+                        <rect x="20" y="50" width="300" height="44" class="svg-box-2"/>
+                        <text x="170" y="69" text-anchor="middle" class="svg-text" font-size="13" font-weight="bold">Features</text>
+                        <text x="170" y="86" text-anchor="middle" class="svg-text" font-size="12">everything known before the cutoff</text>
+                        <rect x="320" y="50" width="100" height="44" class="svg-box-3"/>
+                        <text x="370" y="69" text-anchor="middle" class="svg-text" font-size="13" font-weight="bold">Target</text>
+                        <text x="370" y="86" text-anchor="middle" class="svg-text" font-size="12">the outcome</text>
+                        <path d="M320,20 L320,112" class="svg-line-accent"/>
+                        <text x="320" y="14" text-anchor="middle" class="svg-accent" font-size="12" font-weight="bold">cutoff: 2025-07-01</text>
+                        <path d="M20,124 L420,124" class="svg-line" marker-end="url(#arrow-cutoff)"/>
+                        <text x="20" y="142" class="svg-muted" font-size="12">Jan 2024</text>
+                        <text x="420" y="142" text-anchor="end" class="svg-muted" font-size="12">Dec 2025</text>
+                        <text x="20" y="168" class="svg-muted" font-size="12">Nothing from the right of the line may enter a feature.</text>
+                        <text x="20" y="184" class="svg-muted" font-size="12">Nothing from the left of it may enter the target.</text>
+                    </svg>
+                </div>
+
+                <div class="card card-danger">
+                    <h4>🛑 The Cutoff Rule</h4>
+                    <p>For every feature, ask: <strong>"Could I have computed this value on the cutoff date, using only what existed then?"</strong> If the honest answer is no, the feature leaks. Leaks never raise an error. They produce results that are too good, and "too good" should always make you look twice.</p>
+                </div>
+
+                <p>Leaks come in three common forms, and this dataset contains an example of each:</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Kind of leak</th><th>Example in the Pinecrest data</th><th>Fix</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><strong>Rows from the future</strong></td><td>Counting <em>all</em> of a customer's orders, including those after the cutoff, as "orders so far"</td><td>Filter to <code>order_date &lt; cutoff</code> before aggregating</td></tr>
+                            <tr><td><strong>A column that already knows the answer</strong></td><td><code>loyalty_tier</code> is today's tier, computed from spending through the end of 2025</td><td>Leave it out, or rebuild it from pre-cutoff spend</td></tr>
+                            <tr><td><strong>Statistics of the whole dataset</strong></td><td>Scaling with a mean, or binning with <code>qcut</code> edges, computed over all rows including the period you will test on</td><td>Compute means, standard deviations and bin edges on the earlier data only, then apply them</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>The project puts numbers on the first two. The third is the reason scikit-learn's scalers "remember" what they learned, and the machine-learning course returns to it.</p>
+
+                <div class="mermaid">
+graph TD
+    A["Question and unit of analysis"] --> B["Choose a cutoff date"]
+    B --> C["Features from before the cutoff"]
+    B --> D["Target from after the cutoff"]
+    C --> E["One row per customer"]
+    D --> E
+    E --> F["Audit each column for leaks"]
+    F --> G["Save the feature table"]
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="mistakes" class="lesson-section">
+                <h2>⚠️ Common Mistakes</h2>
+
+                <p>Feature engineering is unusual: the dangerous mistakes are the quiet ones. Here are two that raise errors and three that do not.</p>
+
+                <h3>1. Values Outside the Bin Edges Vanish</h3>
+                <pre><code class="language-python">amounts = pd.Series([0, 25, 50, 75, 100, 150])
+print(pd.cut(amounts, bins=[0, 50, 100]))</code></pre>
+                <div class="card card-output">
+                    <h4>Output (two values lost)</h4>
+                    <pre><code>0              NaN
+1      (0.0, 50.0]
+2      (0.0, 50.0]
+3    (50.0, 100.0]
+4    (50.0, 100.0]
+5              NaN
+dtype: category
+Categories (2, interval[int64, right]): [(0, 50] &lt; (50, 100]]</code></pre>
+                </div>
+                <p><strong>What happened:</strong> 0 is not in <code>(0, 50]</code> because the left edge is excluded, and 150 is beyond the last edge. Both became <code>NaN</code> with no warning. <strong>Fix:</strong> make the edges cover everything, for example <code>bins=[-np.inf, 50, 100, np.inf]</code>, or add <code>include_lowest=True</code> for the left edge. After every <code>cut</code>, compare <code>.isna().sum()</code> before and after.</p>
+
+                <h3>2. qcut on a Column with Many Repeated Values</h3>
+                <pre data-raises="ValueError"><code class="language-python">pd.qcut(orders["discount_pct"], q=4)</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>ValueError: Bin edges must be unique: Index([0.0, 0.0, 0.0, 0.0, 20.0], dtype='float64', name='discount_pct').
+You can drop duplicate edges by setting the 'duplicates' kwarg</code></pre>
+                </div>
+                <p><strong>What it means:</strong> most orders have a discount of 0, so the 25th, 50th and 75th percentiles are all 0 and three of the four bin edges are identical. <strong>Fix:</strong> this column is not suited to quantile bins. It has five distinct values, so treat it as a category, or use <code>pd.cut</code> with edges you choose. (<code>duplicates="drop"</code> silences the error by returning fewer bins, which is rarely what you wanted.)</p>
+
+                <h3>3. Comparing an Unordered Categorical</h3>
+                <pre data-raises="TypeError"><code class="language-python">plain = pd.Series(["Basic", "Gold", "Silver"]).astype("category")
+plain &gt; "Basic"</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>TypeError: Unordered Categoricals can only compare equality or not</code></pre>
+                </div>
+                <p><strong>What it means:</strong> <code>astype("category")</code> makes an <em>unordered</em> categorical, with categories in alphabetical order, and pandas refuses to guess which is "greater". <strong>Fix:</strong> state the order with <code>pd.CategoricalDtype([...], ordered=True)</code>, as you did for the tiers.</p>
+
+                <h3>4. An Inner Merge That Deletes Your Most Interesting Rows</h3>
+                <pre><code class="language-python">lost = customers[["customer_id"]].merge(per_customer, on="customer_id", how="inner")
+print(len(customers), len(lost), len(customers) - len(lost))</code></pre>
+                <div class="card card-output">
+                    <h4>Output (1,058 customers gone, no error)</h4>
+                    <pre><code>4850 3792 1058</code></pre>
+                </div>
+                <p><strong>What happened:</strong> the default <code>how="inner"</code> kept only customers who appear in both tables. Everyone who has never ordered disappeared, and every average computed afterward describes buyers only. <strong>Fix:</strong> <code>how="left"</code> from the table that defines your unit of analysis, then check that the row count did not change.</p>
+
+                <h3>5. Numbering a Nominal Category</h3>
+                <p>Writing <code>.map({"organic": 0, "paid_search": 1, "referral": 2, ...})</code> or using <code>.cat.codes</code> on an unordered column runs without complaint and gives a model an order that does not exist. <strong>Fix:</strong> one-hot encode nominal categories. Keep integer codes for ordinal ones.</p>
+
+                <h3>6. A Feature That Knows the Future</h3>
+                <p>The cutoff rule above. It gets a full demonstration in the project, because seeing the size of the effect is what makes people remember to check.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="project" class="lesson-section">
+                <h2>🛠️ Project: The Customer Feature Table</h2>
+
+                <p>You will build the table that answers marketing's question: one row per customer, features describing everything known on July 1, 2025, and a target saying whether the customer ordered in the following six months. Then you will audit it for leaks and measure what a leak would have done. Work in a new notebook called <code>lesson_2_9_project</code>. Allow about 40 minutes.</p>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 1: Unit, cutoff and target <span class="step-time">(5 min)</span></h3>
+                    <p>One row is a customer who had an account on the cutoff date. Split the orders at the cutoff: the past feeds the features, the future defines the target.</p>
+                    <pre><code class="language-python">import numpy as np
+import pandas as pd
+
+customers = pd.read_csv("data/customers.csv", parse_dates=["signup_date"])
+orders = pd.read_csv("data/orders.csv", parse_dates=["order_date"])
+
+cutoff = pd.Timestamp("2025-07-01")
+
+base = customers[customers["signup_date"] &lt; cutoff].copy()
+past = orders[orders["order_date"] &lt; cutoff]
+future = orders[orders["order_date"] &gt;= cutoff]
+
+print(len(customers), len(base))
+print(len(past), len(future))
+print(past["order_date"].max().date(), future["order_date"].min().date())</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>4850 4474
+14497 5805
+2025-06-30 2025-07-01</code></pre>
+                    </div>
+                    <p>Customers who signed up after the cutoff are left out: on July 1 they did not exist yet, so there is nothing to know about them.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 2: Behavior features from the past <span class="step-time">(10 min)</span></h3>
+                    <p>Aggregate <code>past</code> only. Two helper columns first make the aggregation simple: the mean of a True/False column is the share that are True.</p>
+                    <pre><code class="language-python">past = past.assign(is_online=past["channel"] == "online",
+                   is_returned=past["status"] == "returned",
+                   used_promo=past["promo_code"].notna())
+
+behavior = past.groupby("customer_id").agg(
+    n_orders=("order_id", "count"),
+    total_spend=("order_total", "sum"),
+    avg_order=("order_total", "mean"),
+    online_share=("is_online", "mean"),
+    return_share=("is_returned", "mean"),
+    promo_share=("used_promo", "mean"),
+    first_order=("order_date", "min"),
+    last_order=("order_date", "max"),
 )
-
-# Calculate target encoding
-target_means = categorical_data.groupby('city')['target_income'].mean()
-categorical_data['city_target_encoded'] = categorical_data['city'].map(target_means)
-
-print("🎯 Target Encoding Results:")
-print(target_means.round(2))
-print("\n" + categorical_data[['city', 'city_target_encoded', 'target_income']].head(10))
-
-# The danger: overfitting
-print("\n⚠️ WARNING: Target Encoding Risks:")
-print("1. Data Leakage: Using target information in features")
-print("2. Overfitting: Especially with small categories")
-print("3. Different distributions in train/test")
-
-# Safer approach: Target encoding with smoothing
-def target_encode_with_smoothing(df, col, target, alpha=5):
-    """
-    Target encoding with smoothing to prevent overfitting
-    alpha: smoothing parameter (higher = more smoothing)
-    """
-    global_mean = df[target].mean()
-    category_stats = df.groupby(col)[target].agg(['mean', 'count'])
-    
-    # Smoothing formula: weighted average of category mean and global mean
-    smooth_mean = (category_stats['mean'] * category_stats['count'] + global_mean * alpha) / (category_stats['count'] + alpha)
-    
-    return df[col].map(smooth_mean)
-
-categorical_data['city_target_smooth'] = target_encode_with_smoothing(
-    categorical_data, 'city', 'target_income', alpha=10
-)
-
-print("\n✨ Target Encoding with Smoothing:")
-comparison = pd.DataFrame({
-    'city': target_means.index,
-    'raw_target_encode': target_means.values,
-    'smoothed_encode': categorical_data.groupby('city')['city_target_smooth'].first().values
-})
-print(comparison.round(2))
-print("\nNotice how smoothing pulls extreme values toward the global mean!")</code></pre>
-
-    <h2>Feature Creation: Engineering New Insights 🏗️</h2>
-    
-    <p>Sometimes the best features don't exist in your raw data - you have to create them! This is where domain knowledge meets creativity.</p>
-
-    <pre><code># Create a sample dataset for feature engineering
-dates = pd.date_range('2023-01-01', periods=365, freq='D')
-np.random.seed(42)
-
-sales_data = pd.DataFrame({
-    'date': dates,
-    'product_price': np.random.uniform(10, 100, 365),
-    'quantity_sold': np.random.poisson(50, 365),
-    'marketing_spend': np.random.exponential(1000, 365),
-    'temperature': 20 + 15*np.sin(np.arange(365)*2*np.pi/365) + np.random.normal(0, 3, 365),  # Seasonal
-    'is_weekend': dates.weekday.isin([5, 6]).astype(int),
-    'competitor_price': np.random.uniform(10, 100, 365)
-})
-
-# Add some patterns
-sales_data['revenue'] = sales_data['product_price'] * sales_data['quantity_sold']
-
-print("📊 Original Features:")
-print(sales_data.head())
-print(f"\nShape: {sales_data.shape}")
-
-# Now let's engineer some features!
-print("\n" + "="*60)
-print("🏗️ FEATURE CREATION TECHNIQUES")
-print("="*60)</code></pre>
-
-    <h3>1. Mathematical Transformations 🔢</h3>
-    
-    <pre><code># Mathematical combinations and transformations
-sales_data['price_ratio'] = sales_data['product_price'] / sales_data['competitor_price']
-sales_data['price_difference'] = sales_data['product_price'] - sales_data['competitor_price']
-sales_data['revenue_per_marketing'] = sales_data['revenue'] / (sales_data['marketing_spend'] + 1)  # Add 1 to avoid division by zero
-sales_data['log_marketing'] = np.log1p(sales_data['marketing_spend'])  # log(1+x) for handling zeros
-sales_data['sqrt_quantity'] = np.sqrt(sales_data['quantity_sold'])
-sales_data['price_squared'] = sales_data['product_price'] ** 2
-
-print("🔢 Mathematical Transformations:")
-print(sales_data[['product_price', 'competitor_price', 'price_ratio', 'price_difference']].head())
-
-# Why these transformations?
-explanations = """
-💡 Why These Transformations Work:
-• Ratios: Capture relative relationships (price competitiveness)
-• Differences: Direct comparisons (price advantage)
-• Logs: Handle skewed distributions, multiplicative relationships
-• Square roots: Reduce impact of extreme values
-• Polynomials: Capture non-linear relationships
-"""
-print(explanations)</code></pre>
-
-    <h3>2. Temporal Features from Dates 📅</h3>
-    
-    <pre><code># Extract time-based features
-sales_data['day_of_week'] = sales_data['date'].dt.dayofweek
-sales_data['day_of_month'] = sales_data['date'].dt.day
-sales_data['month'] = sales_data['date'].dt.month
-sales_data['quarter'] = sales_data['date'].dt.quarter
-sales_data['is_month_start'] = sales_data['date'].dt.is_month_start.astype(int)
-sales_data['is_month_end'] = sales_data['date'].dt.is_month_end.astype(int)
-
-# Cyclical encoding for periodic features
-sales_data['day_sin'] = np.sin(2 * np.pi * sales_data['day_of_week'] / 7)
-sales_data['day_cos'] = np.cos(2 * np.pi * sales_data['day_of_week'] / 7)
-sales_data['month_sin'] = np.sin(2 * np.pi * sales_data['month'] / 12)
-sales_data['month_cos'] = np.cos(2 * np.pi * sales_data['month'] / 12)
-
-print("📅 Temporal Features:")
-print(sales_data[['date', 'day_of_week', 'month', 'quarter', 'is_month_end']].head(10))
-
-print("\n🔄 Cyclical Encoding Example:")
-print("Why sin/cos for cyclical features?")
-print("Day 6 and Day 0 are adjacent (Sunday/Monday), but 6-0=6 seems far apart")
-print("With sin/cos encoding, the distance is preserved correctly!")
-
-# Visualize cyclical encoding
-fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-
-# Linear encoding problem
-days = np.arange(7)
-axes[0].scatter(days, np.zeros_like(days), s=100, c=days, cmap='viridis')
-axes[0].set_xlabel('Day of Week (Linear)')
-axes[0].set_title('Linear Encoding: Day 6 and 0 seem far apart')
-axes[0].set_xticks(days)
-axes[0].set_xticklabels(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])
-
-# Cyclical encoding solution
-angles = 2 * np.pi * days / 7
-x = np.cos(angles)
-y = np.sin(angles)
-axes[1].scatter(x, y, s=100, c=days, cmap='viridis')
-axes[1].set_xlabel('Cos(day)')
-axes[1].set_ylabel('Sin(day)')
-axes[1].set_title('Cyclical Encoding: Preserves circular relationship')
-axes[1].axis('equal')
-
-# Add day labels
-for i, day in enumerate(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']):
-    axes[1].annotate(day, (x[i], y[i]), xytext=(5, 5), textcoords='offset points')
-
-plt.tight_layout()
-plt.show()</code></pre>
-
-    <h3>3. Aggregation and Window Features 📊</h3>
-    
-    <pre><code># Rolling window features
-sales_data['revenue_7d_mean'] = sales_data['revenue'].rolling(window=7, min_periods=1).mean()
-sales_data['revenue_7d_std'] = sales_data['revenue'].rolling(window=7, min_periods=1).std()
-sales_data['revenue_30d_mean'] = sales_data['revenue'].rolling(window=30, min_periods=1).mean()
-sales_data['quantity_7d_sum'] = sales_data['quantity_sold'].rolling(window=7, min_periods=1).sum()
-
-# Expanding window features
-sales_data['revenue_cumsum'] = sales_data['revenue'].expanding().sum()
-sales_data['revenue_cummax'] = sales_data['revenue'].expanding().max()
-
-# Lag features
-sales_data['revenue_lag1'] = sales_data['revenue'].shift(1)
-sales_data['revenue_lag7'] = sales_data['revenue'].shift(7)
-sales_data['revenue_diff'] = sales_data['revenue'].diff()
-
-print("📊 Window and Lag Features:")
-print(sales_data[['date', 'revenue', 'revenue_7d_mean', 'revenue_lag1', 'revenue_diff']].head(10))
-
-# Why window features matter
-print("\n💡 Why Window Features Work:")
-print("• Rolling means: Smooth out noise, capture trends")
-print("• Rolling std: Capture volatility changes")
-print("• Lag features: Previous values often predict future")
-print("• Differences: Capture changes/momentum")</code></pre>
-
-    <h3>4. Interaction Features 🤝</h3>
-    
-    <pre><code># Interaction features capture relationships between variables
-sales_data['price_x_weekend'] = sales_data['product_price'] * sales_data['is_weekend']
-sales_data['temp_x_weekend'] = sales_data['temperature'] * sales_data['is_weekend']
-sales_data['marketing_effectiveness'] = (
-    sales_data['revenue'] / sales_data['marketing_spend'].clip(lower=1)
-) * sales_data['is_weekend']
-
-# Binning and interactions
-sales_data['price_bin'] = pd.cut(sales_data['product_price'], 
-                                  bins=[0, 30, 60, 100], 
-                                  labels=['low', 'medium', 'high'])
-sales_data['temp_bin'] = pd.cut(sales_data['temperature'], 
-                                 bins=[-np.inf, 10, 20, 30, np.inf],
-                                 labels=['cold', 'cool', 'warm', 'hot'])
-
-# Create interaction between bins
-sales_data['price_temp_interaction'] = (
-    sales_data['price_bin'].astype(str) + '_' + 
-    sales_data['temp_bin'].astype(str)
-)
-
-print("🤝 Interaction Features:")
-print(sales_data[['product_price', 'is_weekend', 'price_x_weekend', 
-                  'price_bin', 'temp_bin', 'price_temp_interaction']].head(10))
-
-print("\n💡 Interaction Features Capture:")
-print("• Different behaviors in different contexts")
-print("• Non-linear relationships between features")
-print("• Conditional effects (price matters more on weekends)")
-print("• Segment-specific patterns")</code></pre>
-
-    <h2>Feature Selection: Quality Over Quantity 🎯</h2>
-    
-    <p>More features isn't always better! Too many features can lead to overfitting, slower training, and harder interpretation. Let's learn to pick the best ones.</p>
-
-    <pre><code>from sklearn.feature_selection import SelectKBest, f_regression, mutual_info_regression
-from sklearn.feature_selection import RFE
-from sklearn.linear_model import LinearRegression
-from sklearn.ensemble import RandomForestRegressor
-
-# Prepare features and target
-feature_cols = [col for col in sales_data.columns 
-                if col not in ['date', 'revenue', 'price_bin', 'temp_bin', 'price_temp_interaction']]
-X = sales_data[feature_cols].fillna(0)  # Simple fill for demo
-y = sales_data['revenue']
-
-print("📊 Feature Selection Setup:")
-print(f"Total features: {len(feature_cols)}")
-print(f"Target: revenue")
-print(f"Samples: {len(X)}")
-
-# Method 1: Statistical Tests (F-statistic)
-selector_f = SelectKBest(score_func=f_regression, k=10)
-X_selected_f = selector_f.fit_transform(X, y)
-
-feature_scores_f = pd.DataFrame({
-    'feature': feature_cols,
-    'f_score': selector_f.scores_
-}).sort_values('f_score', ascending=False)
-
-print("\n📈 Top 10 Features by F-statistic:")
-print(feature_scores_f.head(10))
-
-# Method 2: Mutual Information
-selector_mi = SelectKBest(score_func=mutual_info_regression, k=10)
-X_selected_mi = selector_mi.fit_transform(X, y)
-
-feature_scores_mi = pd.DataFrame({
-    'feature': feature_cols,
-    'mi_score': selector_mi.scores_
-}).sort_values('mi_score', ascending=False)
-
-print("\n🔗 Top 10 Features by Mutual Information:")
-print(feature_scores_mi.head(10))
-
-# Method 3: Recursive Feature Elimination (RFE)
-estimator = LinearRegression()
-rfe = RFE(estimator, n_features_to_select=10)
-X_selected_rfe = rfe.fit_transform(X, y)
-
-selected_features_rfe = [feature_cols[i] for i, selected in enumerate(rfe.support_) if selected]
-print("\n🔄 Features Selected by RFE:")
-print(selected_features_rfe)
-
-# Method 4: Feature Importance from Tree-based Models
-rf_model = RandomForestRegressor(n_estimators=100, random_state=42)
-rf_model.fit(X, y)
-
-feature_importance_rf = pd.DataFrame({
-    'feature': feature_cols,
-    'importance': rf_model.feature_importances_
-}).sort_values('importance', ascending=False)
-
-print("\n🌲 Top 10 Features by Random Forest Importance:")
-print(feature_importance_rf.head(10))
-
-# Visualize feature selection results
-fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-
-# F-statistic scores
-axes[0, 0].barh(feature_scores_f.head(10)['feature'], feature_scores_f.head(10)['f_score'])
-axes[0, 0].set_xlabel('F-Score')
-axes[0, 0].set_title('Top 10 Features by F-Statistic')
-axes[0, 0].invert_yaxis()
-
-# Mutual Information scores
-axes[0, 1].barh(feature_scores_mi.head(10)['feature'], feature_scores_mi.head(10)['mi_score'])
-axes[0, 1].set_xlabel('MI Score')
-axes[0, 1].set_title('Top 10 Features by Mutual Information')
-axes[0, 1].invert_yaxis()
-
-# Random Forest importance
-axes[1, 0].barh(feature_importance_rf.head(10)['feature'], feature_importance_rf.head(10)['importance'])
-axes[1, 0].set_xlabel('Importance')
-axes[1, 0].set_title('Top 10 Features by Random Forest')
-axes[1, 0].invert_yaxis()
-
-# Comparison of methods
-top_features_comparison = pd.DataFrame({
-    'F-stat': feature_scores_f.head(5)['feature'].values,
-    'MI': feature_scores_mi.head(5)['feature'].values,
-    'RF': feature_importance_rf.head(5)['feature'].values
-})
-
-axes[1, 1].axis('tight')
-axes[1, 1].axis('off')
-table = axes[1, 1].table(cellText=top_features_comparison.values,
-                        colLabels=top_features_comparison.columns,
-                        cellLoc='center',
-                        loc='center')
-table.auto_set_font_size(False)
-table.set_fontsize(10)
-axes[1, 1].set_title('Top 5 Features Comparison')
-
-plt.tight_layout()
-plt.show()
-
-print("\n💡 Feature Selection Strategy:")
-print("1. Start with domain knowledge - what should matter?")
-print("2. Use multiple methods - they capture different relationships")
-print("3. F-stat: Linear relationships")
-print("4. Mutual Info: Any relationship (including non-linear)")
-print("5. Tree importance: Interaction effects")
-print("6. Validate with cross-validation - does it improve the model?")</code></pre>
-
-    <h2>Handling Imbalanced Data: When Rare Events Matter 🎯</h2>
-    
-    <pre><code># Create an imbalanced classification dataset
-from sklearn.datasets import make_classification
-from sklearn.model_selection import train_test_split
-from imblearn.over_sampling import SMOTE
-from imblearn.under_sampling import RandomUnderSampler
-from collections import Counter
-
-# Create imbalanced data (95% class 0, 5% class 1)
-X_imb, y_imb = make_classification(n_samples=1000, n_features=20, n_informative=15,
-                                   n_redundant=5, n_clusters_per_class=1,
-                                   weights=[0.95, 0.05], flip_y=0.01,
-                                   class_sep=1.0, random_state=42)
-
-print("⚖️ Imbalanced Dataset:")
-print(f"Class distribution: {Counter(y_imb)}")
-print(f"Imbalance ratio: {sum(y_imb==0) / sum(y_imb==1):.1f}:1")
-
-# Visualize the imbalance
-fig, axes = plt.subplots(1, 3, figsize=(15, 5))
-
-# Original distribution
-axes[0].bar(*zip(*Counter(y_imb).items()))
-axes[0].set_title('Original Distribution')
-axes[0].set_xlabel('Class')
-axes[0].set_ylabel('Count')
-
-# Problem with imbalanced data
-print("\n❌ Problems with Imbalanced Data:")
-print("1. Model becomes biased toward majority class")
-print("2. Accuracy becomes misleading (95% accuracy by predicting all 0s!)")
-print("3. Poor recall for minority class")
-print("4. Important rare events get missed")
-
-# Solution 1: SMOTE (Synthetic Minority Over-sampling)
-smote = SMOTE(random_state=42)
-X_smote, y_smote = smote.fit_resample(X_imb, y_imb)
-
-axes[1].bar(*zip(*Counter(y_smote).items()))
-axes[1].set_title('After SMOTE (Over-sampling)')
-axes[1].set_xlabel('Class')
-axes[1].set_ylabel('Count')
-
-print(f"\n✅ After SMOTE: {Counter(y_smote)}")
-
-# Solution 2: Random Under-sampling
-rus = RandomUnderSampler(random_state=42)
-X_under, y_under = rus.fit_resample(X_imb, y_imb)
-
-axes[2].bar(*zip(*Counter(y_under).items()))
-axes[2].set_title('After Under-sampling')
-axes[2].set_xlabel('Class')
-axes[2].set_ylabel('Count')
-
-print(f"✅ After Under-sampling: {Counter(y_under)}")
-
-plt.tight_layout()
-plt.show()
-
-# Best practices for imbalanced data
-best_practices = """
-🎯 Best Practices for Imbalanced Data:
-
-1. **Resampling Techniques:**
-   • SMOTE: Creates synthetic examples of minority class
-   • Random Under-sampling: Remove majority class examples
-   • ADASYN: Adaptive synthetic sampling
-   
-2. **Algorithm Level:**
-   • class_weight='balanced' in sklearn models
-   • Adjust decision threshold
-   • Use algorithms robust to imbalance (Tree-based)
-   
-3. **Evaluation Metrics:**
-   • Don't use accuracy! Use:
-   • Precision, Recall, F1-score
-   • ROC-AUC, Precision-Recall AUC
-   • Matthews Correlation Coefficient
-   
-4. **Ensemble Methods:**
-   • BalancedRandomForest
-   • EasyEnsemble
-   • RUSBoost
-"""
-print(best_practices)</code></pre>
-
-    <div class="warning-box">
-        <h3>⚠️ Common Feature Engineering Mistakes to Avoid</h3>
-        <ul>
-            <li><strong>Data Leakage:</strong> Using information from the future or target in features</li>
-            <li><strong>Not handling missing values before scaling:</strong> Scalers don't like NaN!</li>
-            <li><strong>Scaling after splitting:</strong> Fit scalers on training data only!</li>
-            <li><strong>One-hot encoding high cardinality:</strong> Creates too many features</li>
-            <li><strong>Forgetting to save transformers:</strong> You need them for production!</li>
-        </ul>
-    </div>
-
-    <div class="tip-box">
-        <h3>💡 Pro Tips for Feature Engineering</h3>
-        <ul>
-            <li><strong>Start simple:</strong> Basic features often work best</li>
-            <li><strong>Domain knowledge is gold:</strong> Understand your data's context</li>
-            <li><strong>Validate everything:</strong> Use cross-validation to test features</li>
-            <li><strong>Keep it interpretable:</strong> Complex features are hard to debug</li>
-            <li><strong>Document your features:</strong> Future you will thank you!</li>
-        </ul>
-    </div>
-
-    <h2>Putting It All Together: A Complete Pipeline 🔧</h2>
-    
-    <pre><code>from sklearn.pipeline import Pipeline
-from sklearn.compose import ColumnTransformer
-from sklearn.model_selection import train_test_split, cross_val_score
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_squared_error, r2_score
-
-# Create a complete feature engineering pipeline
-# Using our sales data from earlier
-
-# Define column groups
-numeric_features = ['product_price', 'marketing_spend', 'temperature', 'competitor_price']
-categorical_features = ['is_weekend']
-ordinal_features = []  # None in this example
-
-# Create preprocessing pipelines for each type
-numeric_transformer = Pipeline(steps=[
-    ('scaler', RobustScaler())  # Robust to outliers
-])
-
-categorical_transformer = Pipeline(steps=[
-    ('onehot', OneHotEncoder(drop='first', handle_unknown='ignore'))
-])
-
-# Combine preprocessing steps
-preprocessor = ColumnTransformer(
-    transformers=[
-        ('num', numeric_transformer, numeric_features),
-        ('cat', categorical_transformer, categorical_features)
-    ])
-
-# Create full pipeline with model
-full_pipeline = Pipeline(steps=[
-    ('preprocessor', preprocessor),
-    ('model', RandomForestRegressor(n_estimators=100, random_state=42))
-])
-
-# Prepare data
-X = sales_data[numeric_features + categorical_features]
-y = sales_data['revenue']
-
-# Split data
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42
-)
-
-# Train pipeline
-full_pipeline.fit(X_train, y_train)
-
-# Make predictions
-y_pred = full_pipeline.predict(X_test)
-
-# Evaluate
-mse = mean_squared_error(y_test, y_pred)
-r2 = r2_score(y_test, y_pred)
-
-print("🚀 Complete Pipeline Results:")
-print(f"MSE: {mse:.2f}")
-print(f"R2 Score: {r2:.3f}")
-
-# Cross-validation
-cv_scores = cross_val_score(full_pipeline, X, y, cv=5, scoring='r2')
-print(f"\nCross-validation R2 scores: {cv_scores}")
-print(f"Mean CV R2: {cv_scores.mean():.3f} (+/- {cv_scores.std() * 2:.3f})")
-
-# Feature importance from the pipeline
-model = full_pipeline.named_steps['model']
-preprocessor = full_pipeline.named_steps['preprocessor']
-
-# Get feature names after preprocessing
-feature_names = (numeric_features + 
-                [f"is_weekend_{cat}" for cat in preprocessor.transformers_[1][1].categories_[0][1:]])
-
-importance_df = pd.DataFrame({
-    'feature': feature_names,
-    'importance': model.feature_importances_
-}).sort_values('importance', ascending=False)
-
-print("\n📊 Feature Importance in Final Model:")
-print(importance_df)
-
-print("\n✅ Pipeline Benefits:")
-print("• Prevents data leakage")
-print("• Reproducible preprocessing")
-print("• Easy deployment")
-print("• Handles new data automatically")</code></pre>
-
-    <h2>Summary: Your Feature Engineering Toolkit 🎯</h2>
-    
-    <div class="feature-comparison">
-        <div class="feature-card">
-            <h4>Scaling Methods</h4>
-            <ul>
-                <li><strong>StandardScaler:</strong> Normal distributions</li>
-                <li><strong>MinMaxScaler:</strong> Bounded ranges</li>
-                <li><strong>RobustScaler:</strong> Outlier-resistant</li>
-                <li><strong>Normalizer:</strong> Unit vectors</li>
-            </ul>
+behavior["recency_days"] = (cutoff - behavior["last_order"]).dt.days
+behavior["active_days"] = (behavior["last_order"] - behavior["first_order"]).dt.days
+
+print(behavior.drop(columns=["first_order", "last_order"]).head(3).round(2))
+print(len(behavior))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>             n_orders  total_spend  avg_order  online_share  return_share  promo_share  recency_days  active_days
+customer_id
+10001               8      2129.65     266.21          1.00           0.0          0.0             6          465
+10002               1       139.85     139.85          1.00           0.0          0.0           209            0
+10003               7      1513.00     216.14          0.29           0.0          0.0           124          377
+3444</code></pre>
+                    </div>
+                    <p><code>recency_days</code> (how long since the last order), <code>n_orders</code> (frequency) and <code>total_spend</code> (monetary value) are the classic "RFM" trio that retailers have used for decades. Recency is measured from the cutoff, not from today.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 3: Join, fill and add profile features <span class="step-time">(10 min)</span></h3>
+                    <p>Left-merge onto the customer base. Fill counts and sums with 0, leave averages and shares missing, and add what is known about the person: tenure, age band, opt-in, and one-hot acquisition channel.</p>
+                    <pre><code class="language-python">features = base[["customer_id", "signup_date", "birth_year", "acquisition_channel",
+                 "marketing_opt_in"]].merge(behavior, on="customer_id", how="left", validate="one_to_one")
+
+features["n_orders"] = features["n_orders"].fillna(0).astype(int)
+features["total_spend"] = features["total_spend"].fillna(0).round(2)
+features["has_ordered"] = features["n_orders"] &gt; 0
+features["log_spend"] = np.log1p(features["total_spend"]).round(3)
+
+features["tenure_days"] = (cutoff - features["signup_date"]).dt.days
+features["age_group"] = pd.cut(cutoff.year - features["birth_year"],
+                               bins=[17, 24, 34, 44, 54, 64, 120],
+                               labels=["18-24", "25-34", "35-44", "45-54", "55-64", "65+"])
+features["opted_in"] = features["marketing_opt_in"].astype(int)
+
+features = pd.get_dummies(features, columns=["acquisition_channel"], prefix="via", dtype=int)
+features = features.drop(columns=["signup_date", "birth_year", "marketing_opt_in", "first_order", "last_order"])
+
+print(features.shape)
+print(features.columns.tolist())
+print(features.isna().sum()[features.isna().sum() &gt; 0])</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>(4474, 19)
+['customer_id', 'n_orders', 'total_spend', 'avg_order', 'online_share', 'return_share', 'promo_share', 'recency_days', 'active_days', 'has_ordered', 'log_spend', 'tenure_days', 'age_group', 'opted_in', 'via_in_store', 'via_organic', 'via_paid_search', 'via_referral', 'via_social']
+avg_order       1159
+online_share    1159
+return_share    1159
+promo_share     1159
+recency_days    1159
+active_days     1159
+age_group        418
+dtype: int64</code></pre>
+                    </div>
+                    <p>The row count still equals the number of eligible customers. The remaining missing values are all honest ones: averages, shares and recency for people with no orders before the cutoff, and age for people who never gave a birth year.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 4: Add the target and check the features carry signal <span class="step-time">(5 min)</span></h3>
+                    <p>The target comes from <code>future</code> and nothing else. Then bin two features and look at the target rate in each bin: if a feature is useful, the rate should change from bin to bin.</p>
+                    <pre><code class="language-python">features["ordered_again"] = features["customer_id"].isin(future["customer_id"])
+print(round(features["ordered_again"].mean(), 3))
+
+freq_band = pd.cut(features["n_orders"], bins=[-1, 0, 1, 3, 6, 100], labels=["0", "1", "2-3", "4-6", "7+"])
+print(features.groupby(freq_band)["ordered_again"].agg(["mean", "size"]).round(3))
+
+recency_band = pd.qcut(features["recency_days"], q=4)
+print(features.groupby(recency_band)["ordered_again"].agg(["mean", "size"]).round(3))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>0.569
+           mean  size
+n_orders
+0         0.282  1159
+1         0.454   705
+2-3       0.594  1085
+4-6       0.775   854
+7+        0.882   671
+                 mean  size
+recency_days
+(0.999, 32.0]   0.746   835
+(32.0, 87.0]    0.720   837
+(87.0, 197.0]   0.673   820
+(197.0, 546.0]  0.536   823</code></pre>
+                    </div>
+                    <p>Both features separate customers clearly. The more often someone ordered before July, the more likely they ordered again afterward, rising steadily from the lowest band to the highest. And the more recent their last order, the better. Neither result is surprising, which is good: a feature that agrees with common sense is one you can explain. (Always print the group size beside the rate, as you learned in Lesson 2.6.)</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 5: The leak audit <span class="step-time">(5 min)</span></h3>
+                    <p>Now see what happens if the cutoff rule is broken. First, count <em>all</em> orders instead of past orders. Second, look at the <code>loyalty_tier</code> column you deliberately left out.</p>
+                    <pre><code class="language-python">audit = features[["customer_id", "n_orders", "ordered_again"]].merge(
+    orders.groupby("customer_id").size().rename("n_orders_all_time").reset_index(),
+    on="customer_id", how="left").fillna({"n_orders_all_time": 0})
+audit = audit.merge(customers[["customer_id", "loyalty_tier"]], on="customer_id")
+
+print(audit[["n_orders", "n_orders_all_time"]].corrwith(audit["ordered_again"].astype(int)).round(2))
+
+never = audit["n_orders_all_time"] == 0
+print(int(never.sum()), audit.loc[never, "ordered_again"].mean())
+
+print(audit.groupby("loyalty_tier")["ordered_again"].agg(["mean", "size"]).round(3))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>n_orders             0.39
+n_orders_all_time    0.53
+dtype: float64
+832 0.0
+               mean  size
+loyalty_tier
+Basic         0.355  2472
+Gold          0.936   731
+Silver        0.775  1271</code></pre>
+                    </div>
+                    <p>The all-time count is clearly more strongly related to the target than the honest count (a correlation of 0.53 against 0.39), and it gives a perfect prediction for one group: anyone with zero orders in the whole file has, by definition, not ordered after July. That is not insight. It is the answer written into the question. The tier is just as bad: 94% of today's Gold customers ordered in the second half of 2025, because ordering in the second half of 2025 is part of how many of them <em>became</em> Gold. A model given either column would look brilliant in testing and fail when used on a real "today", when the next six months have not happened yet.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 6: Save <span class="step-time">(5 min)</span></h3>
+                    <p>Write the table to disk with the customer id first and the target last, and print a final description.</p>
+                    <pre><code class="language-python">column_order = ["customer_id"] + [c for c in features.columns if c not in ("customer_id", "ordered_again")] + ["ordered_again"]
+features = features[column_order]
+features.to_csv("customer_features.csv", index=False)
+
+print(features.shape)
+print(features.iloc[:3, :8])</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>(4474, 20)
+   customer_id  n_orders  total_spend   avg_order  online_share  return_share  promo_share  recency_days
+0        10001         8      2129.65  266.206250      1.000000           0.0          0.0           6.0
+1        10002         1       139.85  139.850000      1.000000           0.0          0.0         209.0
+2        10003         7      1513.00  216.142857      0.285714           0.0          0.0         124.0</code></pre>
+                    </div>
+                    <p>In your notebook, add a short data dictionary under this cell: one line per column saying what it is, its unit, and the fact that everything was computed as of 2025-07-01. Whoever uses the file next, quite possibly you in the statistics module, will need it.</p>
+                </div>
+
+                <div class="card card-success">
+                    <h3>✅ Project Completion Checklist</h3>
+                    <ul class="checklist">
+                        <li>Your table has one row per customer who signed up before 2025-07-01, and the count did not change after the merge</li>
+                        <li>Every behavior feature was aggregated from <code>past</code> only, and recency is measured from the cutoff</li>
+                        <li>Counts and sums are 0 for customers with no past orders, while averages, shares and recency are left missing</li>
+                        <li>Acquisition channel is one-hot encoded and <code>loyalty_tier</code> is not in the table</li>
+                        <li>The target rate rises with order frequency and falls as recency grows, and you printed group sizes beside the rates</li>
+                        <li>You can explain in one sentence each why the all-time order count and today's loyalty tier are leaks</li>
+                        <li><code>customer_features.csv</code> is saved, with <code>ordered_again</code> as the last column</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="exercises" class="lesson-section">
+                <h2>🏋️ Hands-on Exercises</h2>
+
+                <p>Each exercise names its unit of analysis. Say it to yourself before you start: it tells you what the index of the result should be.</p>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 1: Store-Day Features</h3>
+                    <p>One row is a store-day. Using <code>daily</code> (with the <code>conversion</code> and <code>basket</code> columns from the lesson), add <code>is_weekend</code> and <code>month</code>. Then compare mean <code>visitors</code>, <code>conversion</code> and <code>basket</code> for weekends against weekdays. Do weekends bring more people, more willing buyers, bigger baskets, or some mix?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>daily["date"].dt.dayofweek &gt;= 5</code> is the weekend flag. Group by it and take the mean of the three columns.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">daily["is_weekend"] = daily["date"].dt.dayofweek &gt;= 5
+daily["month"] = daily["date"].dt.month
+print(daily.groupby("is_weekend")[["visitors", "conversion", "basket"]].mean().round(3))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>            visitors  conversion  basket
+is_weekend
+False        305.485       0.235  88.717
+True         481.358       0.236  88.464</code></pre>
+                        </div>
+                        <p>Weekends bring many more visitors. The share who buy and the amount they spend barely move. The busy Saturday is a traffic effect, which is useful to know before anyone credits it to the weekend sales team.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 2: Price Bands and Margins</h3>
+                    <p>One row is a product. Load <code>data/products.csv</code>. Add <code>margin_pct</code>, the percentage of the price that is not cost. Bin <code>price</code> into four bands with edges at $25, $100 and $250 and the labels <code>budget</code>, <code>everyday</code>, <code>premium</code>, <code>flagship</code>, making sure no product falls outside the bins. Report the number of products and the mean margin in each band.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>(price - cost) / price * 100</code>. For the bins, start at 0 and end at <code>np.inf</code> so every price is covered. Check <code>.isna().sum()</code> on the new column.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">products = pd.read_csv("data/products.csv")
+products["margin_pct"] = (products["price"] - products["cost"]) / products["price"] * 100
+products["price_band"] = pd.cut(products["price"], bins=[0, 25, 100, 250, np.inf],
+                                labels=["budget", "everyday", "premium", "flagship"])
+
+print(int(products["price_band"].isna().sum()))
+print(products.groupby("price_band")["margin_pct"].agg(["size", "mean"]).round(1))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>0
+            size  mean
+price_band
+budget        32  47.2
+everyday     113  45.2
+premium       61  45.0
+flagship      36  46.2</code></pre>
+                        </div>
+                        <p>Margins are nearly flat, between 45% and 47% in every band, so price level tells you little about margin here. A feature that turns out not to separate anything is still a result. The bands come out in the order you gave the labels, not alphabetically, because <code>cut</code> returns an ordered categorical.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 3: Standardize Within a Group</h3>
+                    <p>One row is a store-day. A $9,000 day is ordinary for Boise and excellent for Asheville, so raw revenue is a poor "how unusual was this day?" feature. Build <code>revenue_z</code>: each day's revenue standardized <em>within its own store</em> (subtract the store's mean, divide by the store's standard deviation). Which five store-days have the highest z-score? Are they promotion days?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>groupby("store")["revenue"].transform("mean")</code> gives each row its store's mean, lined up with the original rows. Do the same with <code>"std"</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">by_store = daily.groupby("store")["revenue"]
+daily["revenue_z"] = (daily["revenue"] - by_store.transform("mean")) / by_store.transform("std")
+
+top = daily.sort_values("revenue_z", ascending=False).head(5)
+print(top[["date", "store", "revenue", "revenue_z", "promo_day"]].round({"revenue_z": 2}))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>           date      store   revenue  revenue_z  promo_day
+970  2024-08-31       Bend  20935.21       5.47          1
+2023 2025-05-24  Asheville  16558.00       5.26          1
+2775 2025-11-29  Asheville  15828.25       4.90          1
+971  2024-08-31      Boise  27677.10       4.72          1
+2416 2025-08-30       Bend  18720.89       4.60          1</code></pre>
+                        </div>
+                        <p>All five are promotion days, and stores of very different sizes now sit on one scale. One caution, straight from the leakage section: this z-score uses each store's mean over the <em>whole</em> two years, so it describes history well and must not be used to flag a day as it happens. For that you need the trailing baseline from Lesson 2.8.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 4: A Reusable Feature Builder (Stretch)</h3>
+                    <p>Wrap the core of the project in a function <code>build_features(customers, orders, cutoff, horizon_days=184)</code> that returns one row per eligible customer with <code>n_orders</code>, <code>total_spend</code>, <code>recency_days</code>, <code>tenure_days</code> and the target <code>ordered_again</code>, where the target looks only at orders from the cutoff up to <code>horizon_days</code> later. Run it for the cutoffs 2025-01-01 and 2025-07-01 and compare the number of rows and the target rate. Why must the target window have an end?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Inside the function, compute <code>end = cutoff + pd.Timedelta(days=horizon_days)</code> and define <code>future</code> as orders with <code>cutoff &lt;= order_date &lt; end</code>. Everything else is the project code with fewer columns.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">def build_features(customers, orders, cutoff, horizon_days=184):
+    """One row per customer who existed at the cutoff; features from before it, target from after it."""
+    cutoff = pd.Timestamp(cutoff)
+    end = cutoff + pd.Timedelta(days=horizon_days)
+    past = orders[orders["order_date"] &lt; cutoff]
+    future = orders[(orders["order_date"] &gt;= cutoff) &amp; (orders["order_date"] &lt; end)]
+
+    behavior = past.groupby("customer_id").agg(
+        n_orders=("order_id", "count"),
+        total_spend=("order_total", "sum"),
+        last_order=("order_date", "max"),
+    )
+    out = customers.loc[customers["signup_date"] &lt; cutoff, ["customer_id", "signup_date"]].merge(
+        behavior, on="customer_id", how="left", validate="one_to_one")
+    out["n_orders"] = out["n_orders"].fillna(0).astype(int)
+    out["total_spend"] = out["total_spend"].fillna(0)
+    out["recency_days"] = (cutoff - out["last_order"]).dt.days
+    out["tenure_days"] = (cutoff - out["signup_date"]).dt.days
+    out["ordered_again"] = out["customer_id"].isin(future["customer_id"])
+    return out.drop(columns=["signup_date", "last_order"])
+
+for day in ["2025-01-01", "2025-07-01"]:
+    built = build_features(customers, orders, day)
+    print(day, built.shape, round(built["ordered_again"].mean(), 3))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>2025-01-01 (4101, 6) 0.556
+2025-07-01 (4474, 6) 0.569</code></pre>
+                        </div>
+                        <p>The target window needs an end so that every cutoff is judged over the same length of time. Without it, the January table would get twelve months to "order again" and the July table only six, and their target rates could not be compared. With a function, a new cutoff is one line, and the cutoff rule is enforced in one place instead of being remembered in ten.</p>
+                    </details>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="quiz" class="lesson-section">
+                <h2>🎯 Quick Quiz</h2>
+                <div class="card quiz-container">
+                    <h3>🎯 Check Your Understanding</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> You want to split customers into five groups of equal size by total spend: the lowest fifth, the next fifth, and so on. Which tool does that?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="qcut chooses its edges from the quantiles of the data, so each of the 5 bins holds about the same number of rows.">
+                                A) <code>pd.qcut(spend, q=5)</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="cut with a number makes bins of equal width between the minimum and maximum. With skewed spend, almost everyone would land in the first bin.">
+                                B) <code>pd.cut(spend, bins=5)</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="This only converts the dtype. With thousands of different spend values it would create thousands of categories, not five groups.">
+                                C) <code>spend.astype("category")</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> Which bin does the value 10 fall into?</p>
+                        <pre><code class="language-python">quiz_bins = pd.cut(pd.Series([5, 10, 15]), bins=[0, 10, 20])
+print(quiz_bins.astype(str).tolist())</code></pre>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="That would be true with right=False. By default, which edge of each bin is included?">
+                                A) The second bin, 10 to 20, because bins include their left edge
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Only values outside all the edges become NaN. 10 is an edge between two bins, and it belongs to exactly one of them.">
+                                B) Neither: a value exactly on an edge becomes <code>NaN</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="By default each bin includes its right edge and excludes its left, so the bins are (0, 10] and (10, 20]. The value 10 belongs to the first.">
+                                C) The first bin, 0 to 10, because bins include their right edge
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> A model needs numbers, and you have <code>acquisition_channel</code> with five values that have no natural order. What is the appropriate encoding?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Integer codes tell a model that one channel is greater than another and that the gaps between them are equal. Is referral twice paid search?">
+                                A) Integer codes 0 to 4 in alphabetical order
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="One-hot encoding gives each channel its own yes/no column, so no channel is treated as larger than another. pd.get_dummies does it in one call.">
+                                B) One yes/no column per channel (one-hot encoding)
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Standardizing is for numeric columns. Text has no mean or standard deviation to scale by.">
+                                C) Standardize the column to mean 0 and standard deviation 1
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 4:</strong> You are building features as of 2025-07-01 to predict who orders in the second half of 2025. Which feature breaks the cutoff rule?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="The signup date and the cutoff are both known on the cutoff date, so this could have been computed then.">
+                                A) Days from signup to the cutoff
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="A tier recorded in December reflects spending from July to December, the very period being predicted. It could not have been known on July 1, so it leaks the answer.">
+                                B) The customer's loyalty tier as recorded on 2025-12-31
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Orders before the cutoff were known on the cutoff date. This is the honest version of an order count.">
+                                C) Number of orders with a date before 2025-07-01
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 5:</strong> After a left merge of per-customer order summaries onto the customer table, customers with no orders have <code>NaN</code> in <code>n_orders</code> and in <code>avg_order</code>. What is the best treatment?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Dropping them removes every customer who has never ordered, which changes what the table describes and hides a group the business cares about.">
+                                A) Drop those rows so the table has no missing values
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Zero orders is a true statement. Is an average order of zero dollars a true statement about someone who has placed no orders?">
+                                B) Fill both columns with 0
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="A count of 0 is a fact. An average of nothing does not exist, and filling it with 0 would invent tiny orders and drag group averages down. A has_ordered flag keeps the information explicit.">
+                                C) Fill <code>n_orders</code> with 0 and leave <code>avg_order</code> missing
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="faq" class="lesson-section">
+                <h2>❓ Common Questions at This Stage</h2>
+
+                <details>
+                    <summary>How do I know which features to build?</summary>
+                    <p>Start from the question and from how the business works, not from the columns. Ask "what would a sensible store manager look at to guess this?" and build those things first: how recently, how often, how much, through which channel. Then check each one against the outcome with a simple grouped table, as you did in Step 4. A handful of features you understand beats a hundred you generated mechanically.</p>
+                </details>
+                <details>
+                    <summary>Should I convert every text column to a categorical?</summary>
+                    <p>Convert when the column has a small, fixed set of values, especially if they have an order (tiers, ratings, age bands) or the table is large. Leave free text, ids, names and emails as text. Be aware that a categorical refuses values outside its categories: assigning a new tier name gives an error until you add it with <code>.cat.add_categories()</code>. That strictness is often useful, because it catches typos.</p>
+                </details>
+                <details>
+                    <summary>Do I always need to scale and encode?</summary>
+                    <p>No. For grouped tables, pivots and charts, keep the readable labels and the natural units. Encoding is for methods that require numeric input. Scaling is for methods that compare or combine features by size. Do both late, on a copy, and keep the readable table as well: you will want it when someone asks what a result means.</p>
+                </details>
+                <details>
+                    <summary>Is binning throwing information away?</summary>
+                    <p>Yes, on purpose. A 34-year-old and a 25-year-old become the same thing. In exchange you get something you can tabulate and explain, and bins can reveal a pattern that is not a straight line, such as a rate that is highest in the middle bands. Keep the original number in the table too. Then nothing is lost, and a later method can use whichever form suits it.</p>
+                </details>
+                <details>
+                    <summary>I have finished Module 2. Am I supposed to remember all of this?</summary>
+                    <p>No, and nobody does. What you should carry forward is the shape of the toolkit: load, clean, select, group, merge, reshape, work with time, compute within windows, build features. When you know that a tool exists and roughly what it is called, finding the exact syntax takes a minute. Working analysts look things up all day.</p>
+                </details>
+
+                <div class="card card-accent">
+                    <h3>🌟 Going Further: Bonus Challenge</h3>
+                    <p>Build an RFM segmentation from your project table. For customers with at least one past order, use <code>pd.qcut</code> to score recency, frequency and monetary value from 1 to 4 each (think about which direction is "good" for recency, and use <code>.rank(method="first")</code> before <code>qcut</code> if repeated values cause a "bin edges must be unique" error). Add the three scores into one <code>rfm_score</code> from 3 to 12, then show the <code>ordered_again</code> rate and the group size for each score. Does the rate climb steadily? Finally, the leakage question: you computed the quartile edges on all customers at once. If you later scored a brand-new customer, which edges should you use, and why?</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="journal" class="lesson-section">
+                <h2>📓 Learning Journal</h2>
+                <div class="card card-accent">
+                    <p>Take five minutes to write in your learning journal (the <code>journal.md</code> file you started in Lesson 0.1, or a paper notebook). Jot down:</p>
+                    <ul>
+                        <li><strong>Key concepts</strong> you learned today</li>
+                        <li><strong>Techniques that clicked</strong> (and the ones that have not, yet)</li>
+                        <li><strong>Questions or confusion</strong> to come back to</li>
+                        <li><strong>Ideas to try</strong> on your own</li>
+                        <li><strong>Progress and feelings</strong>: how did this lesson go for you?</li>
+                    </ul>
+                    <p><strong>✍️ This lesson's prompt:</strong> Pick a prediction from everyday life ("will it rain tomorrow?", "will this library book come back late?", "will I finish this course?"). Write down the unit of analysis, three features you could build, and one tempting feature that would be a leak. Then look back over Module 2 and name the lesson that was hardest for you. What made it click, or what would help it click?</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="summary" class="lesson-section">
+                <h2>📝 Lesson Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎓 Key Takeaways</h3>
+                    <ul>
+                        <li>A <strong>feature</strong> is a column built to make a pattern visible. First decide the <strong>unit of analysis</strong>: what one row is</li>
+                        <li>Derived columns come from flags, arithmetic, <code>np.where</code> and <code>.map</code>; <strong>ratios</strong> remove size and reveal behavior</li>
+                        <li>Dates become features as parts (<code>dt.month</code>, weekend flag) or as elapsed time from a <strong>fixed reference date</strong></li>
+                        <li><code>pd.cut</code> bins with edges you choose (right edge included by default); <code>pd.qcut</code> makes equal-count bins from the data</li>
+                        <li>Categoricals save memory and, when <strong>ordered</strong>, sort and compare correctly; <code>groupby</code> shows only observed categories unless you pass <code>observed=False</code></li>
+                        <li>Per-entity features: <strong>aggregate, then left-merge</strong>. Fill counts and sums with 0; leave averages missing and add a flag</li>
+                        <li>Encode <strong>ordinal</strong> categories as ordered integers and <strong>nominal</strong> ones with <code>pd.get_dummies</code></li>
+                        <li>Scaling is arithmetic: min-max, z-score, and <code>np.log1p</code> for skew. Needed for some methods, not for tables</li>
+                        <li><strong>The cutoff rule:</strong> every feature must be computable on the cutoff date from what existed then</li>
+                    </ul>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🏆 What You've Accomplished</h3>
+                    <ul>
+                        <li>You built flags, ratios, date parts, bins and ordered categories on real retail tables</li>
+                        <li>You found that all four stores convert visitors at the same rate, a fact hidden in the raw counts</li>
+                        <li>You turned 20,302 orders into one row per customer and joined it back without losing the 1,058 who never ordered</li>
+                        <li>You produced a documented, leak-free feature table with a target, ready for statistics or modeling</li>
+                        <li>You measured how convincing a leak looks, which is the best protection against being fooled by one</li>
+                        <li><strong>You finished Module 2.</strong> You can load, clean, combine, reshape, summarize and prepare data with pandas</li>
+                    </ul>
+                </div>
+
+                <h3>🔭 Looking Ahead</h3>
+                <p>Module 3 is about making what you have found visible. In <a href="matplotlib_line_scatter_bar.html"><strong>Lesson 3.1: Line, Scatter and Bar Charts</strong></a> you will stop using <code>.plot()</code> as a quick sketch and start building charts deliberately with Matplotlib: lines for the trends you computed in Lesson 2.7, bars for the comparisons from your pivot tables, and scatter plots for the relationships between the features you built today. Everything you saved in this module, from <code>category_seasonality.csv</code> to <code>customer_features.csv</code>, is about to become a picture.</p>
+
+                <h3>📋 Before the Next Lesson</h3>
+                <ul>
+                    <li>Check that your project folder holds the five files Module 2 produced: <code>category_seasonality.csv</code>, <code>store_monthly_revenue.csv</code>, <code>sale_day_flags.csv</code>, <code>customer_features.csv</code> and your notebooks.</li>
+                    <li>Confirm Matplotlib is installed: <code>python -c "import matplotlib; print(matplotlib.__version__)"</code> in your activated environment.</li>
+                    <li>Choose one finding from this module that surprised you and write one sentence about it. In Module 3 you will draw it.</li>
+                </ul>
+
+                <div class="card card-accent">
+                    <h3>🌱 Encouragement for the Journey</h3>
+                    <p>Stop for a moment and look at how far you have come. Nine lessons ago a DataFrame was a new word. Today you took two raw files, decided what question they could answer, built a table that answers it, and then tried to catch yourself cheating, and succeeded. That last part is not a beginner's skill. Plenty of published analyses contain the exact leak you found in Step 5. If parts of this module still feel shaky, that is normal: these tools settle in through use, and every module from here on uses them. You are not leaving pandas behind. You are about to start seeing what it can show you.</p>
+                </div>
+            </section>
+
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="pandas_window_functions.html" class="prev-lesson">← Previous: Window Functions</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="matplotlib_line_scatter_bar.html" class="next-lesson">Next: Line, Scatter and Bar Charts →</a>
+            </nav>
         </div>
-        
-        <div class="feature-card">
-            <h4>Encoding Methods</h4>
-            <ul>
-                <li><strong>One-Hot:</strong> Nominal categories</li>
-                <li><strong>Ordinal:</strong> Ordered categories</li>
-                <li><strong>Target:</strong> High cardinality</li>
-                <li><strong>Label:</strong> Target variable only</li>
-            </ul>
-        </div>
-        
-        <div class="feature-card">
-            <h4>Feature Creation</h4>
-            <ul>
-                <li><strong>Mathematical:</strong> Ratios, logs, polynomials</li>
-                <li><strong>Temporal:</strong> Date/time components</li>
-                <li><strong>Aggregations:</strong> Rolling, expanding</li>
-                <li><strong>Interactions:</strong> Feature combinations</li>
-            </ul>
-        </div>
-    </div>
+    </main>
 
-    <h2>Key Takeaways 📚</h2>
-    
-    <ul>
-        <li>🎯 <strong>No universal best method:</strong> Choose based on your data and algorithm</li>
-        <li>📏 <strong>Scale your features:</strong> Most algorithms need it (except trees)</li>
-        <li>🏷️ <strong>Encode carefully:</strong> Wrong encoding creates false relationships</li>
-        <li>🏗️ <strong>Create domain-specific features:</strong> Your knowledge beats any algorithm</li>
-        <li>✂️ <strong>Less can be more:</strong> Feature selection often improves models</li>
-        <li>⚖️ <strong>Handle imbalance:</strong> Don't let rare events get ignored</li>
-        <li>🔧 <strong>Use pipelines:</strong> Prevent leakage and ease deployment</li>
-        <li>📊 <strong>Validate everything:</strong> Test features with cross-validation</li>
-    </ul>
-
-    <p>Remember: Feature engineering is often the difference between a mediocre model and a great one. It's where art meets science in data science. The techniques you've learned here will serve as your foundation - now go forth and engineer amazing features! 🚀</p>
-
-    <!-- Learning Journal (REQUIRED per the Courseware Authoring Standard) -->
-    <section id="journal" class="lesson-section">
-        <h2>📓 Learning Journal</h2>
-        <div class="card card-info">
-            <p>Keep a learning journal — digital or physical. After this lesson, take a few minutes to write down:</p>
-            <ul>
-                <li><strong>Key concepts</strong> you learned</li>
-                <li><strong>Techniques that clicked</strong> for you</li>
-                <li><strong>Questions or confusion points</strong> to revisit</li>
-                <li><strong>Ideas you want to try</strong></li>
-                <li><strong>Your progress and feelings</strong> about learning this</li>
-            </ul>
-            <p><strong>✍️ This lesson's prompt:</strong> Feature engineering is where domain knowledge meets data science. Pick a dataset you understand well — what is one feature you could create from your own knowledge that a raw column wouldn't capture?</p>
-        </div>
-    </section>
-
-    <!-- Lesson Summary (full standard block) -->
-    <section id="summary" class="lesson-section">
-        <h2>📝 Lesson Summary</h2>
-        <div class="card card-success">
-            <h3>🎓 Key Takeaways</h3>
-            <ul>
-                <li>There is no universally best scaler or encoder — the right choice depends on your data's distribution and the algorithm you'll use.</li>
-                <li>Encoding matters: label-encoding nominal categories invents a false order, so reach for one-hot (nominal) or ordinal (ordered) encoding.</li>
-                <li>Thoughtful feature creation — ratios, logs, cyclical dates, rolling windows, and interactions — often beats a fancier algorithm.</li>
-                <li>Fit transformers on the training set only and wrap everything in a Pipeline to prevent data leakage.</li>
-            </ul>
-        </div>
-        <h3>🎉 What You've Accomplished</h3>
-        <p>You can now transform raw columns into features that expose the patterns models need: properly scaled numerics, safely encoded categories, engineered date and window features, a trimmed feature set, and a leakage-free pipeline that's ready for deployment.</p>
-        <h3>❓ Common Questions at This Stage</h3>
-        <details>
-            <summary>Do I always need to scale my features?</summary>
-            <p>Not always. Distance- and gradient-based algorithms (KNN, SVM, neural networks, linear models with regularization) need it, but tree-based models (decision trees, random forests, gradient boosting) are scale-invariant and don't.</p>
-        </details>
-        <details>
-            <summary>Why is fitting a scaler on the whole dataset before splitting a mistake?</summary>
-            <p>It leaks information from the test set into training — the scaler learns the test set's min, max, or mean. Always split first, then <code>fit</code> the scaler on the training data and only <code>transform</code> the test data.</p>
-        </details>
-        <details>
-            <summary>Target encoding sounds powerful but risky — is it safe?</summary>
-            <p>It can overfit and leak the target, especially for rare categories. Use smoothing (blend the category mean toward the global mean) and compute encodings within cross-validation folds to keep it honest.</p>
-        </details>
-        <h3>🔭 Looking Ahead</h3>
-        <p>Many of the strongest engineered features come from summarizing data across groups. Next you'll learn GroupBy operations — the split-apply-combine engine behind aggregations and group-level features.</p>
-        <h3>✅ Before the Next Lesson</h3>
-        <ul>
-            <li>Take a dataset with a date column and generate temporal features, including sin/cos cyclical encodings for day-of-week and month.</li>
-            <li>Build a small <code>ColumnTransformer</code> that scales numeric columns and one-hot encodes categorical ones, then fit it inside a Pipeline.</li>
-            <li>Write your Learning Journal entry for this lesson</li>
-        </ul>
-        <div class="card card-accent" style="text-align: center; padding: 2rem;">
-            <h3>🌟 Encouragement for the Journey</h3>
-            <p>Great features are where your creativity and understanding shine through the data. Every transformation you master gives your models sharper eyes. Keep experimenting — this is the craft that separates good analysts from great ones!</p>
-        </div>
-    </section>
-
-    <footer>
-        <div class="navigation-links">
-            <a class="nav-prev" href="pandas_data_cleaning.html">← Previous: Data Cleaning</a>
-            <a class="nav-home" href="index.html">🏠 Course Home</a>
-            <a class="nav-next" href="pandas_groupby_operations.html">Next: GroupBy Operations →</a>
-        </div>
-    </footer>
-
-    <!-- Footer -->
     <footer class="site-footer">
         <p>&copy; 2026 Ray de la Paz. Python Data Science. All rights reserved.</p>
         <div class="footer-links">
@@ -1154,6 +1234,10 @@ print("• Handles new data automatically")</code></pre>
             <a href="https://rays-home.netlify.app/contact">Contact</a>
             <a href="#" id="print-button">Print Page</a>
         </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
     </footer>
+
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
 </body>
 </html>

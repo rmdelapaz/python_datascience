@@ -1,582 +1,1306 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>Descriptive Statistics - Python Data Science</title>
-    <link href="styles/main.css" rel="stylesheet"/>
-    <link href="/styles/enhanced.css" rel="stylesheet"/>
-    <link href="/favicon.png" rel="icon" type="image/png"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Skew, percentiles, z-scores, outlier rules and what to do with outliers, describe(), histograms and box plots, grouped summaries and honest handling of Likert survey data. Python Data Science Lesson 4.2.">
+    <meta name="author" content="Ray de la Paz">
+    <title>Descriptive Statistics II: Shape, Position and Outliers - Python Data Science</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid: rendered (and re-rendered on theme change) by js/course-enhancements.js -->
     <script type="module">
         import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({ startOnLoad: true });
+        window.__mermaid = mermaid;
+        mermaid.initialize({ startOnLoad: false });
+        document.dispatchEvent(new Event('mermaid-ready'));
     </script>
-    <style>
-        .breadcrumb {
-            background: #f8f9fa;
-            padding: 1rem;
-            border-radius: 5px;
-            margin-bottom: 2rem;
-            font-size: 0.9rem;
-        }
-        
-        .breadcrumb a {
-            color: #667eea;
-            text-decoration: none;
-        }
-        
-        .breadcrumb a:hover {
-            text-decoration: underline;
-        }
-        
-        .navigation-links {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 2rem 0;
-            margin-top: 3rem;
-            border-top: 2px solid #e0e0e0;
-        }
-        
-        .navigation-links a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 500;
-            padding: 0.5rem 1rem;
-            border-radius: 5px;
-            transition: all 0.3s ease;
-        }
-        
-        .navigation-links a:hover {
-            background: #f0f0f0;
-        }
-        
-        .nav-prev, .nav-next {
-            flex: 1;
-        }
-        
-        .nav-next {
-            text-align: right;
-        }
-        
-        .nav-home {
-            text-align: center;
-        }
-        
-        canvas {
-            display: block;
-            margin: 20px auto;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background: white;
-        }
-        
-        .statistics-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin: 20px 0;
-        }
-        
-        .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease;
-        }
-        
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 12px rgba(0,0,0,0.15);
-        }
-        
-        .stat-card h4 {
-            margin: 0 0 10px 0;
-            background: none;
-            color: white;
-            padding: 0;
-        }
-        
-        .stat-card p {
-            margin: 5px 0;
-        }
-        
-        .formula-box {
-            background: #f0f9ff;
-            border: 2px solid #0284c7;
-            padding: 20px;
-            border-radius: 10px;
-            margin: 20px 0;
-            font-family: 'Courier New', monospace;
-        }
-        
-        .visual-explanation {
-            background: #fef3c7;
-            border-left: 4px solid #f59e0b;
-            padding: 20px;
-            margin: 20px 0;
-            border-radius: 0 10px 10px 0;
-        }
-        
-        .code-example {
-            background: #f8f9fa;
-            border-left: 3px solid #667eea;
-            padding: 20px;
-            margin: 20px 0;
-            border-radius: 0 8px 8px 0;
-            position: relative;
-        }
-    </style>
-    <script src="/js/course-enhancements.js" defer></script>
-    <link rel="stylesheet" href="styles/standard.css">
 </head>
 <body>
-    <!-- Skip to main content for accessibility -->
     <a href="#main-content" class="skip-to-main">Skip to main content</a>
-    
-    <!-- Progress indicator -->
+
     <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
         <div class="progress-bar"></div>
     </div>
-    <nav class="breadcrumb">
-        <a href="index.html">Home</a> &gt; 
-        <a href="index.html#statistics">Statistical Analysis</a> &gt; 
-        <span>Descriptive Statistics</span>
+
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">📊 Python Data Science</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">☰</button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
     </nav>
 
-
     <main id="main-content">
-    <h1>📊 Descriptive Statistics: Understanding Your Data's Story</h1>
+        <div class="container">
+            <header>
+                <h1>📐 Lesson 4.2: Descriptive Statistics II: Shape, Position and Outliers</h1>
+                <p class="lead">Go beyond center and spread: measure the shape of a column, locate any value inside it, decide what to do with the values that stand apart, and compare groups fairly.</p>
 
-    <!-- What You'll Learn (learning objectives) -->
-    <div class="card card-info">
-        <h2>📚 What You'll Learn</h2>
-        <p>By the end of this lesson, you will be able to:</p>
-        <ul>
-            <li>Summarize a dataset with measures of central tendency: mean, median, and mode</li>
-            <li>Quantify spread using range, variance, standard deviation, and the interquartile range (IQR)</li>
-            <li>Describe distribution shape with skewness and kurtosis, and know when to prefer the median over the mean</li>
-            <li>Compute all of these quickly in pandas with <code>describe()</code>, <code>groupby()</code>, and related methods</li>
-            <li>Handle missing values and use robust statistics when outliers are present</li>
-            <li>Recognize pitfalls like mean-vs-median confusion, silent missing data, and Simpson's paradox</li>
-        </ul>
-        <p><strong>⏱️ Estimated Time:</strong> 45–60 minutes</p>
-        <p><strong>🎯 Project:</strong> Profile a real dataset — report its central tendency, spread, and shape per group, then write a short "statistical story" summarizing what the numbers reveal.</p>
-    </div>
 
-    <p>Imagine you're a detective 🕵️ investigating a crime scene. Before making any conclusions, you need to gather evidence, examine patterns, and understand what happened. That's exactly what descriptive statistics does for data! It's your first tool in the data science toolkit - helping you summarize, visualize, and understand the fundamental characteristics of your dataset before diving into complex analyses.</p>
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Describe the shape of a distribution with a histogram and a skewness value, and say what the shape implies for your choice of summary</li>
+                        <li>Locate a value within its column using percentiles, quantiles and z-scores</li>
+                        <li>Apply the IQR and z-score outlier rules, explain why they disagree, and choose a defensible action for flagged values</li>
+                        <li>Read every line of <code>describe()</code> and every part of a box plot</li>
+                        <li>Summarize by group with <code>groupby().agg()</code>, and summarize 1-to-5 survey answers as the ordered categories they are</li>
+                    </ul>
+                </div>
 
-    <h2>The Big Picture: What Are Descriptive Statistics? 🎯</h2>
-    
-    <p>Descriptive statistics are like a data's passport - they tell you the essential information about your dataset at a glance. Instead of looking at thousands of individual data points, you get a concise summary that captures the essence of your data's behavior.</p>
+                <ul class="lesson-meta">
+                    <li><span class="meta-label">⏱️ Time</span> 90 minutes</li>
+                    <li><span class="meta-label">📋 Prerequisites</span> <a href="statistics_descriptive_part1.html">Lesson 4.1: Descriptive Statistics I: Center and Spread</a> (mean, median, SD, IQR), <a href="pandas_groupby_operations.html">Lesson 2.4: GroupBy Operations</a>, <a href="matplotlib_subplots_composition.html">Lesson 3.2: Subplots and Composition</a></li>
+                    <li><span class="meta-label">🛠️ You will build</span> A store profile sheet: grouped summaries, flagged days investigated, and a box plot comparing the four stores</li>
+                    <li><span class="meta-label">📂 Data</span> <code>data/orders.csv</code>, <code>data/daily_sales.csv</code>, <code>data/store_weather.csv</code>, <code>data/survey.csv</code>, <code>data/products.csv</code></li>
+                </ul>
+            </header>
 
-    <div class="mermaid">
-    graph TB
-        A[Raw Data] --> B[Descriptive Statistics]
-        B --> C[Central Tendency]
-        B --> D[Variability/Spread]
-        B --> E[Distribution Shape]
-        B --> F[Relationships]
-        
-        C --> G[Mean]
-        C --> H[Median]
-        C --> I[Mode]
-        
-        D --> J[Range]
-        D --> K[Variance]
-        D --> L[Standard Deviation]
-        D --> M[IQR]
-        
-        E --> N[Skewness]
-        E --> O[Kurtosis]
-        
-        F --> P[Correlation]
-        F --> Q[Covariance]
-        
-        style B fill:#667eea
-        style C fill:#4ecdc4
-        style D fill:#fbbf24
-        style E fill:#10b981
-        style F fill:#f472b6
-    </div>
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#shape" class="toc-link">Shape: Symmetry and Skew</a></li>
+                        <li><a href="#percentiles" class="toc-link">Position: Percentiles and Quantiles</a></li>
+                        <li><a href="#zscores" class="toc-link">Position: z-Scores</a></li>
+                        <li><a href="#outliers" class="toc-link">Outlier Rules</a></li>
+                        <li><a href="#handling" class="toc-link">What to Do with an Outlier</a></li>
+                        <li><a href="#describe" class="toc-link">Reading describe()</a></li>
+                        <li><a href="#plots" class="toc-link">Histograms and Box Plots, Read Properly</a></li>
+                        <li><a href="#groups" class="toc-link">Summaries by Group</a></li>
+                        <li><a href="#likert" class="toc-link">Survey Scales: Numbers That Are Not Quite Numbers</a></li>
+                        <li><a href="#mistakes" class="toc-link">Common Mistakes</a></li>
+                        <li><a href="#project" class="toc-link">Project: The Store Profile Sheet</a></li>
+                        <li><a href="#exercises" class="toc-link">Hands-on Exercises</a></li>
+                        <li><a href="#quiz" class="toc-link">Quick Quiz</a></li>
+                        <li><a href="#faq" class="toc-link">Common Questions</a></li>
+                        <li><a href="#journal" class="toc-link">Learning Journal</a></li>
+                        <li><a href="#summary" class="toc-link">Lesson Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
 
-    <h3>The Restaurant Review Analogy 🍕</h3>
-    
-    <p>Think of descriptive statistics like restaurant reviews. Instead of reading 1,000 individual reviews, you want to know: What's the average rating (mean)? What rating appears most often (mode)? What's the typical rating if we ignore extremes (median)? How consistent are the ratings (standard deviation)? Are there many terrible or amazing outliers (skewness)? This summary gives you the restaurant's "statistical story" instantly!</p>
+            <section id="shape" class="lesson-section">
+                <h2>⛰️ Shape: Symmetry and Skew</h2>
 
-    <canvas id="distributionCanvas" width="800" height="400"></canvas>
-    <script>
-        const canvas = document.getElementById('distributionCanvas');
-        const ctx = canvas.getContext('2d');
-        
-        // Generate sample data for visualization
-        function generateNormalData(mean, std, count) {
-            const data = [];
-            for(let i = 0; i < count; i++) {
-                // Box-Muller transform for normal distribution
-                const u1 = Math.random();
-                const u2 = Math.random();
-                const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-                data.push(mean + z * std);
-            }
-            return data;
-        }
-        
-        // Animation variables
-        let animationFrame = 0;
-        let dataPoints = generateNormalData(400, 60, 200);
-        
-        function drawVisualization() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Title
-            ctx.fillStyle = '#333';
-            ctx.font = 'bold 16px Arial';
-            ctx.fillText('Interactive Distribution Visualization', 250, 30);
-            
-            // Draw histogram
-            const bins = 20;
-            const minVal = Math.min(...dataPoints);
-            const maxVal = Math.max(...dataPoints);
-            const binWidth = (maxVal - minVal) / bins;
-            const histogram = new Array(bins).fill(0);
-            
-            // Calculate histogram
-            dataPoints.forEach(val => {
-                const binIndex = Math.min(Math.floor((val - minVal) / binWidth), bins - 1);
-                histogram[binIndex]++;
-            });
-            
-            // Find max count for scaling
-            const maxCount = Math.max(...histogram);
-            
-            // Draw bins
-            const chartWidth = 600;
-            const chartHeight = 200;
-            const chartX = 100;
-            const chartY = 80;
-            const barWidth = chartWidth / bins;
-            
-            histogram.forEach((count, i) => {
-                const barHeight = (count / maxCount) * chartHeight;
-                const x = chartX + i * barWidth;
-                const y = chartY + chartHeight - barHeight;
-                
-                // Gradient fill
-                const gradient = ctx.createLinearGradient(0, y, 0, y + barHeight);
-                gradient.addColorStop(0, '#667eea');
-                gradient.addColorStop(1, '#764ba2');
-                ctx.fillStyle = gradient;
-                ctx.fillRect(x, y, barWidth - 2, barHeight);
-            });
-            
-            // Draw axes
-            ctx.strokeStyle = '#333';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(chartX, chartY);
-            ctx.lineTo(chartX, chartY + chartHeight);
-            ctx.lineTo(chartX + chartWidth, chartY + chartHeight);
-            ctx.stroke();
-            
-            // Calculate and display statistics
-            const mean = dataPoints.reduce((a, b) => a + b, 0) / dataPoints.length;
-            const sortedData = [...dataPoints].sort((a, b) => a - b);
-            const median = sortedData[Math.floor(dataPoints.length / 2)];
-            const variance = dataPoints.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / dataPoints.length;
-            const stdDev = Math.sqrt(variance);
-            
-            // Draw mean line
-            const meanX = chartX + ((mean - minVal) / (maxVal - minVal)) * chartWidth;
-            ctx.strokeStyle = '#ef4444';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([5, 5]);
-            ctx.beginPath();
-            ctx.moveTo(meanX, chartY);
-            ctx.lineTo(meanX, chartY + chartHeight);
-            ctx.stroke();
-            ctx.setLineDash([]);
-            
-            // Draw median line
-            const medianX = chartX + ((median - minVal) / (maxVal - minVal)) * chartWidth;
-            ctx.strokeStyle = '#10b981';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([5, 5]);
-            ctx.beginPath();
-            ctx.moveTo(medianX, chartY);
-            ctx.lineTo(medianX, chartY + chartHeight);
-            ctx.stroke();
-            ctx.setLineDash([]);
-            
-            // Legend
-            ctx.font = '12px Arial';
-            ctx.fillStyle = '#ef4444';
-            ctx.fillText('Mean: ' + mean.toFixed(1), chartX + 20, chartY + chartHeight + 40);
-            ctx.fillStyle = '#10b981';
-            ctx.fillText('Median: ' + median.toFixed(1), chartX + 120, chartY + chartHeight + 40);
-            ctx.fillStyle = '#667eea';
-            ctx.fillText('Std Dev: ' + stdDev.toFixed(1), chartX + 230, chartY + chartHeight + 40);
-            
-            // Add new data point periodically
-            if(animationFrame % 60 === 0) {
-                dataPoints.shift();
-                dataPoints.push(generateNormalData(400, 60, 1)[0]);
-            }
-            
-            // Draw insight box
-            ctx.fillStyle = '#fef3c7';
-            ctx.fillRect(50, 320, 700, 60);
-            ctx.fillStyle = '#92400e';
-            ctx.font = '14px Arial';
-            ctx.fillText('💡 Insight: The red line (mean) and green line (median) are close together,', 70, 345);
-            ctx.fillText('   indicating a symmetric distribution with no significant skew.', 70, 365);
-            
-            animationFrame++;
-        }
-        
-        function animate() {
-            drawVisualization();
-            requestAnimationFrame(animate);
-        }
-        
-        animate();
-    </script>
+                <p>In Lesson 4.1 you summarized a column with a center and a spread, and you saw that the right pair depends on whether the data has a long tail. That makes <strong>shape</strong> the third thing to know about a column, and in practice the first thing to check.</p>
 
-    <h2>Common Pitfalls and How to Avoid Them 🚧</h2>
-    
-    <p>Even experienced data scientists make these mistakes. Let's learn how to avoid them!</p>
+                <div class="card card-info">
+                    <h4>💡 Mental Model: A Pile of Sand</h4>
+                    <p>Pour every value of a column onto a number line, like sand. The pile that forms is the <strong>distribution</strong>, and a histogram is a photograph of it. Center says where the pile sits. Spread says how wide it is. Shape says whether it is one even mound, a mound with a long ramp on one side, or two mounds. Every other summary is an attempt to describe that pile without showing the photograph.</p>
+                </div>
 
-    <div class="code-example">
-        <pre><code>import numpy as np
+                <p>Load the data for this lesson. You will also compute one new column: the revenue a store takes per visitor through the door.</p>
+
+<pre><code class="language-python">import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
-print("⚠️ Common Pitfalls in Descriptive Statistics")
-print("=" * 60)
+pd.set_option("display.width", 150)
+pd.set_option("display.max_columns", 20)
 
-# Pitfall 1: Mean vs Median Confusion
-print("\n❌ Pitfall 1: Using Mean for Skewed Data")
-print("-" * 40)
+orders = pd.read_csv("data/orders.csv", parse_dates=["order_date"])
+daily = pd.read_csv("data/daily_sales.csv", parse_dates=["date"])
+totals = orders["order_total"]
+daily["spend_per_visitor"] = daily["revenue"] / daily["visitors"]
 
-# Income data (highly skewed)
-incomes = np.concatenate([
-    np.random.normal(50000, 10000, 900),  # Most people
-    np.random.normal(500000, 100000, 100)  # High earners
-])
+print(daily[["date", "store", "visitors", "revenue", "spend_per_visitor"]].head(4))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>        date      store  visitors  revenue  spend_per_visitor
+0 2024-01-01  Asheville       201  5017.07          24.960547
+1 2024-01-01       Bend       200  4132.92          20.664600
+2 2024-01-01      Boise       333  5962.00          17.903904
+3 2024-01-01  Flagstaff       144  3061.66          21.261528</code></pre>
+</div>
 
-mean_income = np.mean(incomes)
-median_income = np.median(incomes)
+                <p>Now look at two piles side by side.</p>
 
-print(f"Mean income: ${mean_income:,.2f}")
-print(f"Median income: ${median_income:,.2f}")
-print(f"Difference: ${mean_income - median_income:,.2f}")
-print("\n✅ Solution: Use median for skewed distributions!")
+<pre><code class="language-python">spend = daily["spend_per_visitor"].dropna()
 
-# Pitfall 2: Ignoring Missing Data
-print("\n❌ Pitfall 2: Silent Missing Data")
-print("-" * 40)
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 3.8), layout="constrained")
+ax1.hist(spend, bins=40, color="#667eea", edgecolor="white")
+ax1.set_title(f"Spend per visitor: skew {spend.skew():.2f}")
+ax1.set_xlabel("Revenue per visitor ($)")
+ax1.set_ylabel("Store-days")
+ax2.hist(totals[totals &lt;= 1000], bins=40, color="#667eea", edgecolor="white")
+ax2.set_title(f"Order totals: skew {totals.skew():.2f}")
+ax2.set_xlabel("Order total ($), up to 1,000")
+ax2.set_ylabel("Orders")
+plt.show()</code></pre>
+<figure>
+    <img src="images/statistics_descriptive_shapes.png" alt="Two histograms. Left: revenue per visitor on each store-day, a single symmetric mound centered near 21 dollars, skew 0.27. Right: order totals up to 1,000 dollars, a peak near 80 dollars and a long tail to the right, skew 5.48." width="1100" height="418" loading="lazy">
+    <figcaption>Left: one even mound. Right: a peak with a long ramp to the right. The skewness value in each title puts a number on the difference.</figcaption>
+</figure>
 
-data_with_nulls = pd.Series([1, 2, 3, np.nan, 5, np.nan, 7, 8, 9, 10])
+                <h3>Putting a Number on It</h3>
 
-print(f"Mean (with NaN): {data_with_nulls.mean():.2f}")
-print(f"Count without checking: {len(data_with_nulls)}")
-print(f"Count of valid values: {data_with_nulls.count()}")
-print(f"Percentage missing: {data_with_nulls.isnull().sum()/len(data_with_nulls)*100:.1f}%")
-print("\n✅ Solution: Always check for and handle missing values!")
+                <p><strong>Skewness</strong> measures lopsidedness. It is zero for a perfectly symmetric pile, positive when the long tail is on the right, and negative when it is on the left.</p>
 
-# Pitfall 3: Simpson's Paradox
-print("\n❌ Pitfall 3: Simpson's Paradox")
-print("-" * 40)
+<pre><code class="language-python">products = pd.read_csv("data/products.csv")
 
-# Example: Treatment success rates
-hospital_data = pd.DataFrame({
-    'hospital': ['A'] * 1000 + ['B'] * 1000,
-    'severity': ['mild'] * 800 + ['severe'] * 200 + ['mild'] * 200 + ['severe'] * 800,
-    'success': np.concatenate([
-        np.random.binomial(1, 0.9, 800),   # Hospital A, mild cases
-        np.random.binomial(1, 0.3, 200),   # Hospital A, severe cases
-        np.random.binomial(1, 0.85, 200),  # Hospital B, mild cases
-        np.random.binomial(1, 0.25, 800)   # Hospital B, severe cases
-    ])
+print("product ratings   :", round(products["rating"].skew(), 2))
+print("spend per visitor :", round(spend.skew(), 2))
+print("daily revenue     :", round(daily["revenue"].skew(), 2))
+print("order totals      :", round(totals.skew(), 2))
+print("  without the 12 bulk orders:", round(totals[totals &lt;= 2000].skew(), 2))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>product ratings   : -0.02
+spend per visitor : 0.27
+daily revenue     : 1.51
+order totals      : 5.48
+  without the 12 bulk orders: 1.64</code></pre>
+</div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Skewness</th><th>Reading</th><th>Typical summary</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Between -0.5 and 0.5</td><td>Roughly symmetric</td><td>Mean and SD are fair</td></tr>
+                            <tr><td>0.5 to 1 (either sign)</td><td>Moderately skewed</td><td>Check both; say which you used</td></tr>
+                            <tr><td>Beyond 1 (either sign)</td><td>Strongly skewed</td><td>Median and IQR</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>These cutoffs are a convention, not a law. They do one job: telling you when to stop trusting the mean as "typical". Order totals at 5.48 are far past any cutoff. Daily revenue at 1.51 is skewed too, for a reason you will uncover in the project.</p>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Three Things Skewness Does Not Tell You</h4>
+                    <p><strong>It does not say the pile has one hump.</strong> Boise's daily highs in Lesson 4.1 were symmetric with <em>two</em> humps, winter and summer. Only the picture shows that. <strong>It is not robust.</strong> The formula cubes each deviation, so a few extreme values dominate it: twelve bulk orders out of 20,302 move it from 1.64 to 5.48. <strong>"Mean above median" is a rule of thumb</strong> for right skew, usually true for one-humped data and not guaranteed. Always look at the histogram.</p>
+                </div>
+
+                <h3>Taming a Tail with a Logarithm</h3>
+
+                <p>Money often behaves multiplicatively: the step from $50 to $100 feels like the step from $500 to $1,000. Taking the logarithm turns those equal ratios into equal distances, and frequently pulls a right-skewed pile into something close to symmetric.</p>
+
+<pre><code class="language-python">log_totals = np.log(totals)
+print("skew of order totals     :", round(totals.skew(), 2))
+print("skew of log(order totals):", round(log_totals.skew(), 2))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>skew of order totals     : 5.48
+skew of log(order totals): -0.41</code></pre>
+</div>
+
+                <p>From 5.48 to -0.41. You will not need the log scale in this lesson, but remember the trick: later methods that prefer symmetric data often work much better on the logarithm of a money column.</p>
+            </section>
+
+            <section id="percentiles" class="lesson-section">
+                <h2>📍 Position: Percentiles and Quantiles</h2>
+
+                <p>Center, spread and shape describe the whole pile. <strong>Position</strong> describes one value's place in it. "This order was $517" says little. "This order was larger than 95% of all orders" says a lot.</p>
+
+                <p>The <strong>p-th percentile</strong> is the value with p percent of the data at or below it. A <strong>quantile</strong> is the same idea on a 0-to-1 scale, which is what pandas uses. You have met three of them already: the quartiles are the 0.25, 0.50 and 0.75 quantiles.</p>
+
+<pre><code class="language-python">print(totals.quantile([0.10, 0.25, 0.50, 0.75, 0.90, 0.95, 0.99]))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>0.10     41.9500
+0.25     78.8500
+0.50    146.8500
+0.75    264.9500
+0.90    405.3950
+0.95    516.7975
+0.99    737.4430
+Name: order_total, dtype: float64</code></pre>
+</div>
+
+                <p>Read down the list and the distribution appears: one order in ten is under $42, half are under $147, one in ten is over $405, and only one in a hundred is over $737. Seven numbers, and you could sketch the histogram from them.</p>
+
+                <h3>The Reverse Question: What Percentile Is This Value?</h3>
+
+                <p>Going from a value to its position uses the trick from Lesson 4.1: the mean of a boolean column is a proportion.</p>
+
+<pre><code class="language-python">from scipy import stats
+
+print("share of orders at or below $500:", round((totals &lt;= 500).mean(), 4))
+print("scipy percentileofscore         :", round(stats.percentileofscore(totals, 500, kind="weak"), 2))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>share of orders at or below $500: 0.9443
+scipy percentileofscore         : 94.43</code></pre>
+</div>
+
+                <p>A $500 order sits at about the 94th percentile. <code>percentileofscore</code> answers on the 0-to-100 scale; <code>kind="weak"</code> means "at or below", matching the line above it.</p>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Two Scales, Easy to Mix Up</h4>
+                    <p>pandas <code>.quantile()</code> takes a fraction from 0 to 1. NumPy's <code>np.percentile()</code> takes a number from 0 to 100 (<code>np.quantile()</code> takes 0 to 1). <code>np.percentile(totals, 90)</code> and <code>totals.quantile(0.90)</code> are the same number.</p>
+                </div>
+
+                <h3>When the Cut Falls Between Two Values</h3>
+
+                <p>With four values, where is the 25th percentile? There is no single right answer, and software has to choose a convention.</p>
+
+<pre><code class="language-python">four = pd.Series([10, 20, 30, 40])
+print(four.quantile(0.25))                          # default: interpolate
+print(four.quantile(0.25, interpolation="lower"))   # an actual data value</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>17.5
+10</code></pre>
+</div>
+
+                <p>By default pandas and NumPy slide proportionally between the two neighbors ("linear" interpolation), giving 17.5. Other tools use other rules, which is why a spreadsheet and pandas can disagree slightly on a quartile. With thousands of rows the differences vanish. With ten rows, do not be alarmed by them.</p>
+            </section>
+
+            <section id="zscores" class="lesson-section">
+                <h2>📏 Position: z-Scores</h2>
+
+                <p>Percentiles locate a value by <em>rank</em>. A <strong>z-score</strong> locates it by <em>distance</em>: how many standard deviations it lies above or below the mean.</p>
+
+                <p class="text-center"><code>z = (value - mean) / standard deviation</code></p>
+
+                <p>A z-score of 0 is exactly average, +1 is one SD above, -2 is two SDs below. The units cancel, so z-scores let you compare things measured on different scales, or the same thing in different contexts. Here is a question a regional manager might ask: <em>is a $12,000 day a big deal?</em></p>
+
+<pre><code class="language-python">for store in ["Asheville", "Boise"]:
+    revenue = daily.loc[daily["store"] == store, "revenue"]
+    z = (12000 - revenue.mean()) / revenue.std()
+    share = (revenue &gt;= 12000).mean()
+    print(f"{store:&lt;9} mean {revenue.mean():8,.0f}  SD {revenue.std():6,.0f}  "
+          f"z = {z:5.2f}  days at or above: {share:.1%}")</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>Asheville mean    5,704  SD  2,064  z =  3.05  days at or above: 1.5%
+Boise     mean   10,144  SD  3,715  z =  0.50  days at or above: 24.3%</code></pre>
+</div>
+
+                <p>The same $12,000 is three standard deviations above Asheville's average, something that happens on about 1.5% of days, and half a standard deviation above Boise's, which happens on about one day in four. The raw number cannot tell you that. The z-score can.</p>
+
+                <p>To convert a whole column, do the arithmetic on the Series:</p>
+
+<pre><code class="language-python">z_totals = (totals - totals.mean()) / totals.std()
+
+print("mean of z:", abs(round(z_totals.mean(), 6)), "  SD of z:", round(z_totals.std(), 6))
+print("largest z:", round(z_totals.max(), 1), "  smallest z:", round(z_totals.min(), 2))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>mean of z: 0.0   SD of z: 1.0
+largest z: 26.3   smallest z: -1.05</code></pre>
+</div>
+
+                <p>Standardizing always produces a column with mean 0 and SD 1. It does <strong>not</strong> change the shape: the largest order is 26 SDs above the mean while the smallest is barely 1 SD below it, because the pile is as lopsided as before.</p>
+
+                <div class="card card-info">
+                    <h4>💡 What Counts as a Large z?</h4>
+                    <p>You may have heard "95% of values are within 2 SDs of the mean". That is a property of one particular bell-shaped distribution, the <em>normal</em> distribution, which Lesson 4.3 introduces. For data with that shape, |z| above 2 is unusual and above 3 is rare. For skewed data the guideline fails, as the 26 shows. A z-score is always a valid <em>distance</em>; turning it into "how rare" needs to know the shape.</p>
+                </div>
+
+                <p><code>scipy.stats.zscore(values)</code> does the same calculation, with one familiar catch: it divides by the population SD (<code>ddof=0</code>) unless you pass <code>ddof=1</code>.</p>
+            </section>
+
+            <section id="outliers" class="lesson-section">
+                <h2>🚩 Outlier Rules</h2>
+
+                <p>An <strong>outlier</strong> is a value that sits far from the rest of its column. "Far" needs a definition, and there are two standard ones. Each is built from a center-and-spread pair you already know.</p>
+
+                <h3>Rule 1: The IQR Fences</h3>
+
+                <p>Build a fence 1.5 IQRs below Q1 and another 1.5 IQRs above Q3. Anything outside the fences is flagged. This is the rule box plots use.</p>
+
+<pre><code class="language-python">q1, q3 = totals.quantile(0.25), totals.quantile(0.75)
+iqr = q3 - q1
+lower_fence = q1 - 1.5 * iqr
+upper_fence = q3 + 1.5 * iqr
+
+flag_iqr = (totals &lt; lower_fence) | (totals &gt; upper_fence)
+print("fences:", round(lower_fence, 2), "to", round(upper_fence, 2))
+print("flagged:", flag_iqr.sum(), f"({flag_iqr.mean():.1%} of orders)")</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>fences: -200.3 to 544.1
+flagged: 848 (4.2% of orders)</code></pre>
+</div>
+
+                <h3>Rule 2: z-Scores Beyond 3</h3>
+
+<pre><code class="language-python">flag_z = z_totals.abs() &gt; 3
+print("flagged:", flag_z.sum(), f"({flag_z.mean():.1%} of orders)")
+print("smallest flagged order:", totals[flag_z].min())</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>flagged: 217 (1.1% of orders)
+smallest flagged order: 731.85</code></pre>
+</div>
+
+                <p>Two respectable rules, two very different answers: 848 orders or 217. The IQR rule draws its line at $544, the z-score rule at about $732. They disagree because they are built on different summaries. The mean and SD are inflated by the very values being judged, which pushes the z-score line outward. The quartiles are not, so the IQR fence stays closer in.</p>
+
+                <div class="card card-warning">
+                    <h4>⚠️ A Flag Is a Question, Not a Verdict</h4>
+                    <p>Both rules quietly assume a roughly symmetric, bell-like pile, where values beyond the line really are rare. Order totals are not shaped like that. Look at the lower fence: -$200.30. No order can be flagged as too small, and 4% of all orders are flagged as too large. Those 848 orders are mostly customers buying a tent and a sleeping bag together. The rule has not found errors. It has rediscovered that the data is skewed.</p>
+                </div>
+
+                <p>How much would you lose by deleting them?</p>
+
+<pre><code class="language-python">print(f"flagged orders: {flag_iqr.mean():.1%} of orders, "
+      f"{totals[flag_iqr].sum() / totals.sum():.1%} of revenue")</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>flagged orders: 4.2% of orders, 15.4% of revenue</code></pre>
+</div>
+
+                <p>Four percent of the orders and almost fifteen percent of the money. Removing them "to clean the data" would be one of the more expensive mistakes an analyst can make.</p>
+            </section>
+
+            <section id="handling" class="lesson-section">
+                <h2>🧑‍⚖️ What to Do with an Outlier</h2>
+
+                <p>The rules find candidates. Judgment decides what happens to them, and the judgment follows a short sequence of questions.</p>
+
+                <div class="mermaid">
+graph TD
+    A["A value is flagged"] --> B{"Provable error?"}
+    B -->|yes| C["Fix or remove it"]
+    B -->|no| D{"Part of your question?"}
+    D -->|no| E["Analyze separately"]
+    D -->|yes| F["Keep it, stay robust"]
+                </div>
+
+                <p>Apply it to Pinecrest's twelve largest orders. Step one: are they errors? Look them up.</p>
+
+<pre><code class="language-python">items = pd.read_csv("data/order_items.csv")
+bulk_ids = orders.loc[totals &gt; 2000, "order_id"]
+bulk_lines = items[items["order_id"].isin(bulk_ids)]
+
+print("orders above $2,000:", len(bulk_ids))
+print("largest quantity on each:", sorted(bulk_lines.groupby("order_id")["quantity"].max().tolist()))
+print(orders.loc[totals &gt; 2000, ["channel", "status"]].value_counts())</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>orders above $2,000: 12
+largest quantity on each: [25, 26, 27, 28, 30, 30, 30, 32, 35, 38, 39, 39]
+channel  status
+online   completed    12
+Name: count, dtype: int64</code></pre>
+</div>
+
+                <p>Every one of them is a completed online order with a single line of 25 to 39 units. These are outfitters buying in bulk: real sales, real revenue. They are not errors, so they stay in the data. Whether they belong in a particular <em>analysis</em> depends on the question:</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Situation</th><th>Reasonable action</th><th>Pinecrest example</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>A provable error</td><td>Correct it if you can, remove it if you cannot, and keep a note of what you did</td><td>The eight totals in <code>orders_messy.csv</code> that lost their decimal point (Lesson 2.3)</td></tr>
+                            <tr><td>Real, and part of what you are measuring</td><td>Keep it. Describe the column with the median and IQR</td><td>Total revenue: the bulk orders are revenue</td></tr>
+                            <tr><td>Real, but a different kind of thing</td><td>Analyze the groups separately and say you did</td><td>"What does a typical <em>shopper</em> spend?" Outfitters are not typical shoppers</td></tr>
+                            <tr><td>Real, and you must use a mean-based method</td><td>Report results with and without, or transform (log), or cap extreme values at a stated percentile</td><td>A model of order size on the log scale</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>The option people reach for first, silently deleting whatever a rule flags, is not in the table. If removing a value changes your conclusion, the reader deserves to know the value existed.</p>
+
+                <div class="card card-success">
+                    <h4>✅ You Have Already Been Doing This</h4>
+                    <p>In Lesson 0.1 you met the $4,893 order and were told it was "a question, not automatically a mistake". Everything in this section is that sentence, with tools attached.</p>
+                </div>
+            </section>
+
+            <section id="describe" class="lesson-section">
+                <h2>📋 Reading describe()</h2>
+
+                <p>You have used <code>.describe()</code> since the first lesson. You can now read every line of it.</p>
+
+<pre><code class="language-python">print(totals.describe())</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>count    20302.000000
+mean       194.596663
+std        178.760964
+min          6.380000
+25%         78.850000
+50%        146.850000
+75%        264.950000
+max       4893.000000
+Name: order_total, dtype: float64</code></pre>
+</div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Line</th><th>What it is</th><th>What to check</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>count</code></td><td>Non-missing values</td><td>Is it lower than the number of rows? Then values are missing</td></tr>
+                            <tr><td><code>mean</code>, <code>50%</code></td><td>Mean and median</td><td>Far apart means skew: here 194.60 against 146.85</td></tr>
+                            <tr><td><code>std</code></td><td>Sample SD (<code>ddof=1</code>)</td><td>Comparable to or larger than the mean, for a column that cannot be negative, means a long right tail</td></tr>
+                            <tr><td><code>25%</code>, <code>75%</code></td><td>Q1 and Q3</td><td>Subtract for the IQR. Compare <code>75% - 50%</code> with <code>50% - 25%</code>: unequal halves mean skew</td></tr>
+                            <tr><td><code>min</code>, <code>max</code></td><td>The extremes</td><td>Impossible values (negative prices), and a max far beyond the 75% line</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>The last check is worth doing in your head every time. Here the upper half of the box (264.95 - 146.85 = 118.10) is much wider than the lower half (146.85 - 78.85 = 68.00), and the max is eighteen times the 75th percentile. You know it is right-skewed with extreme values before drawing anything.</p>
+
+                <p>You can choose the percentiles, and you can ask for text columns too, which get a different set of lines:</p>
+
+<pre><code class="language-python">print(totals.describe(percentiles=[0.05, 0.5, 0.95]).round(2))
+print()
+print(orders[["channel", "status"]].describe())</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>count    20302.00
+mean       194.60
+std        178.76
+min          6.38
+5%          27.90
+50%        146.85
+95%        516.80
+max       4893.00
+Name: order_total, dtype: float64
+
+       channel     status
+count    20302      20302
+unique       2          3
+top     online  completed
+freq     12854      18762</code></pre>
+</div>
+
+                <p>For text, <code>unique</code> is the number of distinct values, <code>top</code> is the mode and <code>freq</code> is how many times it appears.</p>
+            </section>
+
+            <section id="plots" class="lesson-section">
+                <h2>🖼️ Histograms and Box Plots, Read Properly</h2>
+
+                <h3>A Histogram Depends on Its Bins</h3>
+
+                <p>A histogram sorts values into bins and draws one bar per bin. The number of bins is your choice, and it can hide or reveal the shape. Here are Boise's daily highs, twice.</p>
+
+<pre><code class="language-python">weather = pd.read_csv("data/store_weather.csv", parse_dates=["date"])
+boise_highs = weather.loc[weather["city"] == "Boise", "high_f"]
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 3.6), layout="constrained", sharex=True)
+ax1.hist(boise_highs, bins=5, color="#667eea", edgecolor="white")
+ax1.set_title("5 bins")
+ax2.hist(boise_highs, bins=30, color="#667eea", edgecolor="white")
+ax2.set_title("30 bins")
+for ax in (ax1, ax2):
+    ax.set_xlabel("Boise daily high (F)")
+ax1.set_ylabel("Days")
+plt.show()</code></pre>
+<figure>
+    <img src="images/statistics_descriptive_bins.png" alt="The same Boise temperature data drawn as two histograms. With 5 bins it looks like one broad block. With 30 bins two separate humps appear, one near 40 degrees and one near 85 degrees." width="1100" height="396" loading="lazy">
+    <figcaption>Same 731 days. Five bins show one lumpy block; thirty show two seasons. Too few bins hide structure, and too many turn it into noise.</figcaption>
+</figure>
+
+                <p>There is no single correct number of bins. Matplotlib's default is 10, which is rarely the best choice. Try a few values (20 to 50 suits a few hundred to a few thousand rows) and prefer the picture that stays stable when you change the count a little. You can also pass <code>bins="auto"</code> and let NumPy pick.</p>
+
+                <h3>Anatomy of a Box Plot</h3>
+
+                <p>A box plot draws five-number position information and the IQR outlier rule in one compact shape. Here is one, labeled, for Asheville's daily revenue.</p>
+
+<pre><code class="language-python">asheville = daily.loc[daily["store"] == "Asheville", "revenue"].dropna()
+a_q1, a_med, a_q3 = asheville.quantile([0.25, 0.5, 0.75])
+a_iqr = a_q3 - a_q1
+whisker_hi = asheville[asheville &lt;= a_q3 + 1.5 * a_iqr].max()
+whisker_lo = asheville[asheville &gt;= a_q1 - 1.5 * a_iqr].min()
+
+fig, ax = plt.subplots(figsize=(9, 3.4), layout="constrained")
+ax.boxplot(asheville, orientation="horizontal", widths=0.5,
+           flierprops={"marker": "o", "markersize": 4, "alpha": 0.5})
+notes = [(a_q1, "Q1"), (a_med, "median"), (a_q3, "Q3"),
+         (whisker_lo, "lowest value\ninside the fence"),
+         (whisker_hi, "highest value\ninside the fence")]
+for x, text in notes:
+    ax.annotate(text, xy=(x, 1.27), xytext=(x, 1.42), ha="center", va="bottom", fontsize=9,
+                arrowprops={"arrowstyle": "-&gt;"})
+ax.annotate("points beyond the fence,\ndrawn one by one", xy=(13500, 0.97), xytext=(13500, 0.60),
+            ha="center", va="top", fontsize=9, arrowprops={"arrowstyle": "-&gt;"})
+ax.set_ylim(0.45, 1.75)
+ax.set_xlim(left=800)
+ax.set_yticks([])
+ax.set_xlabel("Asheville daily revenue ($)")
+plt.show()
+
+print("Q1, median, Q3:", round(a_q1), round(a_med), round(a_q3))
+print("whiskers end at:", round(whisker_lo), "and", round(whisker_hi))
+print("points beyond the upper fence:", (asheville &gt; a_q3 + 1.5 * a_iqr).sum())</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>Q1, median, Q3: 4263 5208 6652
+whiskers end at: 2268 and 10229
+points beyond the upper fence: 23</code></pre>
+</div>
+<figure>
+    <img src="images/statistics_descriptive_box_anatomy.png" alt="A horizontal box plot of Asheville daily revenue with labels. The box runs from Q1 near 4,263 dollars to Q3 near 6,652 dollars with the median line near 5,208. Whiskers extend to the lowest and highest values inside the fences, about 2,268 and 10,229 dollars. Individual points beyond the upper whisker, up to about 16,500 dollars, are drawn one by one." width="990" height="374" loading="lazy">
+    <figcaption>The box is the middle half of the data. The whiskers reach to the last real data point inside each fence, not to the fence itself and not to the minimum and maximum.</figcaption>
+</figure>
+
+                <p>Four things to read from any box plot:</p>
+                <ul>
+                    <li><strong>The line in the box</strong> is the median. Not the mean.</li>
+                    <li><strong>The box</strong> spans Q1 to Q3, so its length is the IQR and it contains half the data.</li>
+                    <li><strong>Each whisker</strong> ends at the most extreme data point that is still within 1.5 IQRs of the box. If nothing is flagged on a side, that whisker ends at the minimum or maximum.</li>
+                    <li><strong>Separate points</strong> are the values the IQR rule flags. As you now know, they are candidates for a closer look, nothing more.</li>
+                </ul>
+
+                <p>Shape shows too: here the median sits left of the box's center, the right whisker is longer than the left, and all the flagged points are on the right. That is right skew, drawn. What a box plot cannot show is how many humps there are. Boise's two-season temperatures would be one unremarkable box. Use histograms to study one distribution and box plots to compare several, which is what you will do in the project.</p>
+            </section>
+
+            <section id="groups" class="lesson-section">
+                <h2>👥 Summaries by Group</h2>
+
+                <p>A summary of all 2,903 store-days mixes four stores of very different size. Most real questions are comparisons, so most real summaries are <strong>grouped</strong>. You know <code>groupby</code> from Lesson 2.4. Passing a list of function names to <code>.agg()</code> gives one column per statistic.</p>
+
+<pre><code class="language-python">by_store = daily.groupby("store")["revenue"].agg(["count", "mean", "median", "std"])
+print(by_store.round(0))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>           count     mean  median     std
+store
+Asheville    726   5704.0  5208.0  2064.0
+Bend         721   6998.0  6456.0  2546.0
+Boise        726  10144.0  9360.0  3715.0
+Flagstaff    724   6890.0  6405.0  2686.0</code></pre>
+</div>
+
+                <p>Always include <code>count</code>. A mean with no <em>n</em> beside it cannot be judged: is that group 700 days or 7? Here the groups are balanced (the counts differ by the few missing days you know about), and Boise is clearly the largest store, with a typical day about 80% bigger than Asheville's.</p>
+
+                <p>For statistics that have no built-in name, such as the quartiles, write a small function and use <strong>named aggregation</strong>, where each keyword becomes a column name:</p>
+
+<pre><code class="language-python">def q1(values):
+    return values.quantile(0.25)
+
+def q3(values):
+    return values.quantile(0.75)
+
+profile = daily.groupby("store")["revenue"].agg(
+    n="count", median="median", q1=q1, q3=q3, skew="skew")
+profile["iqr"] = profile["q3"] - profile["q1"]
+print(profile.round(2))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>             n   median       q1        q3  skew      iqr
+store
+Asheville  726  5207.63  4262.75   6651.70  1.38  2388.95
+Bend       721  6455.84  5162.11   8385.92  1.38  3223.81
+Boise      726  9360.23  7590.49  11866.32  1.35  4275.83
+Flagstaff  724  6405.04  4912.76   8242.47  1.12  3329.71</code></pre>
+</div>
+
+                <p>Every store is right-skewed by a similar amount (1.1 to 1.4), so medians and IQRs are the fair comparison. Boise's IQR is the widest in dollars, as you would expect of the biggest store. Is it more <em>variable</em>, though, or just bigger? Divide the spread by the center to compare on equal terms:</p>
+
+<pre><code class="language-python">print((profile["iqr"] / profile["median"]).round(2))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>store
+Asheville    0.46
+Bend         0.50
+Boise        0.46
+Flagstaff    0.52
+dtype: float64</code></pre>
+</div>
+
+                <p>Relative to its size, Boise's middle half is about as wide as Asheville's (roughly 46% of the median in both), and Flagstaff is the most variable store. Dividing a spread by its center is a simple and underused move when groups differ in scale.</p>
+
+                <div class="card card-info">
+                    <h4>💡 The One-Liner</h4>
+                    <p><code>daily.groupby("store")["revenue"].describe()</code> gives the full eight-line summary for every group at once. It is the fastest first look at any grouped comparison.</p>
+                </div>
+            </section>
+
+            <section id="likert" class="lesson-section">
+                <h2>🗳️ Survey Scales: Numbers That Are Not Quite Numbers</h2>
+
+                <p>Pinecrest surveyed 1,800 customers. Five questions asked for satisfaction on a scale from 1 (very dissatisfied) to 5 (very satisfied). This kind of question is called a <strong>Likert item</strong>, and it looks like numeric data. It is not, quite.</p>
+
+<pre><code class="language-python">survey = pd.read_csv("data/survey.csv")
+print(survey[["store", "age_group", "sat_overall", "sat_staff", "sat_website", "recommend"]].head(4))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>       store age_group  sat_overall  sat_staff  sat_website  recommend
+0  Asheville       65+          5.0        5.0          3.0        NaN
+1      Boise     18-24          3.0        3.0          NaN        6.0
+2     Online     25-34          4.0        3.0          4.0        7.0
+3     Online     25-34          4.0        NaN          3.0        9.0</code></pre>
+</div>
+
+                <div class="card card-info">
+                    <h4>💡 Ordinal Data</h4>
+                    <p>The answers are <strong>ordered categories</strong>: 4 is more satisfied than 3. But nothing says the step from 2 to 3 is the same size as the step from 4 to 5, or that a 4 is "twice" a 2. The digits are labels for "dissatisfied", "neutral", "satisfied". Data with order but no guaranteed distances is called <strong>ordinal</strong>. Arithmetic on it (means, SDs) assumes distances that may not exist.</p>
+                </div>
+
+                <h3>The Honest Summary Is the Whole Distribution</h3>
+
+                <p>With only five possible answers you do not need to compress anything. Show the counts and percentages.</p>
+
+<pre><code class="language-python">overall = survey["sat_overall"]
+table = pd.DataFrame({
+    "count": overall.value_counts().sort_index(),
+    "percent": (overall.value_counts(normalize=True).sort_index() * 100).round(1),
 })
+print(table)
+print("answered:", overall.count(), "of", len(overall))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>             count  percent
+sat_overall
+1.0              8      0.5
+2.0            108      6.2
+3.0            438     25.1
+4.0            649     37.1
+5.0            544     31.1
+answered: 1747 of 1800</code></pre>
+</div>
 
-# Overall success rates
-overall = hospital_data.groupby('hospital')['success'].mean()
-print("Overall success rates:")
-print(overall)
-print("\n⚠️ Hospital A looks better overall!")
+                <p>From there, three summaries respect the ordinal nature of the data:</p>
 
-# But when we control for severity...
-by_severity = hospital_data.groupby(['hospital', 'severity'])['success'].mean().unstack()
-print("\nSuccess rates by severity:")
-print(by_severity)
-print("\n✅ Hospital B is actually better for both mild AND severe cases!")
-print("   This reversal is Simpson's Paradox!")</code></pre>
-    </div>
+<pre><code class="language-python">answered = overall.dropna()
+print("median             :", answered.median())
+print("mode               :", answered.mode()[0])
+print("satisfied (4 or 5) :", f"{(answered &gt;= 4).mean():.1%}")
+print("dissatisfied (1, 2):", f"{(answered &lt;= 2).mean():.1%}")</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>median             : 4.0
+mode               : 4.0
+satisfied (4 or 5) : 68.3%
+dissatisfied (1, 2): 6.6%</code></pre>
+</div>
 
-    <h2>Quick Reference Guide 📚</h2>
-    
-    <div class="statistics-grid">
-        <div class="stat-card">
-            <h4>📍 Central Tendency</h4>
-            <p><strong>Mean:</strong> Average value</p>
-            <p><strong>Median:</strong> Middle value</p>
-            <p><strong>Mode:</strong> Most frequent</p>
-            <p>Use median for skewed data!</p>
-        </div>
-        
-        <div class="stat-card">
-            <h4>📏 Spread</h4>
-            <p><strong>Range:</strong> Max - Min</p>
-            <p><strong>IQR:</strong> Q3 - Q1</p>
-            <p><strong>Std Dev:</strong> Average deviation</p>
-            <p>IQR is robust to outliers!</p>
-        </div>
-        
-        <div class="stat-card">
-            <h4>📐 Shape</h4>
-            <p><strong>Skewness:</strong> Asymmetry</p>
-            <p><strong>Kurtosis:</strong> Tail heaviness</p>
-            <p>Skew > 0 = Right tail</p>
-            <p>Kurt > 0 = Heavy tails</p>
-        </div>
-        
-        <div class="stat-card">
-            <h4>🔗 Relationships</h4>
-            <p><strong>Correlation:</strong> Linear relationship</p>
-            <p><strong>Covariance:</strong> Joint variability</p>
-            <p>-1 ≤ correlation ≤ 1</p>
-            <p>Correlation ≠ Causation!</p>
-        </div>
-    </div>
+                <p>"68% of customers who answered are satisfied or very satisfied, and 7% are dissatisfied" is a sentence nobody can misread. That share of 4s and 5s is often called the <strong>top-two-box</strong> score.</p>
 
-    <h2>Summary: Your Statistical Toolkit ✅</h2>
-    
-    <div class="visual-explanation">
-        <h3>🎯 Key Takeaways:</h3>
-        <ul>
-            <li><strong>Always Start Here:</strong> Descriptive statistics are your first step in any analysis</li>
-            <li><strong>Know Your Measures:</strong> Different statistics tell different stories - use the right one</li>
-            <li><strong>Check Distribution:</strong> Skewness and outliers affect which statistics to use</li>
-            <li><strong>Visualize Everything:</strong> Graphs reveal patterns numbers can't show</li>
-            <li><strong>Group Analysis:</strong> Statistics by groups reveal hidden insights</li>
-            <li><strong>Be Robust:</strong> Use median and IQR when dealing with outliers</li>
-            <li><strong>Document Everything:</strong> Keep track of your statistical decisions and why</li>
-        </ul>
-    </div>
+                <h3>What About the Mean?</h3>
 
-    <div class="code-example">
-        <pre><code># Quick Reference Card for Descriptive Statistics
+                <p>You will see Likert means everywhere ("overall satisfaction: 3.92"), and computing one is not a crime. It treats the five labels as equally spaced, which is an assumption, and it compresses a five-bar chart into one number that hides whether people are lukewarm or split between delighted and angry. A sensible position: use the mean as a rough index for tracking or ranking, quote it to one decimal place, and never show it without the distribution or the top-two-box share beside it. Lesson 4.5 covers tests designed for ranks, which compare ordinal groups without pretending the steps are equal.</p>
+
+                <h3>Who Did Not Answer?</h3>
+
+                <p>The second honesty check on survey data is the missing answers.</p>
+
+<pre><code class="language-python">sat_columns = ["sat_overall", "sat_selection", "sat_price", "sat_staff", "sat_website"]
+print(survey[sat_columns].isna().sum())</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>sat_overall       53
+sat_selection     53
+sat_price         47
+sat_staff        605
+sat_website      472
+dtype: int64</code></pre>
+</div>
+
+                <p>About 50 people skipped each of the first three questions. But 605 skipped the staff question and 472 the website question. That is not carelessness. Break it down by where people shop:</p>
+
+<pre><code class="language-python">skipped = survey.groupby("store")[["sat_staff", "sat_website"]].agg(lambda col: col.isna().mean())
+print((skipped * 100).round(0))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>           sat_staff  sat_website
+store
+Asheville        4.0         44.0
+Bend             2.0         52.0
+Boise            3.0         41.0
+Flagstaff        3.0         49.0
+Online          70.0          3.0</code></pre>
+</div>
+
+                <p>70% of online shoppers skipped the staff question (they never met the staff), and 41 to 52% of store shoppers skipped the website question. The answers are <strong>not missing at random</strong>. Any statement about "online shoppers' satisfaction with staff" rests on the 30% minority who had some contact with staff, and they may differ from the rest. Report the <em>n</em>, and say who is in it.</p>
+
+                <h3>Comparing Groups on an Ordinal Scale</h3>
+
+                <p>Put the pieces together for the staff question: for each store, the number who answered, the median, the share satisfied and the share dissatisfied.</p>
+
+<pre><code class="language-python">def top_two(values):
+    return (values.dropna() &gt;= 4).mean() * 100
+
+def bottom_two(values):
+    return (values.dropna() &lt;= 2).mean() * 100
+
+staff = survey.groupby("store")["sat_staff"].agg(
+    n="count", median="median", satisfied_pct=top_two, dissatisfied_pct=bottom_two)
+print(staff.round(1))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>             n  median  satisfied_pct  dissatisfied_pct
+store
+Asheville  193     4.0           57.5              14.0
+Bend       228     4.0           78.9               4.4
+Boise      320     4.0           76.9               2.2
+Flagstaff  206     4.0           74.8               4.4
+Online     248     4.0           74.6               2.8</code></pre>
+</div>
+
+                <p>The median is 4 in every store and tells you nothing. The shares tell the story: in Asheville only 58% are satisfied with the staff, against 75 to 79% elsewhere, and 14% are dissatisfied, three times the rate of any other store. A stacked bar of the full distribution makes it visible at a glance.</p>
+
+<pre><code class="language-python">import matplotlib
+
+shares = pd.crosstab(survey["store"], survey["sat_staff"], normalize="index") * 100
+colors = matplotlib.colormaps["RdBu"](np.linspace(0.1, 0.9, 5))
+labels = ["1 very dissatisfied", "2", "3 neutral", "4", "5 very satisfied"]
+
+fig, ax = plt.subplots(figsize=(9, 3.8), layout="constrained")
+left = np.zeros(len(shares))
+for answer, color, label in zip(shares.columns, colors, labels):
+    ax.barh(shares.index, shares[answer], left=left, color=color, edgecolor="white", label=label)
+    left += shares[answer].to_numpy()
+ax.invert_yaxis()
+ax.set_xlim(0, 100)
+ax.set_xlabel("Percent of customers who answered")
+ax.set_title("Satisfaction with staff, by where the customer shops")
+fig.legend(loc="outside lower center", ncols=5, fontsize=8, frameon=False)
+plt.show()</code></pre>
+<figure>
+    <img src="images/statistics_descriptive_likert.png" alt="Stacked horizontal bars showing the percentage of each answer from 1 to 5 for satisfaction with staff, one bar per store. Asheville has visibly larger shares of answers 1, 2 and 3 and smaller shares of 4 and 5 than Bend, Boise, Flagstaff and Online, which look alike." width="990" height="418" loading="lazy">
+    <figcaption>Asheville's bar has more red and pale segments and less dark blue than the others. Something about the staff experience there is different, and the median alone would never have shown it.</figcaption>
+</figure>
+
+                <p>Whether a gap like Asheville's could be a fluke of who happened to answer is a question for Lesson 4.5. Describing it clearly, with counts, comes first.</p>
+            </section>
+
+            <section id="mistakes" class="lesson-section">
+                <h2>⚠️ Common Mistakes</h2>
+
+                <p>These are the ones that show up most in real reports. Each has a recognizable symptom.</p>
+
+                <h3>1. Passing a Percentage to quantile()</h3>
+
+<pre data-raises="ValueError"><code class="language-python">totals.quantile(25)</code></pre>
+<div class="card card-output">
+<h4>Error</h4>
+<pre><code>ValueError: percentiles should all be in the interval [0, 1]</code></pre>
+</div>
+                <p><strong>What it means:</strong> pandas wants a fraction. <strong>Fix:</strong> <code>totals.quantile(0.25)</code>. (NumPy's <code>np.percentile(totals, 25)</code> is the one that takes 25.)</p>
+
+                <h3>2. A Box Plot That Comes Out Empty</h3>
+
+<pre><code class="language-python">fig, ax = plt.subplots(figsize=(6, 2))
+result = ax.boxplot(daily["revenue"])
+print(result["medians"][0].get_xdata(), result["medians"][0].get_ydata())
+plt.close(fig)</code></pre>
+<div class="card card-output">
+<h4>Output (the median of the box is nan)</h4>
+<pre><code>[0.925 1.075] [nan nan]</code></pre>
+</div>
+                <p><strong>What happened:</strong> the column has six missing values. Matplotlib does not skip them, the quartiles come out as <code>nan</code>, and you get an empty frame with no error. <strong>Fix:</strong> <code>ax.boxplot(daily["revenue"].dropna())</code>. <code>ax.hist()</code> is more forgiving and silently leaves missing values out, which is its own kind of surprise. Remove them yourself before plotting, so you know what the picture is based on.</p>
+
+                <h3>3. Describing Columns That Are Not Measurements</h3>
+
+<pre><code class="language-python">print(orders[["order_id", "customer_id", "order_total"]].describe().loc[["mean", "std"]].round(1))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>      order_id  customer_id  order_total
+mean  110151.5      12537.3        194.6
+std     5860.8       1436.0        178.8</code></pre>
+</div>
+                <p><strong>What happened:</strong> <code>describe()</code> summarizes every numeric column, including identifiers. The "mean order id" is arithmetic on labels. <strong>Fix:</strong> select the columns that are real measurements before describing, and treat ids, zip codes and other number-shaped labels as categories.</p>
+
+                <h3>4. Deleting Whatever the Rule Flags</h3>
+                <p>You measured this above: the IQR rule flags 848 orders worth 15.4% of revenue, nearly all of them genuine. <strong>Fix:</strong> investigate flagged values, remove only provable errors, and use the median and IQR so the rest cannot distort your summary.</p>
+
+                <h3>5. Comparing Group Means Without the Counts</h3>
+
+<pre><code class="language-python">print(survey.groupby("store")["sat_staff"].agg(["mean", "count", "size"]).round(2))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>           mean  count  size
+store
+Asheville  3.62    193   202
+Bend       4.16    228   232
+Boise      4.11    320   329
+Flagstaff  4.02    206   213
+Online     4.07    248   824</code></pre>
+</div>
+                <p><strong>What to notice:</strong> <code>size</code> is the number of rows and <code>count</code> the number of answers. Online's mean of 4.07 comes from 248 of 824 respondents. Printed alone, the <code>mean</code> column would hide that. <strong>Fix:</strong> never report a grouped statistic without its <em>n</em>.</p>
+            </section>
+
+            <section id="project" class="lesson-section">
+                <h2>🛠️ Project: The Store Profile Sheet</h2>
+
+                <p>Pinecrest's operations manager wants a one-page profile of daily revenue at the four stores, and has asked you to "take out the weird days first". You will build the profile, find the weird days, and discover whether they should be taken out at all. Work in a new notebook called <code>lesson_4_2_project</code>. Allow about 40 minutes.</p>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 1: Load and profile <span class="step-time">(10 min)</span></h3>
+                    <p>Drop the six store-days with no revenue (say so in your notes), add the weekday name, and build a grouped profile with robust statistics.</p>
+<pre><code class="language-python">import numpy as np
 import pandas as pd
-import numpy as np
-from scipy import stats
+import matplotlib.pyplot as plt
 
-# ESSENTIAL FUNCTIONS
-# ------------------
+daily = pd.read_csv("data/daily_sales.csv", parse_dates=["date"])
+sales = daily.dropna(subset=["revenue"]).copy()
+sales["weekday"] = sales["date"].dt.day_name()
+print("store-days:", len(daily), "-&gt; with revenue:", len(sales))
 
-# For a DataFrame
-df.describe()                # Basic statistics
-df.info()                    # Data types and missing values
-df.shape                     # Dimensions
-df.dtypes                    # Column types
+def q1(values):
+    return values.quantile(0.25)
 
-# Central Tendency
-df['col'].mean()            # Average
-df['col'].median()          # Middle value
-df['col'].mode()            # Most frequent
+def q3(values):
+    return values.quantile(0.75)
 
-# Spread
-df['col'].std()             # Standard deviation
-df['col'].var()             # Variance
-df['col'].quantile([0.25, 0.75])  # Quartiles
+profile = sales.groupby("store")["revenue"].agg(
+    n="count", median="median", q1=q1, q3=q3, p95=lambda v: v.quantile(0.95), max="max")
+profile["iqr"] = profile["q3"] - profile["q1"]
+print(profile.round(0))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>store-days: 2903 -&gt; with revenue: 2897
+             n  median      q1       q3      p95      max     iqr
+store
+Asheville  726  5208.0  4263.0   6652.0   9552.0  16558.0  2389.0
+Bend       721  6456.0  5162.0   8386.0  11631.0  20935.0  3224.0
+Boise      726  9360.0  7590.0  11866.0  16834.0  27677.0  4276.0
+Flagstaff  724  6405.0  4913.0   8242.0  12193.0  18691.0  3330.0</code></pre>
+</div>
+                    <p>In every store the best day is far beyond even the 95th percentile: Boise's maximum is $27,677 against a 95th percentile of $16,834. A few days are very unlike the rest.</p>
+                </div>
 
-# Distribution Shape
-df['col'].skew()            # Skewness
-df['col'].kurtosis()        # Kurtosis
+                <div class="card card-info">
+                    <h3>🛠️ Step 2: Score every day within its own store <span class="step-time">(5 min)</span></h3>
+                    <p>A $12,000 day means different things in Asheville and Boise, so compute z-scores per store. <code>groupby().transform()</code> returns a value for every row, aligned with the original table.</p>
+<pre><code class="language-python">grouped = sales.groupby("store")["revenue"]
+sales["z"] = (sales["revenue"] - grouped.transform("mean")) / grouped.transform("std")
 
-# Relationships
-df.corr()                   # Correlation matrix
-df.cov()                    # Covariance matrix
+top = sales.sort_values("z", ascending=False).head(6)
+print(top[["date", "store", "weekday", "promo_day", "revenue", "z"]].round(2))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>           date      store   weekday  promo_day   revenue     z
+970  2024-08-31       Bend  Saturday          1  20935.21  5.47
+2023 2025-05-24  Asheville  Saturday          1  16558.00  5.26
+2775 2025-11-29  Asheville  Saturday          1  15828.25  4.90
+971  2024-08-31      Boise  Saturday          1  27677.10  4.72
+2416 2025-08-30       Bend  Saturday          1  18720.89  4.60
+1331 2024-11-30      Boise  Saturday          1  27199.33  4.59</code></pre>
+</div>
+                </div>
 
-# Grouped Statistics
-df.groupby('category')['value'].agg(['mean', 'std', 'count'])
+                <div class="card card-info">
+                    <h3>🛠️ Step 3: Flag days with per-store IQR fences <span class="step-time">(10 min)</span></h3>
+                    <p>Use the profile table to give each row its own store's upper fence, then flag the days above it. <code>.map()</code> looks up each row's store in a Series indexed by store.</p>
+<pre><code class="language-python">upper = profile["q3"] + 1.5 * profile["iqr"]
+lower = profile["q1"] - 1.5 * profile["iqr"]
+print(pd.DataFrame({"lower_fence": lower, "upper_fence": upper}).round(0))
 
-# Missing Data
-df.isnull().sum()           # Count missing
-df.dropna()                 # Remove missing
-df.fillna(method='mean')    # Fill missing
+sales["flagged"] = sales["revenue"] &gt; sales["store"].map(upper)
+print()
+print("flagged days:", sales["flagged"].sum(), "of", len(sales))
+print("below a lower fence:", (sales["revenue"] &lt; sales["store"].map(lower)).sum())
+print(sales.groupby("store")["flagged"].sum())</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>           lower_fence  upper_fence
+store
+Asheville        679.0      10235.0
+Bend             326.0      13222.0
+Boise           1177.0      18280.0
+Flagstaff        -82.0      13237.0
 
-print("📊 You're now equipped with descriptive statistics mastery!")</code></pre>
-    </div>    </main>
+flagged days: 91 of 2897
+below a lower fence: 0
+store
+Asheville    23
+Bend         18
+Boise        27
+Flagstaff    23
+Name: flagged, dtype: int64</code></pre>
+</div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 4: Investigate before you remove <span class="step-time">(5 min)</span></h3>
+                    <p>Are the 91 flagged days errors? Look at when they happened.</p>
+<pre><code class="language-python">flagged = sales[sales["flagged"]]
+
+print(flagged["weekday"].value_counts())
+print()
+print(f"promo days among flagged days: {flagged['promo_day'].mean():.0%}")
+print(f"promo days among all days    : {sales['promo_day'].mean():.1%}")
+
+explained = (flagged["promo_day"] == 1) | flagged["weekday"].isin(["Saturday", "Sunday"]) \
+    | (flagged["date"].dt.month == 12)
+print("flagged days that are a weekend, a promotion or in December:", explained.sum(), "of", len(flagged))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>weekday
+Saturday    60
+Sunday      25
+Friday       6
+Name: count, dtype: int64
+
+promo days among flagged days: 52%
+promo days among all days    : 3.3%
+flagged days that are a weekend, a promotion or in December: 91 of 91</code></pre>
+</div>
+                    <p>Every flagged day is a weekend, a sale weekend or a December day. Half of them are promotion days, which make up only 3% of the calendar. These are not errors. They are the business working as designed, and they are the days the operations manager most needs to plan for.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 5: Draw the comparison <span class="step-time">(5 min)</span></h3>
+                    <p>One box per store, ordered by median. <code>tick_labels</code> names the boxes.</p>
+<pre><code class="language-python">order = profile["median"].sort_values().index
+groups = [sales.loc[sales["store"] == s, "revenue"] for s in order]
+
+fig, ax = plt.subplots(figsize=(9, 4.2), layout="constrained")
+ax.boxplot(groups, tick_labels=list(order), orientation="horizontal",
+           flierprops={"marker": "o", "markersize": 3, "alpha": 0.4},
+           medianprops={"color": "#b91c1c", "linewidth": 2})
+ax.set_xlabel("Daily revenue ($)")
+ax.set_title("Daily revenue by store, 2024-2025")
+fig.savefig("store_profile.png", dpi=110)
+plt.show()</code></pre>
+<figure>
+    <img src="images/statistics_descriptive_project_box.png" alt="Four horizontal box plots of daily revenue, one per store, ordered Asheville, Flagstaff, Bend, Boise from bottom to top by median. Boise's box is furthest right and widest. Every store has a longer right whisker and a string of individual points to the right, reaching about 27,700 dollars for Boise." width="990" height="462" loading="lazy">
+    <figcaption>Same shape four times at different scales: a compact box, a longer right whisker and a trail of big days. The trail is the weekends and sales you found in Step 4.</figcaption>
+</figure>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 6: Write the profile <span class="step-time">(5 min)</span></h3>
+                    <p>Finish with a short text profile generated from your tables, including what you decided about the flagged days.</p>
+<pre><code class="language-python">print("STORE PROFILE: daily revenue, 2024-2025")
+for store in order:
+    row = profile.loc[store]
+    n_flag = sales.loc[sales["store"] == store, "flagged"].sum()
+    print(f"{store:&lt;10} typical day ${row['median']:&gt;7,.0f}   middle half ${row['q1']:,.0f} to ${row['q3']:,.0f}"
+          f"   big days: {n_flag}")
+print(f"Flagged days kept: all {sales['flagged'].sum()} are weekends, promotions or December.")
+print(f"Rows dropped: {len(daily) - len(sales)} store-days with no revenue recorded.")</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>STORE PROFILE: daily revenue, 2024-2025
+Asheville  typical day $  5,208   middle half $4,263 to $6,652   big days: 23
+Flagstaff  typical day $  6,405   middle half $4,913 to $8,242   big days: 23
+Bend       typical day $  6,456   middle half $5,162 to $8,386   big days: 18
+Boise      typical day $  9,360   middle half $7,590 to $11,866   big days: 27
+Flagged days kept: all 91 are weekends, promotions or December.
+Rows dropped: 6 store-days with no revenue recorded.</code></pre>
+</div>
+                </div>
+
+                <div class="card card-success">
+                    <h3>✅ Project Completion Checklist</h3>
+                    <ul class="checklist">
+                        <li>Your profile table has one row per store with n, median, quartiles, 95th percentile, max and IQR</li>
+                        <li>z-scores are computed within each store, using <code>transform</code></li>
+                        <li>You found 91 days above their store's upper fence and none below a lower fence</li>
+                        <li>You checked the flagged days against weekday, promotion and month before deciding anything</li>
+                        <li>Your box plot has one labeled box per store and is saved as <code>store_profile.png</code></li>
+                        <li>Your written profile states what was dropped (6 rows) and what was kept, with the reason</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="exercises" class="lesson-section">
+                <h2>🏋️ Hands-on Exercises</h2>
+
+                <p>Predict the rough answer before you compute it. Being surprised is where the learning is.</p>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 1: Where Does $200 Sit in the Catalog?</h3>
+                    <p>Using <code>price</code> in <code>products.csv</code>: print the 10th, 25th, 50th, 75th and 90th percentiles. Then find what percentage of products cost $200 or less. Is the catalog skewed?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>.quantile([...])</code> for the first part, the mean of a boolean for the second, <code>.skew()</code> for the third.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+<pre><code class="language-python">price = products["price"]
+print(price.quantile([0.10, 0.25, 0.50, 0.75, 0.90]))
+print(f"at or below $200: {(price &lt;= 200).mean():.1%}")
+print("skew:", round(price.skew(), 2))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>0.10     20.95
+0.25     39.95
+0.50     82.95
+0.75    155.95
+0.90    285.75
+Name: price, dtype: float64
+at or below $200: 81.8%
+skew: 1.8</code></pre>
+</div>
+                        <p>A $200 product is at about the 82nd percentile. The upper half of the catalog (from $83 to $617) is far more spread out than the lower half ($8.50 to $83): right-skewed, with a skewness of 1.8.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 2: Which Day Was More Unusual?</h3>
+                    <p>Asheville had a day with 600 visitors. Boise had a day with 900. Using each store's own mean and SD of <code>visitors</code>, compute both z-scores. Which day was more unusual for its store?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Group by store and aggregate <code>["mean", "std"]</code>, then apply the z-score formula to each row of the result.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+<pre><code class="language-python">visitors = daily.groupby("store")["visitors"].agg(["mean", "std"])
+print(visitors.round(1))
+print("Asheville, 600 visitors: z =", round((600 - visitors.loc["Asheville", "mean"]) / visitors.loc["Asheville", "std"], 2))
+print("Boise, 900 visitors    : z =", round((900 - visitors.loc["Boise", "mean"]) / visitors.loc["Boise", "std"], 2))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>            mean    std
+store
+Asheville  274.9   89.5
+Bend       334.9  109.1
+Boise      485.2  161.8
+Flagstaff  328.5  117.4
+Asheville, 600 visitors: z = 3.63
+Boise, 900 visitors    : z = 2.56</code></pre>
+</div>
+                        <p>Boise's day had 300 more people, but Asheville's was the more unusual one: 3.6 SDs above its own average against 2.6 for Boise.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 3: Website Satisfaction by Age</h3>
+                    <p>Summarize <code>sat_website</code> in <code>survey.csv</code> by <code>age_group</code>: the number who answered, the median, and the percentage satisfied (4 or 5). Which group stands out? Write the finding as one sentence that includes an <em>n</em>.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Reuse the <code>top_two</code> function from the lesson in a named aggregation.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+<pre><code class="language-python">web = survey.groupby("age_group")["sat_website"].agg(n="count", median="median", satisfied_pct=top_two)
+print(web.round(1))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>             n  median  satisfied_pct
+age_group
+18-24      144     4.0           56.9
+25-34      208     4.0           54.8
+35-44      233     4.0           58.4
+45-54      242     4.0           58.7
+55-64      210     4.0           62.9
+65+        291     3.0           28.5</code></pre>
+</div>
+                        <p>Among the 291 customers aged 65 and over who rated the website, 28.5% were satisfied, about half the rate of every younger group (55 to 63%), and theirs is the only median of 3. Here the median does pick up the difference, and the percentage shows how large it is.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 4: The Rule on a Different Scale (Stretch)</h3>
+                    <p>Apply the 1.5 × IQR rule to <code>np.log(totals)</code> instead of <code>totals</code>. How many orders are flagged now, and on which side? Convert the two fences back to dollars with <code>np.exp()</code>. What does the comparison with the 848 flagged on the dollar scale tell you about outlier rules?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Compute the fences exactly as before, on the logged column. Count the low and high flags separately.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+<pre><code class="language-python">logged = np.log(totals)
+lq1, lq3 = logged.quantile(0.25), logged.quantile(0.75)
+low_fence, high_fence = lq1 - 1.5 * (lq3 - lq1), lq3 + 1.5 * (lq3 - lq1)
+
+print("fences in dollars:", round(np.exp(low_fence), 2), "to", round(np.exp(high_fence), 2))
+print("flagged low :", (logged &lt; low_fence).sum())
+print("flagged high:", (logged &gt; high_fence).sum())</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>fences in dollars: 12.8 to 1631.95
+flagged low : 128
+flagged high: 13</code></pre>
+</div>
+                        <p>On the log scale the rule flags 13 large orders instead of 848, twelve of them the bulk orders you already know, and it now flags 128 very small orders (under about $13) that the dollar-scale rule could never see. Same data, same rule, different "outliers". An outlier is always an outlier <em>relative to an assumed shape</em>, which is why a flag is a question and not a verdict.</p>
+                    </details>
+                </div>
+            </section>
+
+            <section id="quiz" class="lesson-section">
+                <h2>🎯 Quick Quiz</h2>
+                <div class="card quiz-container">
+                    <h3>🎯 Check Your Understanding</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> A column has a skewness of 2.4. Which description fits best?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="A symmetric pile has skewness near zero. 2.4 is far from zero, and its sign tells you which side the tail is on.">
+                                A) A symmetric mound; the mean and median will be nearly equal
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="A tail on the left gives a negative skewness. This one is positive.">
+                                B) Most values are high, with a long tail of small values on the left
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Positive skewness means the long tail is on the right. Most values are small, a few are much larger, and those few pull the mean above the median. Median and IQR are the safer summary.">
+                                C) Most values are low, with a long tail of large values on the right
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> A store's visitor count on one day has a z-score of -2. What does that mean?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="A z-score is a distance from the mean measured in standard deviations, with the sign giving the direction. Minus 2 is two standard deviations below that store's mean.">
+                                A) The count was two standard deviations below that store's average
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="z-scores are not in the units of the data. The units cancel when you divide by the standard deviation.">
+                                B) The store had two fewer visitors than usual
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="A percentile is a rank and can never be negative. A z-score is a distance. Which one has a sign?">
+                                C) The day was in the bottom 2 percent of all days
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> In a standard box plot, where does the upper whisker end?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="If the whisker always reached the maximum, there would never be separate points drawn beyond it.">
+                                A) Always at the maximum value
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="The fence is at Q3 + 1.5 x IQR, but the whisker is drawn only as far as the last actual data point inside that fence. Values beyond it are drawn as individual points.">
+                                B) At the largest data value that is no more than 1.5 IQRs above Q3
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Box plots are built from quartiles and the IQR. The mean and standard deviation do not appear in them at all.">
+                                C) At the mean plus three standard deviations
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 4:</strong> The IQR rule flags 4% of Pinecrest's orders. You check a sample and they are genuine large purchases. What should you do for a report on total revenue?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Those orders carry about 15 percent of revenue. Would a revenue report without them be accurate?">
+                                A) Delete them, since the rule identified them as outliers
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="A flag is a prompt to investigate. These values are real and belong to the question, so they stay. If you also describe a typical order, use the median and IQR so the tail does not distort it.">
+                                B) Keep them, because they are real and they are revenue
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Replacing real values with an average invents data and understates revenue. What did your investigation say about whether they are errors?">
+                                C) Replace each one with the mean order total
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 5:</strong> What does this print?</p>
+<pre><code class="language-python">answers = pd.Series([5, 5, 4, None, 1])
+print(answers.mean(), answers.count())</code></pre>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="pandas skips the missing answer: 15 divided by the 4 answers present is 3.75, and count() reports 4. The mean describes the people who answered, not all five who were asked.">
+                                A) <code>3.75 4</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="That would treat the missing answer as a zero. pandas does not do that. What does it do with missing values by default?">
+                                B) <code>3.0 5</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="NumPy would give nan here, but this is a pandas Series, and its methods skip missing values by default.">
+                                C) <code>nan 5</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="faq" class="lesson-section">
+                <h2>❓ Common Questions at This Stage</h2>
+
+                <details>
+                    <summary>Percentile, quantile, quartile: are these the same thing?</summary>
+                    <p>They are the same idea at different scales. A <strong>quantile</strong> is a cut point given as a fraction (0.9). A <strong>percentile</strong> is the same cut point given out of 100 (the 90th). <strong>Quartiles</strong> are the three quantiles that cut the data into four parts (0.25, 0.5, 0.75), and deciles cut it into ten. The 0.5 quantile, the 50th percentile, the second quartile and the median are four names for one number.</p>
+                </details>
+                <details>
+                    <summary>Why 1.5 IQRs? Why 3 standard deviations?</summary>
+                    <p>Both are conventions that work well for bell-shaped data. For a normal distribution, about 0.7% of values fall outside the 1.5 × IQR fences and about 0.3% beyond 3 SDs, so a flagged value really is rare. Neither number is derived from your data or your question. If a rule flags 4% of a column, the first suspect is the shape of the column, not 4% of the rows.</p>
+                </details>
+                <details>
+                    <summary>Should I remove outliers before computing a mean?</summary>
+                    <p>If they are errors, fix or remove them for every analysis. If they are real, removing them to make the mean "behave" changes the question you are answering without telling anyone. It is usually better to keep them and report the median, or to report the mean both ways and let the reader see the difference.</p>
+                </details>
+                <details>
+                    <summary>Is it ever acceptable to report the mean of a 1-to-5 scale?</summary>
+                    <p>It is common practice and often harmless as a tracking index, especially when you are averaging many people and comparing like with like over time. It becomes misleading when the distribution is split (many 1s and many 5s average to a bland 3), when groups have very different response rates, or when small differences in means (3.9 against 4.0) are read as meaningful. Show the distribution or the top-two-box share alongside it and you are on safe ground.</p>
+                </details>
+                <details>
+                    <summary>What is kurtosis? I see it next to skewness everywhere.</summary>
+                    <p>Kurtosis measures how heavy the tails of a distribution are, that is, how much of the variance comes from rare extreme values. pandas reports it with <code>.kurt()</code>, where 0 matches the normal distribution. It is even more sensitive to extreme values than skewness, and for most descriptive work a histogram and the percentiles tell you the same thing more clearly. Know the word; you will rarely need the number.</p>
+                </details>
+
+                <div class="card card-accent">
+                    <h3>🌟 Going Further: Bonus Challenge</h3>
+                    <p>The project flagged days using one fence per store, and found that the flagged days were weekends and promotions. So make the comparison fairer: compute fences within each <strong>store and weekday</strong> combination (<code>groupby(["store", "weekday"])</code> with <code>transform</code>), using only non-promotion days. How many days are flagged now? Look at the dates. Are the remaining flags concentrated in particular months? What would you compare against next? You are doing by hand what Lesson 4.7 turns into a workflow: peeling off known patterns until what is left is worth a phone call.</p>
+                </div>
+            </section>
+
+            <section id="journal" class="lesson-section">
+                <h2>📓 Learning Journal</h2>
+                <div class="card card-accent">
+                    <p>Take five minutes to write in your learning journal (the <code>journal.md</code> file you started in Lesson 0.1, or a paper notebook). Jot down:</p>
+                    <ul>
+                        <li><strong>Key concepts</strong> you learned today</li>
+                        <li><strong>Techniques that clicked</strong> (and the ones that have not, yet)</li>
+                        <li><strong>Questions or confusion</strong> to come back to</li>
+                        <li><strong>Ideas to try</strong> on your own</li>
+                        <li><strong>Progress and feelings</strong>: how did this lesson go for you?</li>
+                    </ul>
+                    <p><strong>✍️ This lesson's prompt:</strong> The operations manager asked you to "take out the weird days first". Write the two or three sentences you would send back, explaining what the weird days turned out to be and what you did instead. Then note one situation from your own experience where an "outlier" was the most important row in the data.</p>
+                </div>
+            </section>
+
+            <section id="summary" class="lesson-section">
+                <h2>📝 Lesson Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎓 Key Takeaways</h3>
+                    <ul>
+                        <li><strong>Shape</strong> decides which summaries are fair. Skewness near 0 is symmetric; beyond about 1 in either direction, prefer the median and IQR. Only a histogram shows the number of humps</li>
+                        <li><strong>Percentiles and quantiles</strong> locate a value by rank; a handful of them sketches the whole distribution</li>
+                        <li>A <strong>z-score</strong> locates a value by distance from the mean in SDs, which makes different scales comparable. It does not change the shape of the data</li>
+                        <li>The <strong>IQR rule</strong> and the <strong>z-score rule</strong> flag candidates. They assume a bell-like shape, and on skewed data they flag ordinary values</li>
+                        <li>For a flagged value ask: is it an error, and is it part of the question? Remove only provable errors, and write down what you did</li>
+                        <li><code>describe()</code> gives count, mean, SD and five position values. Compare mean with median and the two halves of the box to read skew from the numbers</li>
+                        <li>A <strong>box plot</strong> shows median, quartiles, whiskers to the last point inside the fences, and flagged points. It compares groups well and hides humps</li>
+                        <li>Grouped summaries always carry their <strong>n</strong></li>
+                        <li><strong>Likert</strong> answers are ordinal: lead with the distribution, the median and the share satisfied, and check who did not answer</li>
+                    </ul>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🏆 What You've Accomplished</h3>
+                    <ul>
+                        <li>You measured skew four ways: by eye, by number, by mean against median, and from <code>describe()</code></li>
+                        <li>You showed that the same $12,000 day is routine for one store and exceptional for another</li>
+                        <li>You ran two outlier rules, saw them disagree by a factor of nearly four, and explained why</li>
+                        <li>You investigated 91 "weird days" and showed they were the business's best days, not errors</li>
+                        <li>You found a real problem in survey data (Asheville's staff scores) that the median alone could not show, and a missing-data trap that a mean alone would have hidden</li>
+                    </ul>
+                </div>
+
+                <h3>🔭 Looking Ahead</h3>
+                <p>So far you have described the data you have. In <a href="statistics_probability_distributions.html"><strong>Lesson 4.3: Probability Distributions</strong></a> you will start reasoning about data you do <em>not</em> have: what tomorrow's return count might be, how much a sample average can be trusted, and why that bell shape keeps appearing. The z-scores and percentiles from today become the working parts of the normal distribution.</p>
+
+                <h3>📋 Before the Next Lesson</h3>
+                <ul>
+                    <li>Keep the <code>spend_per_visitor</code> idea in mind: Lesson 4.3 uses that column as its example of a bell-shaped distribution.</li>
+                    <li>For <code>spend_per_visitor</code>, compute what share of store-days fall within 1 SD of the mean, and within 2 SDs. Write the two percentages down. You will meet them again.</li>
+                    <li>Run <code>daily.groupby("store")["visitors"].describe()</code> and read every column of it aloud.</li>
+                </ul>
+
+                <div class="card card-accent">
+                    <h3>🌱 Encouragement for the Journey</h3>
+                    <p>The most valuable thing you practiced today was not a formula. It was the pause between "the rule flagged it" and "so I deleted it". Analysts who take that pause, look up the rows, and ask what they are, find things: bulk customers, sale weekends, a store with a staffing problem. You now have the tools to make the pause quick and the habit to make it automatic. If percentiles, z-scores and fences are still jostling for space in your head, that is fine. The project used all of them in a sensible order; rerun it once and they will settle.</p>
+                </div>
+            </section>
 
 
-    <!-- Learning Journal (REQUIRED per the Courseware Authoring Standard) -->
-    <section id="journal" class="lesson-section">
-        <h2>📓 Learning Journal</h2>
-        <div class="card card-info">
-            <p>Keep a learning journal — digital or physical. After this lesson, take a few minutes to write down:</p>
-            <ul>
-                <li><strong>Key concepts</strong> you learned</li>
-                <li><strong>Techniques that clicked</strong> for you</li>
-                <li><strong>Questions or confusion points</strong> to revisit</li>
-                <li><strong>Ideas you want to try</strong></li>
-                <li><strong>Your progress and feelings</strong> about learning this</li>
-            </ul>
-            <p><strong>✍️ This lesson's prompt:</strong> The mean and the median can tell very different stories about the same data — think of income, house prices, or wait times. Describe a real situation where reporting the mean would mislead people, and explain why the median (or IQR) would be fairer.</p>
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="statistics_descriptive_part1.html" class="prev-lesson">← Previous: Descriptive Statistics I: Center and Spread</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="statistics_probability_distributions.html" class="next-lesson">Next: Probability Distributions →</a>
+            </nav>
         </div>
-    </section>
+    </main>
 
-    <!-- Lesson Summary (full standard block) -->
-    <section id="summary" class="lesson-section">
-        <h2>📝 Lesson Summary</h2>
-        <div class="card card-success">
-            <h3>🎓 Key Takeaways</h3>
-            <ul>
-                <li>Descriptive statistics condense a whole dataset into a few meaningful numbers describing center, spread, and shape.</li>
-                <li>The mean is sensitive to outliers and skew; the median and IQR are robust and often more honest for real-world data.</li>
-                <li>Skewness and kurtosis describe a distribution's asymmetry and tail heaviness, guiding which summary and which later methods to use.</li>
-                <li>Always check for missing values and inspect subgroups — aggregated numbers can hide reversals like Simpson's paradox.</li>
-            </ul>
-        </div>
-        <h3>🎉 What You've Accomplished</h3>
-        <p>You can now open an unfamiliar dataset and describe it accurately — its typical value, how much it varies, its shape, and its data-quality issues — which is the essential first step before any modeling or hypothesis testing.</p>
-        <h3>❓ Common Questions at This Stage</h3>
-        <details>
-            <summary>When should I use the median instead of the mean?</summary>
-            <p>Use the median whenever the data are skewed or contain outliers — income, prices, response times. The median reflects the "typical" value without being dragged by a few extreme observations.</p>
-        </details>
-        <details>
-            <summary>What's the difference between variance and standard deviation?</summary>
-            <p>Variance is the average squared deviation from the mean; standard deviation is its square root. Standard deviation is usually preferred for reporting because it's in the same units as the original data.</p>
-        </details>
-        <details>
-            <summary>Why does my mean look wrong when there are missing values?</summary>
-            <p>Many functions silently skip or mishandle <code>NaN</code>s, so the denominator may not be what you expect. Always check <code>isnull().sum()</code> and decide deliberately whether to drop or impute missing values.</p>
-        </details>
-        <h3>🔭 Looking Ahead</h3>
-        <p>Descriptive statistics summarize what your data <em>is</em>; next you'll study probability distributions — the models that describe how data <em>behaves</em> and generate the values you've been summarizing.</p>
-        <h3>✅ Before the Next Lesson</h3>
-        <ul>
-            <li>Run <code>df.describe()</code> on a dataset, then compute skewness and decide whether the mean or median better represents each column.</li>
-            <li>Group the data by a category and compare the group means and standard deviations to look for hidden patterns.</li>
-            <li>Write your Learning Journal entry for this lesson</li>
-        </ul>
-        <div class="card card-accent" style="text-align: center; padding: 2rem;">
-            <h3>🌟 Encouragement for the Journey</h3>
-            <p>Every great analysis starts with simply looking carefully at the data. Master these fundamentals and you'll never be fooled by a flashy chart again — you'll know what to ask. Keep going!</p>
-        </div>
-    </section>
-
-    <footer>
-        <div class="navigation-links">
-            <a class="nav-prev" href="matplotlib_saving_figures.html">← Previous: Saving Publication Figures</a>
-            <a class="nav-home" href="index.html">🏠 Course Home</a>
-            <a class="nav-next" href="statistics_probability_distributions.html">Next: Probability Distributions →</a>
-        </div>
-    </footer>
-    
-    <!-- Footer -->
     <footer class="site-footer">
         <p>&copy; 2026 Ray de la Paz. Python Data Science. All rights reserved.</p>
         <div class="footer-links">
@@ -584,9 +1308,10 @@ print("📊 You're now equipped with descriptive statistics mastery!")</code></p
             <a href="https://rays-home.netlify.app/contact">Contact</a>
             <a href="#" id="print-button">Print Page</a>
         </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
     </footer>
 
-    <!-- Copy to Clipboard functionality -->
-    <script src="scripts/clipboard.js"></script>
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
 </body>
 </html>

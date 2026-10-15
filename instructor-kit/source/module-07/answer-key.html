@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Answer Key: Session 7</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Instructor copy —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">answers &amp; solutions · not for students</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Answer Key</div>
+    <h1>Session 7: Time Series and Windows</h1>
+    <p class="sub">Answers with reasons for the twelve self-check items (all four options shown, with why each wrong one is wrong), the Predict, then run boxes, reference notes and real output for all four labs, the lesson pages' own Quick Quiz answers, the warm-up and exit ticket, and a table of common wrong answers with what each one tells you about the learner.</p>
+    <div class="meta-row">
+      <span class="chip">Session <b>7</b></span>
+      <span class="chip">Lessons <b>2.7–2.8</b></span>
+      <span class="chip"><b>12</b> self-check items</span>
+      <span class="chip">Confidential</span>
+    </div>
+  </header>
+
+  <div class="note"><div class="t">Numbering matches the workbook</div><p>Self-check items carry the same numbers as the participant workbook, and the wording is generated from one source, so question and option text match exactly. Every output block is the real output of the code above it or of the named <code class="inline">*_solution.py</code>, run on the course data with pandas 3.0. <code class="inline">python3 labs/check_labs.py module-07</code> runs all eight lab files.</p></div>
+  <div class="sec"><h2>2.7 · Time Series: self-check</h2><span class="rule"></span></div>
+  <div class="q" data-sc="1"><div class="qn">Q1</div><div class="qt">After <code class="inline">raw = pd.read_csv("data/daily_sales.csv")</code>, the line <code class="inline">raw["date"].dt.month</code> raises <code class="inline">AttributeError: Can only use .dt accessor with datetimelike values</code>. What is the cause?</div><div class="opts"><div class="opt">A) Some dates are missing from the file</div><div class="opt correct">B) The column was loaded as text; pass <code class="inline">parse_dates=["date"]</code> or convert with <code class="inline">pd.to_datetime</code></div><div class="opt">C) <code class="inline">.dt</code> only works on the index, not on a column</div><div class="opt">D) <code class="inline">month</code> is a method and needs parentheses</div></div><div class="why"><b>Why:</b> With no instructions <code class="inline">read_csv</code> keeps dates as text, and text has no <code class="inline">.dt</code> accessor. Parse at load time, then check <code class="inline">df.dtypes</code>.<br><b>A</b> is wrong: Missing days do not change the dtype of the days that are present.<br><b>C</b> is wrong: <code class="inline">.dt</code> is for columns (Series). A DatetimeIndex has the same properties directly, without <code class="inline">.dt</code>.<br><b>D</b> is wrong: <code class="inline">.dt.month</code> is a property. The error is raised at <code class="inline">.dt</code>, before <code class="inline">month</code> is even looked up.</div></div>
+  <div class="q" data-sc="2" data-kind="short"><div class="qn">Q2</div><div class="qt">What does this print?</div><pre class="code">s = pd.Series(range(<span class="s">10</span>),
+              index=pd.date_range(<span class="s">"2025-01-28"</span>, periods=<span class="s">10</span>, freq=<span class="s">"D"</span>))
+print(len(s.loc[<span class="s">"2025-01"</span>]), len(s.loc[<span class="s">"2025-01-30"</span>:<span class="s">"2025-02-02"</span>]))</pre><div class="opts"><div class="opt correct"><code class="inline">4 4</code></div></div><div class="why"><b>Why:</b> <code class="inline">"2025-01"</code> selects every row in January: the 28th, 29th, 30th and 31st. The string range includes <b>both</b> ends: January 30 and 31, February 1 and 2.</div></div>
+  <div class="q" data-sc="3"><div class="qn">Q3</div><div class="qt"><code class="inline">wide</code> has one row per date and 727 rows between 2024-01-01 and 2025-12-31, a span of 731 days. What does <code class="inline">wide.asfreq("D")</code> return?</div><div class="opts"><div class="opt">A) 727 rows; the four gaps are interpolated</div><div class="opt">B) 731 rows; the four new rows are filled with 0</div><div class="opt">C) An error, because the index has missing dates</div><div class="opt correct">D) 731 rows; the four new rows hold <code class="inline">NaN</code></div></div><div class="why"><b>Why:</b> <code class="inline">asfreq("D")</code> gives the table one row for every calendar day. Rows that did not exist appear as <code class="inline">NaN</code>: pandas shows you the gap and leaves the decision to you.<br><b>A</b> is wrong: pandas never estimates values unless you call <code class="inline">interpolate()</code> or <code class="inline">ffill()</code> yourself.<br><b>B</b> is wrong: Zero is a claim (the store sold nothing). pandas does not make it for you; you fill closed days with 0 on purpose.<br><b>C</b> is wrong: Missing dates are exactly what <code class="inline">asfreq</code> is for. It needs a DatetimeIndex, not a complete one.</div></div>
+  <div class="q" data-sc="4"><div class="qn">Q4</div><div class="qt">What does this print?</div><pre class="code">s = pd.Series([<span class="s">10.0</span>, np.nan, <span class="s">30.0</span>],
+              index=pd.to_datetime([<span class="s">"2025-05-01"</span>, <span class="s">"2025-05-02"</span>, <span class="s">"2025-05-03"</span>]))
+print(s.resample(<span class="s">"ME"</span>).agg([<span class="s">"sum"</span>, <span class="s">"count"</span>]).values.tolist())</pre><div class="opts"><div class="opt correct">A) <code class="inline">[[40.0, 2.0]]</code></div><div class="opt">B) <code class="inline">[[nan, 3.0]]</code></div><div class="opt">C) <code class="inline">[[40.0, 3.0]]</code></div><div class="opt">D) <code class="inline">[[nan, 2.0]]</code></div></div><div class="why"><b>Why:</b> <code class="inline">sum</code> skips the missing value and adds 10 + 30. <code class="inline">count</code> counts only real values, so it says 2, which is how you find out that the total of 40 is built from two days and not three.<br><b>B</b> is wrong: pandas aggregations skip <code class="inline">NaN</code> by default, and <code class="inline">count</code> never counts a missing value.<br><b>C</b> is wrong: <code class="inline">count</code> is the number of non-missing values, not the number of rows in the bucket.<br><b>D</b> is wrong: The count is right, but the sum is not <code class="inline">NaN</code>: <code class="inline">sum</code> skips missing values (that is the danger).</div></div>
+  <div class="q" data-sc="5"><div class="qn">Q5</div><div class="qt">Bend has no rows at all for three days in August 2024. On that rows-only Series, what does <code class="inline">bend_rows.diff(7)</code> compare the first Saturday after the gap with?</div><div class="opts"><div class="opt">A) The previous Saturday, seven days earlier</div><div class="opt">B) Nothing: the result is <code class="inline">NaN</code> because the window crosses a gap</div><div class="opt correct">C) The value seven <b>rows</b> earlier, which is ten days back and not a Saturday</div><div class="opt">D) Nothing: pandas raises an error on an irregular index</div></div><div class="why"><b>Why:</b> <code class="inline">shift</code> and <code class="inline">diff</code> count rows, not days. With three rows missing, seven rows back is ten days back. No error and no warning: complete the calendar with <code class="inline">asfreq("D")</code> first.<br><b>A</b> is wrong: That is what you want, and what you get only on a complete calendar.<br><b>B</b> is wrong: <code class="inline">NaN</code> is what the <b>completed</b> calendar gives for the days after a gap, because a week earlier is unknown there. Rows-only data has no <code class="inline">NaN</code> to pass on.<br><b>D</b> is wrong: pandas is happy to shift any index. The mistake is silent.</div></div>
+  <div class="q" data-sc="6" data-kind="short"><div class="qn">Q6</div><div class="qt">What does this print?</div><pre class="code">m = pd.Series([<span class="s">200</span>, <span class="s">220</span>, <span class="s">264</span>],
+              index=pd.date_range(<span class="s">"2025-01-31"</span>, periods=<span class="s">3</span>, freq=<span class="s">"ME"</span>))
+print((m.pct_change() * <span class="s">100</span>).round(<span class="s">1</span>).tolist())</pre><div class="opts"><div class="opt correct"><code class="inline">[nan, 10.0, 20.0]</code></div></div><div class="why"><b>Why:</b> <code class="inline">pct_change()</code> is the change from the previous row divided by the previous row: 20/200 = 10% and 44/220 = 20%. January has no previous row, so it is <code class="inline">NaN</code>.</div></div>
+  <div class="sec"><h2>2.7 · Predict, then run: answers</h2><span class="rule"></span></div>
+  <div class="q"><div class="qn">Predict 2.7.1</div><div class="qt">How many rows does each selection return? (Two numbers.)</div><pre class="code">days = pd.Series(<span class="s">1</span>, index=pd.date_range(<span class="s">"2024-01-01"</span>, <span class="s">"2024-12-31"</span>, freq=<span class="s">"D"</span>))
+print(len(days.loc[<span class="s">"2024-02"</span>]), len(days.loc[<span class="s">"2024-12-30"</span>:<span class="s">"2024-12-31"</span>]))</pre><pre class="out">29 2</pre><div class="why"><b>Why:</b> 2024 is a leap year, so February has 29 days. The string range includes both ends: December 30 and December 31.</div></div>
+  <div class="q"><div class="qn">Predict 2.7.2</div><div class="qt">One Sunday is missing from this small table. What are the two weekly sums, and the two counts?</div><pre class="code">s = pd.Series([<span class="s">5</span>, <span class="s">5</span>, <span class="s">5</span>, <span class="s">5</span>, <span class="s">5</span>, <span class="s">5</span>, <span class="s">9</span>, <span class="s">9</span>, <span class="s">9</span>, <span class="s">9</span>, <span class="s">9</span>, <span class="s">9</span>, <span class="s">9</span>],
+              index=pd.date_range(<span class="s">"2025-03-03"</span>, periods=<span class="s">14</span>, freq=<span class="s">"D"</span>).delete(<span class="s">6</span>))
+print(s.resample(<span class="s">"W"</span>).agg([<span class="s">"sum"</span>, <span class="s">"count"</span>]).values.tolist())</pre><pre class="out">[[30, 6], [63, 7]]</pre><div class="why"><b>Why:</b> March 3, 2025 is a Monday, and the first Sunday (March 9) was deleted. The first week has six rows of 5 (sum 30, count 6); the second has seven rows of 9 (sum 63, count 7). The sum alone would suggest the second week was twice as good; per recorded day it went from 5 to 9.</div></div>
+  <div class="q"><div class="qn">Predict 2.7.3</div><div class="qt">What does <code class="inline">diff()</code> print for the last row, and why is that surprising?</div><pre class="code">s = pd.Series([<span class="s">100</span>, <span class="s">104</span>, <span class="s">120</span>],
+              index=pd.to_datetime([<span class="s">"2025-06-01"</span>, <span class="s">"2025-06-02"</span>, <span class="s">"2025-06-06"</span>]))
+print(s.diff().tolist())
+print(s.asfreq(<span class="s">"D"</span>).diff().tolist())</pre><pre class="out">[nan, 4.0, 16.0]
+[nan, 4.0, nan, nan, nan, nan]</pre><div class="why"><b>Why:</b> On the rows-only Series, <code class="inline">diff()</code> subtracts the previous <b>row</b>: 120 - 104 = 16, although that row is four days earlier. After <code class="inline">asfreq("D")</code> the three missing days exist as <code class="inline">NaN</code>, and every difference that touches one of them is <code class="inline">NaN</code>: the honest answer to "how much did it change since yesterday?"</div></div>
+  <div class="sec"><h2>2.7 · Lab reference solutions</h2><span class="rule"></span></div>
+  <div class="note lab"><div class="t">Lab 2.7-A · An honest weekly calendar: labs/module-07/l2_7-time-series/units_calendar_solution.py</div><p><b>What it practices:</b> the order of operations on a new column (<code class="inline">units</code>) and a new bucket (weeks). <code class="inline">units</code> has no blank values, so after zeroing the four closed days the only unknowns are the five failed-export days (Bend 3, Flagstaff 2).</p><p><b>Step 1.</b> The calendar has 731 days and the wide table 727 rows. <code class="inline">calendar.difference(units.index)</code> is the four dates on which no store has a row. The reverse, <code class="inline">units.index.difference(calendar)</code>, is empty and is the usual slip.</p><p><b>Step 4.</b> Two weeks have fewer than 7 days, for two different reasons. The week ending 2024-08-18 has 4 days because the export failed on August 12 to 14. The week ending 2026-01-04 has 3 days because the data stops on Wednesday, December 31: a <code class="inline">"W"</code> bucket runs Monday to Sunday and is labeled with its Sunday, even when that Sunday is past the end of the data.</p><p><b>Step 5.</b> Take the maximum only over complete weeks. Here the best week overall is also complete (ends 2025-08-31, 1,767 units: Labor Day weekend), so a learner who skips the filter gets the same answer by luck. Ask what the code would have done if the best week had been a partial one.</p><p><b>Step 6.</b> -96 and +80 are real. -542 is the 4-day week compared with a 7-day week, and +443 is the next full week compared with the 4-day week. One incomplete bucket spoils two changes. An honest table shows <code class="inline">NaN</code> or a footnote for both.</p></div>
+<pre class="out">rows: 727 | index type: DatetimeIndex
+days in the calendar: 731
+closed on: ['2024-11-28', '2024-12-25', '2025-11-27', '2025-12-25']
+missing days per store after asfreq:
+store
+Asheville    4
+Bend         7
+Boise        4
+Flagstaff    6
+still unknown after zeroing the closed days:
+store
+Asheville    0
+Bend         3
+Boise        0
+Flagstaff    2
+Bend weeks built from fewer than 7 days:
+              sum  count
+date                    
+2024-08-18  831.0      4
+2026-01-04  373.0      3
+best complete week: ends 2025-08-31 (Sunday), 1767 units
+week-over-week change in units, August 2024:
+date
+2024-08-04    -96.0
+2024-08-11     80.0
+2024-08-18   -542.0
+2024-08-25    443.0
+Freq: W-SUN
+The -542 and the +443 are the gap, not the customers: the week ending 2024-08-18 has only 4 days.</pre>
+  <div class="note lab"><div class="t">Lab 2.7-B · Is the online return rate getting worse?: labs/module-07/l2_7-time-series/returns_trend_solution.py</div><p><b>What it practices:</b> <code class="inline">resample(..., on=)</code> on a table whose dates are a column; the mean of a True/False column as a rate; <code class="inline">diff(12)</code> for year over year in percentage points; and reading a noisy series without inventing a story.</p><p><b>The answer is "no trend".</b> The yearly rate went from 7.11% to 6.76%. Seven months of 2025 were worse than a year earlier and five were better, with changes between -2.80 and +2.84 points. A month has only 24 to 51 returns, so a handful of orders moves the monthly rate by a point or more.</p><p><b>Accept</b> any conclusion that reports the yearly rates and says the monthly differences are noise. <b>Push back</b> on "April 2025 was much worse" (+2.84 points, on 46 returns) or "returns improved in May and June" presented as findings: ask how many returns that difference is.</p><p><b>Gaps:</b> <code class="inline">orders.csv</code> has orders on every one of the 731 days, so every monthly <code class="inline">count</code> is a full month. The <code class="inline">count</code> column here is the number of orders, which is the denominator of the rate.</p></div>
+<pre class="out">online orders: 12854 | returned: 890
+            rate_pct  sum  count
+order_date                      
+2024-01-31      5.87   24    409
+2024-02-29      7.07   28    396
+2024-03-31      7.19   33    459
+2024-04-30      5.92   27    456
+2024-05-31      9.06   50    552
+2024-06-30      8.71   42    482
+2024-07-31      5.76   28    486
+2024-08-31      7.38   40    542
+2024-09-30      6.21   29    467
+2024-10-31      7.25   35    483
+2024-11-30      8.12   41    505
+2024-12-31      6.47   46    711
+2025-01-31      7.61   36    473
+2025-02-28      7.11   33    464
+2025-03-31      5.74   31    540
+2025-04-30      8.76   46    525
+2025-05-31      6.26   38    607
+2025-06-30      6.05   36    595
+2025-07-31      6.28   37    589
+2025-08-31      5.87   37    630
+2025-09-30      6.34   35    552
+2025-10-31      8.10   46    568
+2025-11-30      6.90   41    594
+2025-12-31      6.63   51    769
+highest: 2024-05 at 9.06% (50 of 552 orders)
+lowest:  2025-03 at 5.74% (31 of 540 orders)
+by quarter (%):
+order_date
+2024-03-31    6.72
+2024-06-30    7.99
+2024-09-30    6.49
+2024-12-31    7.18
+2025-03-31    6.77
+2025-06-30    6.95
+2025-09-30    6.15
+2025-12-31    7.15
+Freq: QE-DEC
+by year (%):
+order_date
+2024-12-31    7.11
+2025-12-31    6.76
+Freq: YE-DEC
+2025 minus the same month of 2024, in percentage points:
+order_date
+2025-01-31    1.74
+2025-02-28    0.04
+2025-03-31   -1.45
+2025-04-30    2.84
+2025-05-31   -2.80
+2025-06-30   -2.66
+2025-07-31    0.52
+2025-08-31   -1.51
+2025-09-30    0.13
+2025-10-31    0.85
+2025-11-30   -1.22
+2025-12-31    0.16
+Freq: ME
+months of 2025 with a higher rate than a year earlier: 7 of 12
+Conclusion: no trend. Monthly rates bounce between about 5.7% and 9.1% because each month has only
+24 to 51 returns. 2025 was worse in 7 months and better in 5, and the yearly rate went DOWN slightly,
+from 7.11% to 6.76%. 'Returns feel worse' is not supported by the data.</pre>
+  <div class="sec"><h2>2.7 · The lesson page's own Quick Quiz</h2><span class="rule"></span></div>
+  <p style="font-size:.9rem;color:var(--ink-2)">These five questions are on the lesson page (three options each). Letters and reasons are read from the lesson.</p>
+  <table class="timing"><thead><tr><th>#</th><th>Question (short form)</th><th>Answer</th><th>Reason</th></tr></thead><tbody><tr><td class="t">Q1</td><td>Rows returned by <code class="inline">s.loc["2025-03-30":"2025-04-02"]</code> on a complete daily index</td><td>C</td><td>Label slices include both ends: March 30, 31, April 1, 2. Four rows.</td></tr><tr><td class="t">Q2</td><td><code class="inline">resample("ME").sum()</code> for a month with three <code class="inline">NaN</code> days</td><td>A</td><td>Sums skip missing values, so the total is built from the days that exist, with no warning. Print <code class="inline">count</code> beside it.</td></tr><tr><td class="t">Q3</td><td><code class="inline">q3.diff().iloc[-1]</code> when the previous row is three days earlier</td><td>B</td><td><code class="inline">diff</code> works on row positions: 150 minus 110 is 40.0, whatever the dates are.</td></tr><tr><td class="t">Q4</td><td>Growth against the same month a year earlier, monthly rows</td><td>A</td><td>The same month last year is 12 rows back: <code class="inline">monthly.pct_change(12)</code>.</td></tr><tr><td class="t">Q5</td><td><code class="inline">NaN</code> on December 25 (closed) and on August 12 (export failed)</td><td>C</td><td>A closed day is a real zero; a failed export is unknown. Fill the first with 0, leave or openly estimate the second.</td></tr></tbody></table>
+  <div class="sec"><h2>2.8 · Window Functions: self-check</h2><span class="rule"></span></div>
+  <div class="q" data-sc="7"><div class="qn">Q7</div><div class="qt">What does this print?</div><pre class="code">s = pd.Series([<span class="s">4</span>, <span class="s">8</span>, <span class="s">6</span>, <span class="s">10</span>])
+print(s.rolling(<span class="s">3</span>, min_periods=<span class="s">2</span>).mean().tolist())</pre><div class="opts"><div class="opt">A) <code class="inline">[nan, nan, 6.0, 8.0]</code></div><div class="opt">B) <code class="inline">[4.0, 6.0, 6.0, 8.0]</code></div><div class="opt correct">C) <code class="inline">[nan, 6.0, 6.0, 8.0]</code></div><div class="opt">D) <code class="inline">[6.0, 6.0, 8.0, nan]</code></div></div><div class="why"><b>Why:</b> The window is this row and the two before it, and it answers as soon as 2 values are present. Row 1 has only one value (<code class="inline">NaN</code>); row 2 is the mean of 4 and 8; then the full windows give 6 and 8.<br><b>A</b> is wrong: That is the strict default, where all 3 values must be present.<br><b>B</b> is wrong: That is <code class="inline">min_periods=1</code>, where one value is enough.<br><b>D</b> is wrong: A trailing window looks backward, so the gap is at the start, not the end.</div></div>
+  <div class="q" data-sc="8" data-kind="short"><div class="qn">Q8</div><div class="qt">What does this print?</div><pre class="code">s = pd.Series([<span class="s">5</span>, <span class="s">3</span>, <span class="s">9</span>, <span class="s">4</span>, <span class="s">9</span>])
+print((s == s.cummax()).tolist())</pre><div class="opts"><div class="opt correct"><code class="inline">[True, False, True, False, True]</code></div></div><div class="why"><b>Why:</b> <code class="inline">cummax()</code> is the best value so far: 5, 5, 9, 9, 9. A row equals it when it sets or ties the record. The last 9 ties the record, so it is <code class="inline">True</code> as well.</div></div>
+  <div class="q" data-sc="9"><div class="qn">Q9</div><div class="qt">A long table has columns <code class="inline">store</code>, <code class="inline">date</code>, <code class="inline">revenue</code>, sorted by date and then store. Which code adds each store's own 7-day average, lined up with the right rows?</div><div class="opts"><div class="opt">A) <code class="inline">df["avg"] = df["revenue"].rolling(7).mean()</code></div><div class="opt">B) <code class="inline">df["avg"] = df.groupby("store")["revenue"].rolling(7).mean()</code></div><div class="opt">C) <code class="inline">df["avg"] = df.groupby("date")["revenue"].transform(lambda s: s.rolling(7).mean())</code></div><div class="opt correct">D) Sort by store and date, then <code class="inline">df["avg"] = df.groupby("store")["revenue"].transform(lambda s: s.rolling(7).mean())</code></div></div><div class="why"><b>Why:</b> Sort, group, window. <code class="inline">transform</code> returns one value per row with the original index, so the new column lines up.<br><b>A</b> is wrong: Seven consecutive rows are different stores on neighboring days: a number with no meaning.<br><b>B</b> is wrong: The result has a two-level index (store, row label), and assigning it back raises <code class="inline">TypeError: incompatible index of inserted column with frame index</code>.<br><b>C</b> is wrong: Grouping by date puts four stores of one day in each group: every result is <code class="inline">NaN</code>, and it is the wrong grouping anyway.</div></div>
+  <div class="q" data-sc="10"><div class="qn">Q10</div><div class="qt">What does this print?</div><pre class="code">s = pd.Series([<span class="s">30</span>, <span class="s">10</span>, <span class="s">30</span>, <span class="s">20</span>])
+print(s.rank(ascending=<span class="k">False</span>, method=<span class="s">"dense"</span>).tolist())</pre><div class="opts"><div class="opt correct">A) <code class="inline">[1.0, 3.0, 1.0, 2.0]</code></div><div class="opt">B) <code class="inline">[1.5, 4.0, 1.5, 3.0]</code></div><div class="opt">C) <code class="inline">[1.0, 4.0, 1.0, 3.0]</code></div><div class="opt">D) <code class="inline">[3.0, 1.0, 3.0, 2.0]</code></div></div><div class="why"><b>Why:</b> With <code class="inline">ascending=False</code> the largest value gets rank 1. The two 30s tie for first. <code class="inline">"dense"</code> leaves no gap after a tie, so 20 is rank 2 and 10 is rank 3.<br><b>B</b> is wrong: That is the default <code class="inline">method="average"</code>: the tied values share positions 1 and 2.<br><b>C</b> is wrong: That is <code class="inline">method="min"</code> (sports ranking): after two firsts the next rank is 3.<br><b>D</b> is wrong: That is a dense rank with the default <code class="inline">ascending=True</code>, where the smallest value is rank 1.</div></div>
+  <div class="q" data-sc="11"><div class="qn">Q11</div><div class="qt">To flag unusual days, an analyst computes <code class="inline">lift = rev / rev.rolling(28).mean()</code> and flags days where <code class="inline">lift &gt;= 1.5</code>. What is wrong with the baseline?</div><div class="opts"><div class="opt">A) A 28-day window is too long to react to a sale</div><div class="opt correct">B) Each day is inside its own baseline, so every spike is understated; use <code class="inline">rev.shift(1).rolling(28).mean()</code></div><div class="opt">C) A rolling mean cannot be used as a divisor</div><div class="opt">D) The first 27 rows are <code class="inline">NaN</code>, so the division fails</div></div><div class="why"><b>Why:</b> The window ends on the day being judged, so part of the spike is already in the average it is compared with. Shift first, then roll: the baseline then holds only what was known that morning.<br><b>A</b> is wrong: Window length is a judgment call, not an error. The leak is the problem at any length.<br><b>C</b> is wrong: Dividing two aligned Series is ordinary pandas.<br><b>D</b> is wrong: <code class="inline">NaN</code> rows give <code class="inline">NaN</code> lifts and are simply not flagged; nothing fails.</div></div>
+  <div class="q" data-sc="12" data-kind="short"><div class="qn">Q12</div><div class="qt">What does this print?</div><pre class="code">s = pd.Series([<span class="s">1</span>, <span class="s">2</span>, <span class="s">3</span>, <span class="s">4</span>, <span class="s">5</span>])
+print(s.shift(<span class="s">1</span>).rolling(<span class="s">2</span>).sum().tolist())</pre><div class="opts"><div class="opt correct"><code class="inline">[nan, nan, 3.0, 5.0, 7.0]</code></div></div><div class="why"><b>Why:</b> <code class="inline">shift(1)</code> gives <code class="inline">NaN, 1, 2, 3, 4</code>. A 2-row sum needs two real values: the first two rows have none or one, then 1+2, 2+3, 3+4. Each result uses only the rows <b>before</b> its own.</div></div>
+  <div class="sec"><h2>2.8 · Predict, then run: answers</h2><span class="rule"></span></div>
+  <div class="q"><div class="qn">Predict 2.8.1</div><div class="qt">How many <code class="inline">NaN</code> values, and what is the last number?</div><pre class="code">s = pd.Series([<span class="s">2</span>, <span class="s">4</span>, <span class="s">6</span>, <span class="s">8</span>, <span class="s">10</span>, <span class="s">12</span>])
+r = s.rolling(<span class="s">4</span>).mean()
+print(int(r.isna().sum()), r.iloc[-<span class="s">1</span>])</pre><pre class="out">3 9.0</pre><div class="why"><b>Why:</b> A window of 4 is full for the first time on the 4th row, so the first 3 results are <code class="inline">NaN</code>. The last window holds 6, 8, 10 and 12: mean 9.0.</div></div>
+  <div class="q"><div class="qn">Predict 2.8.2</div><div class="qt">Two groups stacked in one column. What does each line print?</div><pre class="code">t = pd.DataFrame({<span class="s">"g"</span>: [<span class="s">"a"</span>, <span class="s">"a"</span>, <span class="s">"a"</span>, <span class="s">"b"</span>, <span class="s">"b"</span>, <span class="s">"b"</span>],
+                  <span class="s">"v"</span>: [<span class="s">1</span>, <span class="s">2</span>, <span class="s">3</span>, <span class="s">10</span>, <span class="s">20</span>, <span class="s">30</span>]})
+print(t[<span class="s">"v"</span>].cumsum().tolist())
+print(t.groupby(<span class="s">"g"</span>)[<span class="s">"v"</span>].cumsum().tolist())</pre><pre class="out">[1, 3, 6, 16, 36, 66]
+[1, 3, 6, 10, 30, 60]</pre><div class="why"><b>Why:</b> The plain <code class="inline">cumsum</code> runs straight through both groups: 6 + 10 = 16 carries group a's total into group b. The grouped version restarts at the first row of each group. This is the long-table trap in its smallest form, and it is how year to date works.</div></div>
+  <div class="q"><div class="qn">Predict 2.8.3</div><div class="qt">Which of the three columns could you have computed on the morning of each row? Predict the last row of each.</div><pre class="code">s = pd.Series([<span class="s">10</span>, <span class="s">10</span>, <span class="s">10</span>, <span class="s">40</span>, <span class="s">10</span>])
+print(s.rolling(<span class="s">3</span>).mean().round(<span class="s">1</span>).tolist())
+print(s.rolling(<span class="s">3</span>, center=<span class="k">True</span>).mean().round(<span class="s">1</span>).tolist())
+print(s.shift(<span class="s">1</span>).rolling(<span class="s">3</span>).mean().round(<span class="s">1</span>).tolist())</pre><pre class="out">[nan, nan, 10.0, 20.0, 20.0]
+[nan, 10.0, 20.0, 20.0, nan]
+[nan, nan, nan, 10.0, 20.0]</pre><div class="why"><b>Why:</b> Only the third. The trailing mean already contains the 40 on the day of the spike (20.0). The centered mean sees the spike one row early (20.0 on the third row) and has no value on the last row. The shifted version is still 10.0 on the day of the spike and only reacts the day after.</div></div>
+  <div class="sec"><h2>2.8 · Lab reference solutions</h2><span class="rule"></span></div>
+  <div class="note lab"><div class="t">Lab 2.8-A · Foot traffic: when did Flagstaff pass Bend?: labs/module-07/l2_8-window-functions/foot_traffic_solution.py</div><p><b>What it practices:</b> <code class="inline">rolling().mean()</code> and its <code class="inline">NaN</code> edge, <code class="inline">min_periods</code>, comparing two smoothed series, <code class="inline">cummax()</code> for records, and <code class="inline">rolling().sum()</code> with <code class="inline">idxmax()</code> for a best stretch. Everything is on the wide calendar, so no grouping is needed.</p><p><b>Step 2.</b> With <code class="inline">min_periods=21</code> the first 28-day value appears on row 21 (2024-01-21), and the five unknown visitor days (Bend 3, Flagstaff 2) cost nothing: each affected window still has 25 or 26 known days.</p><p><b>Step 3 has two defensible answers and one better one.</b> Flagstaff's 28-day average is first above Bend's on 2024-12-25, but the lead changed hands several times after that. Bend was last ahead on 2025-06-03, so the answer to "since when has Flagstaff been ahead?" is 2025-06-04. Flagstaff led on 324 days in all. The <code class="inline">known</code> mask in the solution keeps rows where both averages exist; without it, the <code class="inline">NaN</code> rows at the start count as "not ahead", which happens to give the same date here.</p><p><b>Step 4.</b> 18 record days. A tie with the previous record would also be <code class="inline">True</code> (see self-check Q8); there are none in this column.</p><p><b>Step 5.</b> The label that <code class="inline">idxmax()</code> returns is the <b>last</b> day of the 7; subtract 6 days for the start. Three of the four stores peak around Labor Day or Memorial Day sale weekends; Flagstaff peaks in the week before Christmas 2025, which fits its growth.</p></div>
+<pre class="out">(731, 4) | unknown store-days: 5
+Boise, 7-day average, first 8 days:
+date
+2024-01-01      NaN
+2024-01-02      NaN
+2024-01-03      NaN
+2024-01-04      NaN
+2024-01-05      NaN
+2024-01-06      NaN
+2024-01-07    380.4
+2024-01-08    366.3
+Freq: D
+28-day average visitors:
+store       Asheville   Bend  Boise  Flagstaff
+date                                          
+2024-06-30      319.0  388.0  530.0      350.0
+2024-12-31      304.0  358.0  523.0      367.0
+2025-06-30      300.0  384.0  577.0      412.0
+2025-12-31      292.0  367.0  575.0      420.0
+Flagstaff first ahead of Bend on: 2024-12-25
+days with Flagstaff ahead: 324
+Bend last ahead on: 2025-06-03 | Flagstaff ahead for good since: 2025-06-04
+Flagstaff record days: 18
+date
+2024-08-31    762.0
+2025-05-24    816.0
+2025-08-30    853.0
+Asheville  2024-05-24 to 2024-05-30  2,809 visitors
+Bend       2025-08-29 to 2025-09-04  3,431 visitors
+Boise      2025-08-27 to 2025-09-02  4,812 visitors
+Flagstaff  2025-12-15 to 2025-12-21  3,492 visitors</pre>
+  <div class="note lab"><div class="t">Lab 2.8-B · The online shop: milestones, ranks and a fair baseline: labs/module-07/l2_8-window-functions/online_milestones_solution.py</div><p><b>What it practices:</b> a running total that restarts per group, ranking within groups, <code class="inline">cummax()</code>, and the leakage idea from the project on a new series.</p><p><b>Step 1.</b> 2024 passed $1,000,000 on December 11; 2025 on October 16, about eight weeks earlier in the year. Full-year totals: 1,077,800.75 and 1,280,183.70 (+18.8%).</p><p><b>Step 2.</b> December is rank 1 and February rank 12 in both years. In between, the order changes: May was 2nd in 2024 and 5th in 2025. <code class="inline">rank</code> returns floats; the solution converts to <code class="inline">int</code> only because there are no ties.</p><p><b>Step 4.</b> The record day, 2025-06-24, is a Tuesday with $8,960.15. Against the mean of the four Tuesdays before it (4,066.72) it is 2.20 times normal. With the day inside its own 4-Tuesday window the "baseline" rises to 5,583.56 and the ratio falls to 1.60. Across two years, 25 days reach 2 times an honest baseline and only 2 reach 2 times a leaky one: the leak hides exactly the days the baseline exists to find.</p><p><b>A question worth asking:</b> why was that Tuesday so large? <code class="inline">done[done["order_date"] == "2025-06-24"]</code> shows one order of $4,184.90, one of the twelve bulk outfitter orders described in <code class="inline">data/README.md</code>. A real order, not an error.</p></div>
+<pre class="out">days: 731 | days with no revenue: 0 | total: 2357984.45
+2024: passed $1,000,000 on 2024-12-11 | full year 1,077,800.75
+2025: passed $1,000,000 on 2025-10-16 | full year 1,280,183.70
+             revenue  rank_in_year
+order_date                        
+2024-01      73567.0            11
+2024-02      70712.0            12
+2024-03      80882.0            10
+2024-04      86564.0             8
+2024-05      99581.0             2
+2024-06      97009.0             3
+2024-07      90041.0             6
+2024-08      92585.0             4
+2024-09      90564.0             5
+2024-10      82443.0             9
+2024-11      88500.0             7
+2024-12     125352.0             1
+2025-01      86269.0            11
+2025-02      86043.0            12
+2025-03      96183.0             9
+2025-04      92205.0            10
+2025-05     114708.0             5
+2025-06     127372.0             2
+2025-07     116606.0             4
+2025-08     125729.0             3
+2025-09     101342.0             7
+2025-10     105098.0             6
+2025-11      98475.0             8
+2025-12     130155.0             1
+record days: 13
+order_date
+2025-05-26    8115.83
+2025-06-11    8925.85
+2025-06-24    8960.15
+2025-06-24 (Tuesday): revenue 8,960.15
+  mean of the 4 Tuesdays BEFORE it: 4,066.72 -&gt; 2.20 times normal
+  without shift(1):                 5,583.56 -&gt; 1.60 times 'normal' (the day is in its own baseline)
+days at least 2 times their baseline: honest 25 | leaky 2</pre>
+  <div class="sec"><h2>2.8 · The lesson page's own Quick Quiz</h2><span class="rule"></span></div>
+  <p style="font-size:.9rem;color:var(--ink-2)">These five questions are on the lesson page (three options each). Letters and reasons are read from the lesson.</p>
+  <table class="timing"><thead><tr><th>#</th><th>Question (short form)</th><th>Answer</th><th>Reason</th></tr></thead><tbody><tr><td class="t">Q1</td><td><code class="inline">NaN</code> count in <code class="inline">s.rolling(7).mean()</code> for 100 complete daily values</td><td>B</td><td>The trailing window is full for the first time on row 7, so 6 <code class="inline">NaN</code>, all at the start.</td></tr><tr><td class="t">Q2</td><td><code class="inline">pd.Series([1, 2, 3, 4]).rolling(2).sum().tolist()</code></td><td>C</td><td><code class="inline">[nan, 3.0, 5.0, 7.0]</code>: each value is the row plus the one before; the first row has none.</td></tr><tr><td class="t">Q3</td><td><code class="inline">df["revenue"].rolling(7).mean()</code> on a table sorted by date, then store</td><td>A</td><td>Seven consecutive rows mix different stores. Sort by store and date, then <code class="inline">groupby</code> with <code class="inline">transform</code>.</td></tr><tr><td class="t">Q4</td><td>A feature for predicting today's revenue, safe from leakage</td><td>C</td><td><code class="inline">rev.shift(1).rolling(7).mean()</code>: the window covers yesterday and the six days before.</td></tr><tr><td class="t">Q5</td><td><code class="inline">pd.Series([50, 80, 80, 95]).rank(ascending=False, method="min")</code></td><td>A</td><td><code class="inline">[4.0, 2.0, 2.0, 1.0]</code>: 95 is first, the two 80s both get 2, the next rank is 4.</td></tr></tbody></table>
+  <div class="sec"><h2>Warm-up Answers</h2><span class="rule"></span></div>
+        <ol class="steps">
+          <li>What is the default <code class="inline">how=</code> of <code class="inline">merge</code>, and what happens to a row whose key has no match? <b>Answer:</b> <code class="inline">inner</code>. The row is dropped with no warning. In Lesson 2.5 that lost 739 orders whose customer has no row in <code class="inline">customers.csv</code>. Use <code class="inline">how="left"</code> when you are adding columns to a main table.</li>
+          <li>After a merge the result has <b>more</b> rows than the left table. What does that tell you? <b>Answer:</b> The key repeats on the other side (one-to-many or many-to-many), so left rows were duplicated. Count rows before and after, and state the relationship with <code class="inline">validate=</code>.</li>
+          <li>What does <code class="inline">pivot_table</code> compute in each cell if you leave out <code class="inline">aggfunc</code>? <b>Answer:</b> The mean. A table titled "revenue" built that way shows average order values. Always write <code class="inline">aggfunc</code>.</li>
+          <li><code class="inline">df.pivot(index="date", columns="store", values="revenue")</code> raises <code class="inline">ValueError: Index contains duplicate entries, cannot reshape</code>. What does the error tell you about the data? <b>Answer:</b> At least one date and store pair appears on more than one row. <code class="inline">pivot</code> only rearranges; choose how to combine the repeats and use <code class="inline">pivot_table(..., aggfunc=...)</code>.</li>
+          <li>A sheet has one row per month and one column per store. Which method turns it into tidy rows of month, store, revenue? <b>Answer:</b> <code class="inline">melt(id_vars="Month", var_name="store", value_name="revenue")</code>. Twelve rows and five store columns become 60 rows.</li>
+        </ol>
+  <div class="sec"><h2>Exit Ticket Answers</h2><span class="rule"></span></div>
+        <ol class="steps">
+          <li>You resample daily revenue to monthly totals with <code class="inline">.sum()</code>. What do you print beside every total, and why? <b>Answer:</b> The <code class="inline">count</code> of days with a value (for example <code class="inline">.agg(["sum", "count"])</code>). Sums skip <code class="inline">NaN</code> silently, so a month with missing days looks like a weak month.</li>
+          <li>Write an expression for a 7-day average of the Series <code class="inline">rev</code> that is safe to use for judging or predicting today. <b>Answer:</b> <code class="inline">rev.shift(1).rolling(7).mean()</code> (or <code class="inline">rev.rolling(7, closed="left").mean()</code>). Shift first, so today is not inside its own baseline.</li>
+          <li>List the order of operations for a time series, and name the step people skip most often. <b>Answer:</b> Parse the dates; put them in the index; complete the calendar with <code class="inline">asfreq</code>; decide what each gap means; only then resample, shift or compare. The skipped step is completing the calendar.</li>
+        </ol>
+  <p style="font-size:.9rem;color:var(--ink-2)">Reading the tickets: a ticket that says "mean" or "nothing" for question 1 needs the Bend August example again. For question 2, <code class="inline">rev.rolling(7).mean().shift(1)</code> is also correct (the same numbers); <code class="inline">rev.rolling(7).mean()</code> and anything with <code class="inline">center=True</code> are the leak, and those learners get a two-minute recap at the start of Session 8, where leakage returns as the cutoff rule. For question 3, accept any wording that puts the calendar before the arithmetic.</p>
+  <div class="sec"><h2>Common Wrong Answers and What They Reveal</h2><span class="rule"></span></div>
+  <table class="timing"><thead><tr><th>Wrong answer or symptom</th><th>What it reveals</th><th>What to do</th></tr></thead><tbody><tr><td>Q2 answered <code class="inline">3 3</code> or <code class="inline">4 3</code></td><td>Treats a date-string range like a Python slice that stops one short.</td><td>Re-run demo step 5 and count the rows of <code class="inline">.loc["2024-12-30":"2025-01-02"]</code> aloud.</td></tr><tr><td>Q3 answered B (filled with 0)</td><td>Believes pandas decides what a gap means.</td><td>Show <code class="inline">wide.asfreq("D").isna().sum()</code> again. Zero is something you write, on purpose, for closed days only.</td></tr><tr><td>Q4 answered C (<code class="inline">count</code> is 3)</td><td>Reads <code class="inline">count</code> as "rows in the bucket".</td><td><code class="inline">count</code> is non-missing values; <code class="inline">size</code> is rows. That difference is the whole point of printing it.</td></tr><tr><td>Q5 answered A or B</td><td>Thinks <code class="inline">diff(7)</code> knows about dates.</td><td>The lesson's rows-only table: the Saturday compared with a Wednesday. <code class="inline">shift</code> and <code class="inline">diff</code> count rows.</td></tr><tr><td class="t">Q7 answered A</td><td>Has not taken in what <code class="inline">min_periods</code> changes.</td><td>Have them run it with <code class="inline">min_periods</code> 3, 2 and 1 and line up the three outputs.</td></tr><tr><td>Q9 answered A or B</td><td>Windowing a long table without grouping, or grouping without aligning.</td><td>The quick test: first rows of each group <code class="inline">NaN</code>? Then <code class="inline">transform</code>.</td></tr><tr><td>Q11 answered D, or exit ticket question 2 answered <code class="inline">rev.rolling(7).mean()</code></td><td>Leakage has not landed: the window is seen as "the past" although it ends on today.</td><td>Demo step 11 again, one row only: May 23, 2025, 11,292 against 10,408. Ask which one was known at opening time.</td></tr><tr><td>Lab 2.7-A: reports the week ending 2024-08-18 as Bend's worst week</td><td>Reads a sum without its count.</td><td>Point at the <code class="inline">count</code> column in their own output: 4 days.</td></tr><tr><td>Lab 2.7-A: <code class="inline">closed_days</code> is empty</td><td>Typed <code class="inline">units.index.difference(calendar)</code>.</td><td>Ask which of the two has all 731 days; the difference starts from the complete one.</td></tr><tr><td>Lab 2.8-A: reports 2024-12-25 as the day Flagstaff passed Bend, with no caveat</td><td>Takes the first crossing as the answer although the lines cross several times.</td><td>Plot or print <code class="inline">ahead</code> around June 2025; ask for the last date Bend led.</td></tr><tr><td>Lab 2.7-B: "returns got worse in April 2025"</td><td>Reads noise as a finding.</td><td>Ask how many returned orders make up +2.84 points on 525 orders (about 15).</td></tr></tbody></table>
+
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 7 · Answer Key · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

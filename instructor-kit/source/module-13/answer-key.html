@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Answer Key: Session 13</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Instructor copy —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">answers &amp; solutions · not for students</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Answer Key</div>
+    <h1>Session 13: A/B Testing and the EDA Workflow</h1>
+    <p class="sub">Answers with reasoning for every workbook item, reference output for all six labs, the lesson pages' quiz answers, and the rubric, model answer and weak answers for Checkpoint 1.</p>
+    <div class="meta-row">
+      <span class="chip">Session <b>13</b></span>
+      <span class="chip"><b>12</b> self-check items</span>
+      <span class="chip">Checkpoint <b>1</b> rubric</span>
+      <span class="chip">Confidential</span>
+    </div>
+  </header>
+
+  <div class="sec"><h2>How to Use This Key</h2><span class="rule"></span></div>
+<ul class="tick">
+  <li>Self-check items repeat the workbook's wording and options exactly; the correct option is highlighted and each wrong option has a one-line reason.</li>
+  <li>Every number comes from running the code on the course data with the course environment (pandas 3.0, SciPy 1.18, statsmodels 0.15).</li>
+  <li>Checkpoint 1 is at the end: the rubric, the model answer from a real run, and seven common weak answers with what each one reveals.</li>
+</ul>
+  <div class="sec"><h2>4.6 · A/B Testing: self-check</h2><span class="rule"></span></div>
+<div class="q" data-sc="1"><div class="qn">Q1</div><div class="qt">Pinecrest showed the old and the new checkout page during the same four weeks and let a coin flip decide who saw which. What does the coin flip buy?</div><div class="opts"><div class="opt">A) Two groups of exactly the same size, which the z-test requires</div><div class="opt">B) A smaller sample size than a before/after comparison would need</div><div class="opt correct">C) Groups that are alike in everything except the page, including things nobody measured</div><div class="opt">D) A guarantee that the difference between the pages is not due to chance</div></div><div class="why"><b>Why:</b> Random assignment spreads every kind of visitor evenly across the arms, so the page is the only systematic difference. Chance is still possible; the test judges that.<br><b>A</b> is wrong: The arms were 14,079 and 13,921. The test does not need equal sizes; it needs a split consistent with the design.<br><b>B</b> is wrong: Randomization does not reduce the sample size. The power calculation sets it.<br><b>D</b> is wrong: Randomization removes confounding, not chance. That is why a test and an interval are still needed.</div></div>
+<div class="q" data-sc="2"><div class="qn">Q2</div><div class="qt">A colleague sizes a test for a rise from 8.9% to 10.0% like this and gets 129,733 visitors per arm. What went wrong?</div><pre class="code">n = NormalIndPower().solve_power(effect_size=<span class="s">0.011</span>, alpha=<span class="s">0.05</span>, power=<span class="s">0.80</span>)</pre><div class="opts"><div class="opt correct">A) <code class="inline">effect_size</code> expects Cohen's h from <code class="inline">proportion_effectsize(0.100, 0.089)</code>, not the raw difference in rates</div><div class="opt">B) <code class="inline">power</code> should be 0.20, the chance of missing the effect</div><div class="opt">C) <code class="inline">solve_power</code> needs <code class="inline">nobs1</code> as well, or it has nothing to solve</div><div class="opt">D) Nothing: a one-point lift really needs about 130,000 visitors per arm</div></div><div class="why"><b>Why:</b> <code class="inline">effect_size</code> is Cohen's h (0.0376 here). Passing 0.011 asks for a much smaller effect than intended, and the answer is twelve times too large. The right call gives 11,092.<br><b>B</b> is wrong: Power is the chance of detecting a real effect: 0.80 is the convention.<br><b>C</b> is wrong: <code class="inline">solve_power</code> solves for the one argument you leave out. Giving all four raises <code class="inline">ValueError: need exactly one keyword that is None</code>.<br><b>D</b> is wrong: With the effect size computed correctly the answer is 11,092 per arm.</div></div>
+<div class="q" data-sc="3" data-kind="short"><div class="qn">Q3</div><div class="qt">Conversion went from 8.86% to 10.03%. What does this print? (First number: percentage points. Second: relative lift.)</div><pre class="code">print(round((<span class="s">0.1003</span> - <span class="s">0.0886</span>) * <span class="s">100</span>, <span class="s">2</span>), round(<span class="s">0.1003</span> / <span class="s">0.0886</span> - <span class="s">1</span>, <span class="s">3</span>))</pre><div class="opts"><div class="opt correct"><code class="inline">1.17 0.132</code></div></div><div class="why"><b>Why:</b> 1.17 percentage points is the absolute difference. 0.132 (13.2%) is the relative lift: 1.17 is 13.2% of 8.86. Both are correct; always say which one you mean.</div></div>
+<div class="q" data-sc="4"><div class="qn">Q4</div><div class="qt">An experiment planned as 50/50 reports 14,400 visitors in treatment and 13,600 in control. <code class="inline">stats.binomtest(14400, 28000, p=0.5).pvalue</code> is <code class="inline">1.8e-06</code>. What do you do?</div><div class="opts"><div class="opt">A) Carry on: 51.4% is close enough to half</div><div class="opt">B) Drop 800 treatment visitors at random so the arms match, then analyze</div><div class="opt">C) Report the conversion result with a note that the split was uneven</div><div class="opt correct">D) Stop and find where the control visitors went: the experiment did not run as planned, so its results cannot be read</div></div><div class="why"><b>Why:</b> A fair coin almost never gives 51.4% in 28,000 flips. This is a sample ratio mismatch: visitors are going missing from one arm, which breaks the comparison. Fix the bug and rerun.<br><b>A</b> is wrong: With 28,000 visitors a fair coin stays very close to 50%; p = 0.0000018 says this is not chance.<br><b>B</b> is wrong: Trimming hides the symptom. Whatever removed 800 control visitors probably removed a particular kind of visitor.<br><b>C</b> is wrong: A failed health check is not a caveat to attach; nothing downstream can be trusted.</div></div>
+<div class="q" data-sc="5"><div class="qn">Q5</div><div class="qt">A team looks at its four-week test every Monday and stops the first time p is below 0.05. In the lesson's simulation of experiments with <b>no</b> real effect, how often did that rule declare a winner?</div><div class="opts"><div class="opt">A) About 5%, because alpha is 0.05 at each look</div><div class="opt correct">B) About 12%, because each look is another chance to cross the line by luck</div><div class="opt">C) About 1.25%, because the four looks share the 5%</div><div class="opt">D) About 50%, because the p-value wanders at random</div></div><div class="why"><b>Why:</b> One planned look kept false alarms near 5% (4.4% in the simulation). Stopping at any of four looks raised it to 12.2%. Peeking is the multiple-comparisons problem in disguise.<br><b>A</b> is wrong: 5% holds for ONE look. Four chances to stop add up.<br><b>C</b> is wrong: 1.25% is the stricter per-look threshold you would USE to pay for four looks, not the false-alarm rate of looking at 0.05.<br><b>D</b> is wrong: The p-value wanders, but not that wildly: the simulated rate was 12.2% for weekly looks and about 27% for daily looks.</div></div>
+<div class="q" data-sc="6"><div class="qn">Q6</div><div class="qt">By device: mobile +1.76 points (p = 0.00004), desktop +0.27 points (p = 0.67). The test of the difference between the two lifts gives p = 0.049, and nobody planned this comparison. Which sentence belongs in the memo?</div><div class="opts"><div class="opt">A) The new page works on mobile and does nothing on desktop</div><div class="opt">B) The new page should be shipped to mobile visitors only</div><div class="opt correct">C) The gain appears concentrated on mobile; the evidence that devices differ is borderline and exploratory, and worth a follow-up test</div><div class="opt">D) The desktop result proves the page has no effect on desktop</div></div><div class="why"><b>Why:</b> "Significant here, not there" is not evidence that here and there differ. The direct test of the difference is on the line (p = 0.049) and unplanned, so it is a lead to confirm.<br><b>A</b> is wrong: Desktop's interval runs from about -1.0 to +1.5 points: a lift as large as the overall 1.17 is still inside it.<br><b>B</b> is wrong: That builds a strategy on an unplanned, borderline comparison. The confirmed result is the overall lift.<br><b>D</b> is wrong: Not significant means not detected. It never proves zero.</div></div>
+  <div class="sec"><h2>4.6 · Predict, then run</h2><span class="rule"></span></div>
+<div class="q"><div class="qn">P1</div><div class="qt">Output and reasoning</div><pre class="code">print(round(proportions_ztest([<span class="s">20</span>, <span class="s">10</span>], [<span class="s">100</span>, <span class="s">100</span>])[<span class="s">1</span>], <span class="s">3</span>))</pre><div class="why"><b>Answer:</b> <code class="inline">0.048</code>. Just below 0.05 (p = 0.048), even though one rate is double the other. With 100 visitors per arm the interval is wide; "twice as good" on small counts is weak evidence.</div></div>
+<div class="q"><div class="qn">P2</div><div class="qt">Output and reasoning</div><pre class="code">h = proportion_effectsize(<span class="s">0.100</span>, <span class="s">0.089</span>)
+n90 = NormalIndPower().solve_power(effect_size=h, alpha=<span class="s">0.05</span>, power=<span class="s">0.90</span>)
+print(round(n90))</pre><div class="why"><b>Answer:</b> <code class="inline">14850</code>. About 14,850 per arm: a third more visitors than the 11,092 needed for 80% power. Power is bought with sample size.</div></div>
+<div class="q"><div class="qn">P3</div><div class="qt">Output and reasoning</div><pre class="code">print(round(stats.binomtest(<span class="s">5100</span>, <span class="s">10_000</span>, p=<span class="s">0.5</span>).pvalue, <span class="s">3</span>))
+print(round(stats.binomtest(<span class="s">5080</span>, <span class="s">10_000</span>, p=<span class="s">0.5</span>).pvalue, <span class="s">3</span>))</pre><div class="why"><b>Answer:</b> <code class="inline">0.047 / 0.112</code>. 5,100 / 4,900 fails (p = 0.047); 5,080 / 4,920 passes (p = 0.112). A 51% share looks harmless and is already unusual for a fair coin at this size. Many teams use a stricter threshold (0.01 or 0.001) for this check so that it does not cry wolf.</div></div>
+  <div class="sec"><h2>4.6 · Worked example and lab reference notes</h2><span class="rule"></span></div>
+<p><b>Worked example (weekend against weekday).</b> Output as printed in the workbook: weekday +1.03 points (p = 0.012), weekend +1.53 points (p = 0.021); difference +0.50 points, p = 0.52. A learner who writes "it works better on weekends" has compared two estimates without their uncertainty.</p><p><b><code class="inline">labs/module-13/l4_6-ab-testing/novelty_check_solution.py</code>.</b> The week column is <code class="inline">(date - first date).dt.days // 7 + 1</code>. Each week is compared by itself with <code class="inline">==</code> (the lesson's peeking table used <code class="inline">&lt;=</code>, cumulative). The halves are compared with the lesson's difference-between-lifts test. Reference output:</p><pre class="out" style="white-space:pre-wrap">rows: 28000 | days: 28
+week
+1    7018
+2    7065
+3    6960
+4    6957
+
+week 1        7,018 visitors  8.20% -&gt; 9.25%  +1.05 pts (95% CI -0.27 to +2.37)  p = 0.1188
+week 2        7,065 visitors  9.44% -&gt; 10.20%  +0.76 pts (95% CI -0.63 to +2.15)  p = 0.2806
+week 3        6,960 visitors  9.73% -&gt; 10.53%  +0.80 pts (95% CI -0.61 to +2.22)  p = 0.2662
+week 4        6,957 visitors  8.06% -&gt; 10.14%  +2.08 pts (95% CI +0.73 to +3.43)  p = 0.0026
+weeks whose own p-value is below 0.05: [4]
+weeks whose interval contains the overall lift of +1.17 points: [1, 2, 3, 4]
+
+weeks 1-2    14,083 visitors  8.82% -&gt; 9.73%  +0.91 pts (95% CI -0.05 to +1.87)  p = 0.0622
+weeks 3-4    13,917 visitors  8.90% -&gt; 10.33%  +1.43 pts (95% CI +0.45 to +2.41)  p = 0.0041
+Late lift minus early lift: +0.52 points (standard error 0.70), p = 0.46
+
+Verdict: every week shows a positive lift (about +0.8 to +2.1 points) and every weekly interval
+contains the overall +1.17. One week of 7,000 visitors is too small to be significant alone,
+so 'only week 4 worked' is a power problem, not a finding. The late lift is not smaller than the
+early one (+1.43 vs +0.91 points, p = 0.46 for the difference):
+no sign of a novelty effect in these four weeks. This check was not in the plan: exploratory.</pre><p>What a good sentence contains: every week positive; every weekly interval contains +1.17; the late lift is not smaller than the early one (p = 0.46); one week alone has too little power; the check was unplanned. <b>Common wrong answers:</b> "it only worked in week 4" (reading p-values instead of lifts); using cumulative weeks (reproduces the peeking table: p = 0.1188, 0.0622, 0.0308, 0.0008); "the effect is growing" (the +0.52-point difference between halves has p = 0.46).</p><p><b><code class="inline">labs/module-13/l4_6-ab-testing/followup_test_plan_solution.py</code>.</b> Baseline = control-arm mobile rate (6.8%); traffic = 15,462 mobile visitors / 28 days = 552 a day. Reference output:</p><pre class="out" style="white-space:pre-wrap">mobile visitors: 15462 in 28 days
+baseline 6.8%, about 552 mobile visitors a day
+
+detect 6.8% -&gt; 7.6% (+0.8 points, h = 0.0310):  16,376 per arm, about  59 days
+detect 6.8% -&gt; 8.0% (+1.2 points, h = 0.0459):   7,458 per arm, about  27 days
+detect 6.8% -&gt; 8.6% (+1.8 points, h = 0.0676):   3,432 per arm, about  12 days
+
+28 days = 7,728 mobile visitors per arm
+power of a 28-day test for 6.8% -&gt; 8.0%: 0.81
+power of the same test for 6.8% -&gt; 7.6%: 0.49
+
+with the raw difference 0.012 as effect size: 109,012 per arm (wrong: effect_size is Cohen's h)
+
+Plan: mobile visitors only, 50/50 at random, primary metric conversion per visitor, two-sided,
+alpha 0.05. Run 28 days (four full weeks, about 7,728 per arm): 81% power to detect
+6.8% -&gt; 8.0%. A true lift as small as 0.8 points would be caught only 49% of the time;
+say so in the plan. One analysis, after day 28.</pre><p>Points to draw out: planning on the observed 8.6% (12 days) is optimistic, because a result that crossed the significance line tends to overstate the true effect; four full weeks gives 81% power for a 1.2-point lift and only 49% for 0.8 points, and the plan should say so. <b>Common wrong answers:</b> passing 0.012 as <code class="inline">effect_size</code> (109,012 per arm); using the treatment arm's rate as the baseline; forgetting that <code class="inline">n</code> is per arm when converting to days (half the true duration).</p><p><b><code class="inline">labs/module-13/l4_6-ab-testing/aa_test_solution.py</code>.</b> Seeded with <code class="inline">np.random.default_rng(42)</code>; 2,000 random halvings of the 13,921 control visitors. Reference output:</p><pre class="out" style="white-space:pre-wrap">control visitors: 13921 | conversions: 1233 | rate: 8.86%
+one split: 8.65% vs 9.06%, p = 0.388
+
+A/A splits with p &lt; 0.05: 4.9%  (the promised false-alarm rate is 5%)
+A/A splits with p &lt; 0.01: 0.8%
+smallest p-value in 2,000 splits: 0.0021
+p-value at the 10th, 30th, 50th, 70th, 90th percentile: [0.1  0.3  0.49 0.7  0.88]
+
+Reading: with no difference at all, about 1 split in 20 is 'significant', and p-values are spread
+evenly from 0 to 1. One significant A/A result is expected now and then; a rate far above 5% would
+mean the assignment or the counting is broken.
+Splits with a p-value as small as the real test's 0.0008: 0 of 2,000.</pre><p>The answer to the starter's closing question (a colleague ran ONE A/A test and got p = 0.03; is the tool broken?): no. About 1 in 20 A/A tests does that. A rate well above 5% over many A/A tests would be the warning sign. <b>Common wrong answer:</b> shuffling once outside the loop, which gives 2,000 identical p-values.</p>
+  <div class="sec"><h2>4.6 · The lesson page's own quiz</h2><span class="rule"></span></div>
+<ol class="steps">
+  <li><b>Question 1: C.</b> Random assignment makes the groups alike in everything except the page, so the page is the only systematic difference. Speed and equal sizes are not the reason.</li>
+  <li><b>Question 2: B.</b> A much smaller number: a bigger effect (8.9% to 13.9%) is easier to detect, so fewer visitors are needed.</li>
+  <li><b>Question 3: A.</b> Far above 5%: each look is another chance to cross the line by luck (about 27% with daily looks).</li>
+  <li><b>Question 4: B.</b> The lifts are similar (+1.09 and +1.26 points); the returning group is half the size, so its estimate is less precise.</li>
+  <li><b>Question 5: A.</b> Revenue per visitor across all randomized visitors: buyers are not a randomized group.</li>
+</ol>
+  <div class="sec"><h2>4.7 · An EDA Workflow: self-check</h2><span class="rule"></span></div>
+<div class="q" data-sc="7"><div class="qn">Q7</div><div class="qt">Someone hands you a table you have never seen. After writing your questions, what is the first fact to establish about it?</div><div class="opts"><div class="opt">A) Which columns correlate most strongly</div><div class="opt correct">B) Its grain: what one row represents, and which column identifies a row</div><div class="opt">C) Whether the numeric columns are normally distributed</div><div class="opt">D) Which rows are outliers, so they can be removed</div></div><div class="why"><b>Why:</b> Every count and every average depends on what one row is. Structure (grain, keys, types) is step 2 of the routine, straight after the questions.<br><b>A</b> is wrong: Pairs of columns are step 5. Without the grain you cannot say what a correlation is a correlation of.<br><b>C</b> is wrong: Shape matters in step 4, and only for the columns your questions need.<br><b>D</b> is wrong: Unusual rows are investigated in step 3, not removed on sight. Pinecrest's twelve bulk orders are real.</div></div>
+<div class="q" data-sc="8" data-kind="short"><div class="qn">Q8</div><div class="qt">What does this print?</div><pre class="code">df = pd.DataFrame({<span class="s">"a"</span>: [<span class="s">1.0</span>, <span class="k">None</span>, <span class="s">3.0</span>],
+                   <span class="s">"b"</span>: [<span class="k">None</span>, <span class="s">5.0</span>, <span class="s">6.0</span>],
+                   <span class="s">"c"</span>: [<span class="s">"x"</span>, <span class="s">"y"</span>, <span class="k">None</span>]})
+print(len(df.dropna()), len(df.dropna(subset=[<span class="s">"a"</span>])))</pre><div class="opts"><div class="opt correct"><code class="inline">0 2</code></div></div><div class="why"><b>Why:</b> Every row has a gap somewhere, so <code class="inline">dropna()</code> with no arguments keeps nothing. Naming the one column the analysis needs keeps the two rows where <code class="inline">a</code> is present.</div></div>
+<div class="q" data-sc="9"><div class="qn">Q9</div><div class="qt">In the survey, <code class="inline">sat_website</code> is missing for 46% of store shoppers and 3% of online shoppers. Its mean is 3.54. What is the most accurate description?</div><div class="opts"><div class="opt">A) Pinecrest customers rate the website 3.54</div><div class="opt">B) The mean is unusable until the gaps are filled with 3.54</div><div class="opt">C) Store shoppers rate the website 3.54</div><div class="opt correct">D) Customers who answered, mostly online shoppers, rate the website 3.54</div></div><div class="why"><b>Why:</b> The values are not missing at random: people skipped the question about the part of Pinecrest they do not use. The column describes those who answered.<br><b>A</b> is wrong: That claims to speak for everyone, including the many store shoppers who never answered.<br><b>B</b> is wrong: Filling with the mean invents opinions. Leave missing values missing and say who answered.<br><b>C</b> is wrong: It is the other way round: store shoppers are the ones who mostly skipped it.</div></div>
+<div class="q" data-sc="10" data-kind="short"><div class="qn">Q10</div><div class="qt">What does this print?</div><pre class="code">left = pd.DataFrame({<span class="s">"id"</span>: [<span class="s">1</span>, <span class="s">2</span>, <span class="s">3</span>]})
+right = pd.DataFrame({<span class="s">"id"</span>: [<span class="s">1</span>, <span class="s">1</span>, <span class="s">1</span>, <span class="s">2</span>], <span class="s">"x"</span>: [<span class="s">5</span>, <span class="s">6</span>, <span class="s">7</span>, <span class="s">8</span>]})
+print(len(left.merge(right, on=<span class="s">"id"</span>)),
+      len(left.merge(right, on=<span class="s">"id"</span>, how=<span class="s">"left"</span>)))</pre><div class="opts"><div class="opt correct"><code class="inline">4 5</code></div></div><div class="why"><b>Why:</b> <code class="inline">id</code> 1 matches three rows and <code class="inline">id</code> 2 matches one: 4 rows in the inner merge, and <code class="inline">id</code> 3 is dropped. The left merge keeps <code class="inline">id</code> 3 with a missing <code class="inline">x</code>: 5 rows. Three rows became four or five without any message, which is why merges get <code class="inline">validate=</code>.</div></div>
+<div class="q" data-sc="11"><div class="qn">Q11</div><div class="qt">You compare online order totals across 22 groups (weekdays, payment methods, months). Three groups have p below 0.05; after a Holm correction one remains. What goes in the findings?</div><div class="opts"><div class="opt correct">A) The one that survived, with the size of its gap, the number of comparisons, and the result of checking an obvious competing explanation; the other two are leads</div><div class="opt">B) All three, with their original p-values</div><div class="opt">C) None: results found by scanning are never reportable</div><div class="opt">D) Only the group with the largest gap in dollars, whatever its p-value</div></div><div class="why"><b>Why:</b> Scanning is multiple testing. Correct for it, judge the size of the gap, challenge the survivor, and say that 22 comparisons were made. Uncorrected hits are leads for later.<br><b>B</b> is wrong: With 22 tests about one false alarm is expected at 0.05. Uncorrected p-values overstate the evidence.<br><b>C</b> is wrong: Exploration is how leads are found. A corrected, sanity-checked result can be reported as exploratory.<br><b>D</b> is wrong: The largest gap may come from the smallest, noisiest group.</div></div>
+<div class="q" data-sc="12"><div class="qn">Q12</div><div class="qt">Which sentence from the survey note is a <b>caveat</b>, not a finding?</div><div class="opts"><div class="opt">A) Only 42% of customers are satisfied with prices</div><div class="opt correct">B) Every respondent has placed an order, so customers who never ordered are not heard</div><div class="opt">C) Asheville's staff rating is 3.62 against about 4.1 at the other stores</div><div class="opt">D) Asheville is the only store whose revenue fell in 2025</div></div><div class="why"><b>Why:</b> A caveat says who or what the data cannot speak for. This one limits every finding in the note to active customers.<br><b>A</b> is wrong: That is a finding: one sentence with a number.<br><b>C</b> is wrong: A finding (and one that survived the correction for 55 comparisons).<br><b>D</b> is wrong: A finding from a second dataset that points the same way.</div></div>
+  <div class="sec"><h2>4.7 · Predict, then run</h2><span class="rule"></span></div>
+<div class="q"><div class="qn">P1</div><div class="qt">Output and reasoning</div><pre class="code">left = pd.DataFrame({<span class="s">"k"</span>: [<span class="s">1</span>, <span class="s">1</span>, <span class="s">2</span>]})
+right = pd.DataFrame({<span class="s">"k"</span>: [<span class="s">1</span>, <span class="s">1</span>, <span class="s">2</span>], <span class="s">"v"</span>: [<span class="s">10</span>, <span class="s">20</span>, <span class="s">30</span>]})
+print(len(left.merge(right, on=<span class="s">"k"</span>)))</pre><div class="why"><b>Answer:</b> <code class="inline">5</code>. 5 rows from 3: the key 1 appears twice on each side, so it matches 2 × 2 = 4 times, plus one row for key 2. A many-to-many merge multiplies. <code class="inline">validate="one_to_one"</code> or <code class="inline">"many_to_one"</code> would have raised an error.</div></div>
+<div class="q"><div class="qn">P2</div><div class="qt">Output and reasoning</div><pre class="code">s = pd.Series([<span class="s">4</span>, <span class="k">None</span>, <span class="s">2</span>])
+print(s.mean(), s.fillna(<span class="s">0</span>).mean())</pre><div class="why"><b>Answer:</b> <code class="inline">3.0 2.0</code>. <code class="inline">mean()</code> skips the gap: (4 + 2) / 2 = 3.0 is the honest mean. <code class="inline">fillna(0)</code> counts the missing answer as a zero and gives 2.0.</div></div>
+<div class="q"><div class="qn">P3</div><div class="qt">Output and reasoning</div><pre class="code">print(multipletests([<span class="s">0.01</span>, <span class="s">0.04</span>, <span class="s">0.03</span>], method=<span class="s">"holm"</span>)[<span class="s">1</span>].round(<span class="s">2</span>).tolist())</pre><div class="why"><b>Answer:</b> <code class="inline">[0.03, 0.06, 0.06]</code>. One. Holm multiplies the smallest p by 3 (0.03), the next by 2 (0.03 × 2 = 0.06) and keeps the last at least as large as the one before (0.06). Three raw hits become one.</div></div>
+  <div class="sec"><h2>4.7 · Worked example and lab reference notes</h2><span class="rule"></span></div>
+<p><b>Worked example (frequent buyers and recommending).</b> 20,302 orders become 3,942 rows, one per customer; the validated merge keeps 1,800 survey rows; Spearman = -0.02; mean recommend 7.23 to 7.48 across the four order-count bands. The point is the grain and the honest null. A learner who merges <code class="inline">survey</code> with <code class="inline">orders</code> directly gets 9,230 rows and should be asked "what is one row now?"</p><p><b><code class="inline">labs/module-13/l4_7-eda-workflow/shipping_rules_solution.py</code>.</b> The decisive line is <code class="inline">goods = order_total - shipping_cost</code>. Reference output:</p><pre class="out" style="white-space:pre-wrap">rows: 20302 | order_id unique: True
+grain: one row per order
+
+missing values: {'channel': 0, 'shipping_cost': 0, 'order_total': 0}
+shipping values: [0.0, 6.95, 14.95]
+shipping_cost  0.00   6.95   14.95
+channel                           
+online          9176   2754    924
+store           7448      0      0
+Store orders never pay shipping, so questions 2 and 3 are about ONLINE orders only.
+
+shipping_cost
+0.00     71.4
+6.95     21.4
+14.95     7.2
+
+               count   min  median      max
+shipping_cost                              
+0.00            9176  75.0  200.90  4893.00
+6.95            2754   6.0   44.45    74.96
+14.95            924   7.5  152.23  4097.15
+
+shipping_cost  0.00   6.95   14.95
+goods_75_plus                     
+False              0   2754    224
+True            9176      0    700
+
+shipping_cost  0.00   6.95   14.95
+goods                             
+[0, 25)          0.0   90.8    9.2
+[25, 50)         0.0   91.8    8.2
+[50, 75)         0.0   94.2    5.8
+[75, 100)       93.5    0.0    6.5
+[100, 150)      92.5    0.0    7.5
+[150, 300)      93.0    0.0    7.0
+[300, 5000)     92.8    0.0    7.2
+
+FINDINGS
+- Store orders never pay shipping. Online: 71.4% ship free, 21.4% pay 6.95, 7.2% pay 14.95.
+- Among orders that did not pay 14.95, the rule is exact: goods of 75.00 or more ship free
+  (9,176 of 9,176), goods under 75.00 pay 6.95 (2,754 of 2,754). No exceptions in two years.
+- The 14.95 charge appears at every order size, on about 6% to 9% of orders in each band.
+CAVEATS
+- The rule is inferred from the data, not read from a policy. 14.95 looks like an option the
+  customer chooses (faster delivery?): a hypothesis. No column records the delivery method.
+- 'goods' is the total after any discount: the threshold applies to what the customer pays.
+NEXT QUESTIONS
+- Do customers add items to reach 75.00? (Look at the distribution of goods just above and below.)</pre><p>Mark the note, not the tables. A good note says: stores never pay; among online orders that did not pay 14.95 the rule is exact (goods of 75.00 or more ship free, under 75.00 pay 6.95: 9,176 and 2,754 orders, no exceptions); 14.95 appears at every size on about 7% of orders; and as a caveat that the rule is inferred, and that what 14.95 buys is a guess. <b>Common wrong answers:</b> grouping on <code class="inline">order_total</code> (the threshold appears at 81.95 for paid orders and looks fuzzy); "orders over $75 ship free" with no mention of the 700 large orders that paid 14.95; a note with findings and no caveat.</p><p><b><code class="inline">labs/module-13/l4_7-eda-workflow/order_size_scan_solution.py</code>.</b> Mann-Whitney because order totals are skewed (online mean 204.65, median 156.40). Reference output:</p><pre class="out" style="white-space:pre-wrap">online orders: 12854 | median order total: 156.4
+order_total is right-skewed (mean 204.65 ), so compare medians and use the Mann-Whitney test.
+
+22 tests, 4 below 0.05 before correction, 1 after
+       segment     group    n  median  median_rest       p p_holm
+         month      June 1077 169.400       154.95 0.00023  0.005
+       weekday  Saturday 1789 146.240       158.75 0.00815  0.171
+payment_method gift_card 1025 145.950       156.90 0.04011  0.802
+         month     April  981 168.400       155.40 0.04687  0.890
+         month  December 1480 149.775       157.40 0.05039  0.907
+
+Share of online orders that contain a tent:
+june
+False    10.4
+True     17.7
+
+Median order total:
+june       False   True 
+has_tent                
+False     143.80  146.52
+True      328.82  336.85
+has_tent = False: June against other months, p = 0.14
+has_tent = True: June against other months, p = 0.60
+
+FINDINGS
+- Scanned 22 groups (7 weekdays, 3 payment methods, 12 months). Four had p &lt; 0.05 before
+  correction; one survives Holm: June, median $169.40 against $154.95 in other months.
+- June's gap is mostly product mix: 17.7% of June orders contain a tent against 10.4% in other
+  months, and a tent order is about $329 against $144. Within tent orders and within non-tent
+  orders, June is only $3 to $8 higher and neither gap is significant (p = 0.60 and 0.14).
+CAVEATS
+- Saturday (lower), gift cards (lower) and April (higher) did not survive the correction:
+  leads, not findings.
+- Exploratory scan on observational data. 'Has a tent' was chosen after seeing June stand out.
+NEXT QUESTION
+- If the banner is about basket size, the lever is what is in the basket, not the calendar.</pre><p>The lesson in it: four raw hits, one survivor, and the survivor is mostly product mix. June orders contain a tent 17.7% of the time against 10.4%, and tent orders are more than twice the size. Within tent orders and within non-tent orders the June gap is small and not significant. <b>Common wrong answers:</b> reporting Saturday, gift cards or April as findings; "people spend more in June" with no check of what they buy; testing the tent explanation and then calling it proven (it was chosen after seeing the data: also exploratory).</p><p><b><code class="inline">labs/module-13/l4_7-eda-workflow/customer_overview_solution.py</code>.</b> Reference output:</p><pre class="out" style="white-space:pre-wrap">                              dtype  missing  missing_pct  unique                 example
+customer_id                   int64        0          0.0    4850                   10001
+first_name                      str        0          0.0     151                  Odessa
+last_name                       str        0          0.0     148                    Kato
+email                           str        0          0.0    4850  odessa.kato@example.co
+phone                           str      280          5.8    1104          (303) 555-0175
+city                            str        0          0.0      35                  Denver
+state                           str        0          0.0      14                      CO
+signup_date          datetime64[us]        0          0.0    2181     2023-08-07 00:00:00
+birth_year                  float64      442          9.1      59                  1989.0
+acquisition_channel             str        0          0.0       5             paid_search
+loyalty_tier                    str        0          0.0       3                    Gold
+marketing_opt_in               bool        0          0.0       2                    True
+
+grain: one row per customer account | key customer_id unique: True | email unique: True
+
+phone missing by acquisition_channel: {'in_store': 6.3, 'organic': 5.5, 'paid_search': 5.3, 'referral': 6.1, 'social': 6.0}  chi-square p = 0.85
+phone missing by loyalty_tier: {'Basic': 5.9, 'Gold': 5.2, 'Silver': 5.9}  chi-square p = 0.75
+birth_year missing by acquisition_channel: {'in_store': 8.7, 'organic': 8.9, 'paid_search': 8.5, 'referral': 10.2, 'social': 10.1}  chi-square p = 0.66
+birth_year missing by loyalty_tier: {'Basic': 8.7, 'Gold': 10.1, 'Silver': 9.5}  chi-square p = 0.43
+Four checks, none below 0.05: no sign that either column is missing for a particular kind of customer.
+
+_merge
+both          19563
+left_only       739
+right_only        0
+orders with no customer row: 739 from 150 customer ids
+ids between 10001 and 15000 that are absent from customers.csv: 150
+
+share online: {False: 63.3, True: 63.3}
+share returned: {False: 5.6, True: 5.5}
+median order total: {False: 146.7, True: 158.95}
+order total, orphan against matched (Mann-Whitney): p = 0.07
+first and last orphan order: 2024-01-01 to 2025-12-30
+
+FINDINGS
+- One row per account, keyed by customer_id (4,850 rows). phone is missing for 5.8% and
+  birth_year for 9.1%; neither is tied to acquisition channel or loyalty tier.
+- 739 orders (3.6%) belong to 150 customer ids with no row in customers.csv: exactly the 150
+  ids missing from the 10001-15000 range (closed accounts). Their orders span both years and
+  have the same channel mix and return rate as everyone else's.
+CAVEATS
+- 'Not tied to channel or tier' covers the columns checked, not every possible pattern.
+- An inner merge of orders with customers silently drops those 739 orders. Their median total is
+  a little higher ($158.95 against $146.70) but within what chance produces (p = 0.07).</pre><p>Unlike the survey, these gaps show no pattern in the columns checked: a useful contrast, and worth one sentence in a note ("no sign that ... "), not silence. The 739 orphan orders are the 150 closed accounts; an inner merge would have dropped them without a word. <b>Common wrong answer:</b> "phone is missing at random" stated as a fact; four checks cannot show that, only fail to find a pattern.</p>
+  <div class="sec"><h2>4.7 · The lesson page's own quiz</h2><span class="rule"></span></div>
+<ol class="steps">
+  <li><b>Question 1: A.</b> Questions focus the work and let you tell planned comparisons from patterns found by scanning. They may change, openly.</li>
+  <li><b>Question 2: C.</b> <code class="inline">1 2.0</code>: only one row is complete in both columns, and <code class="inline">mean()</code> skips the gaps: (1 + 3) / 2.</li>
+  <li><b>Question 3: B.</b> Customers who answered, mostly store shoppers, rate the staff 4.02.</li>
+  <li><b>Question 4: B.</b> Each response was repeated once per order, so frequent buyers count many times in any average.</li>
+  <li><b>Question 5: C.</b> Look at the size of the gap (0.21) and at what could produce it: here the unhappy 65+ group inside the comparison group.</li>
+</ol>
+  <div class="sec"><h2>Warm-up and Exit Ticket</h2><span class="rule"></span></div>
+      <div class="blk"><div class="h">Warm-up: retrieval from Session 12</div>
+<ol class="steps">
+  <li>Across store-days, staff on duty and revenue correlate at r = 0.88. Give one reason this does not mean "add staff, sell more". <b>Answer:</b> Staff are scheduled from expected demand (weekday, season, promotions), and expected demand also drives revenue: a confounder. Comparing like with like (same store, month, weekday, promo status) the correlation falls to 0.14.</li>
+  <li>For the same two columns Pearson's r is -0.32 and Spearman's is -0.61. What does the gap tell you? <b>Answer:</b> The relationship is consistent in direction but curved (or one influential point is distorting Pearson). Spearman works on ranks, so it measures any monotonic trend. Plot it.</li>
+  <li>Finish the sentence: "A p-value is the probability of ... assuming ..." <b>Answer:</b> ...a result at least as extreme as the one observed, assuming the null hypothesis is true. It is not the probability that the null is true, and it says nothing about the size of the effect.</li>
+  <li>Which test: (a) the mean of two independent groups of different sizes; (b) whether two categorical columns are related? <b>Answer:</b> (a) Welch's t-test, <code class="inline">stats.ttest_ind(x, y, equal_var=False)</code>. (b) Chi-square on a table of counts, <code class="inline">stats.chi2_contingency(pd.crosstab(a, b))</code>. Hold on to (b): today's first test is the same test in another form.</li>
+  <li>You run 20 tests at alpha = 0.05 and one comes back with p = 0.04. What do you say about it? <b>Answer:</b> About one false alarm is expected from 20 tests when nothing is going on. Count every test, correct (Holm), and call a scanned result exploratory.</li>
+</ol>
+      </div>
+      <div class="blk"><div class="h">Exit ticket</div>
+<ol class="steps">
+  <li>Name two things you check about an A/B test before you look at a single conversion. <b>Answer:</b> Any two of: one row per unit (<code class="inline">visitor_id</code> is unique); the split is consistent with the design (<code class="inline">stats.binomtest</code> against 50/50: here p = 0.35); the arms are balanced on things fixed before the page was shown (device, returning). If a check fails: stop, do not adjust.</li>
+  <li>"Significant on mobile, not significant on desktop." What is the right next step, and what word goes in the memo? <b>Answer:</b> Test the difference between the two lifts directly (here 1.49 points, p = 0.049) and correct for the slices. The word is "exploratory": the comparison was not planned.</li>
+  <li>Write the first three steps of the EDA routine and say what "grain" means. <b>Answer:</b> Questions, structure, quality (then one variable, two variables, segments, findings and caveats). Grain: what one row of the table represents.</li>
+</ol>
+      </div>
+      <div class="blk warn"><div class="h">Common wrong answers and what they reveal</div>
+<ul class="tick">
+  <li><b>"A p-value is the chance the result is due to chance" (warm-up 3).</b> The learner has the conditional backward. They will misread peeking ("p was 0.03, so 97% sure") and scans. Have them say the full sentence with "assuming the null is true" once per session until it sticks.</li>
+  <li><b>"The arms must be equal in size" (Q1, exit 1).</b> Confuses balance with equality. The check is against what a fair coin produces, not against 50.00%.</li>
+  <li><b>Mixing points and percent (Q3).</b> Writing "conversion rose 1.17%" or "13 points". Reveals that the learner computes without saying units; insist on the unit in every spoken answer today.</li>
+  <li><b>"Not significant, so no effect" (Q6, lab A).</b> The oldest mistake of Module 4. Ask for the interval: desktop's runs from -0.97 to +1.50 points.</li>
+  <li><b>"Fill the gaps with the mean" (Q9).</b> The learner treats missing values as a nuisance to remove, not as information about who answered.</li>
+  <li><b>A finding offered as a caveat or the reverse (Q12, exit 3).</b> Usually a sign that the note was written as a diary of steps. The F / C / N marking exercise from the lab debrief fixes it.</li>
+</ul>
+      </div>
+
+  <div class="sec"><h2>Checkpoint 1: Rubric, Model Answer and Weak Answers</h2><span class="rule"></span></div>
+<div class="note"><div class="t">The question</div><p>Pinecrest's store buyers believe that <b>December shoppers buy more expensive things</b>. Finance wants a number before it plans next December's stock. Using <code class="inline">data/daily_sales.csv</code>: is the average price per unit sold (revenue ÷ units) higher in December than in the rest of the year? By how much, how sure are you, and is it the same in all four stores?</p></div><p><b>Rubric.</b> Five rows, four levels, 20 points. The levels and row names match the capstone rubric in Lesson 8.1 (Reproducibility is left out: thirty minutes is too short to judge it). "Proficient" in every row (15 points) is a successful checkpoint. Circle one cell per row and write one sentence of advice.</p><table class="rubric"><thead><tr><th>Criterion</th><th>1 · Beginning</th><th>2 · Developing</th><th>3 · Proficient</th><th>4 · Exemplary</th></tr></thead><tbody>
+<tr><td class="crit">Question and plan</td><td>No plan. Code starts at once.</td><td>A plan exists but the measure or the comparison is decided as the code goes along.</td><td>Measure (revenue ÷ units per store-day), comparison (December against other days) and checks are written before the analysis, and the work stays on them.</td><td>Also asks in the plan whether "December against the rest" is a fair split, or revises the plan openly when the monthly profile shows it is not.</td></tr>
+<tr><td class="crit">Data handling</td><td>File used as loaded. Row counts never looked at.</td><td>Some checks (shape, missing values) but the 6 missing revenue values vanish or are filled without comment.</td><td>States the grain (one row per store per day), finds the 6 missing revenue values and says what was done with them; the new column is checked (range or describe).</td><td>Also checks that a different reasonable choice gives the same answer (median instead of mean, ratio of sums instead of mean of daily ratios, or without promo days).</td></tr>
+<tr><td class="crit">Analysis</td><td>Two averages compared, no measure of uncertainty.</td><td>A test is run but only a p-value is reported, or the test does not fit (chi-square on a mean, a paired test on unpaired days).</td><td>Difference in dollars with a 95% confidence interval, a suitable test (Welch or Mann-Whitney) and an effect size (Cohen's d or percent). Stores are compared.</td><td>Also looks at every month and sees the winter plateau (November to February), or says that neighboring days are not independent and what that does to the p-value.</td></tr>
+<tr><td class="crit">Figure</td><td>No figure, or a default chart with no labels.</td><td>Readable and labeled, but the title names the topic ("Price by month") or the chart hides the comparison.</td><td>One figure with a title that states the finding, labeled axes with units, and the comparison easy to see.</td><td>The figure alone carries the answer: stores and months both visible, a reference level marked.</td></tr>
+<tr><td class="crit">Communication</td><td>Retells the steps. No answer to the question.</td><td>An answer, but numbers lack uncertainty or the caveats are generic ("more data is needed").</td><td>Leads with the answer and its size; two specific caveats; one next question; plain language.</td><td>Also never says more than the data allow: separates "revenue per unit is higher" (shown) from "shoppers buy pricier things" (one explanation; mix against prices cannot be told apart from this file).</td></tr>
+</tbody></table><p>Quick guide when time is short: read the note first. A note with the answer, a size, an interval and two specific caveats is at Proficient or better in Analysis and Communication before you open a single cell. Then look for three things in the notebook: a plan above the first code cell, a line that deals with the 6 missing revenue values, and a figure whose title is a sentence.</p>      <div class="blk"><div class="h">Model answer (from a real run)</div>
+<p>The file is <code class="inline">labs/module-13/checkpoint-1/checkpoint1_solution.py</code>: the plan as comments, then six short cells. It took the author about 25 minutes at a learner's pace. Its complete output:</p><pre class="out" style="white-space:pre-wrap">rows: 2903 | one row per store-day: True
+missing revenue: 6 | days with zero units: 0
+store-days used: 2897 | December: 238 | other: 2659
+count    2897.00
+mean       41.92
+std         2.65
+min        33.96
+25%        40.07
+50%        41.73
+75%        43.62
+max        52.20
+
+December: mean $44.95 (median $44.91, n = 238)
+Other months: mean $41.65 (median $41.52, n = 2659)
+Difference: $3.31 per unit (+7.9%), 95% CI $2.97 to $3.65
+Welch t-test p = 2.0e-52, Cohen's d = 1.33
+
+december   False   True   gap
+store                        
+Asheville  41.59  44.45  2.86
+Bend       41.66  45.45  3.79
+Boise      41.64  45.14  3.51
+Flagstaff  41.69  44.77  3.08
+december  False   True   gap
+date                        
+2024      41.65  44.76  3.10
+2025      41.64  45.15  3.51
+
+date
+1     43.55
+2     43.23
+3     41.07
+4     41.19
+5     41.29
+6     40.99
+7     40.99
+8     41.10
+9     41.02
+10    41.27
+11    42.56
+12    44.95
+March to October: mean $41.12. December against those months: $3.84 (+9.3%)
+
+figure saved: checkpoint1_price_per_unit.png
+
+FINDINGS
+- Yes. In December a unit sold in the stores brings in $44.95 on average against $41.65 in the
+  other eleven months: $3.31 more (+7.9%; 95% CI $2.97 to $3.65; Welch p &lt; 0.001;
+  Cohen's d = 1.33, a large effect: the middle December day is above 90% of the other days).
+- It is the same story in all four stores (gaps of $2.86 to $3.79) and in both years
+  ($3.10 and $3.51).
+- December is the peak of a winter season, not a one-month jump: November ($42.56), January
+  ($43.55) and February ($43.23) are also above the March-to-October level of $41.12.
+  Against those months the December gap is $3.84 (+9.3%).
+CAVEATS
+- Revenue per unit rises if shoppers choose pricier items OR if prices are higher: this file cannot
+  tell the two apart (it has no products). "Buy pricier things" is one reading, not a proven one.
+- The unit is a store-day, and neighboring days are alike, so the p-value overstates the evidence.
+  With an effect this large and this consistent, the conclusion does not depend on it.
+- Only two Decembers (238 store-days); 6 store-days had no revenue and were left out.
+NEXT QUESTION
+- Is it the mix? Compare the categories sold in December with other months using order_items and products.</pre><p>The figure it saves is a line chart of mean revenue per unit by month, one line per store, with the March-to-October average marked and the title "Store shoppers pay about $4 more per unit in December, in every store".</p><p><b>Equally correct variations.</b> Mann-Whitney instead of Welch (the distribution is close to symmetric, so both fit). Medians instead of means ($44.91 against $41.52). The ratio of sums instead of the mean of daily ratios ($45.06 against $41.53, +8.5%): say which one was used. A bootstrap interval. A bar chart of twelve months instead of lines. Excluding the promo days at the start of December changes nothing visible. Any of these with a clear note is Proficient or better.</p>
+      </div>
+      <div class="blk"><div class="h">What separates Proficient from Exemplary here</div>
+<ul class="tick">
+  <li><b>The winter plateau.</b> "The rest of the year" contains November ($42.56), January ($43.55) and February ($43.23). Against March to October ($41.12) the December gap is $3.84 (+9.3%), not $3.31. Seeing this means the learner looked at every month before trusting a two-group split.</li>
+  <li><b>The wording about cause.</b> The data show that revenue per unit is higher. "Shoppers buy pricier things" is one explanation; higher winter prices is another; this file cannot separate them. An Exemplary note says so and names the files that could (<code class="inline">order_items</code>, <code class="inline">products</code>).</li>
+  <li><b>Independence.</b> Store-days close together are alike, so 238 December rows are not 238 independent observations and the p-value is too small. With d = 1.33 in every store and both years the conclusion does not depend on it; saying so is the mark of someone who read Lesson 4.5's caveat about days.</li>
+</ul>
+      </div>
+      <div class="blk warn"><div class="h">Common weak answers and what they reveal</div>
+<ul class="tick"><li><b>"December is $44.95, the rest is $41.65, so yes."</b> Two means and no uncertainty: Analysis at level 1. Ask: "How much would those two numbers move with a different set of days?" The interval ($2.97 to $3.65) answers that in one line.</li><li><b>"p = 2.0e-52, so December shoppers definitely buy more expensive things."</b> A tiny p-value read as a large, causal fact. The p-value says the gap is not chance; the size is the $3.31 (+7.9%); and "buy more expensive things" is one explanation. Higher prices in winter would produce the same column. Communication at level 2.</li><li><b>A NaN result, or "the mean is nan".</b> The 6 missing revenue values were passed to NumPy or SciPy (<code class="inline">stats.ttest_ind</code> returns nan when the input holds NaN). Lesson 4.5, Common Mistake 1. Data handling at level 1 or 2; the fix is <code class="inline">dropna(subset=[...])</code> and a sentence saying so.</li><li><b>Total December revenue compared with average monthly revenue.</b> Answers a different question (December is the busiest month) with a different measure. The plan row decides this: the question names revenue ÷ units.</li><li><b>A chi-square test, or a paired t-test.</b> Chi-square is for counts in categories; a paired test needs pairs, and December days have no partner days. Welch's t-test or Mann-Whitney fits two independent groups of a numeric measure.</li><li><b>"December is higher than the rest of the year" and nothing about the other winter months.</b> Correct and still Proficient. Exemplary work plots or tabulates all twelve months and notices that January ($43.55), February ($43.23) and November ($42.56) sit in "the rest" and pull it up: against March to October the gap is $3.84, not $3.31.</li><li><b>Twelve separate month-against-rest tests with no correction, then "four months are significant".</b> A scan presented as planned results. Not wrong to look, but it needs the count of tests and a correction (Lesson 4.5), or one planned comparison plus a descriptive monthly table.</li></ul>
+      </div>
+
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 13 · Answer Key · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

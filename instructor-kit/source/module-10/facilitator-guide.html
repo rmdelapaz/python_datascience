@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facilitator Guide: Session 10</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Instructor copy —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">contains answers &amp; timing · not for students</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Facilitator Guide</div>
+    <h1>Session 10: Saving Figures; Center and Spread</h1>
+    <p class="sub">How to teach the session where Module 3 ends and Module 4 begins. Before the break learners get their charts out of the notebook: they predict a saved figure's size from <code class="inline">figsize</code> and <code class="inline">dpi</code>, find out why text comes out tiny, choose between PNG, SVG and PDF, and build one preset-driven save function. After the break they start statistics with its two most used ideas, center and spread, and discover that Pinecrest's "average order" of $194.60 describes almost nobody.</p>
+    <div class="meta-row">
+      <span class="chip"><b>2</b> lessons</span>
+      <span class="chip"><b>3 hrs</b> session</span>
+      <span class="chip">Lessons <b>3.4–4.1</b></span>
+      <span class="chip">Session <b>10</b> of 21</span>
+    </div>
+  </header>
+
+  <div class="sec"><h2>How to Use This Guide</h2><span class="rule"></span></div>
+  <ul class="tick">
+          <li>Same rhythm as every session: <b>Frame</b> (the goal and a mental model) → <b>Live demo</b> (you type, they type along) → <b>Guided lab</b> (the kit's lab files) → <b>Start the lesson project</b> (so nobody opens it cold at home). The lesson's exercises, quiz and journal are homework.</li>
+          <li><b>Type, do not paste.</b> Every code block in the demo scripts is what to type, in a Jupyter notebook in the course project folder, one cell per step. The one exception is the setup cell of 3.4, which learners may copy from the lesson page. Every output shown was produced by running that code with the course environment (pandas 3.0, Matplotlib 3.11).</li>
+          <li><b>Ask for a prediction before you run.</b> Both lessons are full of results that surprise people (same pixels, different chart; 63% of orders below the average order). The surprise only teaches if they committed to a guess first.</li>
+          <li><b>The lessons are the reference.</b> Keep <code class="inline">matplotlib_saving_figures.html</code> and <code class="inline">statistics_descriptive_part1.html</code> open in browser tabs for the figures (the two same-pixel charts, the raster zoom, the histogram with mean and median) and the tables (destinations, formats, pairing center with spread).</li>
+          <li><span style="color:var(--lab);font-weight:600">Teal</span> = hands-on, <span style="color:var(--warn);font-weight:600">amber</span> = watch-outs. Labs for this session live in <code class="inline">labs/module-10/</code>: starters for learners, solutions for you.</li>
+        </ul>
+  <div class="note warn"><div class="t">The risk of Session 10: two lessons whose mistakes raise no error</div>
+    <p>A chart saved at the wrong size, a blank PNG from <code class="inline">plt.savefig()</code>, a mean reported for skewed data, an SD that silently used the other <code class="inline">ddof</code>: none of these stop the program. Train one habit in each half. Before the break: <b>do not trust, check</b> (<code class="inline">plt.imread(path).shape</code>, then open the file). After the break: <b>every mean gets a median next to it</b>, and every summary gets its <code class="inline">.count()</code>. The second risk is the change of subject at the break. Some learners arrive nervous about statistics; say plainly that today has no formulas to memorize and that every number is one method call.</p>
+  </div>
+
+  <div class="sec"><h2>Before Session 10</h2><span class="rule"></span></div>
+  <ul class="tick lab">
+          <li>☐ Run the lab check from the kit folder: <code class="inline">python3 labs/check_labs.py module-10</code>. Eight lines should say PASS.</li>
+          <li>☐ Copy the starters and the two debug handouts (<code class="inline">*_starter.py</code>, <code class="inline">debug_*.py</code>) from <code class="inline">labs/module-10/</code> to the shared folder. Keep every <code class="inline">*_solution.py</code> on your machine.</li>
+          <li>☐ Projector machine: Jupyter (or VS Code notebooks) opened in the course project folder so that <code class="inline">data/daily_sales.csv</code> and <code class="inline">data/orders.csv</code> resolve; font size at least 18 pt; a file explorer or image viewer open beside it, ready to show the <code class="inline">charts</code> folder.</li>
+          <li>☐ Files used today: <code class="inline">data/daily_sales.csv</code>, <code class="inline">data/orders.csv</code>, <code class="inline">data/store_weather.csv</code>, <code class="inline">data/products.csv</code>, <code class="inline">data/order_items.csv</code>. No servers to start, no accounts, nothing new to install (<code class="inline">matplotlib</code>, <code class="inline">numpy</code>, <code class="inline">pandas</code> and <code class="inline">scipy</code> are already in the course environment).</li>
+          <li>☐ Run the 3.4 demo once on the projector machine and delete the <code class="inline">charts</code> folder afterwards, so the first <code class="inline">out.mkdir(exist_ok=True)</code> visibly creates it.</li>
+          <li>☐ Have a PDF viewer that can zoom to 800% and, if you can, a slide program with one dark slide for the transparent-background trap (optional; the corner-pixel printout makes the same point).</li>
+          <li>☐ Whiteboard, written before learners arrive: <b>pixels = inches x dpi</b> on the left; on the right two empty columns headed <b>Center</b> and <b>Spread</b>.</li>
+          <li>☐ <b>Known environment traps.</b> (1) Notebooks show figures at their own resolution and trim the margins, so the preview is not the file: always open the saved file. (2) File sizes in KB differ a little between machines (fonts); pixel sizes do not. (3) On Windows a PDF that is open in a viewer cannot be overwritten (<code class="inline">PermissionError</code>): close the viewer before re-running a cell. (4) In VS Code the working folder is the workspace root, so <code class="inline">charts/</code> appears there, not next to the notebook. (5) <code class="inline">plt.imread</code> on a PNG returns values from 0 to 1 with 4 channels. (6) pandas 3 prints <code class="inline">dtype: str</code> for text; a learner on pandas 2 sees <code class="inline">object</code>. (7) <code class="inline">np.mean</code> on data with a missing value prints <code class="inline">nan</code>, not an error.</li>
+          <li>☐ Skim the Session 9 homework: the nine-panel category figure (Lesson 3.2 project) and the footwear returns chart (Lesson 3.3 project). The returns chart is your bridge: "It is finished. Now get it onto a slide."</li>
+          <li>☐ Sticky notes or slips of paper for the exit ticket.</li>
+        </ul>
+
+  <div class="sec"><h2>Session 10 Agenda (3 hours)</h2><span class="rule"></span></div>
+  <table class="timing">
+    <thead><tr><th>Clock</th><th>Minutes</th><th>Segment</th><th>What happens</th></tr></thead>
+    <tbody>
+      <tr><td class="t">0:00</td><td class="t">10</td><td>Warm-up</td><td>Five retrieval questions on Session 9 (subplots, customizing), homework check.</td></tr>
+      <tr><td class="t">0:10</td><td class="t">10</td><td><b>3.4</b> Frame and mental model</td><td>The sheet of paper and the scanner; pixels = inches x dpi.</td></tr>
+      <tr><td class="t">0:20</td><td class="t">25</td><td><b>3.4</b> Live demo</td><td>Save, read back, change dpi, the tiny-text problem, formats, presets, a loop that closes.</td></tr>
+      <tr><td class="t">0:45</td><td class="t">20</td><td><b>3.4</b> Guided lab</td><td><code class="inline">labs/module-10/l3_4-saving-figures/pixel_budget_starter.py</code>, then the first two TODOs of <code class="inline">category_price_pack_starter.py</code>.</td></tr>
+      <tr><td class="t">1:05</td><td class="t">10</td><td><b>3.4</b> Start the lesson project</td><td>The Pinecrest Chart Pack, Step 1: everyone prints the four growth figures.</td></tr>
+      <tr><td class="t">1:15</td><td class="t">10</td><td>Break</td><td>Leave the two same-pixel charts side by side on the projector.</td></tr>
+      <tr><td class="t">1:25</td><td class="t">15</td><td><b>4.1</b> Frame and mental model</td><td>Two questions about any column: what is typical, and how much does it vary?</td></tr>
+      <tr><td class="t">1:40</td><td class="t">30</td><td><b>4.1</b> Live demo</td><td>Mean and median of order totals, the tail, mode, variance by hand, ddof, IQR, missing values.</td></tr>
+      <tr><td class="t">2:10</td><td class="t">25</td><td><b>4.1</b> Guided lab</td><td><code class="inline">labs/module-10/l4_1-center-and-spread/orders_per_buyer_starter.py</code>, then Steps 1 to 3 of <code class="inline">visitor_spread_starter.py</code>.</td></tr>
+      <tr><td class="t">2:35</td><td class="t">15</td><td><b>4.1</b> Start the lesson project</td><td>The Typical Order Memo, Step 1: <code class="inline">center_and_spread()</code> prints six numbers.</td></tr>
+      <tr><td class="t">2:50</td><td class="t">10</td><td>Wrap-up</td><td>Exit ticket (3 questions), homework, bring list for Session 11.</td></tr>
+      <tr><td class="t"><b>Total</b></td><td class="t"><b>180</b></td><td></td><td>Ends at 3:00.</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:.9rem;color:var(--ink-2)">The lesson pages estimate 75 + 85 = 160 minutes for a solo learner, and the room has 150 after the warm-up, break and wrap-up, of which 45 go to the kit labs. So the room runs each lesson's frame, a compressed demo of its main thread, the guided lab and the <b>first step of each lesson project</b>. <b>Done in the room:</b> the mental models, saving and verifying a figure, the tiny-text demonstration, presets and the closing loop, mean against median on the order totals, a variance by hand, <code class="inline">ddof</code>, the IQR, both <code class="inline">pixel_budget</code> and <code class="inline">orders_per_buyer</code> labs. <b>Goes home:</b> the rest of both projects (Chart Pack Steps 2 to 4, Typical Order Memo Steps 2 to 5), the unfinished lab steps, the lessons' exercises, the Quick Quizzes, both journals, and the reading-only parts: the raster zoom figure, <code class="inline">rasterized=True</code> for heavy scatter plots, the dark-style chart, <code class="inline">PdfPages</code>, the n - 1 simulation and the FAQs.</p>
+
+  <div class="sec"><h2>Session at a Glance</h2><span class="rule"></span></div>
+  <table class="timing">
+    <thead><tr><th>Lesson</th><th>Topic</th><th>Room time</th><th>Learners leave able to…</th></tr></thead>
+    <tbody>
+      <tr><td class="t">3.4</td><td>Saving Figures</td><td class="t">65 of 75 min</td><td>predict a saved figure's pixel size, choose PNG, SVG or PDF for a destination, and export a set of charts through one preset-driven function</td></tr>
+      <tr><td class="t">4.1</td><td>Descriptive Statistics I: Center and Spread</td><td class="t">85 of 85 min</td><td>compute and explain mean, median, mode, SD and IQR, say which library divides by n or n - 1, and pair the right center with the right spread</td></tr>
+    </tbody>
+  </table>
+
+  <div class="sec"><h2>Warm-up</h2><span class="rule"></span></div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">0:00</span><h3>Warm-up: Retrieval from Session 9</h3><span class="dur">10 min</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Timing</div>
+        <table class="timing"><tbody>
+          <tr><td class="t">6m</td><td>Five questions, no notes: answer alone on paper, compare with a neighbor, then one answer per question out loud</td></tr>
+          <tr><td class="t">3m</td><td>Homework check: the two Session 9 projects</td></tr>
+          <tr><td class="t">1m</td><td>Bridge to today</td></tr>
+        </tbody></table>
+      </div>
+      <div class="blk"><div class="h">Five retrieval questions (no notes, pairs, 60 seconds each)</div>
+        <ol class="steps">
+          <li><code class="inline">fig, axs = plt.subplots(2, 2)</code>: what kind of object is <code class="inline">axs</code>, and what loop visits every panel whatever the grid shape? <b>Answer:</b> A 2-D NumPy array of Axes. <code class="inline">for ax, group in zip(axs.flat, groups):</code> works for every grid shape.</li>
+          <li>What does <code class="inline">sharey=True</code> buy you in a grid of panels, and what does it cost? <b>Answer:</b> Heights become comparable across panels. The cost: small series are flattened, so shape is harder to see. Choose on purpose and tell the reader.</li>
+          <li>Why is a twin-axis chart with two different measures risky, and what should you draw instead? <b>Answer:</b> The two scales are arbitrary, so the chart can be made to say almost anything. Use stacked panels with a shared x axis, or plot a ratio.</li>
+          <li>What should a finished chart's title say? And the subtitle? <b>Answer:</b> The title states the finding. The subtitle says what is plotted, the units and the period.</li>
+          <li>You have a dictionary of style settings. How do you apply it to one block of plotting code without changing the rest of the session? <b>Answer:</b> <code class="inline">with plt.rc_context(style_dict):</code> around the block.</li>
+        </ol>
+      </div>
+      <div class="blk"><div class="h">Homework check</div>
+        <p>Ask for a show of hands: who finished the nine-category small-multiples figure (Lesson 3.2) and the footwear returns chart (Lesson 3.3)? Have one volunteer hold up or share the returns chart and read its title out loud: it should state a finding (the lesson's is "Online orders with footwear come back twice as often": about 14% against the overall online rate, 2.1 times). Ask the lesson's own question of it: "Twice as often as what?" Anyone who did not finish keeps going at home; today's first lesson does not depend on those notebooks beyond the style dictionary, and the setup cell is on the lesson page.</p>
+      </div>
+      <div class="blk"><div class="h">Bridge to today</div>
+        <p>Say: "That chart is finished and it lives in your notebook, where its audience is one person. Before the break we get charts out: onto a web page, a slide, a printed report. After the break we change subject completely and start the statistics module, with the simplest question there is: what is a typical order?"</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="sec"><h2>Lesson Plans</h2><span class="rule"></span></div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">3.4</span><h3>Saving Figures</h3><span class="dur">65 min</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Timing</div>
+        <table class="timing"><tbody>
+          <tr><td class="t">10m</td><td>Frame: the last step is part of the work; the sheet of paper and the scanner</td></tr>
+          <tr><td class="t">25m</td><td>Live demo: 10 short steps, learners type along in a new notebook</td></tr>
+          <tr><td class="t">20m</td><td>Guided lab: <code class="inline">pixel_budget</code>, then the start of <code class="inline">category_price_pack</code></td></tr>
+          <tr><td class="t">10m</td><td>Start the lesson project: the Pinecrest Chart Pack, Step 1</td></tr>
+        </tbody></table>
+      </div>
+      <div class="blk"><div class="h">Objectives (the lesson's own)</div>
+        <ul class="tick">
+          <li>Save a figure with <code class="inline">fig.savefig()</code> and predict its size in pixels from <code class="inline">figsize</code> and <code class="inline">dpi</code></li>
+          <li>Choose between raster formats (PNG) and vector formats (SVG, PDF) for a given destination</li>
+          <li>Explain why text looks tiny or huge in a saved chart, and fix it with the figure size</li>
+          <li>Control the saved area and background with <code class="inline">bbox_inches</code>, <code class="inline">facecolor</code> and <code class="inline">transparent</code></li>
+          <li>Write one function that applies a house style and saves for web, slides or print, then use it in a loop that closes each figure</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Mental model to say</div>
+        <p>Say: "A Matplotlib Figure is a sheet of paper with a size in inches. Everything on it, including the text, is laid out on that sheet. Saving to an image is like scanning the sheet: the scanner's resolution, in dots per inch, decides how many pixels you get. A bigger sheet and a finer scan both give more pixels, but they are not the same thing. A finer scan makes everything sharper. A bigger sheet makes the text smaller relative to the page."</p>
+        <p>Hold up a sheet of paper with one word written on it, then a sheet twice the size with the same word at the same handwriting size. "Same pen. Which page looks empty?" Write on the board and leave it up all session: <b>pixels = inches x dpi</b> and under it <b>figsize sets how big the text looks; dpi sets how many pixels you get.</b> The lesson's decision chart (printed or resized: PDF or SVG; a slide: PNG at slide size; web or email: PNG at about 110 dpi) is worth showing from the lesson page once.</p>
+      </div>
+      <div class="blk"><div class="h">Live demo (you type, they follow)</div>
+        <p>New notebook <code class="inline">session10_saving.ipynb</code> in the course project folder (so that <code class="inline">data/</code> is next to it). Everything is saved into a <code class="inline">charts</code> folder that the code creates. Do not call <code class="inline">plt.show()</code> in the demo: in a notebook the figure appears under the cell, and the habit to build today is <b>judge the saved file, not the notebook preview</b>. Keep a file explorer or image viewer open on the <code class="inline">charts</code> folder.</p>
+        <ol class="steps">
+          <li><b>Set the stage (3m).</b> This first cell is the lesson's own setup: the one cell today that learners may copy from the lesson page instead of typing. Say: "Nothing new here. It is the monthly table from Lesson 3.1 and a chart function in the style of Lesson 3.3. Today is about what happens after the chart is drawn."
+<pre class="code"><span class="k">from</span> pathlib <span class="k">import</span> Path
+
+<span class="k">import</span> matplotlib.pyplot <span class="k">as</span> plt
+<span class="k">import</span> numpy <span class="k">as</span> np
+<span class="k">import</span> pandas <span class="k">as</span> pd
+<span class="k">from</span> matplotlib.ticker <span class="k">import</span> FuncFormatter
+
+daily = pd.read_csv(<span class="s">"data/daily_sales.csv"</span>, parse_dates=[<span class="s">"date"</span>])
+daily[<span class="s">"month"</span>] = daily[<span class="s">"date"</span>].dt.to_period(<span class="s">"M"</span>).dt.to_timestamp()
+monthly = daily.pivot_table(index=<span class="s">"month"</span>, columns=<span class="s">"store"</span>,
+                            values=<span class="s">"revenue"</span>, aggfunc=<span class="s">"sum"</span>)
+stores = list(monthly.columns)
+
+<span class="k">def</span> thousands(x, pos):
+    <span class="k">return</span> <span class="s">f"${x / 1000:,.0f}K"</span>
+
+<span class="k">def</span> revenue_chart(store, figsize=(<span class="s">8</span>, <span class="s">4</span>)):
+    <span class="s">"""Draw one store's monthly revenue. Returns the figure and its Axes."""</span>
+    fig, ax = plt.subplots(figsize=figsize, layout=<span class="s">"constrained"</span>)
+    ax.plot(monthly.index, monthly[store], color=<span class="s">"#667eea"</span>,
+            marker=<span class="s">"o"</span>, markersize=<span class="s">3</span>)
+    ax.set_title(<span class="s">f"{store}: monthly in-store revenue"</span>,
+                 loc=<span class="s">"left"</span>, fontweight=<span class="s">"bold"</span>)
+    ax.yaxis.set_major_formatter(FuncFormatter(thousands))
+    ax.set_ylim(bottom=<span class="s">0</span>)
+    ax.spines[[<span class="s">"top"</span>, <span class="s">"right"</span>]].set_visible(<span class="k">False</span>)
+    <span class="k">return</span> fig, ax
+
+fig, ax = revenue_chart(<span class="s">"Boise"</span>)
+print(monthly.shape, stores)</pre>
+<pre class="out">(24, 4) ['Asheville', 'Bend', 'Boise', 'Flagstaff']</pre>
+            24 months by 4 stores. In a notebook the Boise chart appears under the cell.</li>
+          <li><b>Save it, then prove it (3m).</b> Say: "Saving is one method call on the figure. Then we do not trust, we check: read the file back." Ask before running the last line: "8 by 4 inches. How many pixels?"
+<pre class="code">out = Path(<span class="s">"charts"</span>)
+out.mkdir(exist_ok=<span class="k">True</span>)
+
+fig.savefig(out / <span class="s">"boise.png"</span>)
+
+saved = out / <span class="s">"boise.png"</span>
+print(saved.exists(), <span class="s">f"{saved.stat().st_size / 1024:.0f} KB"</span>)
+print(plt.imread(saved).shape)</pre>
+<pre class="out">True 35 KB
+(400, 800, 4)</pre>
+            Point at the shape: rows first (400 high), then columns (800 wide), then 4 channels (red, green, blue, alpha). The default dpi is 100. The size in KB can differ a little on other machines.</li>
+          <li><b>One multiplication (3m).</b> Write <b>pixels = inches x dpi</b> on the board. Have the room predict all three lines before you run.
+<pre class="code"><span class="k">for</span> dpi <span class="k">in</span> (<span class="s">72</span>, <span class="s">150</span>, <span class="s">300</span>):
+    path = out / <span class="s">f"boise_{dpi}dpi.png"</span>
+    fig.savefig(path, dpi=dpi)
+    height, width, channels = plt.imread(path).shape
+    kb = path.stat().st_size / <span class="s">1024</span>
+    print(<span class="s">f"dpi={dpi:&gt;3}: {width} x {height} pixels, {kb:&gt;4.0f} KB"</span>)</pre>
+<pre class="out">dpi= 72: 576 x 288 pixels,   24 KB
+dpi=150: 1200 x 600 pixels,   57 KB
+dpi=300: 2400 x 1200 pixels,  128 KB</pre>
+            Say: "Same sheet of paper, scanned at three resolutions. The picture is identical. Only the number of pixels describing it changes."</li>
+          <li><b>The tiny-text problem (4m).</b> The most important two minutes of the lesson. Say: "I need 1,200 pixels wide. Twelve inches at 100, or six inches at 200. Same pixels. Same chart?" Take a show of hands, then run and open both files side by side in the file explorer or an image viewer.
+<pre class="code">big_canvas, _ = revenue_chart(<span class="s">"Boise"</span>, figsize=(<span class="s">12</span>, <span class="s">6</span>))
+big_canvas.savefig(out / <span class="s">"canvas_12in.png"</span>, dpi=<span class="s">100</span>)
+
+small_canvas, _ = revenue_chart(<span class="s">"Boise"</span>, figsize=(<span class="s">6</span>, <span class="s">3</span>))
+small_canvas.savefig(out / <span class="s">"canvas_6in.png"</span>, dpi=<span class="s">200</span>)
+
+<span class="k">for</span> name <span class="k">in</span> (<span class="s">"canvas_12in.png"</span>, <span class="s">"canvas_6in.png"</span>):
+    print(name, plt.imread(out / name).shape[:<span class="s">2</span>])
+plt.close(big_canvas)
+plt.close(small_canvas)</pre>
+<pre class="out">canvas_12in.png (600, 1200)
+canvas_6in.png (600, 1200)</pre>
+            Say: "Font sizes are in points, and a point is 1/72 of an inch: a physical length on the sheet. On the 6-inch sheet the same title is twice as prominent. <b>figsize controls how big the text looks. dpi controls how many pixels you get.</b>" Leave the two files on screen for the break.</li>
+          <li><b>Raster or vector (3m).</b> Say: "A PNG is a grid of colored squares. An SVG or a PDF is a list of drawing instructions, sharp at any size." The format comes from the extension.
+<pre class="code"><span class="k">for</span> extension <span class="k">in</span> (<span class="s">"png"</span>, <span class="s">"svg"</span>, <span class="s">"pdf"</span>):
+    path = out / <span class="s">f"boise_formats.{extension}"</span>
+    fig.savefig(path)
+    print(<span class="s">f"{path.name:&lt;20} {path.stat().st_size / 1024:&gt;5.1f} KB"</span>)</pre>
+<pre class="out">boise_formats.png     35.0 KB
+boise_formats.svg     31.6 KB
+boise_formats.pdf     13.3 KB</pre>
+            Open the PDF and zoom to 800%: still sharp, and the title can be selected as text. Then zoom the PNG. Rule of thumb for the board: PNG for screens and slides, PDF or SVG for print and anything that will be resized, never JPEG for charts.</li>
+          <li><b>The tight bounding box changes the size (2m).</b> Say: "You will see <code class="inline">bbox_inches="tight"</code> in every tutorial. Watch what it does to the size we asked for."
+<pre class="code">fig.savefig(out / <span class="s">"boise_default.png"</span>, dpi=<span class="s">100</span>)
+fig.savefig(out / <span class="s">"boise_tight.png"</span>, dpi=<span class="s">100</span>, bbox_inches=<span class="s">"tight"</span>)
+
+<span class="k">for</span> name <span class="k">in</span> (<span class="s">"boise_default.png"</span>, <span class="s">"boise_tight.png"</span>):
+    rows, cols = plt.imread(out / name).shape[:<span class="s">2</span>]
+    print(<span class="s">f"{name:&lt;20} {cols} x {rows}"</span>)</pre>
+<pre class="out">boise_default.png    800 x 400
+boise_tight.png      811 x 411</pre>
+            Say: "It guarantees nothing is cut off and gives up the exact size. Our figures use <code class="inline">layout="constrained"</code>, so everything already fits. When a slide needs exactly 1,920 by 1,080, leave it off."</li>
+          <li><b>Backgrounds (2m).</b> Say: "Transparent sounds perfect for slides. Look at the corner pixel."
+<pre class="code">fig.savefig(out / <span class="s">"boise_transparent.png"</span>, transparent=<span class="k">True</span>)
+corner = plt.imread(out / <span class="s">"boise_transparent.png"</span>)[<span class="s">0</span>, <span class="s">0</span>]
+print(<span class="s">"top-left pixel (red, green, blue, alpha):"</span>, corner)</pre>
+<pre class="out">top-left pixel (red, green, blue, alpha): [1. 1. 1. 0.]</pre>
+            Alpha 0 means fully see-through. Say: "The background is gone. The title is still black. On a dark slide it disappears." The safe default is <code class="inline">fig.savefig(path, facecolor="white")</code>; for a dark slide, draw in a dark style (the lesson shows it; do not type it now).</li>
+          <li><b>Put the decisions in one place (4m).</b> Say: "I know the settings now. Typing them correctly every time is how mistakes creep in. One table, two small functions." Type the table slowly and say each pixel size out loud as you type the row.
+<pre class="code">PRESETS = {
+    <span class="s">"web"</span>:   {<span class="s">"figsize"</span>: (<span class="s">9</span>, <span class="s">4.5</span>),   <span class="s">"dpi"</span>: <span class="s">110</span>, <span class="s">"extension"</span>: <span class="s">"png"</span>},
+    <span class="s">"slide"</span>: {<span class="s">"figsize"</span>: (<span class="s">9.6</span>, <span class="s">5.4</span>), <span class="s">"dpi"</span>: <span class="s">200</span>, <span class="s">"extension"</span>: <span class="s">"png"</span>},
+    <span class="s">"print"</span>: {<span class="s">"figsize"</span>: (<span class="s">6.5</span>, <span class="s">3.5</span>), <span class="s">"dpi"</span>: <span class="s">300</span>, <span class="s">"extension"</span>: <span class="s">"pdf"</span>},
+}
+
+<span class="k">def</span> new_figure(kind=<span class="s">"web"</span>):
+    <span class="s">"""Create a figure sized for 'web', 'slide' or 'print'."""</span>
+    size = PRESETS[kind][<span class="s">"figsize"</span>]
+    <span class="k">return</span> plt.subplots(figsize=size, layout=<span class="s">"constrained"</span>)
+
+<span class="k">def</span> save_chart(fig, name, kind=<span class="s">"web"</span>, folder=<span class="s">"charts"</span>):
+    <span class="s">"""Save fig as folder/name_kind.ext. Returns the path."""</span>
+    preset = PRESETS[kind]
+    folder = Path(folder)
+    folder.mkdir(parents=<span class="k">True</span>, exist_ok=<span class="k">True</span>)
+    path = folder / <span class="s">f"{name}_{kind}.{preset['extension']}"</span>
+    fig.savefig(path, dpi=preset[<span class="s">"dpi"</span>], facecolor=<span class="s">"white"</span>)
+    <span class="k">return</span> path
+
+<span class="k">def</span> draw_revenue(ax, store):
+    ax.plot(monthly.index, monthly[store], color=<span class="s">"#667eea"</span>,
+            marker=<span class="s">"o"</span>, markersize=<span class="s">3</span>)
+    ax.set_title(<span class="s">f"{store}: monthly in-store revenue"</span>,
+                 loc=<span class="s">"left"</span>, fontweight=<span class="s">"bold"</span>)
+    ax.yaxis.set_major_formatter(FuncFormatter(thousands))
+    ax.set_ylim(bottom=<span class="s">0</span>)
+
+<span class="k">for</span> kind, preset <span class="k">in</span> PRESETS.items():
+    width, height = preset[<span class="s">"figsize"</span>]
+    dpi = preset[<span class="s">"dpi"</span>]
+    print(kind, round(width * dpi), <span class="s">"x"</span>, round(height * dpi))</pre>
+<pre class="out">web 990 x 495
+slide 1920 x 1080
+print 1950 x 1050</pre>
+            The figure is created at the right size <b>before</b> drawing, because the size decides how the text relates to the chart. (The lesson also wraps the loop in the <code class="inline">pinecrest_style</code> dictionary from Lesson 3.3; learners who have it should use it.)</li>
+          <li><b>Many charts: create, draw, save, close (3m).</b> Say: "pyplot keeps every figure alive until you close it. A notebook hides that. A loop does not." Run the loop, then ask what the last line will print.
+<pre class="code">plt.close(<span class="s">"all"</span>)
+<span class="k">for</span> store <span class="k">in</span> stores:
+    chart, ax = new_figure(<span class="s">"web"</span>)
+    draw_revenue(ax, store)
+    path = save_chart(chart, store.lower())
+    plt.close(chart)
+    rows, cols = plt.imread(path).shape[:<span class="s">2</span>]
+    print(path, <span class="s">f"{cols} x {rows}"</span>)
+
+print(<span class="s">"open figures:"</span>, len(plt.get_fignums()))</pre>
+<pre class="out">charts/asheville_web.png 990 x 495
+charts/bend_web.png 990 x 495
+charts/boise_web.png 990 x 495
+charts/flagstaff_web.png 990 x 495
+open figures: 0</pre>
+            Comment out <code class="inline">plt.close(chart)</code>, run again and show <code class="inline">open figures: 4</code>. Say: "Four is harmless. Four hundred is a memory problem." Put the line back.</li>
+          <li><b>Make the classic mistake on purpose (2m).</b> Say: "Here is the bug that reaches the meeting." Type it exactly, with <code class="inline">plt.savefig</code>.
+<pre class="code">chart, ax = revenue_chart(<span class="s">"Bend"</span>)     <span class="c"># the chart you care about</span>
+scratch = plt.figure()                <span class="c"># later, another figure is created</span>
+plt.savefig(out / <span class="s">"bend_oops.png"</span>)    <span class="c"># saves the *current* figure</span>
+
+image = plt.imread(out / <span class="s">"bend_oops.png"</span>)
+print(<span class="s">"every pixel is white:"</span>, bool((image[..., :<span class="s">3</span>] == <span class="s">1</span>).all()))
+plt.close(<span class="s">"all"</span>)</pre>
+<pre class="out">every pixel is white: True</pre>
+            No error, and a blank file. Say: "<code class="inline">plt.savefig()</code> saves whatever pyplot thinks is current. You are holding the figure in a variable, so say which one: <code class="inline">chart.savefig(...)</code>."</li>
+        </ol>
+      </div>
+      <div class="blk warn"><div class="h">Three mistakes to expect, and how to coach each</div>
+        <ul class="tick">
+          <li><b>Raising dpi to fix small text.</b> The slide's labels are tiny, so the learner saves again at <code class="inline">dpi=600</code>: a file many times larger with text exactly as small. Coach with the board rule: "Which knob changes how big the text is on the sheet?" Then have them halve the <code class="inline">figsize</code> and double the dpi, and compare <code class="inline">plt.imread(path).shape</code> before and after: same pixels, bigger text.</li>
+          <li><b><code class="inline">plt.savefig()</code> instead of <code class="inline">fig.savefig()</code></b> (often after <code class="inline">plt.show()</code> in a script, or after another figure was created). No error, a blank or wrong file. Coach: "Which figure did you ask to be saved? Show me its name in that line." The check that catches it is the lesson's: <code class="inline">bool((plt.imread(path)[..., :3] == 1).all())</code>.</li>
+          <li><b>Reading <code class="inline">imread().shape</code> as (width, height), or expecting an exact size with <code class="inline">bbox_inches="tight"</code>.</b> Coach the first with "rows first, like a DataFrame: <code class="inline">shape</code> is (rows, columns)". For the second, ask them to print the shape with and without the argument (800 x 400 against 811 x 411 in the demo) and decide whether their destination needs an exact size.</li>
+        </ul>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab</div>
+        <p><b>First 12 minutes, everyone:</b> <code class="inline">labs/module-10/l3_4-saving-figures/pixel_budget_starter.py</code> (reference: <code class="inline">labs/module-10/l3_4-saving-figures/pixel_budget_solution.py</code>). Before anyone types, have them write the Step 1 prediction in the comment: 7 x 3.5 inches at 100 dpi. Walk the room during TODO 2; the usual stall is realizing the big sheet needs dpi 100 and the small one dpi 200. Stop the room after TODO 3 and take three answers to "which is easier to read, and why?" Expected by the end: <code class="inline">email: (700, 350)</code>, two <code class="inline">(1400, 700)</code> lines, <code class="inline">5 files</code>, <code class="inline">open figures: 0</code>.</p>
+        <p><b>Last 8 minutes:</b> <code class="inline">labs/module-10/l3_4-saving-figures/category_price_pack_starter.py</code>, TODO 1 and TODO 2 only (the two presets and the one-line save). TODO 3 to 4 finish at home; the manifest at the bottom tells them when they are done (7 files, web 960 x 480, slides 1920 x 1080, 0 open figures). Labs write into an <code class="inline">output</code> folder next to the lab file and never call <code class="inline">plt.show()</code>: learners open the saved files, which is the point.</p>
+        <p><b>Early finishers:</b> <code class="inline">labs/module-10/l3_4-saving-figures/debug_blank_slide.py</code>, a script that runs without an error and gets three things wrong.</p>
+      </div>
+      <div class="blk lab"><div class="h">Start the lesson project</div>
+        <p>The lesson's project is <b>The Pinecrest Chart Pack</b> (about 30 minutes alone): one chart per store, saved for web and print, plus a four-page PDF, verified by a manifest. In the room do <b>Step 1 only</b>: learners continue in the demo notebook (the project reuses <code class="inline">PRESETS</code>, <code class="inline">new_figure()</code> and <code class="inline">save_chart()</code>), type the <code class="inline">yearly</code> pivot and <code class="inline">growth</code>, and print it. Everyone should see Asheville -5.0, Bend 3.8, Boise 9.3, Flagstaff 19.7 before the break. Read the completion checklist out loud so they know what "done" means at home: 9 files, every web PNG exactly 990 by 495, 4 pages, 0 open figures. Steps 2 to 4 are homework.</p>
+      </div>
+      <div class="blk"><div class="h">Checks for understanding</div>
+        <p>Ask these out loud during the demo and the lab (cold call, then pair-share):</p>
+        <ol class="steps">
+          <li>"I need an image 1,000 pixels wide. Give me two different <code class="inline">figsize</code> and <code class="inline">dpi</code> pairs. How will the two files differ?" <b>Answer:</b> For example 10 inches at 100 dpi and 5 inches at 200 dpi. Same pixels; in the 5-inch version the text and lines are twice as large relative to the chart.</li>
+          <li>"The designer will resize my chart for the annual report. Which format, and why?" <b>Answer:</b> PDF or SVG: vector files are redrawn sharply at any size. A PNG only has the pixels it was saved with.</li>
+          <li>"My loop saves 300 charts and the kernel dies. What is missing?" <b>Answer:</b> <code class="inline">plt.close(fig)</code> after each save. pyplot keeps every figure alive until it is closed.</li>
+        </ol>
+        <p>Workbook self-check, items Q1 to Q6 (do two in the room if time allows; the rest is homework):</p>
+        <p style="font-size:.9rem;margin:.2rem 0">Answers: <b>Q1</b> <span data-sc="1">B) 1,080 wide by 600 high</span>; <b>Q2</b> <span data-sc="2"><code class="inline">(150, 200)</code></span>; <b>Q3</b> <span data-sc="3">D) In B the text, lines and markers are twice as large relative to the chart</span>; <b>Q4</b> <span data-sc="4">A) Pass <code class="inline">rasterized=True</code> to the scatter layer and keep saving as PDF</span>; <b>Q5</b> <span data-sc="5">C) Only the background became transparent; the text is still black, on a dark slide</span>; <b>Q6</b> <span data-sc="6"><code class="inline">1</code></span>. Full set with explanations in the Answer Key.</p>
+      </div>
+      <div class="blk"><div class="h">Differentiation</div>
+        <p><b>Support:</b> give learners the <code class="inline">PRESETS</code> table on paper and have them fill in a fourth column, the pixel size, by hand before running anything. Pair anyone who was absent for Lesson 3.3 with a neighbor for the setup cell; they do not need <code class="inline">pinecrest_style</code> to follow today. If typing is slow, let them copy the <code class="inline">save_chart()</code> cell from the lesson page and spend the time on the loop.</p>
+        <p><b>Stretch:</b> lesson Exercise 2 (add a <code class="inline">"square"</code> preset of 1,080 by 1,080 and choose the inches so the text is comfortable), or Exercise 4 (write PNG metadata and read it back with Pillow). Strong learners can start the bonus challenge: move the presets and both functions into <code class="inline">charting.py</code> and import them.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">4.1</span><h3>Descriptive Statistics I: Center and Spread</h3><span class="dur">85 min</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Timing</div>
+        <table class="timing"><tbody>
+          <tr><td class="t">15m</td><td>Frame: two questions about any column; the restaurant review; why this module exists</td></tr>
+          <tr><td class="t">30m</td><td>Live demo: 11 short steps on order totals, weather and five days of tent sales</td></tr>
+          <tr><td class="t">25m</td><td>Guided lab: <code class="inline">orders_per_buyer</code>, then Steps 1 to 3 of <code class="inline">visitor_spread</code></td></tr>
+          <tr><td class="t">15m</td><td>Start the lesson project: the Typical Order Memo, Step 1</td></tr>
+        </tbody></table>
+      </div>
+      <div class="blk"><div class="h">Objectives (the lesson's own)</div>
+        <ul class="tick">
+          <li>Compute the mean, median and mode of a column with pandas and say what each one measures</li>
+          <li>Recognize when the mean misleads, and choose the median instead, using Pinecrest's skewed order totals</li>
+          <li>Compute range, variance, standard deviation and interquartile range (IQR), and explain each in the units of the data</li>
+          <li>Explain the difference between dividing by <code class="inline">n</code> and by <code class="inline">n - 1</code>, and predict which one NumPy and pandas use by default</li>
+          <li>Pair the right measure of center with the right measure of spread for a given column</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Mental model to say</div>
+        <p>Say: "Nobody reads 1,000 reviews before choosing a restaurant. You look at the average rating, and then, if you are careful, at how much the reviews disagree. A 4.2 where everyone gave a 4 is a different restaurant from a 4.2 made of fives and ones. Two numbers, what is typical and how much it varies, are the least you need to describe anything honestly."</p>
+        <p>Name the two questions and write them as column headings on the board: <b>Center: what is typical?</b> (mean, median, mode) and <b>Spread: how much does it vary?</b> (range, variance, SD, IQR). Fill the columns in as the demo goes. Open Module 4 in one sentence: "Modules 1 to 3 gave you tables and charts. This module turns them into claims you can defend." Then the hook: "'Our average order is $195' is true. And most orders are nowhere near $195. By the break after next you will be able to say why."</p>
+      </div>
+      <div class="blk"><div class="h">Live demo (you type, they follow)</div>
+        <p>New notebook <code class="inline">session10_center_spread.ipynb</code>. The numbers in the demo are the lesson's own, so learners can find every step again on the lesson page tonight. Ask for a prediction before every cell that prints a comparison. Step 4 draws a histogram: save it with <code class="inline">fig.savefig</code> as practiced before the break.</p>
+        <ol class="steps">
+          <li><b>The mean is a balance point (3m).</b> New notebook. Say: "The marketing lead wants the average order value for a slide. Easy: add them up, divide by how many."
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+<span class="k">import</span> pandas <span class="k">as</span> pd
+
+orders = pd.read_csv(<span class="s">"data/orders.csv"</span>, parse_dates=[<span class="s">"order_date"</span>])
+totals = orders[<span class="s">"order_total"</span>]
+
+print(orders.shape)
+print(totals.sum(), len(totals))
+print(totals.sum() / len(totals))
+print(totals.mean())</pre>
+<pre class="out">(20302, 11)
+3950701.45 20302
+194.59666289035565
+194.59666289035565</pre>
+            Say: "About $3.95 million over 20,302 orders: $194.60. Picture every order as a weight on a ruler. The mean is where the ruler balances."</li>
+          <li><b>One far-away weight (3m).</b> Say: "Five ordinary orders. Then the same five plus one of Pinecrest's real bulk orders." Have learners predict the second mean.
+<pre class="code">five = np.array([<span class="s">42.50</span>, <span class="s">88.00</span>, <span class="s">150.00</span>, <span class="s">163.25</span>, <span class="s">271.00</span>])
+six = np.append(five, <span class="s">4893.00</span>)
+
+print(<span class="s">"five orders: mean"</span>, five.mean(), <span class="s">" median"</span>, np.median(five))
+print(<span class="s">"six orders : mean"</span>, six.mean(), <span class="s">" median"</span>, np.median(six))</pre>
+<pre class="out">five orders: mean 142.95  median 150.0
+six orders : mean 934.625  median 156.625</pre>
+            Say: "One order moved the mean from about $143 to about $935, a number that describes none of the six. The median moved by $6.63. A statistic that barely reacts to extremes is called <b>robust</b>."</li>
+          <li><b>The real column (3m).</b> Ask first: "What share of orders is below the average order? Half?" Write the guesses on the board.
+<pre class="code">print(<span class="s">"mean  :"</span>, round(totals.mean(), <span class="s">2</span>))
+print(<span class="s">"median:"</span>, totals.median())
+below = totals &lt; totals.mean()
+print(<span class="s">"share of orders below the mean:"</span>, round(below.mean(), <span class="s">3</span>))</pre>
+<pre class="out">mean  : 194.6
+median: 146.85
+share of orders below the mean: 0.626</pre>
+            Say: "63% of orders are smaller than the average order. Neither number is wrong; they answer different questions." Dwell on the last line: a comparison gives True/False, True counts as 1, so <b>the mean of a boolean column is a proportion</b>. They will use that all module.</li>
+          <li><b>See the tail (3m).</b> Say: "A picture explains the $50 gap faster than a formula." Type the histogram; in a notebook it appears under the cell.
+<pre class="code"><span class="k">from</span> pathlib <span class="k">import</span> Path
+<span class="k">import</span> matplotlib.pyplot <span class="k">as</span> plt
+
+fig, ax = plt.subplots(figsize=(<span class="s">9</span>, <span class="s">4</span>), layout=<span class="s">"constrained"</span>)
+ax.hist(totals[totals &lt;= <span class="s">1000</span>], bins=<span class="s">50</span>, color=<span class="s">"#667eea"</span>, edgecolor=<span class="s">"white"</span>)
+ax.axvline(totals.median(), color=<span class="s">"#15803d"</span>, linewidth=<span class="s">2.5</span>,
+           label=<span class="s">f"median ${totals.median():,.2f}"</span>)
+ax.axvline(totals.mean(), color=<span class="s">"#b91c1c"</span>, linewidth=<span class="s">2.5</span>, linestyle=<span class="s">"--"</span>,
+           label=<span class="s">f"mean ${totals.mean():,.2f}"</span>)
+ax.set_xlabel(<span class="s">"Order total ($)"</span>)
+ax.set_ylabel(<span class="s">"Number of orders"</span>)
+ax.legend()
+Path(<span class="s">"charts"</span>).mkdir(exist_ok=<span class="k">True</span>)
+fig.savefig(<span class="s">"charts/order_totals.png"</span>, dpi=<span class="s">110</span>)
+
+print(<span class="s">"orders above $1,000 (not drawn):"</span>, (totals &gt; <span class="s">1000</span>).sum())</pre>
+<pre class="out">orders above $1,000 (not drawn): 37</pre>
+            Name the shape: <b>right-skewed</b>, the normal shape of anything about money. The tail has leverage on the balance point, so the mean sits to the right of the median. (This is also the Session's first half in action: the chart is saved for the web.)</li>
+          <li><b>Check the tempting explanation (3m).</b> Say: "Someone will say it is just the twelve bulk orders. Check before you believe it."
+<pre class="code">is_bulk = totals &gt; <span class="s">2000</span>
+print(<span class="s">"bulk orders:"</span>, is_bulk.sum())
+print(<span class="s">"mean without them  :"</span>, round(totals[~is_bulk].mean(), <span class="s">2</span>))
+print(<span class="s">"median without them:"</span>, totals[~is_bulk].median())
+
+big = totals &gt; <span class="s">500</span>
+print(<span class="s">"orders above $500:"</span>, big.sum(), <span class="s">f"({big.mean():.1%} of all orders)"</span>)</pre>
+<pre class="out">bulk orders: 12
+mean without them  : 192.63
+median without them: 146.85
+orders above $500: 1131 (5.6% of all orders)</pre>
+            Say: "Removing them moves the mean by about $2. The gap comes from the whole tail: 1,131 ordinary orders above $500, a tent and a sleeping bag." The honest conclusion for the board: <b>mean for totals, median for a typical order, report both and say which is which.</b></li>
+          <li><b>The mode (2m).</b> Say: "The only center that works for categories."
+<pre class="code">print(orders[<span class="s">"payment_method"</span>].mode())
+print(pd.Series([<span class="s">1</span>, <span class="s">1</span>, <span class="s">2</span>, <span class="s">2</span>, <span class="s">3</span>]).mode().tolist())
+top = totals.mode()[<span class="s">0</span>]
+print(top, <span class="s">"appears"</span>, (totals == top).sum(), <span class="s">"times out of"</span>, len(totals))</pre>
+<pre class="out">0    card
+Name: payment_method, dtype: str
+[1, 2]
+53.9 appears 114 times out of 20302</pre>
+            Three points: <code class="inline">.mode()</code> returns a Series because ties happen (take <code class="inline">[0]</code> for one value); pandas 3 prints <code class="inline">dtype: str</code> (older versions say <code class="inline">object</code>); and the mode of a measured quantity is mostly an accident ($53.90 is mostly one popular $46.95 item plus $6.95 shipping).</li>
+          <li><b>Same center, different spread (3m).</b> Say: "Center is half the story. Two store cities, daily high temperature."
+<pre class="code">weather = pd.read_csv(<span class="s">"data/store_weather.csv"</span>, parse_dates=[<span class="s">"date"</span>])
+boise = weather.loc[weather[<span class="s">"city"</span>] == <span class="s">"Boise"</span>, <span class="s">"high_f"</span>]
+asheville = weather.loc[weather[<span class="s">"city"</span>] == <span class="s">"Asheville"</span>, <span class="s">"high_f"</span>]
+
+<span class="k">for</span> name, city <span class="k">in</span> [(<span class="s">"Boise"</span>, boise), (<span class="s">"Asheville"</span>, asheville)]:
+    print(<span class="s">f"{name:&lt;10} mean {city.mean():5.1f}  median {city.median():5.1f}"</span>
+          <span class="s">f"  range {city.max() - city.min():3d}  SD {city.std():5.1f}"</span>)</pre>
+<pre class="out">Boise      mean  62.4  median  63.0  range 102  SD  22.5
+Asheville  mean  66.5  median  66.0  range  79  SD  15.5</pre>
+            Say: "Four degrees apart on average. Nobody who has lived in both would call the climates alike. The range uses just two days, the two strangest ones. The SD uses all 731."</li>
+          <li><b>A variance by hand (4m).</b> Do this one on the board first, then in code. Five days of tent sales: 4, 7, 5, 10, 4.
+<pre class="code">tents = np.array([<span class="s">4</span>, <span class="s">7</span>, <span class="s">5</span>, <span class="s">10</span>, <span class="s">4</span>])
+deviations = tents - tents.mean()
+
+print(<span class="s">"mean              :"</span>, tents.mean())
+print(<span class="s">"deviations        :"</span>, deviations, <span class="s">" sum:"</span>, deviations.sum())
+squared = deviations ** <span class="s">2</span>
+print(<span class="s">"squared deviations:"</span>, squared, <span class="s">" sum:"</span>, squared.sum())
+print(<span class="s">"divide by n       :"</span>, squared.sum() / <span class="s">5</span>)
+print(<span class="s">"divide by n - 1   :"</span>, squared.sum() / <span class="s">4</span>)
+print(<span class="s">"square root of 6.5:"</span>, round(np.sqrt(<span class="s">6.5</span>), <span class="s">2</span>))</pre>
+<pre class="out">mean              : 6.0
+deviations        : [-2.  1. -1.  4. -2.]  sum: 0.0
+squared deviations: [ 4.  1.  1. 16.  4.]  sum: 26.0
+divide by n       : 5.2
+divide by n - 1   : 6.5
+square root of 6.5: 2.55</pre>
+            Say: "Plain deviations cancel to zero: the balance point again. Squaring makes them positive and counts big misses more. The variance is in tents squared, so take the square root to get back to tents: the standard deviation. Six tents a day, give or take about 2.5."</li>
+          <li><b>Two libraries, two answers (3m).</b> Ask the room to predict which of the three lines will match.
+<pre class="code">print(<span class="s">"NumPy  np.std(tents)          :"</span>, round(np.std(tents), <span class="s">4</span>))
+print(<span class="s">"pandas pd.Series(tents).std() :"</span>, round(pd.Series(tents).std(), <span class="s">4</span>))
+print(<span class="s">"NumPy  np.std(tents, ddof=1)  :"</span>, round(np.std(tents, ddof=<span class="s">1</span>), <span class="s">4</span>))</pre>
+<pre class="out">NumPy  np.std(tents)          : 2.2804
+pandas pd.Series(tents).std() : 2.5495
+NumPy  np.std(tents, ddof=1)  : 2.5495</pre>
+            Say: "NumPy divides by n: <code class="inline">ddof=0</code>. pandas divides by n - 1: <code class="inline">ddof=1</code>. Population, when the data is the whole group you care about; sample, when it stands in for something bigger. If unsure, <code class="inline">ddof=1</code>. With 20,302 rows the two differ by less than half a cent, so it is a small-sample question." Why n - 1 at all: a sample is measured against its own mean, the point it is closest to, so its deviations come out a little too small. The lesson proves it with 100,000 simulated samples; that simulation is homework reading.</li>
+          <li><b>Spread that shrugs off extremes (3m).</b> Say: "An SD of $179 around a mean of $195 suggests some orders are below zero. For skewed data the SD is inflated by the same tail as the mean. The robust partner of the median is the IQR."
+<pre class="code">q1 = totals.quantile(<span class="s">0.25</span>)
+q3 = totals.quantile(<span class="s">0.75</span>)
+print(<span class="s">"Q1:"</span>, q1, <span class="s">" Q3:"</span>, q3, <span class="s">" IQR:"</span>, round(q3 - q1, <span class="s">2</span>))
+
+with_typo = pd.concat([totals, pd.Series([<span class="s">1_000_000.0</span>])], ignore_index=<span class="k">True</span>)
+typo_iqr = with_typo.quantile(<span class="s">0.75</span>) - with_typo.quantile(<span class="s">0.25</span>)
+print(<span class="s">"mean  :"</span>, round(totals.mean(), <span class="s">2</span>), <span class="s">"-&gt;"</span>, round(with_typo.mean(), <span class="s">2</span>))
+print(<span class="s">"median:"</span>, totals.median(), <span class="s">"-&gt;"</span>, with_typo.median())
+print(<span class="s">"SD    :"</span>, round(totals.std(), <span class="s">2</span>), <span class="s">"-&gt;"</span>, round(with_typo.std(), <span class="s">2</span>))
+print(<span class="s">"IQR   :"</span>, round(q3 - q1, <span class="s">2</span>), <span class="s">"-&gt;"</span>, round(typo_iqr, <span class="s">2</span>))</pre>
+<pre class="out">Q1: 78.85  Q3: 264.95  IQR: 186.1
+mean  : 194.6 -&gt; 243.84
+median: 146.85 -&gt; 146.85
+SD    : 178.76 -&gt; 7019.02
+IQR   : 186.1 -&gt; 186.13</pre>
+            Say it as a sentence: "The middle half of Pinecrest's orders are between $78.85 and $264.95." Then the stress test: one bad row out of 20,303 multiplied the SD by 39 and did not move the IQR. Two standard pairs for the board: <b>mean with SD</b> for symmetric data, <b>median with IQR</b> for skewed data.</li>
+          <li><b>Missing values (2m).</b> Say: "One practical matter. Six store-days have no revenue recorded."
+<pre class="code">daily = pd.read_csv(<span class="s">"data/daily_sales.csv"</span>, parse_dates=[<span class="s">"date"</span>])
+revenue = daily[<span class="s">"revenue"</span>]
+
+print(<span class="s">"rows:"</span>, len(revenue), <span class="s">" values present:"</span>, revenue.count())
+print(<span class="s">"pandas mean:"</span>, round(revenue.mean(), <span class="s">2</span>))
+print(<span class="s">"NumPy mean :"</span>, np.mean(revenue.to_numpy()))
+print(<span class="s">"np.nanmean :"</span>, round(np.nanmean(revenue.to_numpy()), <span class="s">2</span>))</pre>
+<pre class="out">rows: 2903  values present: 2897
+pandas mean: 7435.04
+NumPy mean : nan
+np.nanmean : 7435.04</pre>
+            Say: "pandas skips missing values without telling you. NumPy returns <code class="inline">nan</code> without an error. Two habits: print <code class="inline">.count()</code> next to <code class="inline">len()</code>, and ask whether the missing rows could be different from the rest." Next session's survey data is where that question bites.</li>
+        </ol>
+      </div>
+      <div class="blk warn"><div class="h">Three mistakes to expect, and how to coach each</div>
+        <ul class="tick">
+          <li><b>Two libraries, two standard deviations.</b> A learner's SD does not match a neighbor's or the lesson's, because one used <code class="inline">np.std</code> (divide by n) and the other <code class="inline">.std()</code> on a Series (divide by n - 1). Coach: "When your number does not match someone else's, check <code class="inline">ddof</code> first." Have them write the choice into the code, <code class="inline">np.std(x, ddof=1)</code>, so it stops being an accident.</li>
+          <li><b>Averaging averages.</b> To get an overall mean they average the group means from a <code class="inline">groupby</code> (the lesson's example gives $182.66 instead of $194.60). Coach: "Does Asheville's 1,413 orders count as much as Online's 12,854 in your number?" Fix: compute from the original rows, or <code class="inline">np.average(means, weights=counts)</code>.</li>
+          <li><b>Mean and SD for skewed data out of habit.</b> "Orders average $195 plus or minus $179" is arithmetic that paints a symmetric hump that does not exist. There is no error message, so it is the most common. Coach with one question every time a mean is reported: "What is the median? Show me the histogram." If mean and median disagree noticeably, lead with median and IQR.</li>
+        </ul>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab</div>
+        <p><b>First 12 minutes, everyone:</b> <code class="inline">labs/module-10/l4_1-center-and-spread/orders_per_buyer_starter.py</code> (reference: <code class="inline">labs/module-10/l4_1-center-and-spread/orders_per_buyer_solution.py</code>). The loyalty team says "our customers order about five times". Have learners write a guess for the order of mean, median and mode before TODO 1. Expected: mean 5.15, median 4.0, mode 1; 65.1% of buyers below the mean; mean x buyers = 20302 but median x buyers = 15768. Debrief with one question: "Which number goes in which sentence?"</p>
+        <p><b>Next 13 minutes:</b> <code class="inline">labs/module-10/l4_1-center-and-spread/visitor_spread_starter.py</code>, Steps 1 to 3 (variance by hand on five days, matching NumPy and pandas, the four-store table). Expected in Step 1: 510.96 dividing by n and 638.7 dividing by n - 1. Steps 4 and 5 (relative spread, the stress test) go home. Watch for <code class="inline">spread()</code> still returning the <code class="inline">np.nan</code> placeholders: the table prints all NaN and the starter says so.</p>
+        <p><b>Early finishers:</b> <code class="inline">labs/module-10/l4_1-center-and-spread/debug_average_of_averages.py</code>: three findings that run without an error and are wrong (an average of averages, a silent <code class="inline">nan</code>, two <code class="inline">ddof</code> defaults).</p>
+      </div>
+      <div class="blk lab"><div class="h">Start the lesson project</div>
+        <p>The lesson's project is <b>The Typical Order Memo</b> (about 35 minutes alone, in a new notebook <code class="inline">lesson_4_1_project</code>). In the room do <b>Step 1</b>: everyone types <code class="inline">center_and_spread(values)</code>, which returns a dictionary of six numbers, and runs it on <code class="inline">orders["order_total"]</code>. They should see n 20,302.00, mean 194.60, median 146.85, sd 178.76, iqr 186.10 and mean_vs_median_pct 32.51. Say the rule of thumb from the lesson: when the mean is more than about 10% above the median, look at a histogram before reporting a mean. If minutes remain, start Step 2 (the three-row table). Steps 2 to 5 are homework; the memo must be generated from variables, with no number typed by hand.</p>
+      </div>
+      <div class="blk"><div class="h">Checks for understanding</div>
+        <p>Ask these out loud during the demo and the lab (cold call, then pair-share):</p>
+        <ol class="steps">
+          <li>"The mean order is $194.60 and the median is $146.85. Which one is wrong?" <b>Answer:</b> Neither. The mean is the balance point and is pulled up by the long right tail; the median is the middle order. Mean for totals, median for a typical order.</li>
+          <li>"<code class="inline">np.std(x)</code> gave 2.28 and <code class="inline">pd.Series(x).std()</code> gave 2.55 on the same five numbers. Why?" <b>Answer:</b> NumPy divides by n (<code class="inline">ddof=0</code>), pandas by n - 1 (<code class="inline">ddof=1</code>). For a sample standing in for something bigger, use <code class="inline">ddof=1</code>.</li>
+          <li>"Your column is delivery times in days, strongly right-skewed, maybe with typing errors. Which two numbers do you report?" <b>Answer:</b> Median and IQR: both ignore the extremes. Add the mean only if someone needs a total.</li>
+        </ol>
+        <p>Workbook self-check, items Q7 to Q12 (do two in the room if time allows; the rest is homework):</p>
+        <p style="font-size:.9rem;margin:.2rem 0">Answers: <b>Q7</b> <span data-sc="7">B) <code class="inline">30.0</code></span>; <b>Q8</b> <span data-sc="8">C) The mode</span>; <b>Q9</b> <span data-sc="9"><code class="inline">2.0 2.5</code></span>; <b>Q10</b> <span data-sc="10">A) The mean, $194.60</span>; <b>Q11</b> <span data-sc="11">D) Median and interquartile range</span>; <b>Q12</b> <span data-sc="12">A) <code class="inline">200.0 nan 2</code></span>. Full set with explanations in the Answer Key.</p>
+      </div>
+      <div class="blk"><div class="h">Differentiation</div>
+        <p><b>Support:</b> keep the board's two columns (center, spread) visible and have learners copy them into the workbook's notes box as each term appears. For the variance, do the five-number table by hand on paper (value, deviation, squared deviation) before touching code. Learners who are anxious about statistics should hear early that today has no formulas to memorize: every number is one method call, and the skill is choosing which to report.</p>
+        <p><b>Stretch:</b> lesson Exercise 4 (break the catalog: one price loses its decimal point; compare mean, median, SD, IQR and the 5% trimmed mean from <code class="inline">scipy.stats.trim_mean</code>), or the bonus challenge (rerun the n - 1 simulation for sample sizes 2, 5, 10, 30, 100 and compare with (n - 1) / n).</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="sec"><h2>Closing</h2><span class="rule"></span></div>
+  <div class="blk"><div class="h">Exit ticket (3 questions, on paper or sticky notes, no notes)</div>
+    <ol class="steps">
+          <li>A figure has <code class="inline">figsize=(6, 4)</code> and is saved with <code class="inline">dpi=150</code>. How many pixels wide and high is the PNG? <b>Answer:</b> 900 wide by 600 high (6 x 150 and 4 x 150).</li>
+          <li>A column of order totals is strongly right-skewed. Which measure of center and which measure of spread do you report for a typical order? <b>Answer:</b> The median and the IQR. (The mean is for totals.)</li>
+          <li><code class="inline">np.std(x)</code> and <code class="inline">pd.Series(x).std()</code> give different answers for the same small list. Why? <b>Answer:</b> NumPy divides by n (<code class="inline">ddof=0</code>); pandas divides by n - 1 (<code class="inline">ddof=1</code>).</li>
+        </ol>
+    <p>Read the slips before Session 11. If more than a quarter miss question 1, open Session 11 with one more pixel prediction. If question 3 is weak, the 4.2 demo's z-score step (which uses the SD) is the place to revisit <code class="inline">ddof</code>.</p>
+  </div>
+  <div class="note"><div class="t">Homework (about 2 to 3 hours)</div>
+    <ul class="tick">
+          <li><b>Lesson 3.4 project:</b> finish the Pinecrest Chart Pack (Steps 2 to 4): 9 files, every web PNG 990 x 495, a 4-page PDF, 0 open figures.</li>
+          <li><b>Lesson 3.4 practice:</b> Exercises 1 to 3 (Exercise 4 is a stretch), the five-question Quick Quiz, and the journal prompt (it also asks for one line on Module 3 as a whole).</li>
+          <li><b>Lesson 4.1 project:</b> finish the Typical Order Memo (Steps 2 to 5): the three-row table, the bulk-order check, the two-panel figure saved as <code class="inline">typical_order.png</code>, and the memo built from variables.</li>
+          <li><b>Lesson 4.1 practice:</b> Exercises 1 to 3 (Exercise 4 is a stretch), the Quick Quiz, and the journal prompt. Read the section "Sample or Population? The n - 1 Question" and run its simulation once.</li>
+          <li><b>Kit labs:</b> finish <code class="inline">category_price_pack</code> (TODO 3 and 4) and <code class="inline">visitor_spread</code> (Steps 4 and 5).</li>
+          <li><b>Workbook:</b> the 12 self-check items and anything left in Predict, then run.</li>
+          <li><b>Before Lesson 4.2</b> (from the lesson page): run <code class="inline">orders["order_total"].describe()</code> and name every line you can; guess, then check, whether <code class="inline">visitors</code> in <code class="inline">daily_sales.csv</code> is skewed by comparing its mean and median.</li>
+        </ul>
+  </div>
+  <div class="note lab"><div class="t">Bring list for Session 11</div>
+    <ul class="tick">
+          <li>Their Lesson 4.1 notebook with a working <code class="inline">center_and_spread()</code> function: Lesson 4.2 extends it.</li>
+          <li>A place they can copy <code class="inline">pinecrest_style</code>, <code class="inline">new_figure()</code> and <code class="inline">save_chart()</code> from (a marked cell or <code class="inline">charting.py</code>): charts appear in every remaining session.</li>
+          <li>Data files for Session 11: <code class="inline">orders.csv</code>, <code class="inline">daily_sales.csv</code>, <code class="inline">store_weather.csv</code>, <code class="inline">survey.csv</code>, <code class="inline">products.csv</code> (all already in <code class="inline">data/</code>).</li>
+          <li>Installs: none. Session 11 uses <code class="inline">scipy.stats</code>, which is in the course environment; anyone unsure runs <code class="inline">python -c "import scipy; print(scipy.__version__)"</code> at home.</li>
+          <li>Servers to start: none. Accounts: none needed.</li>
+          <li>This workbook, with the Session 10 self-check done.</li>
+        </ul>
+  </div>
+
+  <div class="sec"><h2>If You Run Long or Short</h2><span class="rule"></span></div>
+  <p><b>Protect:</b> the tiny-text demonstration (demo step 4) with both files opened side by side, the <code class="inline">pixel_budget</code> lab, mean against median on the real order totals (demo steps 3 to 5), the variance by hand, and the first step of each lesson project.</p>
+  <p><b>Running long, cut in this order:</b> (1) the backgrounds step of the 3.4 demo (say the rule, show the lesson's three-panel figure); (2) the <code class="inline">bbox_inches</code> step (one sentence: "it changes the size"); (3) <code class="inline">category_price_pack</code> in the room (all of it goes home); (4) the missing-values step of the 4.1 demo (it returns in Session 11); (5) <code class="inline">visitor_spread</code> in the room. Do not cut either project start: two minutes of "your first cell runs" saves twenty at home.</p>
+  <p><b>Running short:</b> run the debug handouts as a whole-room hunt (one on the projector, pairs call out the faults), do the two Predict items per lesson from the workbook together, then let learners continue the Chart Pack to Step 2 or the Memo to Step 2.</p>
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 10 · Facilitator Guide · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

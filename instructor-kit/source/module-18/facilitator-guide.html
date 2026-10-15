@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facilitator Guide: Session 18</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Instructor copy —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">contains answers &amp; timing · not for students</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Facilitator Guide</div>
+    <h1>Session 18: APIs: Keys, Tokens and Polite Clients</h1>
+    <p class="sub">How to teach the session that closes Module 6. Before the break, API keys and bearer tokens: secrets from the environment, 401 versus 403, logging in, expiry and renewing once, pagination into a DataFrame. After the break, the habits of a welcome client: reading the limit, pacing, honoring 429, backoff with jitter, retry policies, caching and resumable jobs. Then Checkpoint 2, a 15-minute data-access task on Modules 5 and 6.</p>
+    <div class="meta-row">
+      <span class="chip"><b>2</b> lessons</span>
+      <span class="chip"><b>3 hrs</b> session</span>
+      <span class="chip">Lessons <b>6.4–6.5</b></span>
+      <span class="chip">Checkpoint <b>2</b></span>
+      <span class="chip">Session <b>18</b> of 21</span>
+    </div>
+  </header>
+
+  <div class="sec"><h2>How to Use This Guide</h2><span class="rule"></span></div>
+<ul class="tick">
+  <li>Session 18 closes Module 6 with the front door: APIs. Before the break, keys and tokens (Lesson 6.4); after it, the habits that make a client welcome and dependable (Lesson 6.5). Then <b>Checkpoint 2</b>, 15 minutes, on data access across Modules 5 and 6.</li>
+  <li>Same rhythm as every session: frame → live demo → guided lab → start the project. The checkpoint takes 15 minutes and its debrief 10, so the lesson blocks are a little shorter than usual and both projects are mostly homework.</li>
+  <li>Every code block below was run for this guide against <code class="inline">data/mock_api.py</code>: with <code class="inline">--token-ttl 5</code> for 6.4 and <code class="inline">--rate 10 --per 5</code> for 6.5, with the three demo environment variables set. Tokens, and some timings, will differ on your screen; the guide says where.</li>
+  <li>The practice shop is not used today. Everything happens on <code class="inline">http://127.0.0.1:8000</code>, a server on each learner's own computer.</li>
+  <li>Labs and the checkpoint live in <code class="inline">labs/module-18/</code>. With <code class="inline">LABS_OFFLINE=1</code> they replay real saved responses and run their waits on a pretend clock.</li>
+</ul>
+<div class="note warn"><div class="t">The risk in Session 18: secrets on screens, loops that hammer</div>
+<p>Two habits to make automatic today. <b>Secrets never appear in code, output or logs</b>: the projector itself is a test (never print a key; print a hint). <b>Every retry has a reason, a wait and a limit</b>: retry 429, 5xx and timeouts; never 400, 403 or 404; renew an expired token once. A loop that retries a 401 forever looks like an attack.</p>
+</div>
+
+  <div class="sec"><h2>Before the Session</h2><span class="rule"></span></div>
+<ul class="tick">
+  <li>☐ Run <code class="inline">python3 labs/check_labs.py module-18</code> from the kit folder. Expect <code class="inline">10 passed, 0 failed</code> (offline; the checker sets the three variables to the demo values).</li>
+  <li>☐ Copy the starters (including <code class="inline">checkpoint-2/checkpoint2_starter.py</code>), <code class="inline">_fixtures/</code> and <code class="inline">labs_paths.py</code> to the shared folder. Keep every <code class="inline">*_solution.py</code> on your machine; the checkpoint solution is the model answer.</li>
+  <li>☐ <b>The practice API, with the flags of each lesson.</b> Lesson 6.4: <code class="inline">python data/mock_api.py --token-ttl 5</code> (tokens last five seconds so learners can watch one expire). Lesson 6.5: stop it with Ctrl+C at the break and start <code class="inline">python data/mock_api.py --rate 10 --per 5</code> (ten requests every five seconds, so the limit is easy to hit). The checkpoint works with either. Check: <code class="inline">http://127.0.0.1:8000/health</code> shows <code class="inline">{"status": "ok"}</code>, and the start line names the limit, for example <code class="inline">(limit: 10 requests per 5 s; Ctrl+C to stop)</code>.</li>
+  <li>☐ <b>Why restart at the break:</b> the 6.5 demos need the small limit to show a 429 within seconds, and the 6.4 token demos need short tokens. With default flags (30 per 10 s, 60-second tokens) nothing goes wrong, it just takes too long to see.</li>
+  <li>☐ <b>The three environment variables</b> on the projector machine, set before starting Jupyter or VS Code from the same terminal (commands below). Test with the first demo cell: it prints <code class="inline">key loaded: pine... (18 characters)</code>.</li>
+  <li>☐ <b>The practice shop:</b> not used today. If a learner asks, it is at <code class="inline">https://rays-python-datascience.netlify.app/practice/shop/</code>, with the offline copy served from <code class="inline">data/pinecrest-practice-site.zip</code> on port 8001 (Session 16).</li>
+  <li>☐ <b>Chrome and Selenium:</b> not used today (Session 17). <b>MongoDB:</b> nothing needed (Session 16 ran on mongomock).</li>
+  <li>☐ Print the Checkpoint 2 task sheet from the workbook, or keep it on the projector during the checkpoint.</li>
+  <li>☐ Whiteboard: "<b>401: who are you? 403: no.</b>" and "<b>Retry: a reason, a wait, a limit.</b>"</li>
+</ul>
+<div class="blk"><div class="h">The three environment variables (public demo values for the practice API)</div>
+<pre class="code"># Windows PowerShell (this terminal only)
+$env:PINECREST_API_KEY = "pinecrest-demo-key"
+$env:PINECREST_USER = "analyst"
+$env:PINECREST_PASSWORD = "trailmix"
+
+# macOS and Linux (this terminal only)
+export PINECREST_API_KEY="pinecrest-demo-key"
+export PINECREST_USER="analyst"
+export PINECREST_PASSWORD="trailmix"</pre>
+<ul class="tick">
+  <li><b>The trap:</b> variables set this way exist only in that terminal and in programs started from it afterward. A notebook started earlier, or from the Start menu, does not see them: close it, set the variables, start it again from that terminal. The demo's <code class="inline">require_env()</code> turns this into a clear message instead of a mystery.</li>
+  <li><b>Other routes (Lesson 6.4):</b> <code class="inline">getpass.getpass("API key: ")</code> to type a secret into a hidden box, or a <code class="inline">.env</code> file read by <code class="inline">python-dotenv</code>, which is safe only if <code class="inline">.env</code> is listed in <code class="inline">.gitignore</code> before the first commit.</li>
+  <li>These are teaching values for a server on your own computer. Real keys are personal: never share one on a slide or in a chat.</li>
+</ul>
+</div>
+
+  <div class="sec"><h2>Session 18 Agenda (3 hours)</h2><span class="rule"></span></div>
+  <table class="timing">
+    <thead><tr><th>Clock</th><th>Minutes</th><th>Segment</th><th>What happens</th></tr></thead>
+    <tbody>
+      <tr><td class="t">0:00</td><td class="t">10</td><td>Warm-up</td><td>Five retrieval questions on Session 17 (Beautiful Soup, Selenium), no notes. Homework check; are the three environment variables set?</td></tr>
+      <tr><td class="t">0:10</td><td class="t">2</td><td>Ground rules opener</td><td>The six Module 6 rules, read aloud. Today's angle: keys are personal, limits are the owner's rule.</td></tr>
+      <tr><td class="t">0:12</td><td class="t">10</td><td><b>6.4</b> Frame and mental model</td><td>The festival wristband: a key at the gate, a timed wristband inside. 401 versus 403.</td></tr>
+      <tr><td class="t">0:22</td><td class="t">23</td><td><b>6.4</b> Live demo</td><td>Secrets from the environment, the key in a header, <code class="inline">ApiError</code>, POST <code class="inline">/login</code>, Bearer, expiry, renew once, pagination.</td></tr>
+      <tr><td class="t">0:45</td><td class="t">22</td><td><b>6.4</b> Guided lab</td><td><code class="inline">labs/module-18/l6_4-api-authentication/cancelled_orders_starter.py</code>, then <code class="inline">token_lifecycle_starter.py</code>.</td></tr>
+      <tr><td class="t">1:07</td><td class="t">8</td><td><b>6.4</b> Start the lesson project</td><td>December Returns Brief: Steps 1 and 2 (<code class="inline">client.me()</code>, the probe).</td></tr>
+      <tr><td class="t">1:15</td><td class="t">10</td><td>Break</td><td>Restart the practice API as <code class="inline">python data/mock_api.py --rate 10 --per 5</code>; everyone does the same.</td></tr>
+      <tr><td class="t">1:25</td><td class="t">10</td><td><b>6.5</b> Frame and mental model</td><td>The freeway on-ramp light: politeness (pace, obey, never ask twice) and resilience (retry what is temporary).</td></tr>
+      <tr><td class="t">1:35</td><td class="t">23</td><td><b>6.5</b> Live demo</td><td>Rate-limit headers, a burst into 429, a Throttle, Retry-After, backoff with jitter, <code class="inline">/flaky</code>, urllib3 <code class="inline">Retry</code>, a cache, a resumable job.</td></tr>
+      <tr><td class="t">1:58</td><td class="t">20</td><td><b>6.5</b> Guided lab</td><td><code class="inline">labs/module-18/l6_5-rate-limiting/stock_check_starter.py</code>, then <code class="inline">retry_and_cache_starter.py</code>.</td></tr>
+      <tr><td class="t">2:18</td><td class="t">7</td><td><b>6.5</b> Start the lesson project</td><td>The Resumable Order Pull: Step 1 (plan before you pull).</td></tr>
+      <tr><td class="t">2:25</td><td class="t">15</td><td>Checkpoint 2</td><td>Open notes, own work: one SQL query on <code class="inline">pinecrest.db</code> and one authenticated, paginated API pull. <code class="inline">labs/module-18/checkpoint-2/checkpoint2_starter.py</code>.</td></tr>
+      <tr><td class="t">2:40</td><td class="t">10</td><td>Checkpoint debrief and Module 6 recap</td><td>The answer on the projector; three common slips; the module in one picture.</td></tr>
+      <tr><td class="t">2:50</td><td class="t">10</td><td>Wrap-up</td><td>Exit ticket (3 questions), homework, bring list for Session 19 (stop the API; check seaborn and Plotly).</td></tr>
+      <tr><td class="t"><b>Total</b></td><td class="t"><b>180</b></td><td></td><td>Ends at 3:00.</td></tr>
+    </tbody>
+  </table>
+<p><b>In the room:</b> the ground rules, both demos, Lab 6.4-A and Lab 6.5-A, the first step of each project, Checkpoint 2 and its debrief. <b>At home (about 2 to 3 hours):</b> both lesson projects (December Returns Brief, Resumable Order Pull), the exercises, quizzes and journals, and the B labs. The lessons estimate 90 + 95 minutes solo; the room has 133 minutes for them after the warm-up, opener, checkpoint, debrief and wrap-up.</p>
+<p><b>Protect:</b> Checkpoint 2 (start it at 2:25 whatever happens); 6.4 demo steps 1, 3, 6 to 9; 6.5 demo steps 2, 3, 4, 7. <b>Cut first if long:</b> 6.5 steps 9 to 11 (cache, logging, resumable: the project teaches them), then 6.4 steps 12 and 13, then the 6.5 project start. Never cut the debrief to under 5 minutes: it is where the checkpoint becomes learning.</p>
+
+  <div class="sec"><h2>Warm-up</h2><span class="rule"></span></div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">0:00</span><h3>Warm-up: Retrieval from Session 17</h3><span class="dur">10 min</span></div>
+    <div class="lesson-body">
+<p>Five questions, notes closed, then answers aloud.</p>
+<ol class="steps">
+  <li>Which Beautiful Soup method returns <code class="inline">None</code> when nothing matches? <b>Answer:</b> <code class="inline">select_one()</code> (and <code class="inline">find()</code>). <code class="inline">select()</code> and <code class="inline">find_all()</code> return a list, empty when nothing matches.</li>
+  <li>Why does <code class="inline">get_soup()</code> pass <code class="inline">resp.content</code>, not <code class="inline">resp.text</code>? <b>Answer:</b> From bytes, Beautiful Soup reads the page's own <code class="inline">&lt;meta charset&gt;</code>, so the text decodes correctly whatever the server said.</li>
+  <li>How does a pagination loop know it has reached the last page of the catalog? <b>Answer:</b> There is no <code class="inline">a.next</code> link on the last page, so <code class="inline">select_one("nav.pagination a.next")</code> returns <code class="inline">None</code>.</li>
+  <li><code class="inline">requests</code> sees an empty list where the browser shows deals. What do you try before Selenium? <b>Answer:</b> Find the data file the page loads (Network tab or the script) and request it directly, if allowed.</li>
+  <li>Why <code class="inline">WebDriverWait(...).until(...)</code> instead of <code class="inline">time.sleep()</code>, and where does <code class="inline">driver.quit()</code> go? <b>Answer:</b> The wait continues as soon as the condition is true and raises clearly if it never is. <code class="inline">quit()</code> goes in a <code class="inline">finally</code> block.</li>
+</ol>
+<p><b>Homework check (3 minutes).</b> Category Price Report: nine rows, Tents first. Deals Watch: 24 rows equal to <code class="inline">deals.json</code>. Then: "Who has the three variables set and the API started with <code class="inline">--token-ttl 5</code>?" Fix the rest now, while the room does question 5.</p>
+    </div>
+  </section>
+
+  <div class="sec"><h2>Ground Rules Opener (2 minutes)</h2><span class="rule"></span></div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">0:10</span><h3>The Six Ground Rules for Module 6</h3><span class="dur">2 min</span></div>
+    <div class="lesson-body">
+<p>Six learners, one rule each, aloud. Today's sentence: "An API is the front door rule 3 asked for. It comes with its own rules: a key that is yours alone, and a limit the owner sets. Keep both."</p>
+<ol class="steps">
+  <li><b>Read <code class="inline">robots.txt</code> and obey it.</b> It is the owner's published request to programs: where they may go and how fast.</li>
+  <li><b>Read the terms of use.</b> If they forbid automated collection, the answer is no, however easy the code would be.</li>
+  <li><b>Prefer an API or a download</b> when one exists. It is the front door.</li>
+  <li><b>Go slowly and say who you are.</b> Pause between requests; send a User-Agent with a way to contact you.</li>
+  <li><b>Never go around a login, a paywall or a block.</b> If you are asked to stop, stop.</li>
+  <li><b>Do not collect personal data.</b> Names, emails, profiles and photos of real people are protected by law in many places.</li>
+</ol>
+    </div>
+  </section>
+
+  <div class="sec"><h2>Lesson Plans</h2><span class="rule"></span></div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">6.4</span><h3>API Authentication</h3><span class="dur">63 min</span></div>
+    <div class="lesson-body">
+<div class="blk"><div class="h">Objectives (from the lesson)</div>
+<ul class="tick">
+  <li>Send an API key in a request header and tell a 401 from a 403</li>
+  <li>Keep keys and passwords out of your code with environment variables</li>
+  <li>Log in for a bearer token, use it, and recover when it expires</li>
+  <li>Turn an API's error responses into clear Python exceptions, and decide by status code what to do next</li>
+  <li>Follow pagination to the last page and build a DataFrame, using a small reusable client class</li>
+</ul>
+</div>
+<div class="blk"><div class="h">Timing (63 minutes)</div>
+<table class="timing"><tbody>
+<tr><td class="t">10m</td><td>Frame: the wristband; 401 versus 403; where secrets live</td></tr>
+<tr><td class="t">23m</td><td>Live demo, steps 1 to 13</td></tr>
+<tr><td class="t">22m</td><td>Guided lab: cancelled orders (then the token lifecycle)</td></tr>
+<tr><td class="t">8m</td><td>Start the December Returns Brief: Steps 1 and 2</td></tr>
+</tbody></table>
+</div>
+<div class="blk"><div class="h">Mental model to say</div>
+<p>"Think of a festival. At the gate you show your <b>ticket</b> once (your username and password). They give you a <b>wristband</b> (the token) and you wear it everywhere inside: no one asks for the ticket again. The wristband is dated: tomorrow it does not work, and you go back to the gate. Some stalls only want to see your <b>membership card</b> (the API key) every time. And two different refusals: 'I cannot see a wristband' is 401; 'I see it, and you are not allowed in here' is 403."</p>
+<p>Draw the decision table from the lesson on the board: 400 fix the code, 401 renew once or stop, 403 stop, 404 stop or record, 429 wait and retry, 5xx wait and retry a few times.</p>
+</div>
+<div class="blk"><div class="h">Live demo (you type, they follow)</div>
+<p>Notebook <code class="inline">session18_auth</code>, with the practice API started as <code class="inline">python data/mock_api.py --token-ttl 5</code>. Step 8 and step 9 each wait six seconds on purpose: talk while they run.</p>
+<ol class="steps">
+  <li><b>Secrets come from the environment.</b> Say: "Before any request: where does the key live? Not in this notebook. You set three variables in the terminal before starting Jupyter. When you need to confirm a secret loaded, print a HINT of it, never the value: output cells are saved with the notebook."
+<pre class="code"><span class="k">import</span> os
+<span class="k">import</span> time
+
+<span class="k">import</span> pandas <span class="k">as</span> pd
+<span class="k">import</span> requests
+
+API = <span class="s">"http://127.0.0.1:8000"</span>
+HEADERS = {<span class="s">"User-Agent"</span>: <span class="s">"pinecrest-course-bot/1.0 (learning project; contact: you@example.com)"</span>}
+
+
+<span class="k">def</span> require_env(name):
+    <span class="s">"""Read a required setting from the environment, or stop with a clear message."""</span>
+    value = os.environ.get(name)
+    <span class="k">if</span> <span class="k">not</span> value:
+        <span class="k">raise</span> RuntimeError(<span class="s">f"Set the environment variable {name} before running this code."</span>)
+    <span class="k">return</span> value
+
+
+API_KEY = require_env(<span class="s">"PINECREST_API_KEY"</span>)
+USERNAME = require_env(<span class="s">"PINECREST_USER"</span>)
+PASSWORD = require_env(<span class="s">"PINECREST_PASSWORD"</span>)
+print(<span class="s">"key loaded:"</span>, API_KEY[:<span class="s">4</span>] + <span class="s">"..."</span>, <span class="s">f"({len(API_KEY)} characters)"</span>)</pre>
+<pre class="out">key loaded: pine... (18 characters)</pre>
+</li>
+  <li><b>A variable that is not set.</b> Say: "This is the message a learner sees when Jupyter was started from a different terminal. It says exactly what to do."
+<pre class="code">require_env(<span class="s">"PINECREST_REPORTS_KEY"</span>)</pre>
+<pre class="out">RuntimeError: Set the environment variable PINECREST_REPORTS_KEY before running this code.</pre>
+</li>
+  <li><b>401 and 403 are different answers.</b> Say: "No key: 401, 'I cannot tell who you are'. A wrong key: 403, 'I understood, and the answer is no'. Sending a 403 again never helps." Ask before running the second request: "Which status?"
+<pre class="code">r = requests.get(<span class="s">f"{API}/orders"</span>, headers=HEADERS, timeout=<span class="s">10</span>)
+print(r.status_code, r.json()[<span class="s">"error"</span>][<span class="s">"code"</span>])
+r = requests.get(<span class="s">f"{API}/orders"</span>, headers={**HEADERS, <span class="s">"X-API-Key"</span>: <span class="s">"pinecrest-demo"</span>},
+                 timeout=<span class="s">10</span>)
+print(r.status_code, r.json()[<span class="s">"error"</span>][<span class="s">"code"</span>])</pre>
+<pre class="out">401 missing_api_key
+403 invalid_api_key</pre>
+</li>
+  <li><b>The key in a header, never in the URL.</b> Say: "The documentation says where the key goes: a header named X-API-Key. URLs end up in logs, browser history and bug reports; headers mostly do not."
+<pre class="code">KEY_HEADERS = {**HEADERS, <span class="s">"X-API-Key"</span>: API_KEY}
+r = requests.get(<span class="s">f"{API}/orders"</span>, headers=KEY_HEADERS,
+                 params={<span class="s">"status"</span>: <span class="s">"cancelled"</span>, <span class="s">"since"</span>: <span class="s">"2025-12-15"</span>, <span class="s">"per_page"</span>: <span class="s">3</span>},
+                 timeout=<span class="s">10</span>)
+data = r.json()
+print(r.status_code, {k: v <span class="k">for</span> k, v <span class="k">in</span> data.items() <span class="k">if</span> k != <span class="s">"items"</span>})
+print([(o[<span class="s">"order_id"</span>], o[<span class="s">"store"</span>], o[<span class="s">"order_total"</span>]) <span class="k">for</span> o <span class="k">in</span> data[<span class="s">"items"</span>]])</pre>
+<pre class="out">200 {'page': 1, 'per_page': 3, 'total': 15, 'total_pages': 5, 'next': '/orders?page=2&amp;per_page=3&amp;since=2025-12-15&amp;status=cancelled'}
+[(119812, 'Online', 81.9), (119840, 'Online', 53.9), (119860, 'Online', 62.9)]</pre>
+</li>
+  <li><b>Errors you can act on.</b> Say: "raise_for_status throws the API's explanation away. A tiny exception class keeps the status, the code and the message, so code can branch on err.code."
+<pre class="code"><span class="k">class</span> ApiError(Exception):
+    <span class="s">"""An error response from the API, with its status, code and message."""</span>
+    <span class="k">def</span> __init__(self, status, code, message):
+        super().__init__(<span class="s">f"{status} {code}: {message}"</span>)
+        self.status, self.code, self.message = status, code, message
+
+
+<span class="k">def</span> check(resp):
+    <span class="s">"""Return the response if it succeeded. Otherwise raise ApiError."""</span>
+    <span class="k">if</span> resp.ok:
+        <span class="k">return</span> resp
+    <span class="k">try</span>:
+        error = resp.json()[<span class="s">"error"</span>]
+        code, message = error[<span class="s">"code"</span>], error[<span class="s">"message"</span>]
+    <span class="k">except</span> (requests.exceptions.JSONDecodeError, KeyError, TypeError):
+        code, message = <span class="s">"http_error"</span>, resp.reason
+    <span class="k">raise</span> ApiError(resp.status_code, code, message)
+
+
+check(requests.get(<span class="s">f"{API}/orders"</span>, headers=KEY_HEADERS,
+                   params={<span class="s">"since"</span>: <span class="s">"Dec 1 2025"</span>}, timeout=<span class="s">10</span>))</pre>
+<pre class="out">ApiError: 400 bad_request: 'since' must look like 2025-01-31, got 'Dec 1 2025'.</pre>
+</li>
+  <li><b>Your first POST: log in for a token.</b> Say: "GET reads; POST sends. json= encodes the dictionary as a JSON body. The password crosses the network once; what you carry afterward stops working on its own. We started the API with --token-ttl 5, so this one lasts five seconds."
+<pre class="code">resp = check(requests.post(<span class="s">f"{API}/login"</span>,
+                           json={<span class="s">"username"</span>: USERNAME, <span class="s">"password"</span>: PASSWORD},
+                           headers=HEADERS, timeout=<span class="s">10</span>))
+body = resp.json()
+print(list(body))
+print(body[<span class="s">"token_type"</span>], <span class="s">"token, valid for"</span>, body[<span class="s">"expires_in"</span>], <span class="s">"seconds"</span>)
+token = body[<span class="s">"access_token"</span>]
+print(token[:<span class="s">6</span>] + <span class="s">"...  (your token will differ)"</span>)</pre>
+<pre class="out">['access_token', 'token_type', 'expires_in']
+Bearer token, valid for 5 seconds
+clP_eI...  (your token will differ)</pre>
+</li>
+  <li><b>Bearer means bearer.</b> Say: "The header is the word Bearer, a space, the token. Whoever bears it gets in, no other questions: treat it like a key."
+<pre class="code">auth = {**HEADERS, <span class="s">"Authorization"</span>: <span class="s">f"Bearer {token}"</span>}
+me = check(requests.get(<span class="s">f"{API}/me"</span>, headers=auth, timeout=<span class="s">10</span>)).json()
+print(me[<span class="s">"username"</span>], <span class="s">"|"</span>, me[<span class="s">"name"</span>], <span class="s">"|"</span>, me[<span class="s">"role"</span>])</pre>
+<pre class="out">analyst | Demo Analyst | analyst</pre>
+</li>
+  <li><b>The wristband runs out.</b> Say: "Wait six seconds and use the same token. Nothing is wrong with your account. This is the normal life of a token, and your code must expect it in the middle of a job."
+<pre class="code">time.sleep(<span class="s">6</span>)
+<span class="k">try</span>:
+    check(requests.get(<span class="s">f"{API}/me"</span>, headers=auth, timeout=<span class="s">10</span>))
+<span class="k">except</span> ApiError <span class="k">as</span> err:
+    print(err.status, err.code)
+    print(err.message)</pre>
+<pre class="out">401 token_expired
+The token has expired. Log in again with POST /login.</pre>
+</li>
+  <li><b>Renew and retry ONCE.</b> Say: "Recover from token_expired by logging in again and repeating the request one time. Anything else, and a second failure, goes up to the caller. A loop that retries a 401 forever looks like an attack and gets accounts locked."
+<pre class="code"><span class="k">def</span> login():
+    resp = check(requests.post(<span class="s">f"{API}/login"</span>, timeout=<span class="s">10</span>, headers=HEADERS,
+                               json={<span class="s">"username"</span>: USERNAME, <span class="s">"password"</span>: PASSWORD}))
+    <span class="k">return</span> resp.json()[<span class="s">"access_token"</span>]
+
+
+<span class="k">def</span> get_me(token):
+    <span class="k">try</span>:
+        <span class="k">return</span> check(requests.get(<span class="s">f"{API}/me"</span>, timeout=<span class="s">10</span>,
+                                  headers={**HEADERS, <span class="s">"Authorization"</span>: <span class="s">f"Bearer {token}"</span>}))
+    <span class="k">except</span> ApiError <span class="k">as</span> err:
+        <span class="k">if</span> err.code != <span class="s">"token_expired"</span>:
+            <span class="k">raise</span>
+    print(<span class="s">"  (token expired: logging in again)"</span>)
+    <span class="k">return</span> check(requests.get(<span class="s">f"{API}/me"</span>, timeout=<span class="s">10</span>,
+                              headers={**HEADERS, <span class="s">"Authorization"</span>: <span class="s">f"Bearer {login()}"</span>}))
+
+
+old = login()
+time.sleep(<span class="s">6</span>)
+print(get_me(old).json()[<span class="s">"username"</span>])</pre>
+<pre class="out">  (token expired: logging in again)
+analyst</pre>
+</li>
+  <li><b>One small request first: how big is the job?.</b> Say: "Before downloading, ask for one record with the same filter and read the total. The size of the job for the price of one request."
+<pre class="code">params = {<span class="s">"status"</span>: <span class="s">"returned"</span>, <span class="s">"since"</span>: <span class="s">"2025-12-15"</span>, <span class="s">"per_page"</span>: <span class="s">1</span>}
+probe = check(requests.get(<span class="s">f"{API}/orders"</span>, headers=KEY_HEADERS, params=params,
+                           timeout=<span class="s">10</span>)).json()
+print(probe[<span class="s">"total"</span>], <span class="s">"orders;"</span>, probe[<span class="s">"next"</span>])</pre>
+<pre class="out">34 orders; /orders?page=2&amp;per_page=1&amp;since=2025-12-15&amp;status=returned</pre>
+</li>
+  <li><b>Follow next to the end.</b> Say: "The same loop as the catalog in Session 17, with JSON. The filters go in params for the FIRST request only: next already carries them, so we set params to None."
+<pre class="code"><span class="k">def</span> get_all(path, params=<span class="k">None</span>):
+    <span class="s">"""Collect every item from a paginated endpoint by following 'next'."""</span>
+    items, url = [], <span class="s">f"{API}{path}"</span>
+    <span class="k">while</span> url:
+        data = check(requests.get(url, headers=KEY_HEADERS, params=params,
+                                  timeout=<span class="s">10</span>)).json()
+        items.extend(data[<span class="s">"items"</span>])
+        url = <span class="s">f"{API}{data['next']}"</span> <span class="k">if</span> data[<span class="s">"next"</span>] <span class="k">else</span> <span class="k">None</span>
+        params = <span class="k">None</span>              <span class="c"># 'next' already carries the filters</span>
+    <span class="k">return</span> items
+
+
+late = pd.DataFrame(get_all(<span class="s">"/orders"</span>, {<span class="s">"status"</span>: <span class="s">"returned"</span>, <span class="s">"since"</span>: <span class="s">"2025-12-15"</span>,
+                                        <span class="s">"per_page"</span>: <span class="s">10</span>}))
+print(late.shape, <span class="s">"| unique ids:"</span>, late[<span class="s">"order_id"</span>].is_unique)
+print(late.groupby(<span class="s">"channel"</span>)[<span class="s">"order_total"</span>].agg([<span class="s">"count"</span>, <span class="s">"sum"</span>]).round(<span class="s">2</span>))</pre>
+<pre class="out">(34, 11) | unique ids: True
+         count      sum
+channel                
+online      28  6618.27
+store        6   567.10</pre>
+</li>
+  <li><b>Check it against the source.</b> Say: "As always: check what you collected. In this course you hold the answer key."
+<pre class="code">csv = pd.read_csv(<span class="s">"data/orders.csv"</span>)
+expected = csv[(csv[<span class="s">"status"</span>] == <span class="s">"returned"</span>) &amp; (csv[<span class="s">"order_date"</span>] &gt;= <span class="s">"2025-12-15"</span>)]
+print(len(expected), <span class="s">"expected | same ids:"</span>,
+      late[<span class="s">"order_id"</span>].tolist() == expected[<span class="s">"order_id"</span>].tolist())</pre>
+<pre class="out">34 expected | same ids: True</pre>
+</li>
+  <li><b>Two mistakes with no traceback to warn you.</b> Say: "Leave out the word Bearer and the server does not recognize a token at all. Send data= instead of json= and you sent a form, not JSON."
+<pre class="code">t = login()
+r = requests.get(<span class="s">f"{API}/me"</span>, headers={**HEADERS, <span class="s">"Authorization"</span>: t}, timeout=<span class="s">10</span>)
+print(r.status_code, r.json()[<span class="s">"error"</span>][<span class="s">"code"</span>])
+r = requests.post(<span class="s">f"{API}/login"</span>, data={<span class="s">"username"</span>: USERNAME, <span class="s">"password"</span>: PASSWORD},
+                  headers=HEADERS, timeout=<span class="s">10</span>)
+print(r.status_code, r.json()[<span class="s">"error"</span>][<span class="s">"message"</span>])</pre>
+<pre class="out">401 missing_token
+400 The request body must be JSON.</pre>
+</li>
+</ol>
+</div>
+<div class="blk warn"><div class="h">Three mistakes to expect</div>
+<ul class="tick">
+  <li><b><code class="inline">RuntimeError: Set the environment variable ...</code></b> because Jupyter was started before the variables were set, or from another terminal. Coach: close it, set them, start it from that terminal. Do not let anyone "fix" it by typing the key into the notebook.</li>
+  <li><b>Leaving out the word Bearer</b>, or using <code class="inline">data=</code> instead of <code class="inline">json=</code> for the login (<code class="inline">401 missing_token</code>; <code class="inline">400 The request body must be JSON.</code>). Coach: "Print the headers you are sending. What does the documentation say the value looks like?"</li>
+  <li><b><code class="inline">KeyError: 'access_token'</code></b> after a failed login. The KeyError is a symptom: the login answered 401 and the body is an error object. Coach: "What was the status of the line BEFORE?" Then <code class="inline">check()</code>.</li>
+</ul>
+<p>Also common: sending <code class="inline">params</code> again on every page (filters doubled), and a retry loop around a 401 with no limit.</p>
+</div>
+<div class="blk lab"><div class="h">Guided lab (22 minutes)</div>
+<p><b>Lab 6.4-A, everyone:</b> <code class="inline">labs/module-18/l6_4-api-authentication/cancelled_orders_starter.py</code> (reference: <code class="inline">cancelled_orders_solution.py</code>). Question: which stores and channels account for the orders cancelled since October 1, 2025, and what were they worth?</p>
+<ul class="tick lab">
+  <li><b>How the lab reaches the API.</b> One function, <code class="inline">make_http()</code>, decides: online, a <code class="inline">Session</code> to <code class="inline">http://127.0.0.1:8000</code> (or <code class="inline">PINECREST_API</code>); offline, the same <code class="inline">Session</code> with an adapter that replays saved responses and a pretend clock.</li>
+  <li>Minutes 0 to 12: TODO 1 (the key from the environment, a hint, the header), TODO 3 (one probe for the size of the job), TODO 4 (follow <code class="inline">next</code>).</li>
+  <li>Minutes 12 to 20: TODO 5 (group by store; the online share) and TODO 6 (a date the API cannot read: a 400 that explains itself).</li>
+  <li>Reference answers: no key 401 <code class="inline">missing_api_key</code>, wrong key 403 <code class="inline">invalid_api_key</code>; 70 cancelled orders since 2025-10-01, 3 requests at 25 per page; Online 62 ($9,788.71), Flagstaff 4, Boise 3, Asheville 1; total $10,604.57; 88.6% online, against 65.5% of all orders in the same period; <code class="inline">orders.csv</code> agrees.</li>
+  <li>Ask: "88.6% of cancellations were online. Does that mean online customers are fickle?" (Partly a base-rate effect: 65.5% of all orders are online. Compare rates, not counts.)</li>
+</ul>
+<p><b>Lab 6.4-B (finish-if-fast, or homework):</b> <code class="inline">labs/module-18/l6_4-api-authentication/token_lifecycle_starter.py</code>. Log in, use the token, make three requests that must fail (<code class="inline">missing_token</code>, <code class="inline">invalid_token</code>, <code class="inline">invalid_credentials</code>), watch the token expire, renew once. The journal at the end says which answer earns a second try: only <code class="inline">token_expired</code>, exactly once.</p>
+</div>
+<div class="blk"><div class="h">Start the lesson project (8 minutes)</div>
+<p>"Project: December Returns Brief". Learners type the <code class="inline">PinecrestClient</code> class from the lesson (or paste it from their notes: it is the lesson's code, not new material), then Step 1 (<code class="inline">client.me()</code> prints <code class="inline">Demo Analyst - analyst</code>) and Step 2 (the probe: 1,145 orders since 2025-12-01, 12 requests at 100 per page). Steps 3 to 5 are homework.</p>
+</div>
+<div class="blk"><div class="h">Checks for understanding</div>
+<p>Workbook self-check, Q1 to Q6. Q1 is the hinge question: ask it right after demo step 3.</p>
+<p style="font-size:.9rem;margin:.2rem 0">Answers: <b>Q1</b> <span data-sc="1">A) 401 for no key, 403 for the misspelled one</span>; <b>Q2</b> <span data-sc="2"><code class="inline">401 token_expired: Log in again.</code> then <code class="inline">True True</code></span>; <b>Q3</b> <span data-sc="3">C) <code class="inline">['a', 'b', 'c'] 3</code></span>; <b>Q4</b> <span data-sc="4">B) The <code class="inline">next</code> address already carries the filters; sending them again would attach every filter twice</span>; <b>Q5</b> <span data-sc="5">D) <code class="inline">Authorization: Bearer &lt;token&gt;</code></span>; <b>Q6</b> <span data-sc="6">B) <code class="inline">print("key loaded:", API_KEY[:4] + "...")</code></span>. Full set with explanations in the Answer Key.</p></div>
+<div class="blk"><div class="h">Differentiation</div>
+<p><b>Support:</b> give the four-line pattern on a card: <code class="inline">require_env</code> → headers with the key → <code class="inline">check(requests.get(...))</code> → <code class="inline">.json()</code>. Learners who struggle with classes skip the client and use <code class="inline">get_all()</code> from the demo for the project.</p>
+<p><b>Stretch:</b> lesson Exercise 4 (a <code class="inline">CatalogClient</code> subclass) or Exercise 3 (watch a token run out).</p>
+</div>
+    </div>
+  </section>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">6.5</span><h3>Rate Limiting and Retries</h3><span class="dur">60 min</span></div>
+    <div class="lesson-body">
+<div class="blk"><div class="h">Objectives (from the lesson)</div>
+<ul class="tick">
+  <li>Read an API's rate-limit headers and pace your requests to stay inside the limit</li>
+  <li>Respond correctly to 429 Too Many Requests by honoring <code class="inline">Retry-After</code></li>
+  <li>Retry temporary failures with exponential backoff and jitter, and recognize errors that must not be retried</li>
+  <li>Configure automatic retries on a Session with urllib3's <code class="inline">Retry</code> and <code class="inline">HTTPAdapter</code></li>
+  <li>Cache responses on disk, make a long download resumable, and log what your job did</li>
+</ul>
+</div>
+<div class="blk"><div class="h">Timing (60 minutes)</div>
+<table class="timing"><tbody>
+<tr><td class="t">10m</td><td>Frame: the on-ramp light; politeness and resilience</td></tr>
+<tr><td class="t">23m</td><td>Live demo, steps 1 to 11</td></tr>
+<tr><td class="t">20m</td><td>Guided lab: the stock check (then retry and cache)</td></tr>
+<tr><td class="t">7m</td><td>Start the Resumable Order Pull: Step 1</td></tr>
+</tbody></table>
+</div>
+<div class="blk"><div class="h">Mental model to say</div>
+<p>"Many freeway on-ramps have a light that lets one car go every few seconds. Nobody enjoys it, but without it everyone merges at once and the whole freeway crawls, including the cars from that ramp. A rate limit is that light. A good driver arrives at the pace the light allows, waits when it is red for exactly as long as it says, and does not honk."</p>
+<p>Two halves on the board: <b>politeness</b> (pace yourself, obey Retry-After, never fetch the same thing twice) and <b>resilience</b> (retry what is temporary with backoff, give up clearly, save work so an interruption loses nothing).</p>
+</div>
+<div class="blk"><div class="h">Live demo (you type, they follow)</div>
+<p>Notebook <code class="inline">session18_limits</code>, with the API restarted as <code class="inline">python data/mock_api.py --rate 10 --per 5</code>. <code class="inline">fresh_window()</code> waits five seconds so each demonstration starts from zero: use the pause to ask the next prediction. The 429 wait in step 4 can print 4 or 5 seconds depending on where in the window the burst landed.</p>
+<ol class="steps">
+  <li><b>The limit, in the headers.</b> Say: "The API was restarted with --rate 10 --per 5: ten requests every five seconds. Every response tells you where you stand. Read them like a fuel gauge."
+<pre class="code"><span class="k">import</span> hashlib
+<span class="k">import</span> json
+<span class="k">import</span> logging
+<span class="k">import</span> random
+<span class="k">import</span> sys
+<span class="k">import</span> time
+<span class="k">from</span> pathlib <span class="k">import</span> Path
+
+<span class="k">import</span> requests
+
+API = <span class="s">"http://127.0.0.1:8000"</span>
+HEADERS = {<span class="s">"User-Agent"</span>: <span class="s">"pinecrest-course-bot/1.0 (learning project; contact: you@example.com)"</span>}
+LIMIT, PER = <span class="s">10</span>, <span class="s">5</span>
+
+
+<span class="k">def</span> fresh_window():
+    <span class="s">"""Wait out the current window so a demonstration starts from zero."""</span>
+    time.sleep(PER)
+
+
+r = requests.get(<span class="s">f"{API}/products"</span>, params={<span class="s">"per_page"</span>: <span class="s">1</span>}, headers=HEADERS, timeout=<span class="s">10</span>)
+print(r.status_code, {k: v <span class="k">for</span> k, v <span class="k">in</span> r.headers.items() <span class="k">if</span> k.startswith(<span class="s">"X-RateLimit"</span>)})</pre>
+<pre class="out">200 {'X-RateLimit-Limit': '10', 'X-RateLimit-Remaining': '9', 'X-RateLimit-Reset': '5'}</pre>
+</li>
+  <li><b>Ignore it, and hit the wall.</b> Say: "Thirteen requests as fast as Python can. Predict how many succeed." After: "429 is the server holding up a hand, with an instruction: Retry-After says how long to wait. The refused requests were pure waste."
+<pre class="code">fresh_window()
+statuses = []
+<span class="k">for</span> i <span class="k">in</span> range(<span class="s">13</span>):
+    r = requests.get(<span class="s">f"{API}/products"</span>, params={<span class="s">"per_page"</span>: <span class="s">1</span>}, headers=HEADERS,
+                     timeout=<span class="s">10</span>)
+    statuses.append(r.status_code)
+print(statuses)
+print(<span class="s">"Retry-After:"</span>, r.headers[<span class="s">"Retry-After"</span>], <span class="s">"|"</span>, r.json()[<span class="s">"error"</span>][<span class="s">"message"</span>])</pre>
+<pre class="out">[200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 429, 429, 429]
+Retry-After: 5 | Too many requests. Try again in 5 second(s).</pre>
+</li>
+  <li><b>Plan A: pace yourself.</b> Say: "The freeway on-ramp light. Ten per five seconds is one every half second; add ten percent for clock drift. The Throttle sleeps only for whatever is left of the interval."
+<pre class="code"><span class="k">class</span> Throttle:
+    <span class="s">"""Keep calls at least `interval` seconds apart."""</span>
+    <span class="k">def</span> __init__(self, interval):
+        self.interval, self.last = interval, <span class="k">None</span>
+
+    <span class="k">def</span> wait(self):
+        <span class="k">if</span> self.last <span class="k">is</span> <span class="k">not</span> <span class="k">None</span>:
+            remaining = self.interval - (time.monotonic() - self.last)
+            <span class="k">if</span> remaining &gt; <span class="s">0</span>:
+                time.sleep(remaining)
+        self.last = time.monotonic()
+
+
+interval = PER / LIMIT * <span class="s">1.1</span>
+fresh_window()
+throttle, statuses, started = Throttle(interval), [], time.monotonic()
+<span class="k">for</span> i <span class="k">in</span> range(<span class="s">13</span>):
+    throttle.wait()
+    statuses.append(requests.get(<span class="s">f"{API}/products"</span>, params={<span class="s">"per_page"</span>: <span class="s">1</span>},
+                                 headers=HEADERS, timeout=<span class="s">10</span>).status_code)
+print(<span class="s">f"every {interval:.2f} s:"</span>, statuses.count(<span class="s">200</span>), <span class="s">"of 13 succeeded,"</span>,
+      <span class="s">f"about {time.monotonic() - started:.0f} s"</span>)</pre>
+<pre class="out">every 0.55 s: 13 of 13 succeeded, about 7 s</pre>
+</li>
+  <li><b>Plan B: when told to wait, wait.</b> Say: "Pacing is plan A; limits change and keys get shared, so you still need plan B. Three details make it trustworthy: a default for Retry-After, a maximum number of tries, and retrying ONLY 429."
+<pre class="code"><span class="k">def</span> get_polite(url, max_tries=<span class="s">5</span>, **kwargs):
+    <span class="s">"""GET that waits and retries when the server answers 429."""</span>
+    kwargs.setdefault(<span class="s">"headers"</span>, HEADERS)
+    kwargs.setdefault(<span class="s">"timeout"</span>, <span class="s">10</span>)
+    <span class="k">for</span> attempt <span class="k">in</span> range(<span class="s">1</span>, max_tries + <span class="s">1</span>):
+        resp = requests.get(url, **kwargs)
+        <span class="k">if</span> resp.status_code != <span class="s">429</span>:
+            <span class="k">return</span> resp
+        wait = float(resp.headers.get(<span class="s">"Retry-After"</span>, <span class="s">1</span>))
+        print(<span class="s">f"  429 (try {attempt}): waiting {wait:.0f} s, as asked"</span>)
+        time.sleep(wait)
+    <span class="k">return</span> resp
+
+
+fresh_window()
+codes = [get_polite(<span class="s">f"{API}/products"</span>, params={<span class="s">"per_page"</span>: <span class="s">1</span>}).status_code
+         <span class="k">for</span> i <span class="k">in</span> range(<span class="s">15</span>)]
+print(codes.count(<span class="s">200</span>), <span class="s">"of"</span>, len(codes), <span class="s">"succeeded"</span>)</pre>
+<pre class="out">  429 (try 1): waiting 5 s, as asked
+15 of 15 succeeded</pre>
+</li>
+  <li><b>Backoff, and why it needs jitter.</b> Say: "No instruction from the server? Wait a little, then twice as long, then twice again, up to a cap. And add randomness, or a hundred clients that failed together retry together, in waves." The seed is only so this page matches the screen.
+<pre class="code"><span class="k">def</span> backoff_delay(attempt, base=<span class="s">0.5</span>, cap=<span class="s">8.0</span>):
+    <span class="s">"""Seconds to wait after failed attempt number `attempt` (from 0)."""</span>
+    <span class="k">return</span> min(cap, base * <span class="s">2</span> ** attempt)
+
+
+print([backoff_delay(n) <span class="k">for</span> n <span class="k">in</span> range(<span class="s">6</span>)])
+rng = random.Random(<span class="s">7</span>)
+print([round(rng.uniform(<span class="s">0</span>, backoff_delay(n)), <span class="s">2</span>) <span class="k">for</span> n <span class="k">in</span> range(<span class="s">6</span>)])</pre>
+<pre class="out">[0.5, 1.0, 2.0, 4.0, 8.0, 8.0]
+[0.16, 0.15, 1.3, 0.29, 4.29, 2.93]</pre>
+</li>
+  <li><b>A flaky endpoint.</b> Say: "/flaky fails twice with 503 and then succeeds, over and over. Notice its 503 also carries Retry-After: an instruction always beats your guess."
+<pre class="code">fresh_window()
+<span class="k">for</span> i <span class="k">in</span> range(<span class="s">3</span>):
+    r = requests.get(<span class="s">f"{API}/flaky"</span>, headers=HEADERS, timeout=<span class="s">10</span>)
+    print(r.status_code, <span class="s">"| Retry-After:"</span>, r.headers.get(<span class="s">"Retry-After"</span>))</pre>
+<pre class="out">503 | Retry-After: 1
+503 | Retry-After: 1
+200 | Retry-After: None</pre>
+</li>
+  <li><b>Retry what is temporary, return what is not.</b> Say: "Temporary: 429, 5xx, a timeout, a dropped connection. Not temporary: 400, 401, 403, 404. A missing product will still be missing in two seconds, so it comes back at once."
+<pre class="code">RETRY_STATUSES = {<span class="s">429</span>, <span class="s">500</span>, <span class="s">502</span>, <span class="s">503</span>, <span class="s">504</span>}
+
+
+<span class="k">def</span> get_with_backoff(url, max_tries=<span class="s">5</span>, base=<span class="s">0.5</span>, **kwargs):
+    <span class="s">"""GET with retries: obeys Retry-After, otherwise backs off with jitter."""</span>
+    kwargs.setdefault(<span class="s">"headers"</span>, HEADERS)
+    kwargs.setdefault(<span class="s">"timeout"</span>, <span class="s">10</span>)
+    <span class="k">for</span> attempt <span class="k">in</span> range(max_tries):
+        <span class="k">try</span>:
+            resp = requests.get(url, **kwargs)
+            <span class="k">if</span> resp.status_code <span class="k">not</span> <span class="k">in</span> RETRY_STATUSES:
+                <span class="k">return</span> resp
+            problem, asked = <span class="s">f"HTTP {resp.status_code}"</span>, resp.headers.get(<span class="s">"Retry-After"</span>)
+        <span class="k">except</span> (requests.exceptions.Timeout, requests.exceptions.ConnectionError) <span class="k">as</span> err:
+            problem, asked = type(err).__name__, <span class="k">None</span>
+        <span class="k">if</span> attempt == max_tries - <span class="s">1</span>:
+            <span class="k">break</span>
+        delay = float(asked) <span class="k">if</span> asked <span class="k">else</span> random.uniform(<span class="s">0</span>, backoff_delay(attempt, base))
+        print(<span class="s">f"  try {attempt + 1}: {problem}; next try in {delay:.1f} s"</span>)
+        time.sleep(delay)
+    <span class="k">raise</span> RuntimeError(<span class="s">f"gave up after {max_tries} tries (last problem: {problem})"</span>)
+
+
+resp = get_with_backoff(<span class="s">f"{API}/flaky"</span>)
+print(resp.status_code, resp.json())
+print(get_with_backoff(<span class="s">f"{API}/products/SNW-9999"</span>).status_code)</pre>
+<pre class="out">  try 1: HTTP 503; next try in 1.0 s
+  try 2: HTTP 503; next try in 1.0 s
+200 {'status': 'ok', 'attempts_needed': 3}
+404</pre>
+</li>
+  <li><b>The same policy, built in.</b> Say: "For everyday work, urllib3's Retry does all of this, mounted on a Session. allowed_methods keeps retries to requests that only read: repeating a POST that places an order could place it twice."
+<pre class="code"><span class="k">from</span> requests.adapters <span class="k">import</span> HTTPAdapter
+<span class="k">from</span> urllib3.util.retry <span class="k">import</span> Retry
+
+
+<span class="k">def</span> make_session(total=<span class="s">5</span>, backoff_factor=<span class="s">0.5</span>):
+    <span class="s">"""A Session that identifies itself and retries temporary failures."""</span>
+    retry = Retry(total=total, backoff_factor=backoff_factor,
+                  status_forcelist=[<span class="s">429</span>, <span class="s">500</span>, <span class="s">502</span>, <span class="s">503</span>, <span class="s">504</span>],
+                  allowed_methods=[<span class="s">"GET"</span>, <span class="s">"HEAD"</span>], respect_retry_after_header=<span class="k">True</span>)
+    adapter = HTTPAdapter(max_retries=retry)
+    session = requests.Session()
+    session.mount(<span class="s">"https://"</span>, adapter)
+    session.mount(<span class="s">"http://"</span>, adapter)
+    session.headers.update(HEADERS)
+    <span class="k">return</span> session
+
+
+fresh_window()
+session = make_session()
+resp = session.get(<span class="s">f"{API}/flaky"</span>, timeout=<span class="s">10</span>)
+print(resp.status_code, <span class="s">"| retried after:"</span>, [a.status <span class="k">for</span> a <span class="k">in</span> resp.raw.retries.history])</pre>
+<pre class="out">200 | retried after: [503, 503]</pre>
+</li>
+  <li><b>The politest request is the one you never send.</b> Say: "Same request, same file name: built from the URL and the parameters, hashed. check() runs BEFORE anything is written, so an error is never cached."
+<pre class="code"><span class="k">class</span> ApiError(Exception):
+    <span class="k">def</span> __init__(self, status, code, message):
+        super().__init__(<span class="s">f"{status} {code}: {message}"</span>)
+        self.status, self.code, self.message = status, code, message
+
+
+<span class="k">def</span> check(resp):
+    <span class="k">if</span> resp.ok:
+        <span class="k">return</span> resp
+    error = resp.json()[<span class="s">"error"</span>]
+    <span class="k">raise</span> ApiError(resp.status_code, error[<span class="s">"code"</span>], error[<span class="s">"message"</span>])
+
+
+CACHE_DIR = Path(<span class="s">"cache"</span>)
+
+
+<span class="k">def</span> cache_path(url, params=<span class="k">None</span>):
+    key = url + <span class="s">"?"</span> + json.dumps(params <span class="k">or</span> {}, sort_keys=<span class="k">True</span>)
+    <span class="k">return</span> CACHE_DIR / (hashlib.sha256(key.encode(<span class="s">"utf-8"</span>)).hexdigest()[:<span class="s">16</span>] + <span class="s">".json"</span>)
+
+
+<span class="k">def</span> cached_get_json(session, url, params=<span class="k">None</span>):
+    <span class="s">"""Return (data, source): the cache when it can, the network when it must."""</span>
+    path = cache_path(url, params)
+    <span class="k">if</span> path.exists():
+        <span class="k">return</span> json.loads(path.read_text(encoding=<span class="s">"utf-8"</span>)), <span class="s">"cache"</span>
+    resp = check(session.get(url, params=params, timeout=<span class="s">10</span>))
+    CACHE_DIR.mkdir(exist_ok=<span class="k">True</span>)
+    path.write_text(resp.text, encoding=<span class="s">"utf-8"</span>)
+    <span class="k">return</span> resp.json(), <span class="s">"network"</span>
+
+
+<span class="k">for</span> category <span class="k">in</span> [<span class="s">"Packs"</span>, <span class="s">"Climbing"</span>, <span class="s">"Packs"</span>, <span class="s">"Climbing"</span>, <span class="s">"Packs"</span>]:
+    data, source = cached_get_json(session, <span class="s">f"{API}/products"</span>,
+                                   {<span class="s">"category"</span>: category, <span class="s">"per_page"</span>: <span class="s">5</span>})
+    print(category, data[<span class="s">"total"</span>], <span class="s">"from"</span>, source)</pre>
+<pre class="out">Packs 24 from network
+Climbing 24 from network
+Packs 24 from cache
+Climbing 24 from cache
+Packs 24 from cache</pre>
+</li>
+  <li><b>A log you can read afterward.</b> Say: "A job that runs overnight needs a record: what was asked, what failed, what was retried. The level is a filter. And never log a key, a token or an Authorization header."
+<pre class="code">log = logging.getLogger(<span class="s">"pinecrest"</span>)
+log.setLevel(logging.INFO)
+handler = logging.StreamHandler(sys.stdout)
+handler.setFormatter(logging.Formatter(<span class="s">"%(levelname)-7s %(message)s"</span>))
+log.handlers = [handler]
+log.debug(<span class="s">"fetched page 3"</span>)             <span class="c"># below INFO: not shown</span>
+log.info(<span class="s">"starting download: %s pages"</span>, <span class="s">7</span>)
+log.warning(<span class="s">"rate limited; waiting %s s"</span>, <span class="s">5</span>)</pre>
+<pre class="out">INFO    starting download: 7 pages
+WARNING rate limited; waiting 5 s</pre>
+</li>
+  <li><b>Resumable: one file per page, skip what is done.</b> Say: "A long download WILL be interrupted. Save each page as it arrives; on the next run, skip pages already on disk. The .part rename means a half-written file is never mistaken for a finished one."
+<pre class="code"><span class="k">def</span> download_pages(session, path, params, out_dir, throttle, max_new=<span class="k">None</span>):
+    <span class="s">"""Save every page as JSON, skipping pages already saved."""</span>
+    out_dir = Path(out_dir)
+    out_dir.mkdir(exist_ok=<span class="k">True</span>)
+    page, fetched, skipped = <span class="s">1</span>, <span class="s">0</span>, <span class="s">0</span>
+    <span class="k">while</span> <span class="k">True</span>:
+        file = out_dir / <span class="s">f"page_{page:04d}.json"</span>
+        <span class="k">if</span> file.exists():
+            data = json.loads(file.read_text(encoding=<span class="s">"utf-8"</span>))
+            skipped += <span class="s">1</span>
+        <span class="k">else</span>:
+            <span class="k">if</span> max_new <span class="k">is</span> <span class="k">not</span> <span class="k">None</span> <span class="k">and</span> fetched &gt;= max_new:
+                <span class="k">return</span> {<span class="s">"complete"</span>: <span class="k">False</span>, <span class="s">"fetched"</span>: fetched, <span class="s">"skipped"</span>: skipped}
+            throttle.wait()
+            resp = check(session.get(<span class="s">f"{API}{path}"</span>, params={**params, <span class="s">"page"</span>: page},
+                                     timeout=<span class="s">10</span>))
+            partial = file.with_suffix(<span class="s">".part"</span>)
+            partial.write_text(resp.text, encoding=<span class="s">"utf-8"</span>)
+            partial.replace(file)
+            data, fetched = resp.json(), fetched + <span class="s">1</span>
+        <span class="k">if</span> page &gt;= data[<span class="s">"total_pages"</span>]:
+            <span class="k">return</span> {<span class="s">"complete"</span>: <span class="k">True</span>, <span class="s">"fetched"</span>: fetched, <span class="s">"skipped"</span>: skipped}
+        page += <span class="s">1</span>
+
+
+throttle = Throttle(interval)
+job = {<span class="s">"per_page"</span>: <span class="s">50</span>}
+print(download_pages(session, <span class="s">"/products"</span>, job, <span class="s">"product_pages"</span>, throttle, max_new=<span class="s">2</span>))
+print(download_pages(session, <span class="s">"/products"</span>, job, <span class="s">"product_pages"</span>, throttle))
+print(download_pages(session, <span class="s">"/products"</span>, job, <span class="s">"product_pages"</span>, throttle))</pre>
+<pre class="out">{'complete': False, 'fetched': 2, 'skipped': 0}
+{'complete': True, 'fetched': 3, 'skipped': 2}
+{'complete': True, 'fetched': 0, 'skipped': 5}</pre>
+</li>
+</ol>
+</div>
+<div class="blk warn"><div class="h">Three mistakes to expect</div>
+<ul class="tick">
+  <li><b><code class="inline">int(resp.headers.get("Retry-After"))</code> with no default</b>: <code class="inline">TypeError</code> exactly when things are already going wrong. Coach: "What if the header is not there?" <code class="inline">.get("Retry-After", 1)</code>.</li>
+  <li><b>Retrying everything</b>, 404s and 403s included, or retrying with no wait and no limit. Coach: "Could this exact request succeed in two seconds? If not, why ask again?"</li>
+  <li><b>Caching before checking</b>: one 429 saved and served forever. Coach: "Which line writes the file, and which line checks the status? Swap them."</li>
+</ul>
+<p>Also common: thinking a retry policy replaces pacing (it catches the rare miss; the Throttle is plan A), and running several copies of a script to go faster (the limit is per client).</p>
+</div>
+<div class="blk lab"><div class="h">Guided lab (20 minutes)</div>
+<p><b>Lab 6.5-A, everyone:</b> <code class="inline">labs/module-18/l6_5-rate-limiting/stock_check_starter.py</code> (reference: <code class="inline">stock_check_solution.py</code>). Question: which categories have the most products out of stock or low, and what happens to thirteen requests sent at once?</p>
+<ul class="tick lab">
+  <li>Minutes 0 to 6: TODO 1 (the headers and a polite pace: one request every 0.55 s) and TODO 2 (<code class="inline">Retry-After</code> with a default).</li>
+  <li>Minutes 6 to 16: TODO 3 (plan B: on 429, wait as asked, a few tries) and TODO 4 (plan A: the Throttle, one line).</li>
+  <li>Reference answers: the burst gets 10 answers and 3 refusals, <code class="inline">Retry-After: 5</code>; plan B ends with 0 refused after one wait (about 5 s); plan A ends with 0 refused in about 7 s; Packs has the most out of stock (3); two of the four SKUs are 404 and are asked once.</li>
+  <li>Minutes 16 to 20: TODO 5, the sentence: only the 429s earned a second try; a product that does not exist will not exist in five seconds either.</li>
+</ul>
+<p><b>Lab 6.5-B (finish-if-fast, or homework):</b> <code class="inline">labs/module-18/l6_5-rate-limiting/retry_and_cache_starter.py</code>. Backoff with jitter, <code class="inline">/flaky</code> (success on try 3), what not to retry, a urllib3 <code class="inline">Retry</code> policy (offline it says why that step is skipped), and a cache that answers six questions with three requests and never stores a 404.</p>
+</div>
+<div class="blk"><div class="h">Start the lesson project (7 minutes)</div>
+<p>"Project: The Resumable Order Pull", Step 1 only: one probe gives 2,056 orders since 2025-11-01, 21 requests, about 12 seconds at 0.55 s each. Say: "Do this arithmetic before every download. For 50,000 requests it tells you to run overnight." Steps 2 to 6 (log file, interruption, resume, prove it, read the log) are homework.</p>
+</div>
+<div class="blk"><div class="h">Checks for understanding</div>
+<p>Workbook self-check, Q7 to Q12. Q12 is worth a 30-second discussion: someone in the room will have tried it.</p>
+<p style="font-size:.9rem;margin:.2rem 0">Answers: <b>Q7</b> <span data-sc="7">C) Wait about 3 seconds, until the window starts over</span>; <b>Q8</b> <span data-sc="8"><code class="inline">3</code></span>; <b>Q9</b> <span data-sc="9"><code class="inline">[0.2, 0.4, 0.8, 1.6, 2.0]</code></span>; <b>Q10</b> <span data-sc="10">A) Repeating a POST can repeat its effect, such as placing an order twice</span>; <b>Q11</b> <span data-sc="11">D) The saved error body is served from the cache, as if it were data</span>; <b>Q12</b> <span data-sc="12">B) The limit applies to you, so the copies hit 429 three times as often and the job is no faster</span>. Full set with explanations in the Answer Key.</p></div>
+<div class="blk"><div class="h">Differentiation</div>
+<p><b>Support:</b> in Lab A, TODO 3 and TODO 4 are independent: a learner who is stuck on the loop can do the one-line Throttle first and see 0 refusals.</p>
+<p><b>Stretch:</b> lesson Exercise 4 (a cache with <code class="inline">max_age</code>) or the bonus challenge.</p>
+</div>
+    </div>
+  </section>
+
+  <div class="sec"><h2>Checkpoint 2 (15 minutes)</h2><span class="rule"></span></div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">2:25</span><h3>Checkpoint 2: Data Access (Modules 5 and 6)</h3><span class="dur">15 min</span></div>
+    <div class="lesson-body">
+<p><b>What it checks:</b> that each learner can get data out of a database and out of an authenticated, paginated API on their own, check both, and answer a question in a sentence. It is open notes (lessons, their own notebooks), own work, not graded for the record: it tells you and them what to review before the capstone.</p>
+<p><b>The task</b> (workbook task sheet): Finance is closing the year. For orders with status <code class="inline">returned</code> placed on or after 2025-11-01, do the company database and the orders API agree? Report the count and total value from each source and whether the order ids are the same.</p>
+<ul class="tick">
+  <li><b>Minute 0:</b> everyone opens <code class="inline">labs/module-18/checkpoint-2/checkpoint2_starter.py</code>. It already runs, sets up the session and prints the mode. Read the task aloud once. Say: "One query, one paginated pull, one sentence."</li>
+  <li><b>Minutes 1 to 13:</b> silence and circulation. Answer questions about the environment (variables, the API not running), not about the solution.</li>
+  <li><b>Minute 13:</b> two-minute warning: "Print what you have. A partial answer with a clear sentence about what is missing scores better than nothing."</li>
+  <li><b>API will not start, or the network stack is broken on a machine:</b> <code class="inline">LABS_OFFLINE=1 python checkpoint2_starter.py</code> runs the same file against saved responses. The database part never needs the network.</li>
+  <li><b>Collect:</b> the file plus its printed output (a screenshot, or the output pasted at the bottom of the file).</li>
+</ul>
+<p><b>Scoring:</b> the 5-row rubric and the model answer are in the Answer Key. The model answer prints <code class="inline">118 returned orders since 2025-11-01, total $25,191.92</code> from both sources, 3 pages at 50 per page, and the same ids.</p>
+    </div>
+  </section>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">2:40</span><h3>Checkpoint Debrief and Module 6 Recap</h3><span class="dur">10 min</span></div>
+    <div class="lesson-body">
+<ul class="tick">
+  <li>Run the model answer on the projector (offline is fine) and read the three printed parts.</li>
+  <li>The three slips you will have seen: values glued into the SQL string instead of <code class="inline">?</code> parameters; <code class="inline">params</code> sent again on every page (or only page 1 read); no status check, so a 401 body became "data".</li>
+  <li>The module in one picture, on the board: <b>an API or a data file first → static HTML with Beautiful Soup → a browser last</b>, all of it with the six rules, a User-Agent, timeouts, status checks, pacing and retries with limits.</li>
+  <li>Tell learners what their result means: a full answer means Modules 5 and 6 are ready for the capstone; a partial one means one lesson to revisit this week (name it on their sheet).</li>
+</ul>
+    </div>
+  </section>
+
+  <div class="sec"><h2>Closing</h2><span class="rule"></span></div>
+<div class="blk"><div class="h">Exit ticket (3 questions, on a sticky note; answers)</div>
+<ol class="steps">
+  <li>What is the difference between a 401 and a 403, and what does your program do with each? <b>Answer:</b> 401: no valid credential (missing, malformed, expired): fix how you send it, or renew an expired token and retry once. 403: understood and refused: stop; a person must fix the key or permission.</li>
+  <li>The server answers 429 with <code class="inline">Retry-After: 5</code>. What does your client do? <b>Answer:</b> Wait at least 5 seconds, then send the request again (with a maximum number of tries). Better still: pace requests so this rarely happens.</li>
+  <li>Name one failure that must NOT be retried, and say why. <b>Answer:</b> Any of 400, 401 (except an expired token, once), 403, 404: they describe the request, so the same request gets the same answer.</li>
+</ol>
+</div>
+<div class="blk"><div class="h">Homework (about 2 to 3 hours)</div>
+<ul class="tick">
+  <li>Lesson 6.4: finish the December Returns Brief (Steps 3 to 5), the exercises, the quiz and the journal.</li>
+  <li>Lesson 6.5: finish the Resumable Order Pull (Steps 2 to 6), the exercises, the quiz and the journal.</li>
+  <li>Kit labs not finished: <code class="inline">token_lifecycle_starter.py</code>, <code class="inline">retry_and_cache_starter.py</code>.</li>
+  <li>Checkpoint 2: if your answer was partial, finish it at home and compare with the sentence on the debrief slide.</li>
+</ul>
+</div>
+<div class="note"><div class="t">Bring list for Session 19 (Seaborn and Plotly)</div>
+<ul class="tick">
+  <li><b>Stop the practice API</b> (Ctrl+C). Module 7 does not use it, nor the practice shop.</li>
+  <li><b>Check the plotting libraries</b> (installed with the course environment in Lesson 0.1): <code class="inline">python -c "import seaborn, plotly; print(seaborn.__version__, plotly.__version__)"</code>.</li>
+  <li><b>Files</b> (all in <code class="inline">data/</code>): <code class="inline">daily_sales.csv</code>, <code class="inline">store_weather.csv</code>, <code class="inline">orders.csv</code>, <code class="inline">survey.csv</code> for Lesson 7.1; <code class="inline">order_items.csv</code>, <code class="inline">products.csv</code>, <code class="inline">ab_test.csv</code> as well for Lesson 7.2.</li>
+  <li>Reopen a Matplotlib notebook from Module 3 and remind yourself how <code class="inline">fig, ax = plt.subplots()</code> works: seaborn builds on it.</li>
+  <li>Keep <code class="inline">orders_since_november.csv</code> and your Module 6 notebooks: a small portfolio of responsible data collection. Accounts: none. Servers: none.</li>
+</ul>
+</div>
+
+  <div class="sec"><h2>If You Run Long or Short</h2><span class="rule"></span></div>
+<p><b>Running long.</b> The checkpoint starts at 2:25 no matter what: take the time from the 6.5 project start, then from the 6.5 demo (steps 9 to 11 become "read the lesson"), then from Lab 6.5-A (TODO 5 becomes homework). If the API restart at the break fails for some learners, they run the 6.5 lab offline (<code class="inline">LABS_OFFLINE=1</code>) and still see the same 429s and waits.</p>
+<p><b>Running short.</b> Do lesson Exercise 2 together (<code class="inline">polite_interval</code>: 100,000 requests at 5,000 per hour take 22 hours) and Exercise 1 (watch <code class="inline">X-RateLimit-Remaining</code> count down). Or extend the debrief: learners swap checkpoint files and run each other's offline.</p>
+
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 18 · Facilitator Guide · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Answer Key: Session 14</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Instructor copy —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">answers &amp; solutions · not for students</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Answer Key</div>
+    <h1>Session 14: SQL from Python: Queries and Joins</h1>
+    <p class="sub">Answers with reasoning for every workbook item, reference output for all six labs, the lesson pages' quiz answers, and the warm-up and exit-ticket answers.</p>
+    <div class="meta-row">
+      <span class="chip">Session <b>14</b></span>
+      <span class="chip"><b>12</b> self-check items</span>
+      <span class="chip">Confidential</span>
+    </div>
+  </header>
+
+  <div class="sec"><h2>How to Use This Key</h2><span class="rule"></span></div>
+<ul class="tick">
+  <li>Self-check items repeat the workbook's wording and options exactly; the correct option is highlighted and each wrong option has a one-line reason.</li>
+  <li>Every output comes from running the code against <code class="inline">data/pinecrest.db</code> with the course environment (SQLite 3.53, SQLAlchemy 2.1, pandas 3.0). Counts do not depend on the SQLite version.</li>
+  <li>The four "what does this print" items build a tiny in-memory database, so learners can run them anywhere.</li>
+</ul>
+  <div class="sec"><h2>5.1 · Database Connections: self-check</h2><span class="rule"></span></div>
+<div class="q" data-sc="1"><div class="qn">Q1</div><div class="qt">A query is written <code class="inline">SELECT ... FROM ... WHERE ... GROUP BY ... HAVING ... ORDER BY ... LIMIT</code>. Which clause does the engine work on <b>first</b>?</div><div class="opts"><div class="opt">A) <code class="inline">SELECT</code>, because it is written first</div><div class="opt">B) <code class="inline">WHERE</code>, because rows must be filtered before anything else</div><div class="opt correct">C) <code class="inline">FROM</code>, because the engine has to pick the table before it can filter, group or select</div><div class="opt">D) <code class="inline">ORDER BY</code>, because sorted rows are faster to filter</div></div><div class="why"><b>Why:</b> The engine runs FROM, WHERE, GROUP BY, HAVING, SELECT, ORDER BY, LIMIT. Knowing that order explains most beginner errors, such as an aggregate in WHERE.<br><b>A</b> is wrong: SELECT is written first but runs fifth, after the groups exist.<br><b>B</b> is wrong: WHERE runs second: it needs a table to filter.<br><b>D</b> is wrong: ORDER BY runs near the end, on the finished result.</div></div>
+<div class="q" data-sc="2" data-kind="short"><div class="qn">Q2</div><div class="qt">What does this print?</div><pre class="code">conn = sqlite3.connect(<span class="s">":memory:"</span>)
+conn.execute(<span class="s">"CREATE TABLE t (x INTEGER, y TEXT)"</span>)
+conn.executemany(<span class="s">"INSERT INTO t VALUES (?, ?)"</span>,
+                 [(<span class="s">1</span>, <span class="s">"a"</span>), (<span class="s">2</span>, <span class="k">None</span>), (<span class="s">3</span>, <span class="s">"c"</span>)])
+print(conn.execute(<span class="s">"SELECT COUNT(*), COUNT(y), SUM(x) FROM t"</span>).fetchone())</pre><div class="opts"><div class="opt correct"><code class="inline">(3, 2, 6)</code></div></div><div class="why"><b>Why:</b> <code class="inline">COUNT(*)</code> counts rows (3). <code class="inline">COUNT(y)</code> counts rows where <code class="inline">y</code> is not NULL (2: Python's <code class="inline">None</code> was stored as NULL). <code class="inline">SUM(x)</code> is 1 + 2 + 3. The row comes back as a tuple.</div></div>
+<div class="q" data-sc="3"><div class="qn">Q3</div><div class="qt">This line raises <code class="inline">ProgrammingError: Incorrect number of bindings supplied. The current statement uses 1, and there are 5 supplied.</code> What is the fix?</div><pre class="code">conn.execute(<span class="s">"SELECT COUNT(*) FROM orders WHERE store = ?"</span>, <span class="s">"Boise"</span>)</pre><div class="opts"><div class="opt correct">A) Pass a one-item tuple: <code class="inline">("Boise",)</code></div><div class="opt">B) Write five placeholders: <code class="inline">?????</code></div><div class="opt">C) Put the value in the text with an f-string</div><div class="opt">D) Use double quotes around the <code class="inline">?</code></div></div><div class="why"><b>Why:</b> The parameters must be a sequence of values. A string is a sequence of its characters, so <code class="inline">"Boise"</code> looked like five values. A one-item tuple needs the trailing comma; a list <code class="inline">["Boise"]</code> also works.<br><b>B</b> is wrong: The statement needs one value. Five placeholders would ask for five different values.<br><b>C</b> is wrong: That removes the error and opens the door to SQL injection. Never.<br><b>D</b> is wrong: A quoted <code class="inline">?</code> is the text of a question mark, not a placeholder.</div></div>
+<div class="q" data-sc="4"><div class="qn">Q4</div><div class="qt">You want the average order per store for completed orders in 2025, but only for stores whose average is above $190. Which condition belongs in <code class="inline">HAVING</code>?</div><div class="opts"><div class="opt">A) <code class="inline">status = 'completed'</code></div><div class="opt correct">B) <code class="inline">AVG(order_total) &gt; 190</code></div><div class="opt">C) <code class="inline">order_date &gt;= '2025-01-01'</code></div><div class="opt">D) <code class="inline">store IN ('Boise', 'Bend')</code></div></div><div class="why"><b>Why:</b> WHERE filters rows before the groups exist, so it cannot mention an aggregate. A condition on a group's result goes in HAVING, which runs after GROUP BY.<br><b>A</b> is wrong: A condition on each row: WHERE.<br><b>C</b> is wrong: A condition on each row: WHERE.<br><b>D</b> is wrong: It mentions the grouping column but it is still a row filter, and WHERE is the normal place for it.</div></div>
+<div class="q" data-sc="5"><div class="qn">Q5</div><div class="qt">A store name typed into a web form arrives in the variable <code class="inline">store</code>. Which line passes it to the database safely?</div><div class="opts"><div class="opt">A) <code class="inline">conn.execute(f"SELECT * FROM orders WHERE store = '{store}'")</code></div><div class="opt">B) <code class="inline">conn.execute("SELECT * FROM orders WHERE store = '" + store + "'")</code></div><div class="opt">C) <code class="inline">conn.execute("SELECT * FROM orders WHERE store = '{}'".format(store))</code></div><div class="opt correct">D) <code class="inline">conn.execute("SELECT * FROM orders WHERE store = ?", (store,))</code></div></div><div class="why"><b>Why:</b> With a placeholder the SQL text and the value travel separately, so the value can never be read as part of the command.<br><b>A</b> is wrong: An f-string pastes the visitor's text into the command: SQL injection.<br><b>B</b> is wrong: String concatenation is the same mistake with a different spelling.<br><b>C</b> is wrong: So is <code class="inline">.format()</code>. All three break on a name like O'Brien even with no attacker.</div></div>
+<div class="q" data-sc="6" data-kind="short"><div class="qn">Q6</div><div class="qt">What does this print?</div><pre class="code">conn = sqlite3.connect(<span class="s">":memory:"</span>)
+conn.execute(<span class="s">"CREATE TABLE t (k INTEGER PRIMARY KEY)"</span>)
+conn.commit()
+<span class="k">try</span>:
+    <span class="k">with</span> conn:
+        conn.execute(<span class="s">"INSERT INTO t VALUES (1)"</span>)
+        conn.execute(<span class="s">"INSERT INTO t VALUES (1)"</span>)
+<span class="k">except</span> sqlite3.IntegrityError:
+    <span class="k">pass</span>
+print(conn.execute(<span class="s">"SELECT COUNT(*) FROM t"</span>).fetchone()[<span class="s">0</span>])</pre><div class="opts"><div class="opt correct"><code class="inline">0</code></div></div><div class="why"><b>Why:</b> Both inserts are in one transaction. The second breaks the primary key, the block raises, and <code class="inline">with conn:</code> rolls the whole transaction back, including the first insert. All or nothing.</div></div>
+  <div class="sec"><h2>5.1 · Predict, then run</h2><span class="rule"></span></div>
+<div class="q"><div class="qn">P1</div><div class="qt">Output and reasoning</div><pre class="code">sql = <span class="s">"SELECT COUNT(*) FROM products WHERE name LIKE '%TENT%'"</span>
+print(conn.execute(sql).fetchone()[<span class="s">0</span>])</pre><div class="why"><b>Answer:</b> <code class="inline">18</code>. In SQLite, <code class="inline">LIKE</code> ignores case for the letters A to Z, so <code class="inline">'%TENT%'</code> matches "Tent". It is 18, not 24 (the size of the Tents category), because six products in that category are shelters and tarps with no "tent" in the name. In PostgreSQL <code class="inline">LIKE</code> is case sensitive and this returns 0; use <code class="inline">ILIKE</code> there.</div></div>
+<div class="q"><div class="qn">P2</div><div class="qt">Output and reasoning</div><pre class="code">cur = conn.execute(<span class="s">"SELECT order_id FROM orders ORDER BY order_id LIMIT 5"</span>)
+cur.fetchone()
+cur.fetchone()
+print(len(cur.fetchall()), cur.fetchone())</pre><div class="why"><b>Answer:</b> <code class="inline">3 None</code>. The cursor moves forward only: two rows were fetched, three were left for <code class="inline">fetchall()</code>, and after that the cursor is spent, so <code class="inline">fetchone()</code> returns <code class="inline">None</code>.</div></div>
+<div class="q"><div class="qn">P3</div><div class="qt">Output and reasoning</div><pre class="code">print(conn.execute(<span class="s">"SELECT COUNT(*), COUNT(promo_code) FROM orders"</span>).fetchone())</pre><div class="why"><b>Answer:</b> <code class="inline">(20302, 2148)</code>. <code class="inline">COUNT(*)</code> counts all rows; <code class="inline">COUNT(promo_code)</code> counts only the rows where the code is not NULL (20,302 - 18,154).</div></div>
+  <div class="sec"><h2>5.1 · Worked example and lab reference notes</h2><span class="rule"></span></div>
+<p><b>Worked example (<code class="inline">promo_report</code>).</b> Output as printed in the workbook. Points to draw out: NULL forms its own group (9,162 completed 2025 orders with no code); <code class="inline">HAVING</code> removed the small groups after grouping; the year reaches the SQL only as two parameter values. A learner who writes <code class="inline">WHERE strftime('%Y', order_date) = '2025'</code> is also correct; the range form is the habit that later lets an index help (Lesson 5.4).</p><p><b><code class="inline">labs/module-14/l5_1-database-connections/staff_report_solution.py</code>.</b> Read-only connection; six steps. Reference output:</p><pre class="out" style="white-space:pre-wrap">(0, 'employee_id', 'INTEGER', 0, None, 1)
+(1, 'first_name', 'TEXT', 1, None, 0)
+(2, 'last_name', 'TEXT', 1, None, 0)
+(3, 'title', 'TEXT', 1, None, 0)
+(4, 'department', 'TEXT', 1, None, 0)
+(5, 'location', 'TEXT', 1, None, 0)
+(6, 'manager_id', 'INTEGER', 0, None, 0)
+(7, 'hire_date', 'TEXT', 1, None, 0)
+(8, 'salary', 'INTEGER', 1, None, 0)
+(9, 'email', 'TEXT', 1, None, 0)
+rows: 55
+
+['first_name', 'last_name', 'title', 'hire_date']
+fetchone: ('Clara', 'Soto', 'Chief Executive Officer', '2016-02-01')
+fetchall: [('Bianca', 'Sato', 'Store Manager', '2016-05-08'), ('Tamar', 'Kimura', 'VP of Retail', '2016-09-30')]
+fetchone again: None
+
+    employee         title  location  salary
+  Helga Shah Store Manager     Boise   77800
+  Leo Mendez Store Manager      Bend   76500
+ Bianca Sato Store Manager Asheville   73900
+Uma Quintero Store Manager Flagstaff   68900
+
+department  people  payroll  avg_salary first_hire
+    Retail      36  1841600     51156.0 2016-05-08
+Operations      11   753600     68509.0 2018-05-21
+E-commerce       6   552500     92083.0 2018-07-23
+ Executive       2   273600    136800.0 2016-02-01
+
+ location  people  avg_salary
+       HQ      17     99512.0
+    Boise      10     43950.0
+Asheville       8     45613.0
+     Bend       8     45613.0
+
+            count      sum
+department                
+Retail         36  1841600
+Operations     11   753600
+E-commerce      6   552500
+Executive       2   273600</pre><p><b>Common wrong answers:</b> the "at least 8 people" condition in WHERE (<code class="inline">misuse of aggregate</code>); expecting the last <code class="inline">fetchone()</code> to return the first row again; <code class="inline">location != 'HQ'</code> instead of the list of four stores in Step 3 (it lets the Warehouse in; here the Retail filter hides the slip, which is worth pointing out); <code class="inline">AVG(salary)</code> shown unrounded.</p><p><b><code class="inline">labs/module-14/l5_1-database-connections/safe_lookup_solution.py</code>.</b> Reference output:</p><pre class="out" style="white-space:pre-wrap">Boise, quantity &lt;= 0:  unsafe 65 | safe 65
+Warehouse, quantity &lt;= 5:  unsafe 39 | safe 39
+
+crafted input, unsafe: 1210 (every row in the table)
+crafted input, safe:   0 (no location has that odd name)
+rows in inventory:     1210
+
+rows for TNT-1001: 5
+ProgrammingError: Incorrect number of bindings supplied. The current statement uses 1, and there are 8 supplied.
+
+Flagstaff, out of stock: 62 SKUs
+     sku  quantity  reorder_point last_counted
+APL-1012         0              3   2025-12-01
+PCK-1009         0              8   2025-12-01
+SNW-1008         0              4   2025-12-01
+KIT-1007         0              7   2025-12-02
+last_counted dtype: datetime64[us]
+ValueError: sort_by must be one of ['last_counted', 'quantity', 'sku']</pre><p>The SQL the unsafe function builds from the crafted input is <code class="inline">SELECT COUNT(*) FROM inventory WHERE location = 'nowhere' OR '1'='1' --' AND quantity &lt;= 0</code>. The quote closes the string early, <code class="inline">OR '1'='1'</code> is true for every row, and the two dashes turn the rest of the line into a comment. <b>Common wrong answers:</b> <code class="inline">(location)</code> without the comma; quotes around the placeholder (<code class="inline">'?'</code>); trying a placeholder for the ORDER BY column (it sorts by a constant and silently does nothing); believing the f-string for <code class="inline">sort_by</code> breaks the rule (it inserts a name checked against a fixed list, never a value).</p><p><b><code class="inline">labs/module-14/l5_1-database-connections/save_summary_solution.py</code>.</b> Works on <code class="inline">pinecrest_work.db</code> in the output folder. Reference output:</p><pre class="out" style="white-space:pre-wrap">dialect: sqlite | tables: ['customers', 'employees', 'inventory', 'order_items', 'orders', 'products']
+
+ location  skus  units  below_reorder  out_of_stock
+Warehouse   242  14229             49            24
+     Bend   242   2230             81            59
+Flagstaff   242   2191             89            62
+Asheville   242   2140             79            54
+    Boise   242   2025             89            65
+
+ location  below_reorder  below_pct
+Warehouse             49       20.2
+     Bend             81       33.5
+Flagstaff             89       36.8
+Asheville             79       32.6
+    Boise             89       36.8
+
+rows written: 5
+highest share below reorder point: [('Boise', 36.8), ('Flagstaff', 36.8)]
+tables now: ['customers', 'employees', 'inventory', 'order_items', 'orders', 'products', 'stock_summary']
+
+IntegrityError: UNIQUE constraint failed: inventory.sku, inventory.location
+inventory rows before: 1210 | after: 1210 | Popup Stand rows: 0
+
+stock_summary in the shipped database: False | in the working copy: True</pre><p>The Popup Stand row was valid, and it is gone, because it shared a transaction with a row that broke the primary key. <b>Common wrong answers:</b> <code class="inline">engine.connect()</code> for the inserts with no commit (the rows vanish at the end of the block: SQLAlchemy 2 does not autocommit); a bare string instead of <code class="inline">text(...)</code>; <code class="inline">if_exists="append"</code> on a rerun, which doubles the table to 10 rows; forgetting <code class="inline">index=False</code>.</p>
+  <div class="sec"><h2>5.1 · The lesson page's own quiz</h2><span class="rule"></span></div>
+<ol class="steps">
+  <li><b>Question 1: B.</b> <code class="inline">GROUP BY store HAVING COUNT(*) &gt; 2000</code>: a condition on an aggregate goes in HAVING, after GROUP BY. A fails (aggregate in WHERE); C has the clauses in the wrong order.</li>
+  <li><b>Question 2: C.</b> Text typed by the visitor becomes part of the SQL command itself: SQL injection.</li>
+  <li><b>Question 3: A.</b> 280: <code class="inline">COUNT(*)</code> is 4,850 and <code class="inline">COUNT(phone)</code> is 4,570, the rows where phone is not NULL.</li>
+  <li><b>Question 4: C.</b> The table as it was before the INSERT: nothing was committed, so the change was never saved to the file.</li>
+  <li><b>Question 5: B.</b> Put the GROUP BY and SUM in the SQL so that only one row per store comes back.</li>
+</ol>
+  <div class="sec"><h2>5.2 · Complex Queries: self-check</h2><span class="rule"></span></div>
+<div class="q" data-sc="7"><div class="qn">Q7</div><div class="qt"><code class="inline">orders</code> has 20,302 rows; 739 of them have a <code class="inline">customer_id</code> that is not in <code class="inline">customers</code>; 1,058 customers have never ordered. How many rows does <code class="inline">orders JOIN customers ON c.customer_id = o.customer_id</code> return?</div><div class="opts"><div class="opt">A) 20,302</div><div class="opt correct">B) 19,563</div><div class="opt">C) 21,360</div><div class="opt">D) 19,244</div></div><div class="why"><b>Why:</b> A plain JOIN is an inner join: only orders that found a customer survive. 20,302 - 739 = 19,563. The 739 rows vanish with no error.<br><b>A</b> is wrong: That is the LEFT JOIN count: every order kept, 739 of them with an empty customer side.<br><b>C</b> is wrong: That is the FULL OUTER JOIN: 19,563 + 739 + 1,058.<br><b>D</b> is wrong: Customers without orders have no order row to lose, so 1,058 is not subtracted.</div></div>
+<div class="q" data-sc="8" data-kind="short"><div class="qn">Q8</div><div class="qt">What does this print?</div><pre class="code">conn = sqlite3.connect(<span class="s">":memory:"</span>)
+conn.executescript(<span class="s">"""
+    CREATE TABLE o (id INTEGER, total REAL);
+    CREATE TABLE i (order_id INTEGER, sku TEXT);
+    INSERT INTO o VALUES (1, 100), (2, 50);
+    INSERT INTO i VALUES (1, 'a'), (1, 'b'), (1, 'c'), (2, 'd');
+"""</span>)
+sql = <span class="s">"SELECT SUM(o.total) FROM o JOIN i ON i.order_id = o.id"</span>
+print(conn.execute(sql).fetchone()[<span class="s">0</span>])</pre><div class="opts"><div class="opt correct"><code class="inline">350.0</code></div></div><div class="why"><b>Why:</b> Order 1 has three lines, so its total of 100 appears three times after the join; order 2 appears once. 300 + 50 = 350, not the true 150. This is the fan-out trap: sum a column at the level where it lives.</div></div>
+<div class="q" data-sc="9"><div class="qn">Q9</div><div class="qt">Which query lists the customers who have <b>never</b> placed an order?</div><div class="opts"><div class="opt correct">A) <code class="inline">SELECT c.* FROM customers AS c LEFT JOIN orders AS o ON o.customer_id = c.customer_id WHERE o.order_id IS NULL</code></div><div class="opt">B) <code class="inline">SELECT c.* FROM customers AS c JOIN orders AS o ON o.customer_id = c.customer_id WHERE o.order_id IS NULL</code></div><div class="opt">C) <code class="inline">SELECT c.* FROM customers AS c LEFT JOIN orders AS o ON o.customer_id = c.customer_id WHERE o.order_id = NULL</code></div><div class="opt">D) <code class="inline">SELECT c.* FROM orders AS o LEFT JOIN customers AS c ON c.customer_id = o.customer_id WHERE c.customer_id IS NULL</code></div></div><div class="why"><b>Why:</b> The anti-join: keep every customer with LEFT JOIN, then keep the rows where the order side is empty. It returns the 1,058 customers with no orders.<br><b>B</b> is wrong: An inner join has already thrown away customers with no order, so nothing is left to find.<br><b>C</b> is wrong: <code class="inline">= NULL</code> is never true. Test for NULL with <code class="inline">IS NULL</code>.<br><b>D</b> is wrong: That starts from orders: it finds the 739 orders with no customer, the opposite question.</div></div>
+<div class="q" data-sc="10"><div class="qn">Q10</div><div class="qt">359 of the 20,302 orders used the code TRAIL15. <code class="inline">SELECT COUNT(*) FROM orders WHERE promo_code &lt;&gt; 'TRAIL15'</code> returns 1,789, not 19,943. Why?</div><div class="opts"><div class="opt">A) <code class="inline">&lt;&gt;</code> is not a valid operator in SQLite</div><div class="opt">B) The query needs <code class="inline">DISTINCT</code></div><div class="opt">C) Text comparison ignores case, so some codes were double counted</div><div class="opt correct">D) For the 18,154 orders with no code the comparison with NULL is unknown, and WHERE keeps only rows where the condition is true</div></div><div class="why"><b>Why:</b> NULL means unknown, so <code class="inline">NULL &lt;&gt; 'TRAIL15'</code> is unknown and the row is skipped. To mean "every order that did not use TRAIL15", add <code class="inline">OR promo_code IS NULL</code> or compare <code class="inline">COALESCE(promo_code, 'none')</code>.<br><b>A</b> is wrong: <code class="inline">&lt;&gt;</code> is the standard not-equal operator (<code class="inline">!=</code> works too).<br><b>B</b> is wrong: DISTINCT removes duplicate rows from a result; it does not bring back skipped rows.<br><b>C</b> is wrong: Case has nothing to do with it: 359 + 1,789 + 18,154 = 20,302 accounts for every order.</div></div>
+<div class="q" data-sc="11" data-kind="short"><div class="qn">Q11</div><div class="qt">What does this print?</div><pre class="code">conn = sqlite3.connect(<span class="s">":memory:"</span>)
+print(conn.execute(<span class="s">"SELECT 7 / 2, 7 / 2.0, 100 * 1 / 4"</span>).fetchone())</pre><div class="opts"><div class="opt correct"><code class="inline">(3, 3.5, 25)</code></div></div><div class="why"><b>Why:</b> Dividing one integer by another gives an integer in SQLite (and PostgreSQL): 7 / 2 is 3. One real number makes the arithmetic real: 3.5. <code class="inline">100 * 1 / 4</code> is all integers: 25. A percentage column that is all zeros is integer division: multiply by <code class="inline">100.0</code>.</div></div>
+<div class="q" data-sc="12"><div class="qn">Q12</div><div class="qt">A recursive CTE walks the employee tree from the CEO down. What makes the recursion stop?</div><div class="opts"><div class="opt">A) The <code class="inline">LIMIT</code> that every recursive CTE must have</div><div class="opt">B) It reaches the row whose <code class="inline">manager_id</code> is NULL</div><div class="opt correct">C) A round of the recursive part finds no new rows</div><div class="opt">D) It has run once for every row in the table</div></div><div class="why"><b>Why:</b> Each round joins the table to the rows found in the round before. When a round adds nobody (the newest employees manage no one), the loop ends and everything found so far is returned.<br><b>A</b> is wrong: A LIMIT is a useful guard while developing, but it is not required and is not what ends a healthy recursion.<br><b>B</b> is wrong: The row with a NULL manager is the anchor, the START of the walk.<br><b>D</b> is wrong: The number of rounds is the depth of the tree (six levels here), not the number of rows.</div></div>
+  <div class="sec"><h2>5.2 · Predict, then run</h2><span class="rule"></span></div>
+<div class="q"><div class="qn">P1</div><div class="qt">Output and reasoning</div><pre class="code">sql = <span class="s">"SELECT COUNT(*) FROM employees AS e JOIN employees AS m"</span>
+print(conn.execute(sql).fetchone()[<span class="s">0</span>])</pre><div class="why"><b>Answer:</b> <code class="inline">3025</code>. 55 × 55. SQLite treats a JOIN with no ON as a cross join. No error; PostgreSQL would reject it. On <code class="inline">orders</code> and <code class="inline">order_items</code> the same slip would produce over 900 million rows.</div></div>
+<div class="q"><div class="qn">P2</div><div class="qt">Output and reasoning</div><pre class="code">print(conn.execute(<span class="s">"SELECT NULL = NULL, NULL IS NULL, COUNT(NULL)"</span>).fetchone())</pre><div class="why"><b>Answer:</b> <code class="inline">(None, 1, 0)</code>. <code class="inline">NULL = NULL</code> is unknown (shown as <code class="inline">None</code>), not true. <code class="inline">NULL IS NULL</code> is 1 (true). <code class="inline">COUNT(NULL)</code> is 0, because COUNT of a value skips NULL.</div></div>
+<div class="q"><div class="qn">P3</div><div class="qt">Output and reasoning</div><pre class="code">q = <span class="s">"SELECT channel FROM orders"</span>
+<span class="k">for</span> op <span class="k">in</span> [<span class="s">"UNION"</span>, <span class="s">"UNION ALL"</span>]:
+    print(op, conn.execute(<span class="s">f"SELECT COUNT(*) FROM ({q} {op} {q})"</span>).fetchone()[<span class="s">0</span>])</pre><div class="why"><b>Answer:</b> <code class="inline">UNION 2 / UNION ALL 40604</code>. <code class="inline">UNION</code> removes duplicates, so two copies of a column with two distinct values give 2 rows. <code class="inline">UNION ALL</code> stacks everything: 20,302 + 20,302.</div></div>
+  <div class="sec"><h2>5.2 · Worked example and lab reference notes</h2><span class="rule"></span></div>
+<p><b>Worked example (return rate by tier).</b> Output as printed in the workbook: the groups add up to 20,302 orders; the inner join would have kept 19,563. Basic 8.0%, Silver 5.4%, Gold 4.7%, closed accounts 5.5%. The point to press: tiers are defined by completed spend, which returns reduce, so "loyal customers return less" is partly built into the definition. A learner who writes "Gold customers are more careful buyers" has skipped Lesson 4.4's question about how the data was generated.</p><p><b>The table of links in the workbook.</b> customers (one) to orders (many): 739 orders without a customer, 1,058 customers without an order. orders (one) to order_items (many): none unmatched. products (one) to order_items (many): 609 lines without a product, 8 products without a line.</p><p><b><code class="inline">labs/module-14/l5_2-complex-queries/join_row_counts_solution.py</code>.</b> Reference output:</p><pre class="out" style="white-space:pre-wrap"> lines  inner_join  left_join
+ 45490       44881      45490
+
+ revenue_inner_join  lines
+          3602058.1  41221
+
+         brand  lines  item_revenue
+     Wrenfield   5107     515811.85
+     Quillback   5688     496503.80
+     Pinecrest   5864     472441.80
+     Tallgrass   5450     457486.65
+  Granite Fork   4640     443898.60
+  Juniper Vane   5105     433123.35
+   Cedar Notch   5334     414783.45
+Larkspur Ridge   4033     368008.60
+  Discontinued    567      34228.25
+all completed lines: 41788 | item revenue: 3636286.35
+
+     sku  lines  units  item_revenue  last_sold
+APL-1033     93    143      11432.85 2024-09-23
+SNW-1018     37     37      10136.15 2024-09-08
+KIT-1016    357    800       6000.00 2024-09-29
+PCK-1025     18     18       4823.10 2024-09-21
+SNW-1007     73    164       2214.00 2024-09-23
+PCK-1015     31     31       1889.45 2024-09-22
+
+       brand  never_sold
+Granite Fork           3
+   Wrenfield           2
+Juniper Vane           1
+   Pinecrest           1
+   Tallgrass           1</pre><p>The lost revenue is 3,636,286.35 - 3,602,058.10 = 34,228.25, on 567 completed lines (609 lines in all statuses) of six SKUs. <b>Common wrong answers:</b> predicting 45,490 for the inner join; reading the unnamed group as "brand missing in the data" instead of "product no longer in the catalog"; writing the anti-join with <code class="inline">WHERE p.sku = NULL</code> (returns nothing); an inner join to products in Step 4 (no rows: it removed exactly the rows being looked for).</p><p><b><code class="inline">labs/module-14/l5_2-complex-queries/stock_vs_sales_solution.py</code>.</b> Reference output:</p><pre class="out" style="white-space:pre-wrap"> units_sold_2025  units_on_hand
+           30894          22815
+
+ units_sold_2025  units_on_hand  rows_summed
+          154470        3693132       111520
+Each order line met its SKU's five inventory rows (units sold x 5), and each inventory
+row was repeated once per order line of that SKU (units on hand x 162). No error, no warning.
+
+ skus  units_sold_2025  units_on_hand
+  242            30894          22815
+
+    category  sold_2025  on_hand  weeks_of_cover cover
+ Accessories       8305     3884            24.3  thin
+Camp Kitchen       6420     3647            29.5    ok
+        Snow       2099     1678            41.6    ok
+    Footwear       3184     2557            41.8    ok
+     Apparel       3225     2643            42.6    ok
+    Climbing       2223     2090            48.9 heavy
+    Sleeping       2298     2373            53.7 heavy
+       Packs       1821     2149            61.4 heavy
+       Tents       1319     1794            70.7 heavy
+
+ integer_math  real_math  ratio_as_integers
+           38  38.401631                  0
+Check: 2025 lines on SKUs that are not in products (they would be missing from per_sku): 0</pre><p>Why those factors: every SKU has exactly five inventory rows, so each order line is repeated five times (30,894 × 5 = 154,470). Each inventory row is repeated once per 2025 order line of its SKU, about 162 times on average. The fix aggregates each side to one row per SKU before joining; <code class="inline">per_sku</code> then has 242 rows and both totals are right. The join to <code class="inline">sold</code> is a LEFT JOIN so that a product with no 2025 sales stays, with 0. <b>Common wrong answers:</b> <code class="inline">COUNT(DISTINCT ...)</code> tricks to "undo" the fan-out (they cannot fix a sum); <code class="inline">52 * on_hand / sold</code> with integers (38 instead of 38.4 overall); no guard against dividing by zero (<code class="inline">NULLIF(sold, 0)</code>).</p><p><b><code class="inline">labs/module-14/l5_2-complex-queries/org_payroll_solution.py</code>.</b> Reference output:</p><pre class="out" style="white-space:pre-wrap"> employee_id      employee            title              reports_to
+           2  Tamar Kimura     VP of Retail Chief Executive Officer
+           3   Arjun Silva VP of E-commerce Chief Executive Officer
+           4 Elise Delgado VP of Operations Chief Executive Officer
+          55    Zane Laine       HR Manager Chief Executive Officer
+
+         head  people_including_head  levels_below  payroll
+ Tamar Kimura                     36             4  1841600
+Elise Delgado                     11             2   753600
+  Arjun Silva                      6             2   552500
+   Zane Laine                      1             0    88600
+
+ employees  in_a_branch  distinct_people  salary_not_in_a_branch
+        55           54               54                  185000
+
+ products  rated_4_or_more  rated_below_4  no_rating  count_rating
+      242              164             70          8           234
+
+ avg_weight_known  avg_with_zero_filled  with_weight  all_products
+            0.793                 0.747          228           242
+
+ not_in  not_exists  managers
+      0          32        23</pre><p>The anchor is the CEO's four direct reports, each carrying its own name as <code class="inline">head</code>; the recursive part passes <code class="inline">branch.head</code> down unchanged. 54 of 55 employees are in exactly one branch; the missing salary, 185,000, is the CEO's. The NULL checks: 164 + 70 = 234 rated products, and 8 unrated make 242; <code class="inline">AVG(weight_kg)</code> uses the 228 known weights while filling with 0 drags the average down; <code class="inline">NOT IN</code> returns 0 because the list contains the CEO's NULL. <b>Common wrong answers:</b> starting the anchor at the CEO (one branch of 55); <code class="inline">UNION</code> instead of <code class="inline">UNION ALL</code>; reporting the zero-filled average weight.</p>
+  <div class="sec"><h2>5.2 · The lesson page's own quiz</h2><span class="rule"></span></div>
+<ol class="steps">
+  <li><b>Question 1: A.</b> 20,302: a LEFT JOIN keeps every order; the 739 unmatched ones have NULL on the customer side.</li>
+  <li><b>Question 2: C.</b> 0: the list contains a NULL, and NOT IN against a list with a NULL is never true.</li>
+  <li><b>Question 3: B.</b> Each order's total is repeated once for every line on the order, then summed: the fan-out trap.</li>
+  <li><b>Question 4: A.</b> 7: UNION removes duplicates. Four cities are shared; add Online, HQ and Warehouse.</li>
+  <li><b>Question 5: C.</b> In the ON clause. In WHERE the condition would discard the NULL rows and undo the left join.</li>
+</ol>
+  <div class="sec"><h2>Warm-up and Exit Ticket</h2><span class="rule"></span></div>
+      <div class="blk"><div class="h">Warm-up: retrieval from Session 13</div>
+<ol class="steps">
+  <li>Name three of the six lines of an experiment plan. <b>Answer:</b> Any three of: unit, primary metric, guardrail metric, hypotheses (two-sided, alpha), sample size and duration, decision rule.</li>
+  <li>Conversion went from 8.86% to 10.03%. Say the lift two ways. <b>Answer:</b> +1.17 percentage points (absolute) and +13% (relative). Both are correct; always say which.</li>
+  <li>Why is "stop the test the first time p is below 0.05" a problem? <b>Answer:</b> Each look is another chance to cross the line by luck. With weekly looks the false-alarm rate was about 12% instead of 5%; with daily looks about 27%.</li>
+  <li>What does "grain" mean, and what is the grain of <code class="inline">order_items</code>? <b>Answer:</b> What one row represents. One product line on an order (45,490 rows for 20,302 orders). Today's joins live or die on this.</li>
+  <li>Merging 1,800 survey rows with <code class="inline">orders</code> on <code class="inline">customer_id</code> gave 9,230 rows. What happened, and what guards against it? <b>Answer:</b> Each response was repeated once per order of that customer. Guard: summarize to one row per customer first, and state the relationship with <code class="inline">validate=</code>. In SQL the same trap is called fan-out, and you will see it turn $3.7 million into $10.3 million after the break.</li>
+</ol>
+      </div>
+      <div class="blk"><div class="h">Exit ticket</div>
+<ol class="steps">
+  <li>In one sentence each: what does WHERE filter, and what does HAVING filter? <b>Answer:</b> WHERE filters rows before they are grouped (so it cannot mention an aggregate). HAVING filters groups after GROUP BY (so it can).</li>
+  <li>Why do values go into SQL through placeholders and never through an f-string? <b>Answer:</b> With a placeholder the SQL text and the value travel separately, so a value can never be read as part of the command. An f-string pastes the value into the command: a quote in the input can change the query (SQL injection), and an honest name like O'Brien breaks it.</li>
+  <li><code class="inline">orders</code> has 20,302 rows and 739 have no matching customer. How many rows from <code class="inline">orders JOIN customers</code>, and how many from <code class="inline">orders LEFT JOIN customers</code>? <b>Answer:</b> 19,563 and 20,302. The inner join drops the unmatched rows silently; the left join keeps them with NULL on the customer side.</li>
+</ol>
+      </div>
+      <div class="blk warn"><div class="h">Common wrong answers and what they reveal</div>
+<ul class="tick">
+  <li><b>"WHERE and HAVING are the same thing" (Q4, exit 1).</b> The learner has not connected the clauses to the order they run in. Have them point at the board: where do the groups come into existence?</li>
+  <li><b>"The f-string is fine if I trust the input" (Q5, exit 2).</b> They see injection only as an attack. Give the honest failure: a customer called O'Brien.</li>
+  <li><b>Predicting 20,302 for the inner join (Q7, exit 3).</b> They treat a join as a lookup that cannot fail. Ask what happened to the order whose customer card is missing.</li>
+  <li><b>150 for the fan-out item (Q8).</b> The right total, which means the learner did not picture the joined rows. Have them write the four rows of the join by hand.</li>
+  <li><b>"NULL is like zero" (Q10, lab C).</b> Then <code class="inline">&lt;&gt;</code> should have matched. Insist on the word "unknown".</li>
+  <li><b>"The recursion stops at the CEO" (Q12).</b> The learner reads the tree bottom-up. Trace two rounds from the anchor on the board.</li>
+</ul>
+      </div>
+
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 14 · Answer Key · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

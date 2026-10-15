@@ -3,1109 +3,1356 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Master SQL window functions for advanced analytics. Learn ranking, aggregation, and analytical functions for data science.">
-    <title>Window Functions - Python Data Science Path</title>
+    <meta name="description" content="Rank rows, compare each row with its neighbors, and compute running totals and moving averages in SQL with OVER, PARTITION BY and window frames, side by side with pandas. Python Data Science Lesson 5.3.">
+    <meta name="author" content="Ray de la Paz">
+    <title>SQL Window Functions - Python Data Science</title>
     <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/enhanced.css">
-    <link rel="icon" href="/favicon.png" type="image/png">
-    <script type="module">
-      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-      mermaid.initialize({ startOnLoad: true });
-    </script>
-    <script src="js/course-enhancements.js" defer></script>
-    <link rel="stylesheet" href="styles/standard.css">
+    <link rel="icon" type="image/png" href="favicon.png">
 </head>
 <body>
-    <!-- Skip to main content for accessibility -->
     <a href="#main-content" class="skip-to-main">Skip to main content</a>
-    
-    <!-- Progress indicator -->
+
     <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
         <div class="progress-bar"></div>
     </div>
-    
+
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">📊 Python Data Science</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">☰</button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
+    </nav>
+
     <main id="main-content">
-    <header role="banner">
-        <h1>Window Functions</h1>
-        <div class="reading-time" aria-label="Estimated reading time"></div>
-    </header>
+        <div class="container">
+            <header>
+                <h1>🪟 Lesson 5.3: SQL Window Functions</h1>
+                <p class="lead">Rank within a group, compare each month with the last, keep a running total: window functions let every row see its neighbors without giving up its own place in the result.</p>
 
-    <!-- What You'll Learn (learning objectives) -->
-    <div class="card card-info">
-        <h2>📚 What You'll Learn</h2>
-        <p>By the end of this lesson, you will be able to:</p>
-        <ul>
-            <li>Explain how window functions compute across rows while keeping every individual row, unlike <code>GROUP BY</code></li>
-            <li>Write the <code>OVER (PARTITION BY ... ORDER BY ...)</code> clause and control the window frame with <code>ROWS</code> and <code>RANGE</code></li>
-            <li>Rank data with <code>ROW_NUMBER</code>, <code>RANK</code>, <code>DENSE_RANK</code>, <code>NTILE</code>, and <code>PERCENT_RANK</code></li>
-            <li>Build running totals, moving averages, and month-to-date aggregates with windowed <code>SUM</code>/<code>AVG</code></li>
-            <li>Use <code>LAG</code>, <code>LEAD</code>, <code>FIRST_VALUE</code>, and <code>LAST_VALUE</code> for period-over-period and cohort analysis</li>
-            <li>Apply window functions to real problems such as funnels, gaps-and-islands, deduplication, and Pareto analysis</li>
-        </ul>
-        <p><strong>⏱️ Estimated Time:</strong> 45–60 minutes</p>
-        <p><strong>🎯 Project:</strong> Build an analytics query that returns each salesperson's monthly rank, running total, and month-over-month growth in a single result set.</p>
-    </div>
-    
-    <!-- Breadcrumb Navigation -->
-    <nav class="breadcrumb" aria-label="Breadcrumb">
-        <a href="index.html">Home</a>
-        <span class="separator">›</span>
-        <a href="#">Intermediate Module</a>
-        <span class="separator">›</span>
-        <a href="#">SQL for Data Scientists</a>
-        <span class="separator">›</span>
-        <span class="current">Window Functions</span>
-    </nav>
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Explain what <code>OVER</code>, <code>PARTITION BY</code> and the window's <code>ORDER BY</code> each control, and how a window function differs from <code>GROUP BY</code></li>
+                        <li>Number and rank rows with <code>ROW_NUMBER</code>, <code>RANK</code> and <code>DENSE_RANK</code>, and select the top N rows of every group</li>
+                        <li>Compare a row with earlier or later rows using <code>LAG</code> and <code>LEAD</code></li>
+                        <li>Compute running totals and moving averages with an explicit window frame, and say what the default frame does</li>
+                        <li>Translate each of these between SQL and pandas (<code>transform</code>, <code>rank</code>, <code>shift</code>, <code>cumsum</code> and <code>expanding</code>, <code>rolling</code> with <code>min_periods</code>)</li>
+                    </ul>
+                </div>
 
-    <h2>Unlock the Power of SQL Analytics! 📊</h2>
-    
-    <blockquote>
-        <p>Window functions are SQL's secret weapon for advanced analytics. They allow you to perform calculations across sets of rows while keeping the detail of individual records - something impossible with regular GROUP BY. Master window functions to perform running totals, rankings, moving averages, and complex analytical calculations with ease!</p>
-    </blockquote>
+                <ul class="lesson-meta">
+                    <li><span class="meta-label">⏱️ Time</span> 100 minutes</li>
+                    <li><span class="meta-label">📋 Prerequisites</span> <a href="sql_complex_queries.html">Lesson 5.2: Complex Queries</a> (joins and CTEs); <a href="pandas_groupby_operations.html">Lesson 2.4: GroupBy Operations</a> and <a href="pandas_window_functions.html">Lesson 2.8: Window Functions</a> for the pandas side</li>
+                    <li><span class="meta-label">🛠️ You will build</span> A monthly store performance table with month-over-month change, year-to-date totals, moving averages and ranks, checked against pandas</li>
+                    <li><span class="meta-label">📂 Data</span> <code>data/pinecrest.db</code> (opened read-only)</li>
+                </ul>
+            </header>
 
-    <h2>Understanding Window Functions</h2>
-    
-    <div class="mermaid">
-    graph TD
-        A[Window Functions] --> B[Ranking Functions]
-        A --> C[Aggregate Functions]
-        A --> D[Analytic Functions]
-        A --> E[Value Functions]
-        
-        B --> F[ROW_NUMBER]
-        B --> G[RANK/DENSE_RANK]
-        B --> H[NTILE/PERCENT_RANK]
-        
-        C --> I[SUM/AVG/COUNT]
-        C --> J[MIN/MAX]
-        
-        D --> K[LAG/LEAD]
-        D --> L[FIRST_VALUE/LAST_VALUE]
-        
-        E --> M[CUME_DIST]
-        E --> N[PERCENTILE_CONT]
-    </div>
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#idea" class="toc-link">Keeping the Rows</a></li>
+                        <li><a href="#over" class="toc-link">OVER and PARTITION BY</a></li>
+                        <li><a href="#ranking" class="toc-link">Ranking: ROW_NUMBER, RANK, DENSE_RANK</a></li>
+                        <li><a href="#topn" class="toc-link">Top N per Group</a></li>
+                        <li><a href="#laglead" class="toc-link">LAG and LEAD: Looking at Neighbors</a></li>
+                        <li><a href="#running" class="toc-link">Running Totals</a></li>
+                        <li><a href="#frames" class="toc-link">Frames and Moving Averages</a></li>
+                        <li><a href="#more" class="toc-link">More Tools: NTILE, FIRST_VALUE, WINDOW</a></li>
+                        <li><a href="#mistakes" class="toc-link">Common Mistakes</a></li>
+                        <li><a href="#project" class="toc-link">Project: The Store Performance Table</a></li>
+                        <li><a href="#exercises" class="toc-link">Hands-on Exercises</a></li>
+                        <li><a href="#quiz" class="toc-link">Quick Quiz</a></li>
+                        <li><a href="#faq" class="toc-link">Common Questions</a></li>
+                        <li><a href="#journal" class="toc-link">Learning Journal</a></li>
+                        <li><a href="#summary" class="toc-link">Lesson Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
 
-    <h2>Setting Up Our Analytics Database</h2>
-    <pre class="language-python"><code>import sqlite3
+            <!-- ============================================================ -->
+            <section id="idea" class="lesson-section">
+                <h2>👀 Keeping the Rows</h2>
+
+                <p><code>GROUP BY</code> answers "what is the average order at each store?" by collapsing 18,762 completed orders into five rows. But many questions need the summary <em>and</em> the detail together: "how does <strong>this</strong> order compare with its store's average?", "what was this month's revenue compared with <strong>last</strong> month's?", "which are the <strong>top two</strong> products in each category?". After <code>GROUP BY</code> the individual rows are gone.</p>
+
+                <p>A <strong>window function</strong> computes a value from a set of related rows, the <em>window</em>, and attaches it to each row, leaving every row in place.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Mental Model: A Seat on the Train</h4>
+                    <p><code>GROUP BY</code> is the conductor's report: "car 3 has 48 passengers". The passengers have become a number.</p>
+                    <p>A window function leaves you in your seat and lets you look around. Through the window you can see the rest of your car (your <strong>partition</strong>), you know who sits in front of you and behind you (the <strong>order</strong>), and you can choose to look only at the two seats ahead (the <strong>frame</strong>). You get your answer, and you are still a passenger with a seat number.</p>
+                </div>
+
+                <p>You have done all of this in pandas: <code>groupby(...).transform(...)</code> from Lesson 2.4, and <code>rank</code>, <code>shift</code>, <code>cumsum</code>, <code>expanding</code> and <code>rolling</code> from Lesson 2.8, are window operations. This lesson gives you the SQL spelling, and each section ends with the pandas line that does the same thing, so you can move a calculation to whichever side holds the data.</p>
+
+                <h3>Setup</h3>
+                <p>This lesson only reads, so the connection is read-only, as in Lesson 5.2. Window functions need <strong>SQLite 3.25 or later</strong>; the Python you installed for this course bundles a much newer one, and the first block checks.</p>
+
+                <pre><code class="language-python">import sqlite3
 import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
-import random
 
-# Create connection (SQLite 3.25+ supports window functions)
-conn = sqlite3.connect('analytics.db')
-cursor = conn.cursor()
+pd.set_option("display.width", 150)
+pd.set_option("display.max_columns", 20)
 
-# Check SQLite version
-cursor.execute("SELECT sqlite_version()")
-version = cursor.fetchone()[0]
-print(f"SQLite version: {version}")
+conn = sqlite3.connect("file:data/pinecrest.db?mode=ro", uri=True)
 
-# Create comprehensive analytics tables
-cursor.executescript('''
-    -- Sales transactions table
-    CREATE TABLE IF NOT EXISTS sales (
-        sale_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        sale_date DATE,
-        product_id INTEGER,
-        category TEXT,
-        region TEXT,
-        salesperson_id INTEGER,
-        quantity INTEGER,
-        unit_price DECIMAL(10,2),
-        total_amount DECIMAL(10,2),
-        profit DECIMAL(10,2)
-    );
-    
-    -- Employee performance table
-    CREATE TABLE IF NOT EXISTS employee_performance (
-        employee_id INTEGER PRIMARY KEY,
-        employee_name TEXT,
-        department TEXT,
-        hire_date DATE,
-        salary DECIMAL(10,2),
-        commission_rate DECIMAL(3,2),
-        manager_id INTEGER,
-        performance_score INTEGER
-    );
-    
-    -- Stock prices table
-    CREATE TABLE IF NOT EXISTS stock_prices (
-        symbol TEXT,
-        trade_date DATE,
-        open_price DECIMAL(10,2),
-        high_price DECIMAL(10,2),
-        low_price DECIMAL(10,2),
-        close_price DECIMAL(10,2),
-        volume BIGINT,
-        PRIMARY KEY (symbol, trade_date)
-    );
-    
-    -- Customer transactions table
-    CREATE TABLE IF NOT EXISTS customer_transactions (
-        transaction_id INTEGER PRIMARY KEY,
-        customer_id INTEGER,
-        transaction_date DATETIME,
-        amount DECIMAL(10,2),
-        transaction_type TEXT,
-        balance_after DECIMAL(10,2)
-    );
-    
-    -- Website analytics table
-    CREATE TABLE IF NOT EXISTS page_views (
-        view_id INTEGER PRIMARY KEY,
-        user_id INTEGER,
-        page_url TEXT,
-        view_timestamp DATETIME,
-        session_id TEXT,
-        time_on_page INTEGER,
-        bounce BOOLEAN
-    );
-''')
+def show(sql, params=()):
+    """Run a query and print the result as a table."""
+    print(pd.read_sql(sql, conn, params=params).to_string(index=False))
 
-# Generate sample data
-def generate_sample_data():
-    # Generate sales data
-    np.random.seed(42)
-    sales_data = []
-    categories = ['Electronics', 'Clothing', 'Food', 'Books', 'Sports']
-    regions = ['North', 'South', 'East', 'West', 'Central']
-    
-    for i in range(1000):
-        sale_date = datetime.now() - timedelta(days=random.randint(0, 365))
-        category = random.choice(categories)
-        quantity = random.randint(1, 20)
-        unit_price = round(random.uniform(10, 500), 2)
-        total = quantity * unit_price
-        profit = total * random.uniform(0.1, 0.3)
-        
-        sales_data.append((
-            sale_date.date(),
-            random.randint(1, 100),  # product_id
-            category,
-            random.choice(regions),
-            random.randint(1, 20),  # salesperson_id
-            quantity,
-            unit_price,
-            total,
-            profit
-        ))
-    
-    cursor.executemany('''
-        INSERT INTO sales (sale_date, product_id, category, region, 
-                          salesperson_id, quantity, unit_price, total_amount, profit)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', sales_data)
-    
-    conn.commit()
-    print("Sample data generated successfully!")
+print(sqlite3.sqlite_version_info &gt;= (3, 25, 0))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>True</code></pre>
+                </div>
+            </section>
 
-generate_sample_data()</code></pre>
+            <!-- ============================================================ -->
+            <section id="over" class="lesson-section">
+                <h2>🧱 OVER and PARTITION BY</h2>
 
-    <h2>Window Function Syntax</h2>
-    
-    <pre class="language-python"><code># Basic window function syntax
-"""
-function_name() OVER (
-    [PARTITION BY column1, column2, ...]
-    [ORDER BY column3, column4, ...]
-    [ROWS/RANGE BETWEEN ... AND ...]
-)
-"""
+                <p>Any aggregate function becomes a window function when you follow it with <code>OVER (...)</code>. Inside the parentheses, <code>PARTITION BY</code> says which rows belong together. Here is each order next to the average for its own store.</p>
 
-# Components explained:
-# - function_name(): The window function (ROW_NUMBER, SUM, LAG, etc.)
-# - PARTITION BY: Divides rows into partitions (like GROUP BY but keeps all rows)
-# - ORDER BY: Defines the order within each partition
-# - ROWS/RANGE: Defines the window frame (which rows to include)</code></pre>
+                <pre><code class="language-python">show("""
+    SELECT order_id,
+           store,
+           order_total,
+           ROUND(AVG(order_total) OVER (PARTITION BY store), 1)               AS store_avg,
+           ROUND(order_total - AVG(order_total) OVER (PARTITION BY store), 2) AS vs_store_avg
+    FROM orders
+    WHERE status = 'completed'
+    ORDER BY order_id
+    LIMIT 5
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code> order_id     store  order_total  store_avg  vs_store_avg
+   100001 Flagstaff       434.90      182.4        252.51
+   100002 Asheville       278.90      175.1        103.80
+   100003    Online        75.90      203.2       -127.30
+   100004    Online       399.80      203.2        196.60
+   100005    Online        26.71      203.2       -176.49</code></pre>
+                </div>
 
-    <h2>Ranking Functions</h2>
-    
-    <h3>ROW_NUMBER() - Sequential Numbers</h3>
-    <pre class="language-python"><code># Basic ROW_NUMBER
-query = """
-SELECT 
-    sale_date,
-    category,
-    total_amount,
-    ROW_NUMBER() OVER (ORDER BY total_amount DESC) AS overall_rank,
-    ROW_NUMBER() OVER (PARTITION BY category ORDER BY total_amount DESC) AS category_rank
-FROM sales
-WHERE sale_date >= DATE('now', '-30 days')
-LIMIT 20;
-"""
+                <p>Five orders in, five rows out, each carrying a number computed from thousands of other rows. Compare the two ways of asking for a store average:</p>
 
-df = pd.read_sql_query(query, conn)
-print(df)
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th></th><th><code>GROUP BY store</code></th><th><code>OVER (PARTITION BY store)</code></th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Rows returned</td><td>One per store (5)</td><td>One per order (18,762)</td></tr>
+                            <tr><td>Other columns</td><td>Only grouped or aggregated ones</td><td>Any column of the row</td></tr>
+                            <tr><td>pandas</td><td><code>groupby("store")["order_total"].mean()</code></td><td><code>groupby("store")["order_total"].transform("mean")</code></td></tr>
+                        </tbody>
+                    </table>
+                </div>
 
-# Finding top N per group
-query = """
-WITH ranked_sales AS (
-    SELECT 
-        sale_date,
-        category,
-        region,
-        total_amount,
-        ROW_NUMBER() OVER (
-            PARTITION BY category 
-            ORDER BY total_amount DESC
-        ) AS rank_in_category
-    FROM sales
-    WHERE sale_date >= DATE('now', '-90 days')
-)
-SELECT *
-FROM ranked_sales
-WHERE rank_in_category <= 3
-ORDER BY category, rank_in_category;
-"""
+                <p>An empty <code>OVER ()</code> means one window containing every row, which gives you a grand total on each row, and with it a share of the whole. Window functions run <em>after</em> <code>GROUP BY</code>, so they can work on grouped results too: here <code>SUM(revenue) OVER ()</code> adds up the five store totals.</p>
 
-df = pd.read_sql_query(query, conn)
-print(df)</code></pre>
+                <pre><code class="language-python">show("""
+    WITH by_store AS (
+        SELECT store, ROUND(SUM(order_total), 2) AS revenue
+        FROM orders
+        WHERE status = 'completed'
+        GROUP BY store
+    )
+    SELECT store,
+           revenue,
+           ROUND(SUM(revenue) OVER (), 2)                   AS all_stores,
+           ROUND(100.0 * revenue / SUM(revenue) OVER (), 1) AS pct_of_total
+    FROM by_store
+    ORDER BY revenue DESC
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>    store    revenue  all_stores  pct_of_total
+   Online 2357984.45  3624306.27          65.1
+    Boise  443386.85  3624306.27          12.2
+Flagstaff  300580.35  3624306.27           8.3
+     Bend  284575.25  3624306.27           7.9
+Asheville  237779.37  3624306.27           6.6</code></pre>
+                </div>
 
-    <h3>RANK() vs DENSE_RANK() - Handling Ties</h3>
-    <pre class="language-python"><code># Difference between RANK and DENSE_RANK
-query = """
-SELECT 
-    salesperson_id,
-    DATE(sale_date, 'start of month') AS sale_month,
-    SUM(total_amount) AS monthly_sales,
-    RANK() OVER (
-        PARTITION BY DATE(sale_date, 'start of month') 
-        ORDER BY SUM(total_amount) DESC
-    ) AS rank_with_gaps,
-    DENSE_RANK() OVER (
-        PARTITION BY DATE(sale_date, 'start of month') 
-        ORDER BY SUM(total_amount) DESC
-    ) AS dense_rank_no_gaps,
-    ROW_NUMBER() OVER (
-        PARTITION BY DATE(sale_date, 'start of month') 
-        ORDER BY SUM(total_amount) DESC
-    ) AS row_num_unique
-FROM sales
-WHERE sale_date >= DATE('now', '-90 days')
-GROUP BY salesperson_id, DATE(sale_date, 'start of month')
-ORDER BY sale_month DESC, monthly_sales DESC
-LIMIT 20;
-"""
+                <h3>The pandas Way</h3>
+                <pre><code class="language-python">completed = pd.read_sql("SELECT order_id, store, order_total FROM orders WHERE status = 'completed' ORDER BY order_id", conn)
 
-df = pd.read_sql_query(query, conn)
-print(df)
+completed["store_avg"] = completed.groupby("store")["order_total"].transform("mean").round(1)
+completed["vs_store_avg"] = (completed["order_total"] - completed.groupby("store")["order_total"].transform("mean")).round(2)
+print(completed.head(5).to_string(index=False))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code> order_id     store  order_total  store_avg  vs_store_avg
+   100001 Flagstaff       434.90      182.4        252.51
+   100002 Asheville       278.90      175.1        103.80
+   100003    Online        75.90      203.2       -127.30
+   100004    Online       399.80      203.2        196.60
+   100005    Online        26.71      203.2       -176.49</code></pre>
+                </div>
+            </section>
 
-# Show the difference with duplicate values
-query = """
-WITH sales_summary AS (
-    SELECT 
-        category,
-        ROUND(total_amount, 0) AS amount
-    FROM sales
-    WHERE sale_date >= DATE('now', '-7 days')
-)
-SELECT 
-    category,
-    amount,
-    RANK() OVER (ORDER BY amount DESC) AS rank_gaps,
-    DENSE_RANK() OVER (ORDER BY amount DESC) AS dense_rank,
-    ROW_NUMBER() OVER (ORDER BY amount DESC) AS row_number
-FROM sales_summary
-ORDER BY amount DESC
-LIMIT 15;
-"""
+            <!-- ============================================================ -->
+            <section id="ranking" class="lesson-section">
+                <h2>🏅 Ranking: ROW_NUMBER, RANK, DENSE_RANK</h2>
 
-df = pd.read_sql_query(query, conn)
-print(df)</code></pre>
+                <p>Some window functions exist only as window functions. The ranking family needs to know the <em>order</em> of rows within the window, which you give with an <code>ORDER BY</code> <strong>inside</strong> the <code>OVER</code>. This is separate from the query's final <code>ORDER BY</code>: one decides how rows are numbered, the other how they are displayed.</p>
 
-    <h3>NTILE() - Dividing into Buckets</h3>
-    <pre class="language-python"><code># Quartile analysis
-query = """
-SELECT 
-    customer_id,
-    COUNT(*) AS transaction_count,
-    SUM(amount) AS total_spent,
-    AVG(amount) AS avg_transaction,
-    NTILE(4) OVER (ORDER BY SUM(amount) DESC) AS spending_quartile,
-    NTILE(10) OVER (ORDER BY SUM(amount) DESC) AS spending_decile,
-    NTILE(100) OVER (ORDER BY SUM(amount) DESC) AS spending_percentile
-FROM customer_transactions
-GROUP BY customer_id
-HAVING COUNT(*) >= 3
-ORDER BY total_spent DESC
-LIMIT 20;
-"""
+                <p>The three ranking functions differ only in how they treat ties. The two cheapest items in the Tents category happen to share a price, which makes the difference visible. (The display is sorted by price, then name.)</p>
 
-# Product performance tiers
-query = """
-WITH product_sales AS (
-    SELECT 
-        product_id,
-        category,
-        COUNT(*) AS times_sold,
-        SUM(quantity) AS total_quantity,
-        SUM(total_amount) AS total_revenue,
-        AVG(profit) AS avg_profit
-    FROM sales
-    GROUP BY product_id, category
-)
-SELECT 
-    product_id,
-    category,
-    total_revenue,
-    NTILE(3) OVER (ORDER BY total_revenue DESC) AS tier,
-    CASE NTILE(3) OVER (ORDER BY total_revenue DESC)
-        WHEN 1 THEN 'Top Performer'
-        WHEN 2 THEN 'Average Performer'
-        WHEN 3 THEN 'Low Performer'
-    END AS performance_label
-FROM product_sales
-ORDER BY total_revenue DESC;
-"""
+                <pre><code class="language-python">show("""
+    SELECT name,
+           price,
+           ROW_NUMBER() OVER (ORDER BY price) AS row_number,
+           RANK()       OVER (ORDER BY price) AS rank,
+           DENSE_RANK() OVER (ORDER BY price) AS dense_rank
+    FROM products
+    WHERE category = 'Tents'
+    ORDER BY price, name
+    LIMIT 5
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>                              name  price  row_number  rank  dense_rank
+  Cedar Notch Cairn Tent Footprint  41.95           2     1           1
+ Quillback Foothill Tent Footprint  41.95           1     1           1
+Quillback Alpenglow Tent Footprint  67.95           3     3           2
+              Pinecrest Drift Tarp  94.95           4     4           3
+              Quillback Talus Tarp 119.95           5     5           4</code></pre>
+                </div>
 
-df = pd.read_sql_query(query, conn)
-print(df.head(20))</code></pre>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Function</th><th>Ties</th><th>After a tie</th><th>pandas <code>rank(method=)</code></th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="nowrap"><code>ROW_NUMBER()</code></td><td>Different numbers (which row gets which is arbitrary unless the order breaks the tie)</td><td>1, 2, 3, 4</td><td><code>"first"</code></td></tr>
+                            <tr><td class="nowrap"><code>RANK()</code></td><td>Same number</td><td>Skips: 1, 1, 3, 4 (like a race: two golds, no silver)</td><td><code>"min"</code></td></tr>
+                            <tr><td class="nowrap"><code>DENSE_RANK()</code></td><td>Same number</td><td>No gap: 1, 1, 2, 3</td><td><code>"dense"</code></td></tr>
+                        </tbody>
+                    </table>
+                </div>
 
-    <h3>PERCENT_RANK() and CUME_DIST()</h3>
-    <pre class="language-python"><code># Percentile ranking
-query = """
-SELECT 
-    salesperson_id,
-    SUM(total_amount) AS total_sales,
-    SUM(profit) AS total_profit,
-    PERCENT_RANK() OVER (ORDER BY SUM(total_amount)) AS sales_percent_rank,
-    CUME_DIST() OVER (ORDER BY SUM(total_amount)) AS sales_cumulative_dist,
-    ROUND(PERCENT_RANK() OVER (ORDER BY SUM(total_amount)) * 100, 2) AS percentile
-FROM sales
-WHERE sale_date >= DATE('now', '-30 days')
-GROUP BY salesperson_id
-ORDER BY total_sales DESC;
+                <p>Look closely at the first two rows: <code>ROW_NUMBER</code> gave 1 to the Quillback footprint and 2 to the Cedar Notch one, although nothing in <code>ORDER BY price</code> puts either first. Among ties, its choice is arbitrary.</p>
+
+                <p>Add <code>PARTITION BY</code> and the numbering restarts in every group. Here is each employee's salary rank within their department, highest first, for two departments.</p>
+
+                <pre><code class="language-python">show("""
+    SELECT department,
+           first_name || ' ' || last_name AS employee,
+           salary,
+           DENSE_RANK() OVER (PARTITION BY department ORDER BY salary DESC) AS rank_in_dept
+    FROM employees
+    WHERE department IN ('E-commerce', 'Executive')
+    ORDER BY department, rank_in_dept
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>department        employee  salary  rank_in_dept
+E-commerce     Arjun Silva  139700             1
+E-commerce       Chidi Sen   96900             2
+E-commerce Santiago Nakata   88700             3
+E-commerce    Isaac Nakata   85100             4
+E-commerce    Zane Pacheco   82800             5
+E-commerce     Hugo Volkov   59300             6
+ Executive      Clara Soto  185000             1
+ Executive      Zane Laine   88600             2</code></pre>
+                </div>
+
+                <h3>The pandas Way</h3>
+                <pre><code class="language-python">tents = pd.read_sql("SELECT name, price FROM products WHERE category = 'Tents' ORDER BY price, name", conn)
+
+tents["row_number"] = tents["price"].rank(method="first").astype(int)
+tents["rank"] = tents["price"].rank(method="min").astype(int)
+tents["dense_rank"] = tents["price"].rank(method="dense").astype(int)
+print(tents.head(5).to_string(index=False))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>                              name  price  row_number  rank  dense_rank
+  Cedar Notch Cairn Tent Footprint  41.95           1     1           1
+ Quillback Foothill Tent Footprint  41.95           2     1           1
+Quillback Alpenglow Tent Footprint  67.95           3     3           2
+              Pinecrest Drift Tarp  94.95           4     4           3
+              Quillback Talus Tarp 119.95           5     5           4</code></pre>
+                </div>
+                <p><code>rank</code> and <code>dense_rank</code> agree with SQL. <code>row_number</code> does not, for the two tied footprints: pandas breaks a tie by position in the DataFrame, SQLite by whichever row it reached first. Neither is wrong, and that is the point. If the numbering matters, add a tiebreaker to the order (<code>ORDER BY price, name</code>) so there are no ties left to break. Within groups, pandas uses <code>df.groupby("department")["salary"].rank(method="dense", ascending=False)</code>.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="topn" class="lesson-section">
+                <h2>🥇 Top N per Group</h2>
+
+                <p>"The two best-selling products in each category" is one of the most common requests an analyst gets, and <code>ORDER BY ... LIMIT 2</code> cannot do it: that gives two rows in total, not two per category. The window-function recipe is always the same three steps:</p>
+                <ol>
+                    <li>number the rows within each group with <code>ROW_NUMBER() OVER (PARTITION BY group ORDER BY measure DESC)</code>;</li>
+                    <li>put that in a CTE;</li>
+                    <li>filter the CTE with <code>WHERE rn &lt;= N</code>.</li>
+                </ol>
+
+                <p>Step 2 is not optional. Window functions are computed <em>after</em> <code>WHERE</code>, so a <code>WHERE</code> clause in the same query cannot see them (the <a href="#mistakes">Common Mistakes</a> section shows the error). The CTE turns the row number into an ordinary column.</p>
+
+                <pre><code class="language-python">show("""
+    WITH product_revenue AS (
+        SELECT p.category,
+               p.name,
+               ROUND(SUM(i.quantity * i.unit_price), 2) AS revenue
+        FROM order_items AS i
+        JOIN orders AS o ON o.order_id = i.order_id
+        JOIN products AS p ON p.sku = i.sku
+        WHERE o.status = 'completed'
+        GROUP BY p.sku
+    ),
+    ranked AS (
+        SELECT *,
+               ROW_NUMBER() OVER (PARTITION BY category ORDER BY revenue DESC)   AS rn,
+               ROUND(100.0 * revenue / SUM(revenue) OVER (PARTITION BY category), 1) AS pct_of_category
+        FROM product_revenue
+    )
+    SELECT category, rn, name, revenue, pct_of_category
+    FROM ranked
+    WHERE rn &lt;= 2
+    ORDER BY category, rn
+    LIMIT 8
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>    category  rn                                 name   revenue  pct_of_category
+ Accessories   1   Cedar Notch Sawtooth First-Aid Kit 148120.20             26.1
+ Accessories   2        Larkspur Ridge Mesa Multitool  47968.95              8.4
+     Apparel   1     Granite Fork Cascade Rain Jacket 104981.25             24.1
+     Apparel   2          Tallgrass Drift Rain Jacket  51019.70             11.7
+Camp Kitchen   1   Quillback Timberline Insulated Mug  46581.65             12.7
+Camp Kitchen   2     Granite Fork Meadow Water Bottle  28923.80              7.9
+    Climbing   1    Granite Fork Summit Quickdraw Set  60813.30             22.3
+    Climbing   2 Tallgrass Timberline Climbing Helmet  47281.50             17.3</code></pre>
+                </div>
+
+                <p>One first-aid kit brings in more than a quarter of all Accessories revenue. That kind of concentration is invisible in a category total and obvious once every product can see its category's sum.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Which Ranking Function for Top N?</h4>
+                    <p><code>ROW_NUMBER</code> returns exactly N rows per group, choosing arbitrarily among ties at the cutoff unless your <code>ORDER BY</code> has a tiebreaker. <code>RANK</code> returns everyone tied at the cutoff, so you may get more than N. Decide which the question wants. "The latest order per customer" wants <code>ROW_NUMBER</code>; "everyone with a top-three score" wants <code>RANK</code> or <code>DENSE_RANK</code>.</p>
+                </div>
+
+                <h3>The pandas Way</h3>
+                <pre><code class="language-python">product_revenue = pd.read_sql("""
+    SELECT p.category, p.name, ROUND(SUM(i.quantity * i.unit_price), 2) AS revenue
+    FROM order_items AS i
+    JOIN orders AS o ON o.order_id = i.order_id
+    JOIN products AS p ON p.sku = i.sku
+    WHERE o.status = 'completed'
+    GROUP BY p.sku
+""", conn)
+
+top2 = (product_revenue.sort_values(["category", "revenue"], ascending=[True, False])
+        .groupby("category").head(2))
+print(top2.head(4).to_string(index=False))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>   category                               name   revenue
+Accessories Cedar Notch Sawtooth First-Aid Kit 148120.20
+Accessories      Larkspur Ridge Mesa Multitool  47968.95
+    Apparel   Granite Fork Cascade Rain Jacket 104981.25
+    Apparel        Tallgrass Drift Rain Jacket  51019.70</code></pre>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="laglead" class="lesson-section">
+                <h2>↔️ LAG and LEAD: Looking at Neighbors</h2>
+
+                <p><code>LAG(column)</code> returns the value of that column from the <strong>previous row</strong> of the window, and <code>LEAD(column)</code> from the <strong>next</strong> row, in the order given by the window's <code>ORDER BY</code>. They are how you compute change over time. A second argument sets how far to look (<code>LAG(revenue, 12)</code> is twelve rows back).</p>
+
+                <p>Most of the remaining examples use completed revenue by month. Storing that CTE in a Python string avoids retyping it.</p>
+
+                <pre><code class="language-python">MONTHLY = """
+    WITH monthly AS (
+        SELECT strftime('%Y-%m', order_date) AS month,
+               ROUND(SUM(order_total), 2)    AS revenue
+        FROM orders
+        WHERE status = 'completed'
+        GROUP BY month
+    )
 """
 
-df = pd.read_sql_query(query, conn)
-print(df)
+show(MONTHLY + """
+    SELECT month,
+           revenue,
+           LAG(revenue)  OVER (ORDER BY month) AS prev_month,
+           LEAD(revenue) OVER (ORDER BY month) AS next_month,
+           ROUND(100.0 * (revenue - LAG(revenue) OVER (ORDER BY month))
+                 / LAG(revenue) OVER (ORDER BY month), 1) AS pct_change
+    FROM monthly
+    ORDER BY month
+    LIMIT 5
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>  month   revenue  prev_month  next_month  pct_change
+2024-01 106287.63         NaN   104687.91         NaN
+2024-02 104687.91   106287.63   128400.63        -1.5
+2024-03 128400.63   104687.91   129716.87        22.7
+2024-04 129716.87   128400.63   153467.52         1.0
+2024-05 153467.52   129716.87   155470.82        18.3</code></pre>
+                </div>
 
-# Find employees in top 20%
-query = """
-WITH employee_ranks AS (
-    SELECT 
-        salesperson_id,
-        SUM(total_amount) AS total_sales,
-        PERCENT_RANK() OVER (ORDER BY SUM(total_amount) DESC) AS pct_rank
-    FROM sales
-    WHERE sale_date >= DATE('now', '-90 days')
-    GROUP BY salesperson_id
-)
-SELECT 
-    salesperson_id,
-    total_sales,
-    ROUND((1 - pct_rank) * 100, 2) AS top_percent
-FROM employee_ranks
-WHERE pct_rank <= 0.2
-ORDER BY total_sales DESC;
+                <p>The first month has no previous row, so <code>LAG</code> returns <code>NULL</code> (pandas shows <code>NaN</code>), and the percentage that depends on it is <code>NULL</code> too. That is the honest answer: there is nothing to compare January 2024 with.</p>
+
+                <p>With <code>PARTITION BY</code>, "previous" means previous <em>within the group</em>. How long do customers wait between orders? <code>julianday()</code> turns a date into a day count, so subtracting two of them gives days.</p>
+
+                <pre><code class="language-python">show("""
+    WITH gaps AS (
+        SELECT customer_id,
+               order_date,
+               LAG(order_date) OVER (PARTITION BY customer_id ORDER BY order_date, order_id) AS prev_order_date
+        FROM orders
+    )
+    SELECT COUNT(*)                                                             AS orders,
+           COUNT(prev_order_date)                                               AS with_an_earlier_order,
+           ROUND(AVG(julianday(order_date) - julianday(prev_order_date)), 1)    AS avg_days_between
+    FROM gaps
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code> orders  with_an_earlier_order  avg_days_between
+  20302                  16360              83.1</code></pre>
+                </div>
+
+                <p>20,302 orders minus the 3,942 first orders (one per buyer, with nothing before them) leaves 16,360 gaps, averaging about 83 days. Note <code>order_id</code> in the window's <code>ORDER BY</code>: it breaks ties when a customer orders twice on one day, so the result is the same every time you run it.</p>
+
+                <h3>The pandas Way</h3>
+                <pre><code class="language-python">monthly = pd.read_sql(MONTHLY + "SELECT month, revenue FROM monthly ORDER BY month", conn)
+
+monthly["prev_month"] = monthly["revenue"].shift(1)
+monthly["next_month"] = monthly["revenue"].shift(-1)
+monthly["pct_change"] = (monthly["revenue"].pct_change() * 100).round(1)
+print(monthly.head(5).to_string(index=False))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>  month   revenue  prev_month  next_month  pct_change
+2024-01 106287.63         NaN   104687.91         NaN
+2024-02 104687.91   106287.63   128400.63        -1.5
+2024-03 128400.63   104687.91   129716.87        22.7
+2024-04 129716.87   128400.63   153467.52         1.0
+2024-05 153467.52   129716.87   155470.82        18.3</code></pre>
+                </div>
+                <p><code>shift(1)</code> is <code>LAG</code>, <code>shift(-1)</code> is <code>LEAD</code>, and within groups it is the sort, then <code>groupby</code> pattern from Lesson 2.8: <code>df.sort_values(["customer_id", "order_date"]).groupby("customer_id")["order_date"].shift(1)</code>. One difference to remember: pandas shifts by <strong>position in the DataFrame</strong>, so you must sort first. SQL takes the order from the <code>OVER</code> clause.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="running" class="lesson-section">
+                <h2>📈 Running Totals</h2>
+
+                <p>Give an aggregate window function an <code>ORDER BY</code> and it stops covering the whole partition. It covers the rows <strong>from the start of the partition up to the current row</strong>, which makes <code>SUM</code> a running total. Partition by year and the total restarts each January: year to date.</p>
+
+                <pre><code class="language-python">show(MONTHLY + """
+    SELECT month,
+           revenue,
+           ROUND(SUM(revenue) OVER (ORDER BY month), 2)                                  AS running_total,
+           ROUND(SUM(revenue) OVER (PARTITION BY substr(month, 1, 4) ORDER BY month), 2) AS year_to_date
+    FROM monthly
+    ORDER BY month
+    LIMIT 14 OFFSET 10
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>  month   revenue  running_total  year_to_date
+2024-11 143304.56     1498118.16    1498118.16
+2024-12 185181.35     1683299.51    1683299.51
+2025-01 132423.89     1815723.40     132423.89
+2025-02 126414.41     1942137.81     258838.30
+2025-03 141063.78     2083201.59     399902.08
+2025-04 143336.75     2226538.34     543238.83
+2025-05 173646.91     2400185.25     716885.74
+2025-06 194875.60     2595060.85     911761.34
+2025-07 183355.56     2778416.41    1095116.90
+2025-08 186671.93     2965088.34    1281788.83
+2025-09 161164.51     3126252.85    1442953.34
+2025-10 163161.56     3289414.41    1606114.90
+2025-11 145655.13     3435069.54    1751770.03
+2025-12 189236.73     3624306.27    1941006.76</code></pre>
+                </div>
+
+                <p>(<code>LIMIT 14 OFFSET 10</code> skips the first ten rows, so you can see the turn of the year.) The running total keeps climbing to the two-year figure of $3,624,306.27, while <code>year_to_date</code> starts over at January 2025.</p>
+
+                <h3>The pandas Way</h3>
+                <p>A window that grows from the first row to the current one is what pandas calls an <strong>expanding</strong> window. <code>cumsum()</code> is the shortcut for an expanding sum, and grouping by year gives year to date, as in Lesson 2.8.</p>
+                <pre><code class="language-python">monthly["running_total"] = monthly["revenue"].cumsum().round(2)
+monthly["year_to_date"] = monthly.groupby(monthly["month"].str[:4])["revenue"].cumsum().round(2)
+print(monthly[["month", "revenue", "running_total", "year_to_date"]].iloc[10:14].to_string(index=False))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>  month   revenue  running_total  year_to_date
+2024-11 143304.56     1498118.16    1498118.16
+2024-12 185181.35     1683299.51    1683299.51
+2025-01 132423.89     1815723.40     132423.89
+2025-02 126414.41     1942137.81     258838.30</code></pre>
+                </div>
+
+                <div class="card card-warning">
+                    <h4>⚠️ The Default Frame Has a Surprise for Ties</h4>
+                    <p>"From the start up to the current row" is not quite what the default says. The default is "up to the current row <strong>and every row that ties with it</strong> in the window's order". With one row per month there are no ties and no surprise. With several orders on the same date there are, as the next section shows. The cure is to state the frame yourself.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="frames" class="lesson-section">
+                <h2>🖼️ Frames and Moving Averages</h2>
+
+                <p>The <strong>frame</strong> is the part of the partition a window function actually looks at for the current row. You set it after the window's <code>ORDER BY</code>:</p>
+
+                <pre><code class="language-sql">ROWS BETWEEN &lt;start&gt; AND &lt;end&gt;</code></pre>
+
+                <p>where each end is one of <code>UNBOUNDED PRECEDING</code> (the first row of the partition), <code>n PRECEDING</code>, <code>CURRENT ROW</code>, <code>n FOLLOWING</code>, or <code>UNBOUNDED FOLLOWING</code> (the last row).</p>
+
+                <div class="diagram">
+                    <svg viewBox="0 0 440 236" width="440" height="236" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Seven monthly rows from January to July. For the current row, May, the frame ROWS BETWEEN 2 PRECEDING AND CURRENT ROW covers March, April and May. The frame slides down one row at a time.">
+                        <text x="16" y="18" class="svg-text" font-size="13" font-weight="bold">ROWS BETWEEN 2 PRECEDING AND CURRENT ROW</text>
+                        <rect x="16" y="30" width="150" height="26" class="svg-box"/>
+                        <text x="26" y="48" class="svg-text svg-mono" font-size="12">2024-01</text>
+                        <rect x="16" y="56" width="150" height="26" class="svg-box"/>
+                        <text x="26" y="74" class="svg-text svg-mono" font-size="12">2024-02</text>
+                        <rect x="16" y="82" width="150" height="26" class="svg-box-2"/>
+                        <text x="26" y="100" class="svg-text svg-mono" font-size="12">2024-03</text>
+                        <rect x="16" y="108" width="150" height="26" class="svg-box-2"/>
+                        <text x="26" y="126" class="svg-text svg-mono" font-size="12">2024-04</text>
+                        <rect x="16" y="134" width="150" height="26" class="svg-solid"/>
+                        <text x="26" y="152" class="svg-on-color svg-mono" font-size="12">2024-05</text>
+                        <rect x="16" y="160" width="150" height="26" class="svg-box"/>
+                        <text x="26" y="178" class="svg-text svg-mono" font-size="12">2024-06</text>
+                        <rect x="16" y="186" width="150" height="26" class="svg-box"/>
+                        <text x="26" y="204" class="svg-text svg-mono" font-size="12">2024-07</text>
+
+                        <path d="M178,84 L190,84 L190,158 L178,158" class="svg-line-accent"/>
+                        <text x="200" y="100" class="svg-text" font-size="12">2 PRECEDING</text>
+                        <text x="200" y="126" class="svg-text" font-size="12">1 PRECEDING</text>
+                        <text x="200" y="152" class="svg-accent" font-size="12" font-weight="bold">CURRENT ROW</text>
+                        <text x="200" y="178" class="svg-muted" font-size="12">1 FOLLOWING (not in this frame)</text>
+                        <text x="16" y="230" class="svg-muted" font-size="12">For the next row, June, the frame slides down: April to June.</text>
+                    </svg>
+                </div>
+
+                <p>An average over that sliding frame is a <strong>three-month moving average</strong>, the standard way to see a trend through month-to-month noise.</p>
+
+                <pre><code class="language-python">show(MONTHLY + """
+    SELECT month,
+           revenue,
+           ROUND(AVG(revenue) OVER (ORDER BY month ROWS BETWEEN 2 PRECEDING AND CURRENT ROW), 2) AS moving_avg_3,
+           COUNT(*)           OVER (ORDER BY month ROWS BETWEEN 2 PRECEDING AND CURRENT ROW)     AS rows_in_frame
+    FROM monthly
+    ORDER BY month
+    LIMIT 5
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>  month   revenue  moving_avg_3  rows_in_frame
+2024-01 106287.63     106287.63              1
+2024-02 104687.91     105487.77              2
+2024-03 128400.63     113125.39              3
+2024-04 129716.87     120935.14              3
+2024-05 153467.52     137195.01              3</code></pre>
+                </div>
+
+                <p>Look at <code>rows_in_frame</code>. January has no preceding rows, so its "three-month average" is an average of one month, and February's of two. SQL uses whatever part of the frame exists. pandas makes the opposite choice by default.</p>
+
+                <h3>The pandas Way</h3>
+                <pre><code class="language-python">monthly["rolling_default"] = monthly["revenue"].rolling(3).mean().round(2)
+monthly["rolling_like_sql"] = monthly["revenue"].rolling(3, min_periods=1).mean().round(2)
+print(monthly[["month", "revenue", "rolling_default", "rolling_like_sql"]].head(5).to_string(index=False))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>  month   revenue  rolling_default  rolling_like_sql
+2024-01 106287.63              NaN         106287.63
+2024-02 104687.91              NaN         105487.77
+2024-03 128400.63        113125.39         113125.39
+2024-04 129716.87        120935.14         120935.14
+2024-05 153467.52        137195.01         137195.01</code></pre>
+                </div>
+
+                <p><code>rolling(3)</code> gives <code>NaN</code> until a full window of three exists; <code>min_periods=1</code> reproduces SQL's behavior. Neither is wrong, but a report that mixes the two will disagree with itself in its first rows. If you want SQL to blank out the incomplete windows, wrap the average: <code>CASE WHEN COUNT(*) OVER (...) = 3 THEN AVG(...) OVER (...) END</code>.</p>
+
+                <h3>A Frame That Stops Before the Current Row</h3>
+                <p>Lesson 2.8 gave you a rule for features that must not see the value they will be compared with: <strong><code>shift(1)</code> before the window</strong>, so that each row's average uses only earlier rows and nothing leaks in from the present. In SQL the same rule is a frame that ends at <code>1 PRECEDING</code> instead of <code>CURRENT ROW</code>.</p>
+
+                <pre><code class="language-python">show(MONTHLY + """
+    SELECT month,
+           revenue,
+           ROUND(AVG(revenue) OVER (ORDER BY month ROWS BETWEEN 3 PRECEDING AND 1 PRECEDING), 2) AS prior_3_avg
+    FROM monthly
+    ORDER BY month
+    LIMIT 5
+""")
+
+monthly["prior_3_avg"] = monthly["revenue"].shift(1).rolling(3, min_periods=1).mean().round(2)
+print(monthly[["month", "revenue", "prior_3_avg"]].head(5).to_string(index=False))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>  month   revenue  prior_3_avg
+2024-01 106287.63          NaN
+2024-02 104687.91    106287.63
+2024-03 128400.63    105487.77
+2024-04 129716.87    113125.39
+2024-05 153467.52    120935.14
+  month   revenue  prior_3_avg
+2024-01 106287.63          NaN
+2024-02 104687.91    106287.63
+2024-03 128400.63    105487.77
+2024-04 129716.87    113125.39
+2024-05 153467.52    120935.14</code></pre>
+                </div>
+
+                <p>The two tables agree. January has no earlier month, so its frame is empty and the result is <code>NULL</code> in SQL and <code>NaN</code> in pandas. April's value averages January to March and does not include April itself.</p>
+
+                <h3>Seeing It: A Seven-Day Moving Average</h3>
+                <p>Daily revenue is noisy because weekends sell more than weekdays. A seven-row frame always holds one of each weekday, so it cancels the weekly cycle. Let SQL do the calculation and pandas draw the result.</p>
+
+                <pre><code class="language-python">import matplotlib.pyplot as plt
+
+daily = pd.read_sql("""
+    WITH daily AS (
+        SELECT order_date, SUM(order_total) AS revenue
+        FROM orders
+        WHERE status = 'completed'
+        GROUP BY order_date
+    )
+    SELECT order_date,
+           ROUND(revenue, 2) AS revenue,
+           ROUND(AVG(revenue) OVER (ORDER BY order_date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW), 2) AS moving_avg_7
+    FROM daily
+    ORDER BY order_date
+""", conn, parse_dates=["order_date"])
+print(daily.tail(3).to_string(index=False))
+
+fig, ax = plt.subplots(figsize=(9, 4), layout="constrained")
+ax.plot(daily["order_date"], daily["revenue"], color="#c5cae9", linewidth=0.8, label="Daily revenue")
+ax.plot(daily["order_date"], daily["moving_avg_7"], color="#667eea", linewidth=2, label="7-day moving average (SQL)")
+ax.set_title("Completed order revenue per day")
+ax.set_ylabel("Revenue ($)")
+ax.yaxis.set_major_formatter("{x:,.0f}")
+ax.legend()
+plt.show()</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>order_date  revenue  moving_avg_7
+2025-12-29  4909.25       4982.23
+2025-12-30  4804.52       4941.95
+2025-12-31  4226.03       4662.80</code></pre>
+                </div>
+
+                <figure>
+                    <img src="images/sql_window_functions_moving_average.png" alt="Line chart of Pinecrest completed order revenue per day for 2024 and 2025. The pale daily line is jagged, with spikes on sale weekends. The darker seven-day moving average is smooth and shows revenue rising each summer and each December, and higher overall in 2025 than in 2024." width="990" height="440" loading="lazy">
+                    <figcaption>The moving average removes the weekly zigzag. What is left is the seasonal rhythm and the growth from 2024 to 2025.</figcaption>
+                </figure>
+
+                <h3>Why an Explicit Frame Is Safer for Running Totals</h3>
+                <p>Here is the tie problem promised above. A running total of Bend's orders, ordered by date, written both ways:</p>
+
+                <pre><code class="language-python">show("""
+    SELECT order_id,
+           order_date,
+           order_total,
+           ROUND(SUM(order_total) OVER (ORDER BY order_date), 2) AS default_frame,
+           ROUND(SUM(order_total) OVER (ORDER BY order_date, order_id
+                                        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW), 2) AS explicit_rows
+    FROM orders
+    WHERE store = 'Bend' AND status = 'completed'
+    ORDER BY order_date, order_id
+    LIMIT 5
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code> order_id order_date  order_total  default_frame  explicit_rows
+   100011 2024-01-01        43.90         687.14          43.90
+   100015 2024-01-01       241.97         687.14         285.87
+   100017 2024-01-01       401.27         687.14         687.14
+   100036 2024-01-02       211.80         898.94         898.94
+   100059 2024-01-04       102.51        1001.45        1001.45</code></pre>
+                </div>
+
+                <p>Three orders share January 1. With the default frame, all three rows show $687.14, the total <em>including</em> the other two, because rows that tie in the window's order are treated as arriving together. The explicit <code>ROWS</code> frame, with <code>order_id</code> as a tiebreaker, counts strictly row by row. (The default is <code>RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW</code>; <code>RANGE</code> works on values, <code>ROWS</code> on positions.)</p>
+
+                <div class="card card-success">
+                    <h4>✅ A Simple Habit</h4>
+                    <p>Whenever a window has an <code>ORDER BY</code> and you are aggregating over it, write the frame out: <code>ROWS BETWEEN ... AND ...</code>. It takes one more line, and the query then says exactly what it does. Ranking functions and <code>LAG</code>/<code>LEAD</code> ignore the frame, so they need none.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="more" class="lesson-section">
+                <h2>🧰 More Tools: NTILE, FIRST_VALUE, WINDOW</h2>
+
+                <h3>NTILE: Equal-Sized Buckets</h3>
+                <p><code>NTILE(4)</code> deals the ordered rows into four buckets of (nearly) equal size: quartiles. It is the SQL <code>pd.qcut</code>.</p>
+
+                <pre><code class="language-python">show("""
+    WITH bucketed AS (
+        SELECT order_total,
+               NTILE(4) OVER (ORDER BY order_total) AS quartile
+        FROM orders
+        WHERE status = 'completed'
+    )
+    SELECT quartile,
+           COUNT(*)                   AS orders,
+           MIN(order_total)           AS smallest,
+           MAX(order_total)           AS largest,
+           ROUND(SUM(order_total), 2) AS revenue
+    FROM bucketed
+    GROUP BY quartile
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code> quartile  orders  smallest  largest    revenue
+        1    4691      6.38    77.90  217711.70
+        2    4691     77.90   145.90  510261.45
+        3    4690    145.90   263.45  920964.94
+        4    4690    263.65  4893.00 1975368.18</code></pre>
+                </div>
+
+                <p>The top quarter of orders, those above about $265, brings in more than half of all revenue.</p>
+
+                <h3>FIRST_VALUE and a Named WINDOW</h3>
+                <p><code>FIRST_VALUE(column)</code> returns the column from the first row of the frame. When several functions share one window definition, name it once in a <code>WINDOW</code> clause (after <code>WHERE</code>, <code>GROUP BY</code> and <code>HAVING</code>; before the final <code>ORDER BY</code>) and refer to it by name.</p>
+
+                <pre><code class="language-python">show(MONTHLY + """
+    SELECT month,
+           revenue,
+           RANK() OVER best_first             AS rank_in_year,
+           FIRST_VALUE(month) OVER best_first AS best_month_of_year,
+           ROUND(100.0 * revenue / FIRST_VALUE(revenue) OVER best_first, 1) AS pct_of_best
+    FROM monthly
+    WINDOW best_first AS (PARTITION BY substr(month, 1, 4) ORDER BY revenue DESC)
+    ORDER BY month
+    LIMIT 4
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>  month   revenue  rank_in_year best_month_of_year  pct_of_best
+2024-01 106287.63            11            2024-12         57.4
+2024-02 104687.91            12            2024-12         56.5
+2024-03 128400.63            10            2024-12         69.3
+2024-04 129716.87             8            2024-12         70.0</code></pre>
+                </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Need</th><th>SQL window function</th><th>pandas</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Group value on every row</td><td><code>AVG(x) OVER (PARTITION BY g)</code></td><td><code>groupby("g")["x"].transform("mean")</code></td></tr>
+                            <tr><td>Number or rank rows</td><td><code>ROW_NUMBER()</code>, <code>RANK()</code>, <code>DENSE_RANK()</code></td><td><code>rank(method="first" / "min" / "dense")</code></td></tr>
+                            <tr><td>Previous or next row</td><td><code>LAG(x)</code>, <code>LEAD(x)</code></td><td><code>shift(1)</code>, <code>shift(-1)</code></td></tr>
+                            <tr><td>Running total (an expanding window)</td><td><code>SUM(x) OVER (ORDER BY t ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)</code></td><td><code>cumsum()</code> or <code>expanding().sum()</code></td></tr>
+                            <tr><td>Window of earlier rows only (no leakage)</td><td><code>AVG(x) OVER (ORDER BY t ROWS BETWEEN 3 PRECEDING AND 1 PRECEDING)</code></td><td><code>shift(1).rolling(3, min_periods=1).mean()</code></td></tr>
+                            <tr><td>Moving average</td><td><code>AVG(x) OVER (ORDER BY t ROWS BETWEEN 6 PRECEDING AND CURRENT ROW)</code></td><td><code>rolling(7, min_periods=1).mean()</code></td></tr>
+                            <tr><td>Equal-sized buckets</td><td><code>NTILE(4)</code></td><td><code>pd.qcut(x, 4)</code></td></tr>
+                            <tr><td>Share of group</td><td><code>x / SUM(x) OVER (PARTITION BY g)</code></td><td><code>x / groupby("g")["x"].transform("sum")</code></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="card card-info">
+                    <h4>💡 Where Windows Fit in the Order of Evaluation</h4>
+                    <p>From Lesson 5.1: <code>FROM</code>, <code>WHERE</code>, <code>GROUP BY</code>, <code>HAVING</code>, <code>SELECT</code>, <code>ORDER BY</code>, <code>LIMIT</code>. Window functions are computed in the <code>SELECT</code> step, after grouping and before the final sort and <code>LIMIT</code>. Two consequences: a window sees only the rows that survived <code>WHERE</code>, and nothing in <code>WHERE</code>, <code>GROUP BY</code> or <code>HAVING</code> can refer to a window function. PostgreSQL follows the same rules, and every query in this lesson is standard SQL apart from <code>strftime</code>, <code>substr</code> on dates and <code>julianday</code>.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="mistakes" class="lesson-section">
+                <h2>⚠️ Common Mistakes</h2>
+
+                <p>The <a href="#frames">default-frame surprise with ties</a> is the most important silent mistake, and you have seen it. Here are four more. If one of them catches you this week, you are in very good company.</p>
+
+                <h3>1. Filtering on a Window Function in the Same Query</h3>
+                <pre data-raises="sqlite3.OperationalError"><code class="language-python">conn.execute("""
+    SELECT order_id, order_total
+    FROM orders
+    WHERE ROW_NUMBER() OVER (ORDER BY order_total DESC) &lt;= 3
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>OperationalError: misuse of window function ROW_NUMBER()</code></pre>
+                </div>
+                <p>Giving it a name in <code>SELECT</code> and using the name in <code>WHERE</code> does not help:</p>
+                <pre data-raises="sqlite3.OperationalError"><code class="language-python">conn.execute("""
+    SELECT order_id, ROW_NUMBER() OVER (ORDER BY order_total DESC) AS rn
+    FROM orders
+    WHERE rn &lt;= 3
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>OperationalError: misuse of aliased window function rn</code></pre>
+                </div>
+                <p><strong>What it means:</strong> <code>WHERE</code> runs before window functions exist. <strong>Fix:</strong> compute the window function in a CTE (or subquery), then filter in the outer query, as in <a href="#topn">Top N per Group</a>.</p>
+
+                <h3>2. Forgetting PARTITION BY with LAG</h3>
+                <pre><code class="language-python">show("""
+    WITH store_month AS (
+        SELECT store, strftime('%Y-%m', order_date) AS month, ROUND(SUM(order_total), 2) AS revenue
+        FROM orders
+        WHERE status = 'completed' AND store IN ('Asheville', 'Bend')
+        GROUP BY store, month
+    )
+    SELECT store, month, revenue,
+           LAG(revenue) OVER (ORDER BY store, month)                AS prev_wrong,
+           LAG(revenue) OVER (PARTITION BY store ORDER BY month)    AS prev_right
+    FROM store_month
+    ORDER BY store, month
+    LIMIT 3 OFFSET 23
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output (the middle row is the problem)</h4>
+                    <pre><code>    store   month  revenue  prev_wrong  prev_right
+Asheville 2025-12  8253.61     8067.69     8067.69
+     Bend 2024-01  7563.67     8253.61         NaN
+     Bend 2024-02  7726.66     7563.67     7563.67</code></pre>
+                </div>
+                <p><strong>What happened:</strong> without a partition, Bend's first month was compared with Asheville's last. Any growth figure computed from <code>prev_wrong</code> on that row is nonsense, and it sits in the middle of an otherwise correct table. <strong>Fix:</strong> whenever the data holds several series (stores, customers, products), <code>PARTITION BY</code> the series.</p>
+
+                <h3>3. LAST_VALUE Returns the Current Row</h3>
+                <pre><code class="language-python">show(MONTHLY + """
+    SELECT month,
+           revenue,
+           LAST_VALUE(revenue) OVER (ORDER BY month) AS last_default,
+           LAST_VALUE(revenue) OVER (ORDER BY month
+                                     ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS last_full_frame
+    FROM monthly
+    ORDER BY month
+    LIMIT 3
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>  month   revenue  last_default  last_full_frame
+2024-01 106287.63     106287.63        189236.73
+2024-02 104687.91     104687.91        189236.73
+2024-03 128400.63     128400.63        189236.73</code></pre>
+                </div>
+                <p><strong>What happened:</strong> the default frame ends at the current row, so the "last" value in it is the row itself. <strong>Fix:</strong> extend the frame to <code>UNBOUNDED FOLLOWING</code>, or sort the window the other way and use <code>FIRST_VALUE</code>.</p>
+
+                <h3>4. An Order That Does Not Decide</h3>
+                <p><code>ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY order_date)</code> looks fine until a customer has two orders on the same date. Then which one is number 1 is up to the engine, and it may change between runs or between databases. <strong>Fix:</strong> end the window's <code>ORDER BY</code> with a unique column, as the examples above do with <code>order_id</code>.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="project" class="lesson-section">
+                <h2>🛠️ Project: The Store Performance Table</h2>
+
+                <p>Pinecrest's leadership reviews each sales channel monthly, and every month someone rebuilds the same spreadsheet by hand: revenue, change from last month, year to date, the trend, the ranking, and growth over the same month last year. You will produce the whole table with one query built in stages, then verify it with pandas. Work in a new notebook, <code>lesson_5_3_project</code>. Allow about 45 minutes.</p>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 1: The base table, one row per store and month <span class="step-time">(5 min)</span></h3>
+                    <p>Everything else is a window over this CTE. Check its shape first: 5 stores × 24 months should be 120 rows.</p>
+                    <pre><code class="language-python">import sqlite3
+import pandas as pd
+
+pd.set_option("display.width", 150)
+db = sqlite3.connect("file:data/pinecrest.db?mode=ro", uri=True)
+
+BASE = """
+    WITH store_month AS (
+        SELECT store,
+               strftime('%Y-%m', order_date) AS month,
+               COUNT(*)                      AS orders,
+               ROUND(SUM(order_total), 2)    AS revenue
+        FROM orders
+        WHERE status = 'completed'
+        GROUP BY store, month
+    )
 """
+base = pd.read_sql(BASE + "SELECT * FROM store_month ORDER BY store, month", db)
+print(base.shape)
+print(base.head(3))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>(120, 4)
+       store    month  orders  revenue
+0  Asheville  2024-01      40  7259.22
+1  Asheville  2024-02      40  7339.92
+2  Asheville  2024-03      61  9306.57</code></pre>
+                    </div>
+                </div>
 
-df = pd.read_sql_query(query, conn)
-print(df)</code></pre>
+                <div class="card card-info">
+                    <h3>🛠️ Step 2: Month-over-month change and year to date <span class="step-time">(10 min)</span></h3>
+                    <p>Both windows are partitioned by store. Year to date adds the year to the partition and states its frame.</p>
+                    <pre><code class="language-python">step2 = pd.read_sql(BASE + """
+    SELECT store, month, revenue,
+           ROUND(100.0 * (revenue - LAG(revenue) OVER (PARTITION BY store ORDER BY month))
+                 / LAG(revenue) OVER (PARTITION BY store ORDER BY month), 1) AS mom_pct,
+           ROUND(SUM(revenue) OVER (PARTITION BY store, substr(month, 1, 4) ORDER BY month
+                                    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW), 2) AS ytd
+    FROM store_month
+    ORDER BY store, month
+""", db)
+print(step2[step2["store"] == "Boise"].iloc[10:14])</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>    store    month   revenue  mom_pct        ytd
+58  Boise  2024-11  20180.31     42.9  192401.84
+59  Boise  2024-12  19738.28     -2.2  212140.12
+60  Boise  2025-01  17900.35     -9.3   17900.35
+61  Boise  2025-02  14093.95    -21.3   31994.30</code></pre>
+                    </div>
+                </div>
 
-    <h2>Aggregate Window Functions</h2>
-    
-    <h3>Running Totals and Moving Averages</h3>
-    <pre class="language-python"><code># Running total and moving average
-query = """
-SELECT 
-    sale_date,
-    total_amount,
-    -- Running total
-    SUM(total_amount) OVER (
-        ORDER BY sale_date
-        ROWS UNBOUNDED PRECEDING
-    ) AS running_total,
-    
-    -- 7-day moving average
-    AVG(total_amount) OVER (
-        ORDER BY sale_date
-        ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
-    ) AS moving_avg_7_day,
-    
-    -- Month-to-date total
-    SUM(total_amount) OVER (
-        PARTITION BY DATE(sale_date, 'start of month')
-        ORDER BY sale_date
-        ROWS UNBOUNDED PRECEDING
-    ) AS month_to_date,
-    
-    -- Daily rank within month
-    RANK() OVER (
-        PARTITION BY DATE(sale_date, 'start of month')
-        ORDER BY total_amount DESC
-    ) AS daily_rank_in_month
-FROM sales
-WHERE sale_date >= DATE('now', '-30 days')
-ORDER BY sale_date DESC
-LIMIT 30;
+                <div class="card card-info">
+                    <h3>🛠️ Step 3: Add the trend, the rank and last year <span class="step-time">(15 min)</span></h3>
+                    <p>Three more columns, three different windows: a three-month moving average per store, the store's rank <em>within each month</em> (so the partition is the month), and the same month one year earlier with <code>LAG(revenue, 12)</code>. Save the full query text: it is the deliverable.</p>
+                    <pre><code class="language-python">PERFORMANCE_SQL = BASE + """
+    SELECT store, month, revenue,
+           ROUND(100.0 * (revenue - LAG(revenue) OVER by_store) / LAG(revenue) OVER by_store, 1) AS mom_pct,
+           ROUND(SUM(revenue) OVER (PARTITION BY store, substr(month, 1, 4) ORDER BY month
+                                    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW), 2)       AS ytd,
+           ROUND(AVG(revenue) OVER (PARTITION BY store ORDER BY month
+                                    ROWS BETWEEN 2 PRECEDING AND CURRENT ROW), 2)               AS moving_avg_3,
+           RANK() OVER (PARTITION BY month ORDER BY revenue DESC)                               AS rank_in_month,
+           ROUND(100.0 * (revenue - LAG(revenue, 12) OVER by_store)
+                 / LAG(revenue, 12) OVER by_store, 1)                                           AS yoy_pct
+    FROM store_month
+    WINDOW by_store AS (PARTITION BY store ORDER BY month)
+    ORDER BY store, month
 """
+perf = pd.read_sql(PERFORMANCE_SQL, db)
+print(perf.shape)
+print(perf[perf["month"] == "2025-12"].to_string(index=False))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>(120, 8)
+    store   month   revenue  mom_pct        ytd  moving_avg_3  rank_in_month  yoy_pct
+Asheville 2025-12   8253.61      2.3  110442.39       8400.13              5    -35.5
+     Bend 2025-12  14111.64     48.0  147586.07      12594.76              4     -0.8
+    Boise 2025-12  19243.89     11.1  231246.73      19058.06              2     -2.5
+Flagstaff 2025-12  17472.88     42.6  171547.87      14722.46              3     33.7
+   Online 2025-12 130154.71     32.2 1280183.70     111242.40              1      3.8</code></pre>
+                    </div>
+                    <p><code>yoy_pct</code> is empty for every 2024 month, because there is no row twelve months earlier. That is correct, not a bug.</p>
+                </div>
 
-df = pd.read_sql_query(query, conn)
-print(df)
+                <div class="card card-info">
+                    <h3>🛠️ Step 4: Each store's best month <span class="step-time">(5 min)</span></h3>
+                    <p>Top 1 per group, with the recipe from the lesson: number, wrap, filter.</p>
+                    <pre><code class="language-python">best = pd.read_sql(BASE + """
+    , ranked AS (
+        SELECT store, month, revenue,
+               ROW_NUMBER() OVER (PARTITION BY store ORDER BY revenue DESC, month) AS rn
+        FROM store_month
+    )
+    SELECT store, month AS best_month, revenue
+    FROM ranked
+    WHERE rn = 1
+    ORDER BY revenue DESC
+""", db)
+print(best)</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>       store best_month    revenue
+0     Online    2025-12  130154.71
+1      Boise    2025-07   28735.98
+2  Flagstaff    2025-06   19760.91
+3       Bend    2025-05   16162.40
+4  Asheville    2025-05   13113.28</code></pre>
+                    </div>
+                    <p>A second CTE is added to <code>BASE</code> by starting the extra text with a comma. Not every store peaks in the same month.</p>
+                </div>
 
-# Cumulative distribution
-query = """
-WITH daily_sales AS (
-    SELECT 
-        sale_date,
-        SUM(total_amount) AS daily_total,
-        SUM(profit) AS daily_profit
-    FROM sales
-    WHERE sale_date >= DATE('now', '-30 days')
-    GROUP BY sale_date
-)
-SELECT 
-    sale_date,
-    daily_total,
-    daily_profit,
-    SUM(daily_total) OVER (ORDER BY sale_date) AS cumulative_sales,
-    SUM(daily_profit) OVER (ORDER BY sale_date) AS cumulative_profit,
-    AVG(daily_total) OVER (
-        ORDER BY sale_date
-        ROWS BETWEEN 2 PRECEDING AND 2 FOLLOWING
-    ) AS smoothed_avg_5_day
-FROM daily_sales
-ORDER BY sale_date DESC;
-"""
+                <div class="card card-info">
+                    <h3>🛠️ Step 5: Verify every window column with pandas <span class="step-time">(10 min)</span></h3>
+                    <p>Recompute the five window columns from <code>base</code> (which has no window functions in it) and compare. <code>equals</code> treats missing values in the same positions as equal.</p>
+                    <pre><code class="language-python">check = base.sort_values(["store", "month"]).reset_index(drop=True)
+by_store = check.groupby("store")["revenue"]
 
-df = pd.read_sql_query(query, conn)
-print(df)</code></pre>
+check["mom_pct"] = (by_store.pct_change() * 100).round(1)
+check["ytd"] = check.groupby(["store", check["month"].str[:4]])["revenue"].cumsum().round(2)
+check["moving_avg_3"] = by_store.transform(lambda s: s.rolling(3, min_periods=1).mean()).round(2)
+check["rank_in_month"] = check.groupby("month")["revenue"].rank(method="min", ascending=False).astype(int)
+check["yoy_pct"] = (by_store.pct_change(12) * 100).round(1)
 
-    <h3>Partition Aggregates</h3>
-    <pre class="language-python"><code># Compare to partition aggregates
-query = """
-SELECT 
-    sale_date,
-    category,
-    region,
-    total_amount,
-    
-    -- Category statistics
-    AVG(total_amount) OVER (PARTITION BY category) AS category_avg,
-    MAX(total_amount) OVER (PARTITION BY category) AS category_max,
-    MIN(total_amount) OVER (PARTITION BY category) AS category_min,
-    
-    -- Region statistics
-    AVG(total_amount) OVER (PARTITION BY region) AS region_avg,
-    
-    -- Comparisons
-    total_amount - AVG(total_amount) OVER (PARTITION BY category) AS diff_from_category_avg,
-    total_amount / AVG(total_amount) OVER (PARTITION BY category) AS pct_of_category_avg,
-    
-    -- Percentage of category total
-    total_amount / SUM(total_amount) OVER (PARTITION BY category) * 100 AS pct_of_category_total
-FROM sales
-WHERE sale_date >= DATE('now', '-7 days')
-ORDER BY category, total_amount DESC;
-"""
+for col in ["mom_pct", "ytd", "moving_avg_3", "rank_in_month", "yoy_pct"]:
+    print(f"{col:&lt;14} matches SQL: {check[col].equals(perf[col])}")
+db.close()</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>mom_pct        matches SQL: True
+ytd            matches SQL: True
+moving_avg_3   matches SQL: True
+rank_in_month  matches SQL: True
+yoy_pct        matches SQL: True</code></pre>
+                    </div>
+                </div>
 
-df = pd.read_sql_query(query, conn)
-print(df.head(20))</code></pre>
+                <div class="card card-success">
+                    <h3>✅ Project Completion Checklist</h3>
+                    <ul class="checklist">
+                        <li>The base CTE returns 120 rows: 5 stores × 24 months</li>
+                        <li><code>mom_pct</code> is empty for each store's first month and never compares one store with another</li>
+                        <li><code>ytd</code> restarts in January 2025 for every store</li>
+                        <li><code>rank_in_month</code> runs from 1 to 5 within each month</li>
+                        <li><code>yoy_pct</code> is empty for all of 2024 and filled for all of 2025</li>
+                        <li>All five window columns match the pandas recomputation</li>
+                    </ul>
+                </div>
+            </section>
 
-    <h2>Analytic Functions</h2>
-    
-    <h3>LAG() and LEAD() - Accessing Other Rows</h3>
-    <pre class="language-python"><code># Year-over-year comparison
-query = """
-WITH monthly_sales AS (
-    SELECT 
-        DATE(sale_date, 'start of month') AS month,
-        SUM(total_amount) AS monthly_total
-    FROM sales
-    GROUP BY DATE(sale_date, 'start of month')
-)
-SELECT 
-    month,
-    monthly_total,
-    LAG(monthly_total, 1) OVER (ORDER BY month) AS prev_month,
-    LAG(monthly_total, 12) OVER (ORDER BY month) AS same_month_last_year,
-    LEAD(monthly_total, 1) OVER (ORDER BY month) AS next_month,
-    
-    -- Month-over-month growth
-    ROUND((monthly_total - LAG(monthly_total, 1) OVER (ORDER BY month)) / 
-          LAG(monthly_total, 1) OVER (ORDER BY month) * 100, 2) AS mom_growth,
-    
-    -- Year-over-year growth
-    ROUND((monthly_total - LAG(monthly_total, 12) OVER (ORDER BY month)) / 
-          LAG(monthly_total, 12) OVER (ORDER BY month) * 100, 2) AS yoy_growth
-FROM monthly_sales
-ORDER BY month DESC
-LIMIT 24;
-"""
+            <!-- ============================================================ -->
+            <section id="exercises" class="lesson-section">
+                <h2>🏋️ Hands-on Exercises</h2>
 
-df = pd.read_sql_query(query, conn)
-print(df)
+                <p>Use the lesson's read-only <code>conn</code>, <code>show()</code> and the <code>MONTHLY</code> string. For each exercise, decide three things before you type: what is the partition, what is the order, and does it need a frame?</p>
 
-# Customer behavior analysis
-query = """
-SELECT 
-    customer_id,
-    transaction_date,
-    amount,
-    LAG(transaction_date, 1) OVER (
-        PARTITION BY customer_id 
-        ORDER BY transaction_date
-    ) AS prev_transaction_date,
-    
-    JULIANDAY(transaction_date) - 
-    JULIANDAY(LAG(transaction_date, 1) OVER (
-        PARTITION BY customer_id 
-        ORDER BY transaction_date
-    )) AS days_since_last_transaction,
-    
-    LAG(amount, 1) OVER (
-        PARTITION BY customer_id 
-        ORDER BY transaction_date
-    ) AS prev_amount,
-    
-    amount - LAG(amount, 1) OVER (
-        PARTITION BY customer_id 
-        ORDER BY transaction_date
-    ) AS amount_change
-FROM customer_transactions
-WHERE customer_id <= 10
-ORDER BY customer_id, transaction_date;
-"""
+                <div class="card">
+                    <h3>🏋️ Exercise 1: Pay Compared with the Team</h3>
+                    <p>For every employee in the <code>Operations</code> department, show name, title, salary, the department's average salary (rounded to whole dollars), and the difference between the two. Sort from the highest paid down.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>AVG(salary) OVER (PARTITION BY department)</code>. Because the <code>WHERE</code> keeps only one department, <code>OVER ()</code> would give the same result here; the partition makes the query correct for any filter.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">show("""
+    SELECT first_name || ' ' || last_name AS employee,
+           title,
+           salary,
+           ROUND(AVG(salary) OVER (PARTITION BY department))          AS dept_avg,
+           ROUND(salary - AVG(salary) OVER (PARTITION BY department)) AS vs_avg
+    FROM employees
+    WHERE department = 'Operations'
+    ORDER BY salary DESC
+    LIMIT 6
+""")</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>      employee             title  salary  dept_avg  vs_avg
+ Elise Delgado  VP of Operations  138900   68509.0 70391.0
+Kiran Hosseini    Analytics Lead   95000   68509.0 26491.0
+  Elise Tanaka        Head Buyer   90900   68509.0 22391.0
+   Maya Petrov      Data Analyst   71700   68509.0  3191.0
+Bianca Ferrand Warehouse Manager   71100   68509.0  2591.0
+   Delia Gallo      Data Analyst   66000   68509.0 -2509.0</code></pre>
+                        </div>
+                    </details>
+                </div>
 
-df = pd.read_sql_query(query, conn)
-print(df.head(20))</code></pre>
+                <div class="card">
+                    <h3>🏋️ Exercise 2: First Orders and the Welcome Code</h3>
+                    <p>The promo code <code>WELCOME10</code> is meant for a customer's first order. Using <code>ROW_NUMBER</code>, pick each customer's first order in the data and report how many first orders there are and what percentage used <code>WELCOME10</code>. Then check: did any order that was <em>not</em> a first order use it?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Number orders with <code>PARTITION BY customer_id ORDER BY order_date, order_id</code> in a CTE. First orders have <code>rn = 1</code>. <code>SUM(promo_code = 'WELCOME10')</code> counts matches (NULL codes are skipped).</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">show("""
+    WITH numbered AS (
+        SELECT promo_code,
+               ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY order_date, order_id) AS rn
+        FROM orders
+    )
+    SELECT CASE WHEN rn = 1 THEN 'first order' ELSE 'later order' END AS which,
+           COUNT(*)                                                    AS orders,
+           SUM(promo_code = 'WELCOME10')                               AS used_welcome10,
+           ROUND(100.0 * SUM(promo_code = 'WELCOME10') / COUNT(*), 1)  AS pct
+    FROM numbered
+    GROUP BY which
+""")</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>      which  orders  used_welcome10  pct
+first order    3942            1139 28.9
+later order   16360               0  0.0</code></pre>
+                        </div>
+                        <p>3,942 first orders, one per buyer, and 28.9% of them used the code. No later order did, so the rule is being applied correctly.</p>
+                    </details>
+                </div>
 
-    <h3>FIRST_VALUE() and LAST_VALUE()</h3>
-    <pre class="language-python"><code># First and last values in partition
-query = """
-SELECT 
-    category,
-    sale_date,
-    total_amount,
-    
-    FIRST_VALUE(total_amount) OVER (
-        PARTITION BY category 
-        ORDER BY sale_date
-        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
-    ) AS first_sale_in_category,
-    
-    LAST_VALUE(total_amount) OVER (
-        PARTITION BY category 
-        ORDER BY sale_date
-        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
-    ) AS last_sale_in_category,
-    
-    FIRST_VALUE(sale_date) OVER (
-        PARTITION BY category 
-        ORDER BY total_amount DESC
-    ) AS date_of_highest_sale,
-    
-    -- Percentage of range
-    (total_amount - MIN(total_amount) OVER (PARTITION BY category)) /
-    (MAX(total_amount) OVER (PARTITION BY category) - 
-     MIN(total_amount) OVER (PARTITION BY category)) * 100 AS pct_of_range
-FROM sales
-WHERE sale_date >= DATE('now', '-30 days')
-ORDER BY category, sale_date;
-"""
+                <div class="card">
+                    <h3>🏋️ Exercise 3: Best and Worst Month-over-Month Changes</h3>
+                    <p>Using the <code>MONTHLY</code> CTE, compute each month's percentage change from the previous month, then list the three biggest rises and the three biggest falls. What do the months have in common?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Add a second CTE (start your extra text with a comma) that computes <code>pct_change</code> with <code>LAG</code>. Then rank it both ways with two <code>ROW_NUMBER</code> calls and keep rows where either is 3 or less. Exclude the first month, whose change is NULL.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">show(MONTHLY + """
+    , changes AS (
+        SELECT month,
+               ROUND(100.0 * (revenue - LAG(revenue) OVER (ORDER BY month))
+                     / LAG(revenue) OVER (ORDER BY month), 1) AS pct_change
+        FROM monthly
+    ),
+    ranked AS (
+        SELECT month, pct_change,
+               ROW_NUMBER() OVER (ORDER BY pct_change DESC) AS from_top,
+               ROW_NUMBER() OVER (ORDER BY pct_change)      AS from_bottom
+        FROM changes
+        WHERE pct_change IS NOT NULL
+    )
+    SELECT month, pct_change
+    FROM ranked
+    WHERE from_top &lt;= 3 OR from_bottom &lt;= 3
+    ORDER BY pct_change DESC
+""")</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>  month  pct_change
+2025-12        29.9
+2024-12        29.2
+2024-03        22.7
+2025-11       -10.7
+2025-09       -13.7
+2025-01       -28.5</code></pre>
+                        </div>
+                        <p>The two biggest rises are the Decembers, and by far the biggest fall is the January between them. Month-over-month change mostly measures the calendar. That is why the project also computed change against the same month a year earlier.</p>
+                    </details>
+                </div>
 
-df = pd.read_sql_query(query, conn)
-print(df.head(20))</code></pre>
+                <div class="card">
+                    <h3>🏋️ Exercise 4: How Concentrated Is Revenue? (Stretch)</h3>
+                    <p>A Pareto analysis asks how few products account for most of the revenue. Compute completed item revenue per product, sort from highest to lowest, and add a running share of total revenue. How many products does it take to reach 50% of revenue, and how many to reach 80%, out of how many that sold?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Running share = <code>SUM(revenue) OVER (ORDER BY revenue DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) / SUM(revenue) OVER ()</code>. A product "is needed" to reach 80% if the running share <em>before</em> it was still under 80%, so count rows where the running share minus the product's own share is below the threshold.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">show("""
+    WITH product_revenue AS (
+        SELECT p.sku, SUM(i.quantity * i.unit_price) AS revenue
+        FROM order_items AS i
+        JOIN orders AS o ON o.order_id = i.order_id
+        JOIN products AS p ON p.sku = i.sku
+        WHERE o.status = 'completed'
+        GROUP BY p.sku
+    ),
+    running AS (
+        SELECT sku,
+               revenue / SUM(revenue) OVER () AS share,
+               SUM(revenue) OVER (ORDER BY revenue DESC, sku
+                                  ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)
+                   / SUM(revenue) OVER ()     AS running_share
+        FROM product_revenue
+    )
+    SELECT COUNT(*)                            AS products_sold,
+           SUM(running_share - share &lt; 0.5)    AS needed_for_50_pct,
+           SUM(running_share - share &lt; 0.8)    AS needed_for_80_pct
+    FROM running
+""")</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code> products_sold  needed_for_50_pct  needed_for_80_pct
+           234                 41                106</code></pre>
+                        </div>
+                        <p>Fewer than a fifth of the products that sold bring in half of the revenue, and under half of them bring in 80%. Not quite the proverbial "80/20", but clearly concentrated.</p>
+                    </details>
+                </div>
+            </section>
 
-    <h2>Window Frame Specifications</h2>
-    
-    <h3>ROWS vs RANGE</h3>
-    <pre class="language-python"><code># Understanding ROWS vs RANGE
-query = """
-WITH sample_data AS (
-    SELECT 
-        sale_date,
-        SUM(total_amount) AS daily_total
-    FROM sales
-    WHERE sale_date >= DATE('now', '-30 days')
-    GROUP BY sale_date
-)
-SELECT 
-    sale_date,
-    daily_total,
-    
-    -- ROWS: Physical rows
-    AVG(daily_total) OVER (
-        ORDER BY sale_date
-        ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
-    ) AS avg_last_3_rows,
-    
-    -- RANGE: Logical range (all rows with same ORDER BY value)
-    AVG(daily_total) OVER (
-        ORDER BY sale_date
-        RANGE BETWEEN INTERVAL '2 days' PRECEDING AND CURRENT ROW
-    ) AS avg_last_3_days,
-    
-    -- Different frame specifications
-    SUM(daily_total) OVER (
-        ORDER BY sale_date
-        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-    ) AS cumulative_sum,
-    
-    SUM(daily_total) OVER (
-        ORDER BY sale_date
-        ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING
-    ) AS reverse_cumulative,
-    
-    AVG(daily_total) OVER (
-        ORDER BY sale_date
-        ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING
-    ) AS centered_moving_avg
-FROM sample_data
-ORDER BY sale_date DESC;
-"""
+            <!-- ============================================================ -->
+            <section id="quiz" class="lesson-section">
+                <h2>🎯 Quick Quiz</h2>
+                <div class="card quiz-container">
+                    <h3>🎯 Check Your Understanding</h3>
 
-df = pd.read_sql_query(query, conn)
-print(df)</code></pre>
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> <code>orders</code> has 20,302 rows and 5 stores. How many rows does <code>SELECT store, AVG(order_total) OVER (PARTITION BY store) FROM orders</code> return?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Five rows is what GROUP BY store would give. What is the defining property of a window function?">
+                                A) 5, one per store
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="A window function never collapses rows. Every one of the 20,302 orders is returned, each carrying the average of its own store.">
+                                B) 20,302, one per order
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="The partition decides which rows are averaged together. It does not multiply rows.">
+                                C) 101,510, each order once per store
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
 
-    <h2>Complex Analytical Queries</h2>
-    
-    <h3>Sales Funnel Analysis</h3>
-    <pre class="language-python"><code># Conversion funnel with window functions
-query = """
-WITH user_events AS (
-    SELECT 
-        user_id,
-        page_url,
-        view_timestamp,
-        CASE 
-            WHEN page_url LIKE '%home%' THEN 1
-            WHEN page_url LIKE '%product%' THEN 2
-            WHEN page_url LIKE '%cart%' THEN 3
-            WHEN page_url LIKE '%checkout%' THEN 4
-            WHEN page_url LIKE '%confirm%' THEN 5
-            ELSE 0
-        END AS funnel_step,
-        ROW_NUMBER() OVER (
-            PARTITION BY user_id 
-            ORDER BY view_timestamp
-        ) AS event_sequence
-    FROM page_views
-    WHERE view_timestamp >= DATE('now', '-7 days')
-)
-SELECT 
-    funnel_step,
-    COUNT(DISTINCT user_id) AS users_at_step,
-    LAG(COUNT(DISTINCT user_id), 1) OVER (ORDER BY funnel_step) AS prev_step_users,
-    ROUND(
-        COUNT(DISTINCT user_id) * 100.0 / 
-        FIRST_VALUE(COUNT(DISTINCT user_id)) OVER (ORDER BY funnel_step),
-        2
-    ) AS pct_of_total,
-    ROUND(
-        COUNT(DISTINCT user_id) * 100.0 / 
-        LAG(COUNT(DISTINCT user_id), 1) OVER (ORDER BY funnel_step),
-        2
-    ) AS conversion_rate
-FROM user_events
-WHERE funnel_step > 0
-GROUP BY funnel_step
-ORDER BY funnel_step;
-"""
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> Four rows have the values 10, 20, 20 and 30. What does this print for the row with 30?</p>
+                        <pre><code class="language-python">quiz_rows = conn.execute("""
+    SELECT v, RANK() OVER (ORDER BY v), DENSE_RANK() OVER (ORDER BY v)
+    FROM (SELECT 10 AS v UNION ALL SELECT 20 UNION ALL SELECT 20 UNION ALL SELECT 30)
+    ORDER BY v
+""").fetchall()
+print(quiz_rows[-1])</code></pre>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="The two 20s tie at rank 2. RANK then skips to 4, like a race with two silver medals and no bronze, while DENSE_RANK continues with 3.">
+                                A) <code>(30, 4, 3)</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="You have the two functions the wrong way around. Which one leaves a gap after a tie?">
+                                B) <code>(30, 3, 4)</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Both being 4 would be ROW_NUMBER, which ignores ties. What do RANK and DENSE_RANK do with the two 20s?">
+                                C) <code>(30, 4, 4)</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
 
-df = pd.read_sql_query(query, conn)
-print(df)</code></pre>
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> You need the single most recent order of every customer. Which approach works?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="ORDER BY with LIMIT 1 returns one row for the whole query, not one per customer.">
+                                A) <code>SELECT * FROM orders ORDER BY customer_id, order_date DESC LIMIT 1</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="WHERE is evaluated before window functions are computed, so this raises a misuse of window function error.">
+                                B) <code>SELECT * FROM orders WHERE ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY order_date DESC) = 1</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="The row number has to exist as a column before it can be filtered. Computing it in a CTE and filtering in the outer query is the standard top-N-per-group recipe.">
+                                C) Compute <code>ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY order_date DESC, order_id DESC) AS rn</code> in a CTE, then select from the CTE <code>WHERE rn = 1</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
 
-    <h3>Cohort Analysis</h3>
-    <pre class="language-python"><code># Customer cohort retention analysis
-query = """
-WITH customer_cohorts AS (
-    SELECT 
-        customer_id,
-        DATE(MIN(transaction_date), 'start of month') AS cohort_month,
-        DATE(transaction_date, 'start of month') AS transaction_month
-    FROM customer_transactions
-    GROUP BY customer_id, DATE(transaction_date, 'start of month')
-),
-cohort_data AS (
-    SELECT 
-        cohort_month,
-        transaction_month,
-        COUNT(DISTINCT customer_id) AS customers,
-        (JULIANDAY(transaction_month) - JULIANDAY(cohort_month)) / 30 AS months_since_join
-    FROM customer_cohorts
-    GROUP BY cohort_month, transaction_month
-)
-SELECT 
-    cohort_month,
-    months_since_join,
-    customers,
-    FIRST_VALUE(customers) OVER (
-        PARTITION BY cohort_month 
-        ORDER BY months_since_join
-    ) AS initial_customers,
-    ROUND(
-        customers * 100.0 / 
-        FIRST_VALUE(customers) OVER (
-            PARTITION BY cohort_month 
-            ORDER BY months_since_join
-        ),
-        2
-    ) AS retention_rate
-FROM cohort_data
-WHERE months_since_join <= 12
-ORDER BY cohort_month, months_since_join;
-"""
+                    <div class="quiz-question">
+                        <p><strong>Question 4:</strong> A SQL column is <code>AVG(revenue) OVER (ORDER BY month ROWS BETWEEN 2 PRECEDING AND CURRENT ROW)</code>. A colleague computes <code>df["revenue"].rolling(3).mean()</code> on the same sorted data. How do the two columns compare?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Look at the first two rows. How many rows are in the SQL frame for the very first month, and what does pandas do when a window is not yet full?">
+                                A) They are identical on every row
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Both use the current row and the two before it, so the windows line up. The difference is only where the window is incomplete.">
+                                B) They differ on every row, because the windows are offset by one
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="SQL averages whatever rows the frame contains, so the first two rows get averages of one and two months. pandas returns NaN until three values are available unless you pass min_periods=1.">
+                                C) They match from the third row on; the first two rows have values in SQL and NaN in pandas
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
 
-df = pd.read_sql_query(query, conn)
-print(df)</code></pre>
+                    <div class="quiz-question">
+                        <p><strong>Question 5:</strong> A table has one row per store per month. An analyst writes <code>LAG(revenue) OVER (ORDER BY store, month)</code> to get each store's previous month. What is wrong?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="Without PARTITION BY store the window is one long sequence, so the first month of each store is compared with the last month of the store before it. PARTITION BY store ORDER BY month restarts the sequence for every store.">
+                                A) Each store's first month gets the previous store's last month instead of NULL
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="LAG ignores the frame, so no frame clause is needed. Think about where one store's rows end and the next one's begin.">
+                                B) <code>LAG</code> needs a <code>ROWS BETWEEN</code> frame to work
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="A window may be ordered by several columns. The issue is what happens at the boundary between two stores.">
+                                C) A window's <code>ORDER BY</code> cannot list two columns
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
 
-    <h3>Time Series Analysis</h3>
-    <pre class="language-python"><code># Advanced time series analysis
-query = """
-WITH daily_metrics AS (
-    SELECT 
-        sale_date,
-        SUM(total_amount) AS daily_sales,
-        COUNT(*) AS transaction_count,
-        AVG(total_amount) AS avg_transaction_value
-    FROM sales
-    WHERE sale_date >= DATE('now', '-180 days')
-    GROUP BY sale_date
-),
-time_series_analysis AS (
-    SELECT 
-        sale_date,
-        daily_sales,
-        
-        -- Trend analysis
-        AVG(daily_sales) OVER (
-            ORDER BY sale_date
-            ROWS BETWEEN 29 PRECEDING AND CURRENT ROW
-        ) AS ma_30_day,
-        
-        AVG(daily_sales) OVER (
-            ORDER BY sale_date
-            ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
-        ) AS ma_7_day,
-        
-        -- Volatility
-        STDDEV(daily_sales) OVER (
-            ORDER BY sale_date
-            ROWS BETWEEN 29 PRECEDING AND CURRENT ROW
-        ) AS volatility_30_day,
-        
-        -- Momentum
-        daily_sales - LAG(daily_sales, 7) OVER (ORDER BY sale_date) AS weekly_change,
-        daily_sales - LAG(daily_sales, 30) OVER (ORDER BY sale_date) AS monthly_change,
-        
-        -- Relative strength
-        CASE 
-            WHEN daily_sales > AVG(daily_sales) OVER (
-                ORDER BY sale_date
-                ROWS BETWEEN 29 PRECEDING AND CURRENT ROW
-            ) THEN 1 
-            ELSE 0 
-        END AS above_ma_30,
-        
-        -- Z-score
-        (daily_sales - AVG(daily_sales) OVER (
-            ORDER BY sale_date
-            ROWS BETWEEN 29 PRECEDING AND CURRENT ROW
-        )) / NULLIF(STDDEV(daily_sales) OVER (
-            ORDER BY sale_date
-            ROWS BETWEEN 29 PRECEDING AND CURRENT ROW
-        ), 0) AS z_score
-    FROM daily_metrics
-)
-SELECT 
-    sale_date,
-    ROUND(daily_sales, 2) AS daily_sales,
-    ROUND(ma_7_day, 2) AS ma_7_day,
-    ROUND(ma_30_day, 2) AS ma_30_day,
-    ROUND(volatility_30_day, 2) AS volatility,
-    ROUND(weekly_change, 2) AS weekly_change,
-    above_ma_30,
-    ROUND(z_score, 2) AS z_score,
-    CASE 
-        WHEN z_score > 2 THEN 'Exceptional High'
-        WHEN z_score > 1 THEN 'Above Normal'
-        WHEN z_score < -2 THEN 'Exceptional Low'
-        WHEN z_score < -1 THEN 'Below Normal'
-        ELSE 'Normal'
-    END AS performance_label
-FROM time_series_analysis
-WHERE sale_date >= DATE('now', '-90 days')
-ORDER BY sale_date DESC
-LIMIT 30;
-"""
+            <!-- ============================================================ -->
+            <section id="faq" class="lesson-section">
+                <h2>❓ Common Questions at This Stage</h2>
 
-df = pd.read_sql_query(query, conn)
-print(df)</code></pre>
+                <details>
+                    <summary>Should I do window calculations in SQL or in pandas?</summary>
+                    <p>Where the data is. If the table is large and in a database, a window function there avoids moving every row to your machine just to rank or lag it. If the data is already a DataFrame, pandas is one line. The results agree, as the project showed, so the choice is about convenience and scale, not correctness.</p>
+                </details>
+                <details>
+                    <summary>Can I use a window function and <code>GROUP BY</code> in the same query?</summary>
+                    <p>Yes. The grouping happens first, and the window then works on the grouped rows. <code>RANK() OVER (ORDER BY SUM(order_total) DESC)</code> ranks groups by their totals. While learning, it is clearer to group in a CTE and apply the window in the next step, which is what this lesson does.</p>
+                </details>
+                <details>
+                    <summary>What is the difference between <code>ROWS</code> and <code>RANGE</code>?</summary>
+                    <p><code>ROWS</code> counts physical rows: "the two rows before this one". <code>RANGE</code> works on the values of the ordering column, and treats rows with equal values as one unit, which is what produced the tie surprise in the running total. For the frames in this course, <code>ROWS</code> is what you want. SQLite 3.28 and later also has <code>GROUPS</code>, which counts sets of tied rows.</p>
+                </details>
+                <details>
+                    <summary>My moving average should cover seven <em>days</em>, but some days have no rows. Is <code>6 PRECEDING</code> still right?</summary>
+                    <p>No, and this is a real trap: <code>ROWS</code> counts rows, not days. If a date is missing, the frame reaches further back in time than you intended. Pinecrest has orders on every day, so the chart above is safe. Otherwise, build a complete calendar first (the recursive date series from the Lesson 5.2 bonus challenge) and left join the data onto it, the SQL counterpart of <code>asfreq</code> in pandas.</p>
+                </details>
 
-    <h3>Pareto Analysis (80/20 Rule)</h3>
-    <pre class="language-python"><code># Pareto analysis with window functions
-query = """
-WITH customer_revenue AS (
-    SELECT 
-        customer_id,
-        SUM(amount) AS total_revenue
-    FROM customer_transactions
-    WHERE transaction_date >= DATE('now', '-90 days')
-    GROUP BY customer_id
-),
-pareto_analysis AS (
-    SELECT 
-        customer_id,
-        total_revenue,
-        SUM(total_revenue) OVER (ORDER BY total_revenue DESC) AS cumulative_revenue,
-        SUM(total_revenue) OVER () AS grand_total,
-        COUNT(*) OVER () AS total_customers,
-        ROW_NUMBER() OVER (ORDER BY total_revenue DESC) AS customer_rank
-    FROM customer_revenue
-)
-SELECT 
-    customer_rank,
-    customer_id,
-    ROUND(total_revenue, 2) AS revenue,
-    ROUND(cumulative_revenue, 2) AS cumulative,
-    ROUND(cumulative_revenue * 100.0 / grand_total, 2) AS cumulative_pct,
-    ROUND(customer_rank * 100.0 / total_customers, 2) AS customer_pct,
-    CASE 
-        WHEN customer_rank * 100.0 / total_customers <= 20 THEN 'Top 20%'
-        WHEN customer_rank * 100.0 / total_customers <= 50 THEN 'Middle 30%'
-        ELSE 'Bottom 50%'
-    END AS customer_segment
-FROM pareto_analysis
-WHERE customer_rank <= 50
-ORDER BY customer_rank;
-"""
+                <div class="card card-accent">
+                    <h3>🌟 Going Further: Bonus Challenge</h3>
+                    <p>Build a small <strong>cohort table</strong>. With <code>FIRST_VALUE(strftime('%Y-%m', order_date)) OVER (PARTITION BY customer_id ORDER BY order_date, order_id)</code>, tag every order with the month of that customer's first order (their cohort). Then count distinct customers by cohort and by the number of months between the cohort month and the order month. For the January 2024 cohort, what share were still ordering 6 and 12 months later? Pivot the result in pandas (Lesson 2.6) into the classic triangle. Keep in mind what the data can and cannot say: a customer's first order <em>in this file</em> is not necessarily their first order ever.</p>
+                </div>
+            </section>
 
-df = pd.read_sql_query(query, conn)
-print(df)</code></pre>
+            <!-- ============================================================ -->
+            <section id="journal" class="lesson-section">
+                <h2>📓 Learning Journal</h2>
+                <div class="card card-accent">
+                    <p>Take five minutes to write in your learning journal (the <code>journal.md</code> file you started in Lesson 0.1, or a paper notebook). Jot down:</p>
+                    <ul>
+                        <li><strong>Key concepts</strong> you learned today</li>
+                        <li><strong>Techniques that clicked</strong> (and the ones that have not, yet)</li>
+                        <li><strong>Questions or confusion</strong> to come back to</li>
+                        <li><strong>Ideas to try</strong> on your own</li>
+                        <li><strong>Progress and feelings</strong>: how did this lesson go for you?</li>
+                    </ul>
+                    <p><strong>✍️ This lesson's prompt:</strong> Write the "seat on the train" model in your own words, naming the partition, the order and the frame. Then choose one calculation from Lesson 2.8 that you found hard in pandas and write it as a SQL window function. Which version do you find easier to read, and why?</p>
+                </div>
+            </section>
 
-    <h2>Performance Optimization</h2>
-    
-    <h3>Efficient Window Function Usage</h3>
-    <pre class="language-python"><code># Inefficient: Multiple window functions with different partitions
-inefficient_query = """
-SELECT 
-    sale_date,
-    category,
-    region,
-    total_amount,
-    AVG(total_amount) OVER (PARTITION BY category) AS cat_avg,
-    AVG(total_amount) OVER (PARTITION BY region) AS reg_avg,
-    MAX(total_amount) OVER (PARTITION BY category) AS cat_max,
-    MAX(total_amount) OVER (PARTITION BY region) AS reg_max
-FROM sales;
-"""
+            <!-- ============================================================ -->
+            <section id="summary" class="lesson-section">
+                <h2>📝 Lesson Summary</h2>
 
-# Efficient: Using CTE to reduce scans
-efficient_query = """
-WITH aggregates AS (
-    SELECT 
-        category,
-        region,
-        AVG(total_amount) AS avg_amount,
-        MAX(total_amount) AS max_amount
-    FROM sales
-    GROUP BY category, region
-)
-SELECT 
-    s.*,
-    ac.avg_amount AS cat_avg,
-    ac.max_amount AS cat_max,
-    ar.avg_amount AS reg_avg,
-    ar.max_amount AS reg_max
-FROM sales s
-JOIN aggregates ac ON s.category = ac.category
-JOIN aggregates ar ON s.region = ar.region;
-"""
+                <div class="card card-success">
+                    <h3>🎓 Key Takeaways</h3>
+                    <ul>
+                        <li>A window function computes over a set of related rows and keeps every row; <code>GROUP BY</code> collapses them</li>
+                        <li><code>OVER (PARTITION BY ... ORDER BY ... ROWS BETWEEN ...)</code>: which rows belong together, in what order, and how many of them to look at</li>
+                        <li><code>ROW_NUMBER</code>, <code>RANK</code> and <code>DENSE_RANK</code> differ only in how they treat ties</li>
+                        <li>Top N per group: number the rows in a CTE, then filter outside it, because <code>WHERE</code> cannot see window functions</li>
+                        <li><code>LAG</code> and <code>LEAD</code> read neighboring rows; partition by the series so one group never reads another's rows</li>
+                        <li>For running totals and moving averages, write the <code>ROWS</code> frame explicitly; the default frame lumps tied rows together</li>
+                        <li>SQL uses partial frames at the start of a series; pandas <code>rolling</code> returns <code>NaN</code> there unless <code>min_periods</code> is set</li>
+                        <li>End a window's <code>ORDER BY</code> with a unique column so results are repeatable</li>
+                    </ul>
+                </div>
 
-# Index strategy for window functions
-cursor.executescript('''
-    -- Indexes for common window function patterns
-    CREATE INDEX IF NOT EXISTS idx_sales_date_amount 
-    ON sales(sale_date, total_amount);
-    
-    CREATE INDEX IF NOT EXISTS idx_sales_category_amount 
-    ON sales(category, total_amount);
-    
-    CREATE INDEX IF NOT EXISTS idx_sales_salesperson_date 
-    ON sales(salesperson_id, sale_date, total_amount);
-''')</code></pre>
+                <div class="card card-info">
+                    <h3>🏆 What You've Accomplished</h3>
+                    <ul>
+                        <li>You put a group average, a grand total and a share on every row without losing the rows</li>
+                        <li>You ranked products and employees within their groups and picked the top two per category</li>
+                        <li>You measured month-over-month change and the time between a customer's orders</li>
+                        <li>You computed running totals, year-to-date figures and moving averages, and charted one</li>
+                        <li>You built a five-window performance table and proved it against pandas, column by column</li>
+                    </ul>
+                </div>
 
-    <h2>Common Window Function Patterns</h2>
-    
-    <h3>Gap and Island Problem</h3>
-    <pre class="language-python"><code># Find consecutive sequences (islands) in data
-query = """
-WITH numbered_sales AS (
-    SELECT 
-        sale_date,
-        salesperson_id,
-        ROW_NUMBER() OVER (ORDER BY sale_date) AS rn,
-        ROW_NUMBER() OVER (PARTITION BY salesperson_id ORDER BY sale_date) AS rn_by_person
-    FROM sales
-    WHERE sale_date >= DATE('now', '-30 days')
-),
-islands AS (
-    SELECT 
-        salesperson_id,
-        sale_date,
-        rn - rn_by_person AS island_id
-    FROM numbered_sales
-)
-SELECT 
-    salesperson_id,
-    MIN(sale_date) AS start_date,
-    MAX(sale_date) AS end_date,
-    COUNT(*) AS consecutive_days
-FROM islands
-GROUP BY salesperson_id, island_id
-HAVING COUNT(*) >= 3
-ORDER BY consecutive_days DESC;
-"""
+                <h3>🔭 Looking Ahead</h3>
+                <p>Your queries are now doing real work: joins across four tables, windows over grouped results. On Pinecrest's small database they return instantly. On a table a thousand times larger they might not. In <a href="sql_query_optimization.html"><strong>Lesson 5.4: Query Optimization</strong></a> you will learn to ask the engine <em>how</em> it runs a query with <code>EXPLAIN QUERY PLAN</code>, see what an index changes in both the plan and the stopwatch, and learn when an index helps, when it does not, and what it costs.</p>
 
-df = pd.read_sql_query(query, conn)
-print(df)</code></pre>
+                <h3>📋 Before the Next Lesson</h3>
+                <ul>
+                    <li>Save <code>PERFORMANCE_SQL</code> from the project. It is a good query to examine with the tools of the next lesson.</li>
+                    <li>Rewrite one of today's queries using a named <code>WINDOW</code> clause if it repeats the same <code>OVER (...)</code> more than once.</li>
+                    <li>Lesson 5.4 creates indexes, so it works on a copy of the database again. Check that you still have the original <code>data/pinecrest.db</code> untouched.</li>
+                </ul>
 
-    <h3>Deduplication with Window Functions</h3>
-    <pre class="language-python"><code># Remove duplicates keeping the most recent
-query = """
-WITH ranked_records AS (
-    SELECT 
-        *,
-        ROW_NUMBER() OVER (
-            PARTITION BY customer_id, DATE(transaction_date)
-            ORDER BY transaction_date DESC
-        ) AS rn
-    FROM customer_transactions
-)
-SELECT 
-    customer_id,
-    transaction_date,
-    amount,
-    transaction_type
-FROM ranked_records
-WHERE rn = 1
-ORDER BY customer_id, transaction_date DESC
-LIMIT 20;
-"""
+                <div class="card card-accent">
+                    <h3>🌱 Encouragement for the Journey</h3>
+                    <p>Window functions have a reputation as "advanced SQL", and many people who use SQL every day avoid them. You have just written a dozen and verified them against a second tool. If the frame clause still feels like a mouthful, that is normal: say it aloud as "from here to here" and it becomes an ordinary sentence. The partition, the order, the frame. Three questions, and you now know to ask all of them.</p>
+                </div>
+            </section>
 
-df = pd.read_sql_query(query, conn)
-print(df)</code></pre>
-
-    <h2>Practice Exercises</h2>
-    
-    <h3>Exercise 1: Customer Segmentation</h3>
-    <p>Create a query that:</p>
-    <ol>
-        <li>Calculates RFM (Recency, Frequency, Monetary) scores using NTILE</li>
-        <li>Assigns customer segments based on scores</li>
-        <li>Shows movement between segments over time</li>
-        <li>Identifies at-risk customers using LAG/LEAD</li>
-    </ol>
-
-    <h3>Exercise 2: Product Performance Dashboard</h3>
-    <p>Build a comprehensive product analysis:</p>
-    <ol>
-        <li>Calculate market share within categories</li>
-        <li>Show trend (up/down) using moving averages</li>
-        <li>Rank products by multiple metrics</li>
-        <li>Identify cross-selling opportunities</li>
-    </ol>
-
-    <h3>Exercise 3: Time-based Metrics</h3>
-    <p>Develop time-series analytics:</p>
-    <ol>
-        <li>Calculate year-to-date, quarter-to-date metrics</li>
-        <li>Compare to previous period (YoY, QoQ, MoM)</li>
-        <li>Identify seasonality patterns</li>
-        <li>Forecast using historical averages</li>
-    </ol>
-
-    <h2>Key Takeaways</h2>
-    <ul>
-        <li>🪟 Window functions perform calculations across rows without grouping</li>
-        <li>📊 Essential for rankings, running totals, and moving averages</li>
-        <li>🔄 LAG/LEAD access data from other rows in the result set</li>
-        <li>📈 PARTITION BY creates independent windows for calculations</li>
-        <li>⚡ Proper indexing crucial for window function performance</li>
-        <li>🎯 Frame clauses (ROWS/RANGE) control which rows are included</li>
-        <li>💡 Combine multiple window functions for complex analytics</li>
-    </ul>
-
-    <h2>Further Resources</h2>
-    <ul>
-        <li><a href="https://www.postgresql.org/docs/current/tutorial-window.html">PostgreSQL Window Functions Tutorial</a></li>
-        <li><a href="https://learnsql.com/blog/sql-window-functions-cheat-sheet/">Window Functions Cheat Sheet</a></li>
-        <li><a href="https://mode.com/sql-tutorial/sql-window-functions/">Mode Analytics Window Functions Guide</a></li>
-        <li><a href="https://www.windowfunctions.com/">Window Functions Explained</a></li>
-        <li><a href="https://www.sqlitetutorial.net/sqlite-window-functions/">SQLite Window Functions</a></li>
-    </ul>
-
-    <!-- Learning Journal (REQUIRED per the Courseware Authoring Standard) -->
-    <section id="journal" class="lesson-section">
-        <h2>📓 Learning Journal</h2>
-        <div class="card card-info">
-            <p>Keep a learning journal — digital or physical. After this lesson, take a few minutes to write down:</p>
-            <ul>
-                <li><strong>Key concepts</strong> you learned</li>
-                <li><strong>Techniques that clicked</strong> for you</li>
-                <li><strong>Questions or confusion points</strong> to revisit</li>
-                <li><strong>Ideas you want to try</strong></li>
-                <li><strong>Your progress and feelings</strong> about learning this</li>
-            </ul>
-            <p><strong>✍️ This lesson's prompt:</strong> Window functions let you keep every row while still computing group-level context. Which reporting question that you once solved with multiple queries or a self-join could now become a single windowed query — and what makes that version clearer?</p>
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="sql_complex_queries.html" class="prev-lesson">← Previous: Complex Queries</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="sql_query_optimization.html" class="next-lesson">Next: Query Optimization →</a>
+            </nav>
         </div>
-    </section>
-
-    <!-- Lesson Summary (full standard block) -->
-    <section id="summary" class="lesson-section">
-        <h2>📝 Lesson Summary</h2>
-        <div class="card card-success">
-            <h3>🎓 Key Takeaways</h3>
-            <ul>
-                <li>A window function computes over a set of rows defined by <code>OVER (...)</code> without collapsing them, so you keep row-level detail and aggregate context together.</li>
-                <li><code>PARTITION BY</code> splits data into independent windows and <code>ORDER BY</code> plus a frame (<code>ROWS</code>/<code>RANGE</code>) controls exactly which rows each calculation sees.</li>
-                <li>Ranking (<code>ROW_NUMBER</code>, <code>RANK</code>, <code>DENSE_RANK</code>, <code>NTILE</code>) and offset functions (<code>LAG</code>, <code>LEAD</code>) unlock top-N, quartiles, and period-over-period comparisons.</li>
-                <li>Running totals, moving averages, funnels, cohorts, and deduplication all become concise, readable queries once you think in windows.</li>
-            </ul>
-        </div>
-        <h3>🎉 What You've Accomplished</h3>
-        <p>You can now express advanced analytics — rankings, trends, retention, and last-stand-vs-baseline comparisons — directly in SQL, right next to your data, instead of exporting everything and computing it elsewhere. This is a genuine analyst superpower.</p>
-        <h3>❓ Common Questions at This Stage</h3>
-        <details>
-            <summary>What's the real difference between RANK, DENSE_RANK, and ROW_NUMBER?</summary>
-            <p>On ties, <code>ROW_NUMBER</code> gives every row a unique number, <code>RANK</code> assigns the same rank and then skips numbers, and <code>DENSE_RANK</code> assigns the same rank without gaps. Choose based on how you want ties handled.</p>
-        </details>
-        <details>
-            <summary>When do I need a ROWS or RANGE frame clause?</summary>
-            <p>Whenever the calculation depends on a sliding set of rows — moving averages, running totals, or centered windows. Without a frame, ordered aggregates default to "unbounded preceding through current row," which is not always what you want, especially with <code>LAST_VALUE</code>.</p>
-        </details>
-        <details>
-            <summary>Are window functions slow on large tables?</summary>
-            <p>They can be, because they often require sorting. Indexes that match your <code>PARTITION BY</code>/<code>ORDER BY</code> columns help a lot, and pre-aggregating in a CTE before applying windows can reduce the work.</p>
-        </details>
-        <h3>🔭 Looking Ahead</h3>
-        <p>Now that you can write powerful analytical queries, the next step is making sure they run fast — reading execution plans and using indexes so these window-heavy reports stay responsive at scale.</p>
-        <h3>✅ Before the Next Lesson</h3>
-        <ul>
-            <li>Write a query that returns the top 3 products per category using <code>ROW_NUMBER</code> in a CTE.</li>
-            <li>Add a 7-row moving average and a running total to a daily-sales query and compare how the frame clause changes each result.</li>
-            <li>Write your Learning Journal entry for this lesson</li>
-        </ul>
-        <div class="card card-accent" style="text-align: center; padding: 2rem;">
-            <h3>🌟 Encouragement for the Journey</h3>
-            <p>Window functions have a steep-looking syntax but a gentle payoff — once the <code>OVER</code> clause clicks, whole classes of "impossible in one query" problems suddenly become one elegant statement. Keep experimenting.</p>
-        </div>
-    </section>
-
-    <!-- Navigation at the bottom -->
-    <nav class="lesson-nav" aria-label="Lesson navigation">
-        <a href="sql_complex_queries.html" class="prev-lesson" aria-label="Previous lesson">Previous: Complex Queries and Joins</a>
-        <a href="index.html" class="home-link" aria-label="Course home">Course Home</a>
-        <a href="sql_query_optimization.html" class="next-lesson" aria-label="Next lesson">Next: Query Optimization</a>
-    </nav>
-    
     </main>
 
-    <!-- Footer -->
     <footer class="site-footer">
         <p>&copy; 2026 Ray de la Paz. Python Data Science. All rights reserved.</p>
         <div class="footer-links">
@@ -1113,6 +1360,10 @@ print(df)</code></pre>
             <a href="https://rays-home.netlify.app/contact">Contact</a>
             <a href="#" id="print-button">Print Page</a>
         </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
     </footer>
+
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
 </body>
 </html>

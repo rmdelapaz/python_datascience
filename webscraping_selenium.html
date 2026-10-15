@@ -3,1733 +3,1142 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Master Selenium WebDriver for scraping dynamic JavaScript content. Learn browser automation, waiting strategies, and handling modern web applications.">
-    <title>Selenium for Dynamic Content - Python Data Science Path</title>
+    <meta name="description" content="Recognize pages that JavaScript fills in, look first for the JSON they load, and drive a real browser with Selenium 4 when you must: headless Chrome, By locators, explicit waits, forms, screenshots and quitting cleanly. Python Data Science Lesson 6.3.">
+    <meta name="author" content="Ray de la Paz">
+    <title>Dynamic Pages with Selenium - Python Data Science</title>
     <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/enhanced.css">
-    <link rel="icon" href="/favicon.png" type="image/png">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid: rendered (and re-rendered on theme change) by js/course-enhancements.js -->
     <script type="module">
-      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-      mermaid.initialize({ startOnLoad: true });
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        window.__mermaid = mermaid;
+        mermaid.initialize({ startOnLoad: false });
+        document.dispatchEvent(new Event('mermaid-ready'));
     </script>
-    <script src="js/course-enhancements.js" defer></script>
-    <link rel="stylesheet" href="styles/standard.css">
 </head>
 <body>
-    <!-- Skip to main content for accessibility -->
     <a href="#main-content" class="skip-to-main">Skip to main content</a>
-    
-    <!-- Progress indicator -->
+
     <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
         <div class="progress-bar"></div>
     </div>
-    
+
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">📊 Python Data Science</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">☰</button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
+    </nav>
+
     <main id="main-content">
-    <header role="banner">
-        <h1>Selenium for Dynamic Content</h1>
-        <div class="reading-time" aria-label="Estimated reading time"></div>
-    </header>
+        <div class="container">
+            <header>
+                <h1>🤖 Lesson 6.3: Dynamic Pages with Selenium</h1>
+                <p class="lead">Some pages hand you an empty shell and fill it in afterward. Learn to spot them, to find the data they load, and to drive a real browser from Python when that is truly the only way in.</p>
 
-    <!-- What You'll Learn (learning objectives) -->
-    <div class="card card-info">
-        <h2>📚 What You'll Learn</h2>
-        <p>By the end of this lesson, you will be able to:</p>
-        <ul>
-            <li>Explain why JavaScript-rendered content requires a real browser and set up a WebDriver</li>
-            <li>Locate elements with ID, name, class, CSS selectors, and XPath</li>
-            <li>Choose the right waiting strategy — implicit, explicit, and fluent waits — for reliable automation</li>
-            <li>Interact with pages: click, type, select dropdowns, hover, drag-and-drop, and run JavaScript</li>
-            <li>Handle infinite scroll, lazy loading, popups, alerts, frames, and multiple windows</li>
-            <li>Apply the Page Object Model, performance tweaks, and awareness of anti-bot detection and its ethics</li>
-        </ul>
-        <p><strong>⏱️ Estimated Time:</strong> 45–60 minutes</p>
-        <p><strong>🎯 Project:</strong> Automate a browser to search a dynamic site, scroll through JavaScript-loaded results with explicit waits, and extract the listings into a CSV.</p>
-    </div>
-    
-    <!-- Breadcrumb Navigation -->
-    <nav class="breadcrumb" aria-label="Breadcrumb">
-        <a href="index.html">Home</a>
-        <span class="separator">›</span>
-        <a href="#">Intermediate Module</a>
-        <span class="separator">›</span>
-        <a href="#">Web Scraping & APIs</a>
-        <span class="separator">›</span>
-        <span class="current">Selenium for Dynamic Content</span>
-    </nav>
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Tell a static page from one that JavaScript fills in, and explain why <code>requests</code> sees no data on the second kind</li>
+                        <li>Find the JSON a dynamic page loads and use it directly when you can</li>
+                        <li>Start headless Chrome with Selenium 4, open a page, and locate elements with <code>By</code> locators</li>
+                        <li>Wait for content with <code>WebDriverWait</code> and expected conditions instead of <code>time.sleep()</code></li>
+                        <li>Click buttons, fill in a form, take a screenshot, and always quit the browser, even after an error</li>
+                    </ul>
+                </div>
 
-    <h2>Scrape the Modern Web! 🌐</h2>
-    
-    <blockquote>
-        <p>Modern websites are dynamic, JavaScript-driven applications that traditional scraping tools can't handle. Selenium WebDriver gives you the power to control real browsers, interact with dynamic content, handle user authentication, and scrape even the most complex single-page applications. Master browser automation to access any data on the web!</p>
-    </blockquote>
+                <ul class="lesson-meta">
+                    <li><span class="meta-label">⏱️ Time</span> 90 minutes</li>
+                    <li><span class="meta-label">📋 Prerequisites</span> <a href="webscraping_beautifulsoup.html">Lesson 6.2: Parsing HTML with Beautiful Soup</a> (selectors, parsing a block into a dictionary); Google Chrome installed</li>
+                    <li><span class="meta-label">🛠️ You will build</span> A deals collector that drives a browser through the practice shop's deals page and checks itself against the page's own data file</li>
+                    <li><span class="meta-label">📂 Data</span> The practice shop (online), <code>data/products.csv</code></li>
+                </ul>
+            </header>
 
-    <h2>Understanding Dynamic Content</h2>
-    
-    <div class="mermaid">
-    graph LR
-        A[Static HTML] --> B[Initial Page Load]
-        B --> C[JavaScript Execution]
-        C --> D[AJAX Requests]
-        D --> E[DOM Manipulation]
-        E --> F[Dynamic Content]
-        
-        G[Traditional Scraping] --> B
-        G -.->|Can't Access| F
-        
-        H[Selenium] --> B
-        H --> C
-        H --> D
-        H --> E
-        H --> F
-        
-        F --> I[React/Vue/Angular]
-        F --> J[Lazy Loading]
-        F --> K[Infinite Scroll]
-        F --> L[Client-Side Rendering]
-    </div>
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#dynamic" class="toc-link">The Page That Came Back Empty</a></li>
+                        <li><a href="#json-first" class="toc-link">Look for the Data First</a></li>
+                        <li><a href="#setup" class="toc-link">Starting a Browser from Python</a></li>
+                        <li><a href="#locators" class="toc-link">Finding Elements with By</a></li>
+                        <li><a href="#waits" class="toc-link">Explicit Waits, Never Sleep</a></li>
+                        <li><a href="#reading" class="toc-link">Reading the Page</a></li>
+                        <li><a href="#clicking" class="toc-link">Clicking: Load More</a></li>
+                        <li><a href="#forms" class="toc-link">Filling In a Form</a></li>
+                        <li><a href="#screenshots" class="toc-link">Screenshots</a></li>
+                        <li><a href="#quitting" class="toc-link">Quitting Cleanly</a></li>
+                        <li><a href="#mistakes" class="toc-link">Common Mistakes</a></li>
+                        <li><a href="#project" class="toc-link">Project: Deals Watch</a></li>
+                        <li><a href="#exercises" class="toc-link">Hands-on Exercises</a></li>
+                        <li><a href="#quiz" class="toc-link">Quick Quiz</a></li>
+                        <li><a href="#faq" class="toc-link">Common Questions</a></li>
+                        <li><a href="#journal" class="toc-link">Learning Journal</a></li>
+                        <li><a href="#summary" class="toc-link">Lesson Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
 
-    <h2>Installation and Setup</h2>
-    
-    <h3>Installing Selenium and Drivers</h3>
-    <pre class="language-python"><code># Installation
-"""
-pip install selenium
-pip install webdriver-manager  # Automatic driver management
-pip install undetected-chromedriver  # For anti-bot detection
-"""
+            <!-- ============================================================ -->
+            <section id="dynamic" class="lesson-section">
+                <h2>📦 The Page That Came Back Empty</h2>
 
-# Basic imports
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.action_chains import ActionChains
+                <p>At the end of Lesson 6.2 one page defeated you. In a browser, the practice shop's <strong>Deals</strong> page shows a list of discounted products. Through <code>requests</code>, it shows none. Start a new notebook and reproduce the problem, because understanding it is half of this lesson. (Working offline? Serve <a href="data/pinecrest-practice-site.zip" download><code>pinecrest-practice-site.zip</code></a> as described in <a href="webscraping_requests.html">Lesson 6.1</a>: unzip it in your project folder, run <code>python -m http.server 8001</code> there, and set <code>BASE_URL = "http://127.0.0.1:8001/practice/shop/"</code>. Selenium loads local pages the same way.)</p>
+
+                <pre><code class="language-python">import re
+import time
+from urllib.parse import urljoin
+
+import pandas as pd
+import requests
+from bs4 import BeautifulSoup
+
+pd.set_option("display.width", 150)
+pd.set_option("display.max_columns", 20)
+
+BASE_URL = "https://rays-python-datascience.netlify.app/practice/shop/"
+USER_AGENT = "pinecrest-course-bot/1.0 (learning project; contact: you@example.com)"
+HEADERS = {"User-Agent": USER_AGENT}
+DEALS_URL = urljoin(BASE_URL, "deals.html")
+
+resp = requests.get(DEALS_URL, headers=HEADERS, timeout=10)
+resp.raise_for_status()
+soup = BeautifulSoup(resp.content, "html.parser")
+
+print(len(soup.select("li.deal")), "deals in the HTML")
+print(soup.select_one("#loading").get_text())
+print(soup.select_one("#deal-list"))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>0 deals in the HTML
+Loading deals…
+&lt;ul class="product-grid" id="deal-list"&gt;&lt;/ul&gt;</code></pre>
+                </div>
+
+                <p>The request succeeded. The list element is there. It is simply empty, next to a message that says the deals are loading. They never will, in this program.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Mental Model: Flat-Pack Furniture</h4>
+                    <p>A <strong>static</strong> page arrives like a finished bookcase: the server built it, and what comes off the truck is what you see. Every page you scraped in Lesson 6.2 was like that.</p>
+                    <p>A <strong>dynamic</strong> page arrives flat-packed: a nearly empty frame (the HTML), a bag of parts to be fetched (data files), and an instruction sheet (JavaScript). Your <em>browser</em> does the assembly, after delivery. <code>requests</code> is a delivery driver, not a carpenter. It hands you the box exactly as shipped, and never opens the instructions.</p>
+                </div>
+
+                <p>Here is what a browser does with the deals page, step by step:</p>
+                <ol>
+                    <li>It requests <code>deals.html</code> and receives the shell you just printed.</li>
+                    <li>The shell names a script, <code>shop.js</code>. The browser requests that too and runs it.</li>
+                    <li>About a second and a half later, the script requests a data file and builds one list item per deal.</li>
+                    <li>It removes the "Loading" message. Only now does the page look finished.</li>
+                </ol>
+
+                <p>You have two honest ways to get that data, and the order in which you try them matters.</p>
+
+                <div class="mermaid">
+            graph TD
+                A["Visible in the browser"] --> B{"In the raw HTML?"}
+                B -->|yes| C["Beautiful Soup"]
+                B -->|no| D{"Loads a data file?"}
+                D -->|yes| E["Request the data"]
+                D -->|no| F["Drive a browser"]
+                </div>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Same Rules, Bigger Footprint</h4>
+                    <p>Everything from Lesson 6.1 still applies: <code>robots.txt</code>, the terms of use, a gentle pace, an honest identity, no logins or paywalls bypassed, no personal data. A browser is also much heavier than <code>requests</code>: each page view downloads the scripts, styles and images too. That is one more reason to reach for it last.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="json-first" class="lesson-section">
+                <h2>🔍 Look for the Data First</h2>
+
+                <p>In step 3 above, the page's own script fetched the deals from somewhere. If your program can ask that same "somewhere", you get clean data with one request and no browser at all. So before you automate a browser, spend two minutes finding out what the page loads.</p>
+
+                <h3>In Your Browser</h3>
+                <ol>
+                    <li>Open the Deals page in Chrome. Press <kbd>F12</kbd> (or right-click and choose <strong>Inspect</strong>) to open the developer tools.</li>
+                    <li>Click the <strong>Network</strong> tab, then reload the page.</li>
+                    <li>Click the <strong>Fetch/XHR</strong> filter. These are the requests the page's scripts made after it loaded.</li>
+                    <li>You will see one entry: <code>deals.json</code>. Click it and look at the <strong>Preview</strong> or <strong>Response</strong> pane. There are your deals.</li>
+                </ol>
+
+                <h3>In Python</h3>
+
+                <p>You can find the same thing by reading the script the page loads. A quick search for calls to <code>fetch()</code>, the browser's way of requesting data, is often enough.</p>
+
+                <pre><code class="language-python">script = requests.get(urljoin(BASE_URL, "shop.js"), headers=HEADERS, timeout=10)
+script.raise_for_status()
+
+print(re.findall(r"fetch\('(.+?)'\)", script.text))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>['deals.json', 'products.json']</code></pre>
+                </div>
+
+                <p>Two data files. One feeds the deals page and the other feeds the search page. Ask for the first exactly as you asked for JSON in Lesson 6.1.</p>
+
+                <pre><code class="language-python">resp = requests.get(urljoin(BASE_URL, "deals.json"), headers=HEADERS, timeout=10)
+resp.raise_for_status()
+
+deals_json = pd.DataFrame(resp.json()["deals"])
+print(deals_json.shape)
+print(deals_json.head(3))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>(24, 6)
+        sku                                name      category   price  discount_pct  deal_price
+0  FTW-1013     Juniper Vane Talus Hiking Boots      Footwear  155.95            15      132.56
+1  ACC-1017    Pinecrest Talus Insect Repellent   Accessories   14.50            20       11.60
+2  KIT-1003  Quillback Timberline Insulated Mug  Camp Kitchen   24.95            25       18.71</code></pre>
+                </div>
+
+                <p>All 24 deals, already typed, in three lines and a fraction of a second. <strong>When a page loads its data from a file or an API that you are allowed to request, that is the best route</strong>: faster for you, far lighter for the server, and much less likely to break than anything that depends on the page's layout.</p>
+
+                <div class="card card-info">
+                    <h4>💡 So When Do You Really Need a Browser?</h4>
+                    <ul>
+                        <li>The data is computed or assembled inside the page, and there is no single request that returns it.</li>
+                        <li>You must interact to reveal it (click, scroll, choose from menus) and the requests behind those actions are too tangled to reproduce.</li>
+                        <li>You want what a person sees: a screenshot, a rendered chart, a check that your own web app works.</li>
+                    </ul>
+                    <p>The rest of this lesson collects the deals the browser way. That is deliberate practice: because you already hold the answer in <code>deals_json</code>, you will be able to check that your browser automation got every row right.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="setup" class="lesson-section">
+                <h2>🚀 Starting a Browser from Python</h2>
+
+                <p><strong>Selenium</strong> is a library that controls a real web browser: it opens pages, runs their JavaScript, clicks, types and reads the result, just as you would by hand. It was built for testing websites, which is still its main job.</p>
+
+                <p>Selenium talks to the browser through a small helper program called a <strong>driver</strong>. Selenium 4 includes a tool, <strong>Selenium Manager</strong>, that finds your installed browser and downloads the matching driver automatically the first time you need it. You only need Chrome itself to be installed. The <code>selenium</code> package came with the course environment in Lesson 0.1.</p>
+
+                <pre><code class="language-python">from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from selenium.common.exceptions import *
-from webdriver_manager.chrome import ChromeDriverManager
-import time
-import json
+from selenium.webdriver.common.by import By
 
-# Check versions
-import selenium
-print(f"Selenium version: {selenium.__version__}")
+options = Options()
+options.add_argument("--headless=new")
+options.add_argument("--window-size=1000,800")
+options.add_argument(f"--user-agent={USER_AGENT}")
 
-# Setup Chrome driver with automatic management
-def setup_chrome_driver():
-    """Setup Chrome driver with webdriver-manager"""
-    
-    # Chrome options
-    chrome_options = Options()
-    
-    # Common options
-    chrome_options.add_argument('--disable-blink-features=AutomationControlled')
-    chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    chrome_options.add_experimental_option('useAutomationExtension', False)
-    
-    # Optional: Headless mode
-    # chrome_options.add_argument('--headless')
-    
-    # Optional: Disable images for faster loading
-    # prefs = {"profile.managed_default_content_settings.images": 2}
-    # chrome_options.add_experimental_option("prefs", prefs)
-    
-    # Create driver with automatic driver management
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=chrome_options)
-    
-    # Execute script to remove webdriver property
-    driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-    
-    return driver
+driver = webdriver.Chrome(options=options)
+print(driver.name)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>chrome</code></pre>
+                </div>
 
-# Basic usage example
-driver = setup_chrome_driver()
-driver.get("https://www.google.com")
-print(f"Page title: {driver.title}")
-driver.quit()
+                <p>The first run can take half a minute while the driver is downloaded. After that, starting takes about a second. Three options were set:</p>
+                <ul>
+                    <li><code>--headless=new</code> runs Chrome without opening a window. Everything works the same; you just cannot watch. While you are learning, try deleting that line once to see the browser being driven. It is worth the thirty seconds.</li>
+                    <li><code>--window-size</code> fixes the size of the invisible window, so that pages lay out the same way on every run.</li>
+                    <li><code>--user-agent</code> replaces the browser's usual identity with yours. An automated browser should say what it is, exactly as your <code>requests</code> code does.</li>
+                </ul>
 
-# Setup for different browsers
-def setup_firefox_driver():
-    """Setup Firefox driver"""
-    from selenium.webdriver.firefox.options import Options
-    from selenium.webdriver.firefox.service import Service
-    from webdriver_manager.firefox import GeckoDriverManager
-    
-    firefox_options = Options()
-    # firefox_options.add_argument('--headless')
-    
-    service = Service(GeckoDriverManager().install())
-    driver = webdriver.Firefox(service=service, options=firefox_options)
-    return driver
+                <div class="card card-danger">
+                    <h4>🛑 You Now Own a Running Program</h4>
+                    <p><code>driver</code> is a connection to a real Chrome process on your computer. It keeps running, and using memory, until you call <code>driver.quit()</code>, even if your notebook moves on or your script crashes. This lesson keeps one browser open across several cells and quits it in the <a href="#quitting">Quitting Cleanly</a> section. If you stop partway through, run <code>driver.quit()</code> yourself.</p>
+                </div>
 
-def setup_edge_driver():
-    """Setup Edge driver"""
-    from selenium.webdriver.edge.options import Options
-    from selenium.webdriver.edge.service import Service
-    from webdriver_manager.microsoft import EdgeChromiumDriverManager
-    
-    edge_options = Options()
-    # edge_options.add_argument('--headless')
-    
-    service = Service(EdgeChromiumDriverManager().install())
-    driver = webdriver.Edge(service=service, options=edge_options)
-    return driver</code></pre>
+                <p>Opening a page is one call. <code>driver.get()</code> loads the URL and returns when the browser reports that the page's own files have finished loading.</p>
 
-    <h2>Finding Elements</h2>
-    
-    <h3>Element Locator Strategies</h3>
-    <pre class="language-python"><code># Different ways to find elements
+                <pre><code class="language-python">driver.get(DEALS_URL)
 
-driver = setup_chrome_driver()
-driver.get("https://example.com")
+print(driver.title)
+print(driver.current_url)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>Deals | Pinecrest Outfitters (practice site)
+https://rays-python-datascience.netlify.app/practice/shop/deals.html</code></pre>
+                </div>
+            </section>
 
-# 1. By ID (fastest, most reliable)
-element = driver.find_element(By.ID, "submit-button")
+            <!-- ============================================================ -->
+            <section id="locators" class="lesson-section">
+                <h2>🧭 Finding Elements with By</h2>
 
-# 2. By Name
-element = driver.find_element(By.NAME, "username")
+                <p>Selenium finds elements with two methods that mirror what you know from Beautiful Soup. <code>find_element()</code> returns the first match and <strong>raises an exception</strong> if there is none. <code>find_elements()</code>, plural, returns a list, which may be empty. Each takes a <strong>locator</strong>: a strategy from the <code>By</code> class and a value.</p>
 
-# 3. By Class Name
-element = driver.find_element(By.CLASS_NAME, "btn-primary")
-elements = driver.find_elements(By.CLASS_NAME, "product-card")  # Multiple
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Locator</th><th>Finds elements by</th><th>Example</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>By.CSS_SELECTOR</code></td><td>A CSS selector, exactly as in Lesson 6.2</td><td><code>(By.CSS_SELECTOR, "li.deal")</code></td></tr>
+                            <tr><td><code>By.ID</code></td><td>The <code>id</code> attribute</td><td><code>(By.ID, "load-more")</code></td></tr>
+                            <tr><td><code>By.NAME</code></td><td>The <code>name</code> attribute (form fields)</td><td><code>(By.NAME, "max_price")</code></td></tr>
+                            <tr><td><code>By.LINK_TEXT</code></td><td>The exact visible text of a link</td><td><code>(By.LINK_TEXT, "Deals")</code></td></tr>
+                            <tr><td><code>By.XPATH</code></td><td>An XPath expression (a second selector language)</td><td><code>(By.XPATH, "//li[@data-sku]")</code></td></tr>
+                        </tbody>
+                    </table>
+                </div>
 
-# 4. By Tag Name
-element = driver.find_element(By.TAG_NAME, "h1")
-links = driver.find_elements(By.TAG_NAME, "a")
+                <p>CSS selectors cover nearly everything, and you already know them, so this course uses <code>By.CSS_SELECTOR</code> with <code>By.ID</code> and <code>By.NAME</code> as shortcuts. Now look for the deals, right after loading the page.</p>
 
-# 5. By Link Text
-element = driver.find_element(By.LINK_TEXT, "Click Here")
+                <pre><code class="language-python">driver.get(DEALS_URL)
 
-# 6. By Partial Link Text
-element = driver.find_element(By.PARTIAL_LINK_TEXT, "Click")
+print(len(driver.find_elements(By.CSS_SELECTOR, "li.deal")), "deals right after get()")
+print(driver.find_element(By.ID, "loading").text)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>0 deals right after get()
+Loading deals…</code></pre>
+                </div>
 
-# 7. By CSS Selector (powerful and flexible)
-element = driver.find_element(By.CSS_SELECTOR, "#main > div.content > p:nth-child(2)")
-element = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
-element = driver.find_element(By.CSS_SELECTOR, "div.class1.class2")
+                <p>Still zero. The browser <em>will</em> run the JavaScript, but your Python code asked before it had finished. <code>driver.get()</code> returned when the page's files were loaded; the deals arrive a second and a half after that. You are now in a race with the page, and you need a way to lose it gracefully.</p>
 
-# 8. By XPath (most flexible, can traverse up/down)
-element = driver.find_element(By.XPATH, "//button[@id='submit']")
-element = driver.find_element(By.XPATH, "//div[@class='content']//p[2]")
-element = driver.find_element(By.XPATH, "//button[contains(text(), 'Submit')]")
+                <div class="card card-info">
+                    <h4>💡 Old Tutorials Look Different</h4>
+                    <p>Selenium 3 code used methods such as <code>find_element_by_css_selector("li.deal")</code> and asked you to download a driver file and pass its path. Both are gone. If an example you find online has <code>find_element_by_</code> or <code>executable_path</code> in it, it was written for the old version: translate it to <code>find_element(By..., ...)</code> and delete the path.</p>
+                </div>
+            </section>
 
-# Advanced XPath examples
-class XPathHelper:
-    """Helper class for complex XPath expressions"""
-    
-    @staticmethod
-    def contains_text(tag, text):
-        """Find element containing text"""
-        return f"//{tag}[contains(text(), '{text}')]"
-    
-    @staticmethod
-    def with_attribute(tag, attr, value):
-        """Find element with specific attribute"""
-        return f"//{tag}[@{attr}='{value}']"
-    
-    @staticmethod
-    def following_sibling(xpath, sibling_tag):
-        """Find following sibling"""
-        return f"{xpath}/following-sibling::{sibling_tag}[1]"
-    
-    @staticmethod
-    def parent(xpath):
-        """Find parent element"""
-        return f"{xpath}/.."
-    
-    @staticmethod
-    def ancestor(xpath, ancestor_tag):
-        """Find ancestor element"""
-        return f"{xpath}/ancestor::{ancestor_tag}[1]"
+            <!-- ============================================================ -->
+            <section id="waits" class="lesson-section">
+                <h2>⏱️ Explicit Waits, Never Sleep</h2>
 
-# Usage
-xpath_helper = XPathHelper()
-xpath = xpath_helper.contains_text("button", "Submit")
-element = driver.find_element(By.XPATH, xpath)
+                <p>The tempting fix is <code>time.sleep(3)</code>. Resist it. A fixed sleep is always wrong in one of two directions. Too short, and on a slow day the content is not there yet, so your script fails at random. Too long, and every page wastes seconds: across a thousand pages, most of an hour. And you cannot know the right number, because it changes with the network, the server and the page.</p>
 
-# Chaining element searches
-parent = driver.find_element(By.ID, "container")
-child = parent.find_element(By.CLASS_NAME, "item")
+                <p>What you want to say is "<strong>wait until the thing I need exists, and give up after a limit</strong>". That is an <strong>explicit wait</strong>.</p>
 
-# Find multiple elements
-all_links = driver.find_elements(By.TAG_NAME, "a")
-for link in all_links:
-    print(link.get_attribute("href"))
+                <pre><code class="language-python">from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
-driver.quit()</code></pre>
+wait = WebDriverWait(driver, 10)
 
-    <h2>Waiting Strategies</h2>
-    
-    <h3>Explicit, Implicit, and Fluent Waits</h3>
-    <pre class="language-python"><code>from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
-import time
+first_deal = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "#deal-list li.deal")))
 
-class WaitStrategies:
-    """Different waiting strategies for dynamic content"""
-    
-    def __init__(self, driver, default_timeout=10):
-        self.driver = driver
-        self.default_timeout = default_timeout
-        self.wait = WebDriverWait(driver, default_timeout)
-    
-    # 1. Implicit Wait (applies to all elements)
-    def set_implicit_wait(self, seconds=10):
-        """Set implicit wait for all element searches"""
-        self.driver.implicitly_wait(seconds)
-    
-    # 2. Explicit Wait (wait for specific conditions)
-    def wait_for_element_visible(self, locator, timeout=None):
-        """Wait for element to be visible"""
-        timeout = timeout or self.default_timeout
-        try:
-            element = WebDriverWait(self.driver, timeout).until(
-                EC.visibility_of_element_located(locator)
-            )
-            return element
-        except TimeoutException:
-            print(f"Element {locator} not visible after {timeout} seconds")
-            return None
-    
-    def wait_for_element_clickable(self, locator, timeout=None):
-        """Wait for element to be clickable"""
-        timeout = timeout or self.default_timeout
-        try:
-            element = WebDriverWait(self.driver, timeout).until(
-                EC.element_to_be_clickable(locator)
-            )
-            return element
-        except TimeoutException:
-            print(f"Element {locator} not clickable after {timeout} seconds")
-            return None
-    
-    def wait_for_text_in_element(self, locator, text, timeout=None):
-        """Wait for specific text in element"""
-        timeout = timeout or self.default_timeout
-        try:
-            WebDriverWait(self.driver, timeout).until(
-                EC.text_to_be_present_in_element(locator, text)
-            )
-            return True
-        except TimeoutException:
-            return False
-    
-    def wait_for_element_count(self, locator, count, timeout=None):
-        """Wait for specific number of elements"""
-        timeout = timeout or self.default_timeout
-        try:
-            WebDriverWait(self.driver, timeout).until(
-                lambda driver: len(driver.find_elements(*locator)) >= count
-            )
-            return True
-        except TimeoutException:
-            return False
-    
-    # 3. Fluent Wait (polling with ignore exceptions)
-    def fluent_wait(self, condition, timeout=30, poll_frequency=0.5, ignored_exceptions=None):
-        """Fluent wait with custom polling and ignored exceptions"""
-        if ignored_exceptions is None:
-            ignored_exceptions = [NoSuchElementException, ElementNotVisibleException]
-        
-        wait = WebDriverWait(
-            self.driver,
-            timeout,
-            poll_frequency=poll_frequency,
-            ignored_exceptions=ignored_exceptions
-        )
-        
-        return wait.until(condition)
-    
-    # 4. Custom wait conditions
-    def wait_for_ajax_complete(self, timeout=None):
-        """Wait for AJAX calls to complete (jQuery)"""
-        timeout = timeout or self.default_timeout
-        try:
-            WebDriverWait(self.driver, timeout).until(
-                lambda driver: driver.execute_script("return jQuery.active == 0")
-            )
-            return True
-        except:
-            return False
-    
-    def wait_for_angular_complete(self, timeout=None):
-        """Wait for Angular to complete"""
-        timeout = timeout or self.default_timeout
-        try:
-            WebDriverWait(self.driver, timeout).until(
-                lambda driver: driver.execute_script(
-                    "return window.getAllAngularTestabilities().every(t => t.isStable())"
-                )
-            )
-            return True
-        except:
-            return False
-    
-    def wait_for_page_load(self, timeout=None):
-        """Wait for page to fully load"""
-        timeout = timeout or self.default_timeout
-        try:
-            WebDriverWait(self.driver, timeout).until(
-                lambda driver: driver.execute_script("return document.readyState") == "complete"
-            )
-            return True
-        except:
-            return False
+print(len(driver.find_elements(By.CSS_SELECTOR, "li.deal")), "deals now")
+print(driver.find_element(By.ID, "deal-status").text)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>8 deals now
+Showing 8 of 24 deals</code></pre>
+                </div>
 
-# All available expected conditions
-class ExpectedConditionsExamples:
-    """Examples of all expected conditions"""
-    
-    @staticmethod
-    def demonstrate_conditions(driver):
-        wait = WebDriverWait(driver, 10)
-        locator = (By.ID, "element-id")
-        
-        # Element presence/visibility
-        wait.until(EC.presence_of_element_located(locator))
-        wait.until(EC.visibility_of_element_located(locator))
-        wait.until(EC.visibility_of(driver.find_element(*locator)))
-        wait.until(EC.invisibility_of_element_located(locator))
-        
-        # Element interaction
-        wait.until(EC.element_to_be_clickable(locator))
-        wait.until(EC.element_to_be_selected(driver.find_element(*locator)))
-        
-        # Text conditions
-        wait.until(EC.text_to_be_present_in_element(locator, "Expected Text"))
-        wait.until(EC.text_to_be_present_in_element_value(locator, "Input Value"))
-        wait.until(EC.title_contains("Page Title"))
-        wait.until(EC.title_is("Exact Page Title"))
-        
-        # Frame/Window conditions
-        wait.until(EC.frame_to_be_available_and_switch_to_it(locator))
-        wait.until(EC.number_of_windows_to_be(2))
-        wait.until(EC.new_window_is_opened(driver.window_handles))
-        
-        # Alert conditions
-        wait.until(EC.alert_is_present())
-        
-        # URL conditions
-        wait.until(EC.url_contains("example.com"))
-        wait.until(EC.url_to_be("https://example.com/page"))
-        wait.until(EC.url_changes("https://old-url.com"))
-        
-        # Element selection state
-        wait.until(EC.element_selection_state_to_be(locator, True))
-        wait.until(EC.element_located_selection_state_to_be(locator, False))
-        
-        # Staleness (element no longer attached to DOM)
-        element = driver.find_element(*locator)
-        wait.until(EC.staleness_of(element))</code></pre>
+                <p>Read the middle line as a sentence: <em>wait up to 10 seconds until an element matching this locator is present</em>. Selenium checks twice a second. The moment the condition is true, <code>until()</code> returns the element and your code continues, so you wait exactly as long as the page needs and no longer. If the limit passes first, it raises <code>TimeoutException</code>, a clear error at a time you chose. It is the same idea as the <code>timeout</code> you put on every request.</p>
 
-    <h2>Interacting with Elements</h2>
-    
-    <h3>User Actions and JavaScript Execution</h3>
-    <pre class="language-python"><code>from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import Select
-import time
+                <div class="card card-warning">
+                    <h4>⚠️ Mind the Double Parentheses</h4>
+                    <p>An expected condition takes the locator as <strong>one tuple</strong>: <code>EC.presence_of_element_located((By.ID, "x"))</code>. Leaving out the inner pair is the most common typing error in Selenium code.</p>
+                </div>
 
-class ElementInteractions:
-    """Methods for interacting with web elements"""
-    
-    def __init__(self, driver):
-        self.driver = driver
-        self.actions = ActionChains(driver)
-    
-    # Basic interactions
-    def click_element(self, element):
-        """Click an element with retry"""
-        try:
-            element.click()
-        except:
-            # Try JavaScript click if regular click fails
-            self.driver.execute_script("arguments[0].click();", element)
-    
-    def send_keys_slowly(self, element, text, delay=0.1):
-        """Type text with delay between characters"""
-        element.clear()
-        for char in text:
-            element.send_keys(char)
-            time.sleep(delay)
-    
-    def clear_and_send_keys(self, element, text):
-        """Clear field and send keys"""
-        element.clear()
-        element.send_keys(Keys.CONTROL + "a")
-        element.send_keys(Keys.DELETE)
-        element.send_keys(text)
-    
-    # Dropdown/Select handling
-    def handle_dropdown(self, element, value=None, text=None, index=None):
-        """Handle dropdown selection"""
-        select = Select(element)
-        
-        if value:
-            select.select_by_value(value)
-        elif text:
-            select.select_by_visible_text(text)
-        elif index is not None:
-            select.select_by_index(index)
-        
-        # Get all options
-        options = select.options
-        selected = select.first_selected_option
-        
-        return selected
-    
-    # Mouse actions
-    def hover_over_element(self, element):
-        """Hover over element"""
-        self.actions.move_to_element(element).perform()
-    
-    def drag_and_drop(self, source, target):
-        """Drag and drop element"""
-        self.actions.drag_and_drop(source, target).perform()
-    
-    def double_click(self, element):
-        """Double click element"""
-        self.actions.double_click(element).perform()
-    
-    def right_click(self, element):
-        """Right click (context click) element"""
-        self.actions.context_click(element).perform()
-    
-    # Keyboard actions
-    def send_keys_with_modifier(self, element, key_combination):
-        """Send keys with modifiers (Ctrl, Alt, Shift)"""
-        # Example: Ctrl+A to select all
-        element.send_keys(Keys.CONTROL, 'a')
-        
-        # Example: Copy
-        element.send_keys(Keys.CONTROL, 'c')
-        
-        # Example: Paste
-        element.send_keys(Keys.CONTROL, 'v')
-    
-    # Scroll actions
-    def scroll_to_element(self, element):
-        """Scroll element into view"""
-        self.driver.execute_script("arguments[0].scrollIntoView(true);", element)
-        time.sleep(0.5)  # Wait for scroll to complete
-    
-    def scroll_page(self, pixels=None, to_bottom=False):
-        """Scroll page by pixels or to bottom"""
-        if to_bottom:
-            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        elif pixels:
-            self.driver.execute_script(f"window.scrollBy(0, {pixels});")
-    
-    # JavaScript execution
-    def execute_javascript(self, script, *args):
-        """Execute JavaScript with arguments"""
-        return self.driver.execute_script(script, *args)
-    
-    def get_element_attribute_js(self, element, attribute):
-        """Get attribute using JavaScript"""
-        return self.driver.execute_script(
-            f"return arguments[0].getAttribute('{attribute}');", element
-        )
-    
-    def set_element_attribute_js(self, element, attribute, value):
-        """Set attribute using JavaScript"""
-        self.driver.execute_script(
-            f"arguments[0].setAttribute('{attribute}', '{value}');", element
-        )
-    
-    def remove_element(self, element):
-        """Remove element from DOM"""
-        self.driver.execute_script("arguments[0].remove();", element)
-    
-    def highlight_element(self, element, color="red", border=2):
-        """Highlight element for debugging"""
-        self.driver.execute_script(
-            f"arguments[0].style.border='{border}px solid {color}';", element
-        )
+                <p>The <code>expected_conditions</code> module, imported as <code>EC</code> by convention, has a condition for most situations.</p>
 
-# Advanced interactions example
-def interact_with_complex_form(driver):
-    """Example of complex form interaction"""
-    
-    interactions = ElementInteractions(driver)
-    wait = WebDriverWait(driver, 10)
-    
-    # Navigate to form
-    driver.get("https://example.com/form")
-    
-    # Text input
-    name_field = wait.until(EC.presence_of_element_located((By.ID, "name")))
-    interactions.send_keys_slowly(name_field, "John Doe", delay=0.05)
-    
-    # Dropdown
-    country_dropdown = driver.find_element(By.ID, "country")
-    interactions.handle_dropdown(country_dropdown, text="United States")
-    
-    # Checkbox
-    checkbox = driver.find_element(By.ID, "agree")
-    if not checkbox.is_selected():
-        checkbox.click()
-    
-    # Radio button
-    radio = driver.find_element(By.CSS_SELECTOR, "input[type='radio'][value='yes']")
-    interactions.click_element(radio)
-    
-    # File upload
-    file_input = driver.find_element(By.CSS_SELECTOR, "input[type='file']")
-    file_input.send_keys("/path/to/file.pdf")
-    
-    # Date picker (if not native HTML5)
-    date_field = driver.find_element(By.ID, "date")
-    interactions.execute_javascript(
-        "arguments[0].value = '2024-01-01';", date_field
-    )
-    
-    # Submit form
-    submit_button = driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
-    interactions.scroll_to_element(submit_button)
-    interactions.click_element(submit_button)</code></pre>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Condition</th><th>True when</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>EC.presence_of_element_located(locator)</code></td><td>The element exists in the page</td></tr>
+                            <tr><td><code>EC.visibility_of_element_located(locator)</code></td><td>It exists and is displayed</td></tr>
+                            <tr><td><code>EC.element_to_be_clickable(locator)</code></td><td>It is displayed and enabled</td></tr>
+                            <tr><td><code>EC.invisibility_of_element_located(locator)</code></td><td>It is hidden or gone (a spinner, a "Loading" message)</td></tr>
+                            <tr><td><code>EC.text_to_be_present_in_element(locator, text)</code></td><td>The element's text contains <code>text</code></td></tr>
+                            <tr><td><code>EC.url_contains(text)</code></td><td>The address bar contains <code>text</code></td></tr>
+                        </tbody>
+                    </table>
+                </div>
 
-    <h2>Handling Dynamic Content</h2>
-    
-    <h3>Single Page Applications (SPA)</h3>
-    <pre class="language-python"><code>class SPAScraper:
-    """Scraper for Single Page Applications"""
-    
-    def __init__(self, driver):
-        self.driver = driver
-        self.wait = WebDriverWait(driver, 20)
-    
-    def wait_for_spa_navigation(self, expected_url_fragment):
-        """Wait for SPA navigation without page reload"""
-        self.wait.until(EC.url_contains(expected_url_fragment))
-    
-    def scrape_infinite_scroll(self, container_selector, item_selector, max_items=None):
-        """Scrape infinite scroll content"""
-        items = []
-        last_height = 0
-        no_change_count = 0
-        
-        while True:
-            # Scroll to bottom
-            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(2)  # Wait for content to load
-            
-            # Get current items
-            current_items = self.driver.find_elements(By.CSS_SELECTOR, item_selector)
-            
-            # Check if new items loaded
-            current_height = self.driver.execute_script("return document.body.scrollHeight")
-            
-            if current_height == last_height:
-                no_change_count += 1
-                if no_change_count >= 3:  # No new content after 3 attempts
-                    break
-            else:
-                no_change_count = 0
-                last_height = current_height
-            
-            # Check max items limit
-            if max_items and len(current_items) >= max_items:
-                break
-        
-        # Extract data from items
-        for item in current_items[:max_items] if max_items else current_items:
-            items.append(self.extract_item_data(item))
-        
-        return items
-    
-    def extract_item_data(self, item):
-        """Extract data from a single item"""
-        data = {}
-        
-        try:
-            # Example extraction - adjust based on actual structure
-            data['title'] = item.find_element(By.CSS_SELECTOR, ".title").text
-            data['price'] = item.find_element(By.CSS_SELECTOR, ".price").text
-            data['link'] = item.find_element(By.CSS_SELECTOR, "a").get_attribute("href")
-        except:
-            pass
-        
-        return data
-    
-    def scrape_lazy_loaded_images(self):
-        """Scrape images that load on scroll"""
-        images = []
-        
-        # Get initial viewport height
-        viewport_height = self.driver.execute_script("return window.innerHeight")
-        total_height = self.driver.execute_script("return document.body.scrollHeight")
-        
-        # Scroll in steps
-        current_position = 0
-        while current_position < total_height:
-            # Scroll down
-            self.driver.execute_script(f"window.scrollTo(0, {current_position});")
-            time.sleep(1)  # Wait for images to load
-            
-            # Get all images in current viewport
-            img_elements = self.driver.find_elements(By.TAG_NAME, "img")
-            
-            for img in img_elements:
-                src = img.get_attribute("src") or img.get_attribute("data-src")
-                if src and src not in images:
-                    images.append(src)
-            
-            current_position += viewport_height
-        
-        return images
-    
-    def handle_ajax_pagination(self, next_button_selector, content_selector):
-        """Handle AJAX-based pagination"""
-        all_content = []
-        page = 1
-        
-        while True:
-            print(f"Scraping page {page}")
-            
-            # Wait for content to load
-            content = self.wait.until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, content_selector))
-            )
-            
-            # Extract content
-            items = content.find_elements(By.CSS_SELECTOR, ".item")
-            for item in items:
-                all_content.append(item.text)
-            
-            # Try to click next button
-            try:
-                next_button = self.driver.find_element(By.CSS_SELECTOR, next_button_selector)
-                
-                if next_button.is_enabled() and "disabled" not in next_button.get_attribute("class"):
-                    self.driver.execute_script("arguments[0].click();", next_button)
-                    
-                    # Wait for content to update
-                    self.wait.until(EC.staleness_of(content))
-                    page += 1
-                else:
-                    break
-            except:
-                break
-        
-        return all_content
+                <p>When none fits, pass your own function. <code>until()</code> calls it with the driver, again and again, until it returns something true. You will use that in a moment to wait for a count to change.</p>
 
-# React/Vue/Angular specific handling
-class ModernFrameworkScraper:
-    """Handle modern JavaScript frameworks"""
-    
-    def __init__(self, driver):
-        self.driver = driver
-        self.wait = WebDriverWait(driver, 20)
-    
-    def wait_for_react(self):
-        """Wait for React to finish rendering"""
-        script = """
-        const checkReact = () => {
-            if (window.React && window.React.version) {
-                const allComponents = document.querySelectorAll('[data-reactroot], [data-reactid]');
-                return allComponents.length > 0;
-            }
-            return false;
-        };
-        return checkReact();
-        """
-        self.wait.until(lambda driver: driver.execute_script(script))
-    
-    def wait_for_vue(self):
-        """Wait for Vue to finish rendering"""
-        script = """
-        if (window.Vue || window.app) {
-            return document.querySelectorAll('[data-v-]').length > 0;
-        }
-        return false;
-        """
-        self.wait.until(lambda driver: driver.execute_script(script))
-    
-    def extract_react_props(self, element):
-        """Extract React props from element"""
-        script = """
-        const getReactProps = (element) => {
-            const keys = Object.keys(element);
-            const reactKey = keys.find(key => key.startsWith('__react'));
-            if (reactKey) {
-                return element[reactKey].memoizedProps || element[reactKey].pendingProps;
-            }
-            return null;
-        };
-        return getReactProps(arguments[0]);
-        """
-        return self.driver.execute_script(script, element)
-    
-    def extract_vue_data(self, element):
-        """Extract Vue component data"""
-        script = """
-        const getVueData = (element) => {
-            if (element.__vue__) {
-                return element.__vue__.$data;
-            }
-            return null;
-        };
-        return getVueData(arguments[0]);
-        """
-        return self.driver.execute_script(script, element)</code></pre>
+                <div class="card card-success">
+                    <h4>✅ One Rule Covers Almost Everything</h4>
+                    <p>Before you read or click anything that JavaScript might still be building, wait for it by name. If you ever feel the urge to add a sleep "just to be safe", ask what you are really waiting for, and wait for that instead.</p>
+                </div>
+            </section>
 
-    <h2>Handling Popups and Frames</h2>
-    
-    <pre class="language-python"><code>class PopupAndFrameHandler:
-    """Handle popups, alerts, frames, and windows"""
-    
-    def __init__(self, driver):
-        self.driver = driver
-        self.wait = WebDriverWait(driver, 10)
-        self.main_window = driver.current_window_handle
-    
-    # Alert handling
-    def handle_alert(self, accept=True, text=None):
-        """Handle JavaScript alerts"""
-        try:
-            alert = self.wait.until(EC.alert_is_present())
-            
-            alert_text = alert.text
-            print(f"Alert text: {alert_text}")
-            
-            if text:
-                alert.send_keys(text)
-            
-            if accept:
-                alert.accept()
-            else:
-                alert.dismiss()
-            
-            return alert_text
-        except TimeoutException:
-            print("No alert present")
-            return None
-    
-    # Window/Tab handling
-    def switch_to_new_window(self):
-        """Switch to newly opened window"""
-        self.wait.until(EC.number_of_windows_to_be(2))
-        
-        for window_handle in self.driver.window_handles:
-            if window_handle != self.main_window:
-                self.driver.switch_to.window(window_handle)
-                break
-    
-    def close_and_switch_back(self):
-        """Close current window and switch back to main"""
-        self.driver.close()
-        self.driver.switch_to.window(self.main_window)
-    
-    def handle_popup_window(self, link_element):
-        """Handle popup window opened by link"""
-        # Store original window
-        original_window = self.driver.current_window_handle
-        
-        # Click link that opens popup
-        link_element.click()
-        
-        # Wait for new window
-        self.wait.until(EC.number_of_windows_to_be(2))
-        
-        # Switch to popup
-        for window_handle in self.driver.window_handles:
-            if window_handle != original_window:
-                self.driver.switch_to.window(window_handle)
-                break
-        
-        # Do work in popup
-        popup_content = self.driver.find_element(By.TAG_NAME, "body").text
-        
-        # Close popup and return to original window
-        self.driver.close()
-        self.driver.switch_to.window(original_window)
-        
-        return popup_content
-    
-    # Frame/iFrame handling
-    def switch_to_frame(self, frame_locator):
-        """Switch to frame or iframe"""
-        # Wait for frame and switch
-        self.wait.until(EC.frame_to_be_available_and_switch_to_it(frame_locator))
-    
-    def switch_to_nested_frame(self, frame_locators):
-        """Switch through nested frames"""
-        for locator in frame_locators:
-            self.switch_to_frame(locator)
-    
-    def switch_back_from_frame(self):
-        """Switch back to main content"""
-        self.driver.switch_to.default_content()
-    
-    def scrape_frame_content(self, frame_locator):
-        """Scrape content from frame"""
-        # Switch to frame
-        self.switch_to_frame(frame_locator)
-        
-        # Scrape content
-        content = self.driver.find_element(By.TAG_NAME, "body").text
-        
-        # Switch back
-        self.switch_back_from_frame()
-        
-        return content
-    
-    # Modal/Dialog handling
-    def handle_modal(self, modal_selector, close_button_selector=None):
-        """Handle modal dialogs"""
-        try:
-            # Wait for modal to appear
-            modal = self.wait.until(
-                EC.visibility_of_element_located((By.CSS_SELECTOR, modal_selector))
-            )
-            
-            # Extract modal content
-            modal_content = modal.text
-            
-            # Close modal if close button provided
-            if close_button_selector:
-                close_button = modal.find_element(By.CSS_SELECTOR, close_button_selector)
-                close_button.click()
-                
-                # Wait for modal to disappear
-                self.wait.until(
-                    EC.invisibility_of_element_located((By.CSS_SELECTOR, modal_selector))
-                )
-            
-            return modal_content
-        except:
-            return None
-    
-    def dismiss_cookie_banner(self):
-        """Dismiss common cookie consent banners"""
-        cookie_selectors = [
-            "button[id*='accept']",
-            "button[class*='accept']",
-            "button[class*='consent']",
-            "button[class*='agree']",
-            "button[class*='cookie']",
-            "a[id*='accept']",
-            ".cookie-banner button",
-            "#cookie-consent button"
-        ]
-        
-        for selector in cookie_selectors:
-            try:
-                button = self.driver.find_element(By.CSS_SELECTOR, selector)
-                if button.is_displayed():
-                    button.click()
-                    time.sleep(1)
-                    return True
-            except:
-                continue
-        
-        return False</code></pre>
+            <!-- ============================================================ -->
+            <section id="reading" class="lesson-section">
+                <h2>📖 Reading the Page</h2>
 
-    <h2>Anti-Detection Techniques</h2>
-    
-    <pre class="language-python"><code>import undetected_chromedriver as uc
-from selenium_stealth import stealth
-import random
+                <p><code>first_deal</code> is a <code>WebElement</code>: a handle on a live element in the browser. Its <code>.text</code> is the text a person would see, <code>get_attribute()</code> reads an attribute, and you can search inside it just as you searched inside a Beautiful Soup tag.</p>
 
-class StealthScraper:
-    """Scraper with anti-detection measures"""
-    
-    def __init__(self):
-        self.driver = None
-    
-    def setup_stealth_driver(self):
-        """Setup driver with stealth mode"""
-        
-        # Option 1: Undetected ChromeDriver
-        options = uc.ChromeOptions()
-        
-        # Randomize window size
-        width = random.randint(1024, 1920)
-        height = random.randint(768, 1080)
-        options.add_argument(f'--window-size={width},{height}')
-        
-        # Randomize user agent
-        user_agents = [
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36'
-        ]
-        options.add_argument(f'user-agent={random.choice(user_agents)}')
-        
-        # Other stealth options
-        options.add_argument('--disable-blink-features=AutomationControlled')
-        options.add_experimental_option("excludeSwitches", ["enable-automation"])
-        options.add_experimental_option('useAutomationExtension', False)
-        
-        # Create undetected driver
-        driver = uc.Chrome(options=options)
-        
-        # Option 2: Selenium Stealth
-        stealth(driver,
-            languages=["en-US", "en"],
-            vendor="Google Inc.",
-            platform="Win32",
-            webgl_vendor="Intel Inc.",
-            renderer="Intel Iris OpenGL Engine",
-            fix_hairline=True,
-        )
-        
-        return driver
-    
-    def setup_authenticated_proxy(self, proxy_host, proxy_port, proxy_user, proxy_pass):
-        """Setup Chrome with authenticated proxy"""
-        
-        manifest_json = """
-        {
-            "version": "1.0.0",
-            "manifest_version": 2,
-            "name": "Chrome Proxy",
-            "permissions": [
-                "proxy",
-                "tabs",
-                "unlimitedStorage",
-                "storage",
-                "<all_urls>",
-                "webRequest",
-                "webRequestBlocking"
-            ],
-            "background": {
-                "scripts": ["background.js"]
-            },
-            "minimum_chrome_version":"22.0.0"
-        }
-        """
-        
-        background_js = """
-        var config = {
-                mode: "fixed_servers",
-                rules: {
-                singleProxy: {
-                    scheme: "http",
-                    host: "%s",
-                    port: parseInt(%s)
-                },
-                bypassList: ["localhost"]
-                }
-            };
-        
-        chrome.proxy.settings.set({value: config, scope: "regular"}, function() {});
-        
-        function callbackFn(details) {
-            return {
-                authCredentials: {
-                    username: "%s",
-                    password: "%s"
-                }
-            };
-        }
-        
-        chrome.webRequest.onAuthRequired.addListener(
-                    callbackFn,
-                    {urls: ["<all_urls>"]},
-                    ['blocking']
-        );
-        """ % (proxy_host, proxy_port, proxy_user, proxy_pass)
-        
-        # Create proxy extension
-        import zipfile
-        import os
-        
-        plugin_file = 'proxy_auth_plugin.zip'
-        
-        with zipfile.ZipFile(plugin_file, 'w') as zp:
-            zp.writestr("manifest.json", manifest_json)
-            zp.writestr("background.js", background_js)
-        
-        options = webdriver.ChromeOptions()
-        options.add_extension(plugin_file)
-        
-        driver = webdriver.Chrome(options=options)
-        
-        # Clean up
-        os.remove(plugin_file)
-        
-        return driver
-    
-    def human_like_behavior(self, driver):
-        """Simulate human-like behavior"""
-        
-        # Random mouse movements
-        action = ActionChains(driver)
-        
-        for _ in range(random.randint(2, 5)):
-            x_offset = random.randint(-100, 100)
-            y_offset = random.randint(-100, 100)
-            action.move_by_offset(x_offset, y_offset)
-            action.perform()
-            time.sleep(random.uniform(0.1, 0.3))
-        
-        # Random scrolling
-        for _ in range(random.randint(1, 3)):
-            scroll_amount = random.randint(100, 500)
-            driver.execute_script(f"window.scrollBy(0, {scroll_amount});")
-            time.sleep(random.uniform(0.5, 1.5))
-        
-        # Random delays
-        time.sleep(random.uniform(1, 3))
-    
-    def detect_bot_detection(self, driver):
-        """Check for common bot detection mechanisms"""
-        
-        # Check for Cloudflare
-        if "Cloudflare" in driver.title or "cf-browser-verification" in driver.page_source:
-            print("Cloudflare detection found")
-            return "cloudflare"
-        
-        # Check for reCAPTCHA
-        if "recaptcha" in driver.page_source.lower():
-            print("reCAPTCHA detected")
-            return "recaptcha"
-        
-        # Check for DataDome
-        if "datadome" in driver.page_source.lower():
-            print("DataDome detected")
-            return "datadome"
-        
-        # Check for PerimeterX
-        if "_px" in driver.page_source or "perimeterx" in driver.page_source.lower():
-            print("PerimeterX detected")
-            return "perimeterx"
-        
-        return None
-    
-    def bypass_cloudflare(self, driver, max_attempts=30):
-        """Attempt to bypass Cloudflare (basic)"""
-        
-        for attempt in range(max_attempts):
-            time.sleep(1)
-            
-            # Check if we passed Cloudflare
-            if "Cloudflare" not in driver.title:
-                print("Cloudflare bypass successful")
-                return True
-            
-            # Check for challenge
-            try:
-                # Look for Cloudflare challenge
-                challenge = driver.find_element(By.ID, "cf-content")
-                print(f"Cloudflare challenge detected, waiting... ({attempt+1}/{max_attempts})")
-            except:
-                pass
-        
-        print("Cloudflare bypass failed")
-        return False</code></pre>
+                <pre><code class="language-python">print(first_deal.text)
+print("---")
+print(first_deal.get_attribute("data-sku"))
 
-    <h2>Real-World Examples</h2>
-    
-    <h3>E-commerce Scraper</h3>
-    <pre class="language-python"><code>class AmazonScraper:
-    """Scraper for Amazon products"""
-    
-    def __init__(self):
-        self.driver = self.setup_driver()
-        self.wait = WebDriverWait(self.driver, 20)
-    
-    def setup_driver(self):
-        """Setup Chrome driver with options"""
-        options = webdriver.ChromeOptions()
-        options.add_argument('--disable-gpu')
-        options.add_argument('--no-sandbox')
-        options.add_argument('--disable-dev-shm-usage')
-        options.add_experimental_option("excludeSwitches", ["enable-automation"])
-        options.add_experimental_option('useAutomationExtension', False)
-        
-        service = Service(ChromeDriverManager().install())
-        driver = webdriver.Chrome(service=service, options=options)
-        
-        return driver
-    
-    def search_products(self, query):
-        """Search for products on Amazon"""
-        self.driver.get("https://www.amazon.com")
-        
-        # Handle cookie banner if present
-        try:
-            accept_cookies = self.driver.find_element(By.ID, "sp-cc-accept")
-            accept_cookies.click()
-        except:
-            pass
-        
-        # Search for products
-        search_box = self.wait.until(
-            EC.presence_of_element_located((By.ID, "twotabsearchtextbox"))
-        )
-        search_box.clear()
-        search_box.send_keys(query)
-        search_box.send_keys(Keys.RETURN)
-        
-        # Wait for results
-        self.wait.until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "[data-component-type='s-search-result']"))
-        )
-    
-    def scrape_product_listings(self, max_pages=3):
-        """Scrape product listings from search results"""
-        all_products = []
-        
-        for page in range(max_pages):
-            print(f"Scraping page {page + 1}")
-            
-            # Wait for products to load
-            products = self.wait.until(
-                EC.presence_of_all_elements_located(
-                    (By.CSS_SELECTOR, "[data-component-type='s-search-result']")
-                )
-            )
-            
-            for product in products:
-                try:
-                    data = self.extract_product_data(product)
-                    if data:
-                        all_products.append(data)
-                except Exception as e:
-                    print(f"Error extracting product: {e}")
-            
-            # Go to next page
-            try:
-                next_button = self.driver.find_element(By.CSS_SELECTOR, ".s-pagination-next")
-                if "disabled" not in next_button.get_attribute("class"):
-                    self.driver.execute_script("arguments[0].click();", next_button)
-                    time.sleep(2)
-                else:
-                    break
-            except:
-                break
-        
-        return all_products
-    
-    def extract_product_data(self, product_element):
-        """Extract data from product element"""
-        data = {}
-        
-        try:
-            # Title
-            title_element = product_element.find_element(By.CSS_SELECTOR, "h2 a span")
-            data['title'] = title_element.text
-            
-            # Price
-            try:
-                price_element = product_element.find_element(By.CSS_SELECTOR, ".a-price-whole")
-                data['price'] = price_element.text
-            except:
-                data['price'] = "N/A"
-            
-            # Rating
-            try:
-                rating_element = product_element.find_element(By.CSS_SELECTOR, ".a-icon-alt")
-                data['rating'] = rating_element.get_attribute("textContent")
-            except:
-                data['rating'] = "No rating"
-            
-            # Link
-            link_element = product_element.find_element(By.CSS_SELECTOR, "h2 a")
-            data['link'] = link_element.get_attribute("href")
-            
-            # Image
-            try:
-                img_element = product_element.find_element(By.CSS_SELECTOR, "img.s-image")
-                data['image'] = img_element.get_attribute("src")
-            except:
-                data['image'] = "N/A"
-            
-            return data
-        except:
-            return None
-    
-    def scrape_product_details(self, product_url):
-        """Scrape detailed product information"""
-        self.driver.get(product_url)
-        
-        details = {}
-        
-        try:
-            # Product title
-            title = self.wait.until(
-                EC.presence_of_element_located((By.ID, "productTitle"))
-            )
-            details['title'] = title.text
-            
-            # Price
-            try:
-                price = self.driver.find_element(By.CSS_SELECTOR, ".a-price-whole")
-                details['price'] = price.text
-            except:
-                details['price'] = "N/A"
-            
-            # Features
-            try:
-                features = self.driver.find_elements(By.CSS_SELECTOR, "#feature-bullets ul li")
-                details['features'] = [f.text for f in features if f.text]
-            except:
-                details['features'] = []
-            
-            # Images
-            try:
-                images = self.driver.find_elements(By.CSS_SELECTOR, "#altImages img")
-                details['images'] = [img.get_attribute("src") for img in images]
-            except:
-                details['images'] = []
-            
-            # Reviews
-            try:
-                review_count = self.driver.find_element(By.CSS_SELECTOR, "#acrCustomerReviewText")
-                details['review_count'] = review_count.text
-            except:
-                details['review_count'] = "0"
-            
-            return details
-        except Exception as e:
-            print(f"Error scraping product details: {e}")
-            return None
-    
-    def close(self):
-        """Close the driver"""
-        self.driver.quit()
+link = first_deal.find_element(By.CSS_SELECTOR, ".product-name a")
+print(link.text)
+print(link.get_attribute("href"))
+print(first_deal.find_element(By.CSS_SELECTOR, "span.deal-price").text)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>Juniper Vane Talus Hiking Boots
+Footwear
+$155.95$132.56
+Save 15%
+---
+FTW-1013
+Juniper Vane Talus Hiking Boots
+https://rays-python-datascience.netlify.app/practice/shop/products/FTW-1013.html
+$132.56</code></pre>
+                </div>
 
-# Usage example
-def scrape_amazon_products():
-    scraper = AmazonScraper()
-    
+                <p>One pleasant difference from Beautiful Soup: the browser has already resolved the link, so <code>href</code> comes back as a full URL.</p>
+
+                <h3>Hand the Finished Page to Beautiful Soup</h3>
+
+                <p>You could build each row with a dozen <code>find_element()</code> calls. There is a neater division of labor. Every one of those calls is a round trip from Python to the browser. Instead, let Selenium do what only a browser can (run the JavaScript, wait, click) and then take the finished HTML from <code>driver.page_source</code> and parse it with the tools you practiced in Lesson 6.2.</p>
+
+                <pre><code class="language-python">def parse_deals(html):
+    """Parse the deal cards in a rendered deals page into a DataFrame."""
+    soup = BeautifulSoup(html, "html.parser")
+    rows = []
+    for li in soup.select("#deal-list li.deal"):
+        rows.append({
+            "sku": li["data-sku"],
+            "name": li.select_one(".product-name a").get_text(strip=True),
+            "category": li.select_one("p.product-category").get_text(strip=True),
+            "price": float(li.select_one("s.was").get_text().lstrip("$")),
+            "deal_price": float(li.select_one("span.deal-price").get_text().lstrip("$")),
+            "discount_pct": int(re.search(r"\d+", li.select_one("p.discount").get_text()).group()),
+        })
+    return pd.DataFrame(rows)
+
+page_deals = parse_deals(driver.page_source)
+print(page_deals)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>        sku                                 name      category   price  deal_price  discount_pct
+0  FTW-1013      Juniper Vane Talus Hiking Boots      Footwear  155.95      132.56            15
+1  ACC-1017     Pinecrest Talus Insect Repellent   Accessories   14.50       11.60            20
+2  KIT-1003   Quillback Timberline Insulated Mug  Camp Kitchen   24.95       18.71            25
+3  ACC-1006  Tallgrass Backcountry First-Aid Kit   Accessories   26.95       18.86            30
+4  CLM-1002   Quillback Sawtooth Climbing Helmet      Climbing   92.95       79.01            15
+5  TNT-1023                 Pinecrest Drift Tarp         Tents   94.95       75.96            20
+6  ACC-1015   Cedar Notch Sawtooth First-Aid Kit   Accessories   46.95       35.21            25
+7  KIT-1019     Juniper Vane Talus Insulated Mug  Camp Kitchen   36.95       25.87            30</code></pre>
+                </div>
+
+                <p><code>page_source</code> is the page <em>as it is now</em>, after the scripts have run, which is why this soup has deals in it and the one at the top of the lesson did not. The function takes HTML and returns a DataFrame; it neither knows nor cares that a browser produced the HTML. That separation makes it easy to test.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="clicking" class="lesson-section">
+                <h2>🖱️ Clicking: Load More</h2>
+
+                <p>The page shows 8 of 24 deals. A person would click <strong>Load more</strong> until the button disappears. So will you, with one wait per click: after clicking, wait until the number of deals on the page is larger than it was before.</p>
+
+                <pre><code class="language-python">load_more = driver.find_element(By.ID, "load-more")
+
+while load_more.is_displayed():
+    shown = len(driver.find_elements(By.CSS_SELECTOR, "li.deal"))
+    load_more.click()
+    wait.until(lambda d: len(d.find_elements(By.CSS_SELECTOR, "li.deal")) &gt; shown)
+    print(driver.find_element(By.ID, "deal-status").text)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>Showing 16 of 24 deals
+Showing 24 of 24 deals</code></pre>
+                </div>
+
+                <p>The <code>lambda</code> is the custom condition promised earlier: a tiny function that receives the driver and returns <code>True</code> once more deals are on the page than before the click. Without that wait the loop would click several times before the first batch arrived. With it, the loop moves at exactly the page's pace, and stops when the page hides the button.</p>
+
+                <p>Now parse the complete page and check it against the data file you fetched at the start.</p>
+
+                <pre><code class="language-python">all_deals = parse_deals(driver.page_source)
+
+print(all_deals.shape)
+print("same as deals.json:", all_deals.equals(deals_json[all_deals.columns]))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>(24, 6)
+same as deals.json: True</code></pre>
+                </div>
+
+                <p>Twenty-four rows, identical to the JSON in every value. The browser route works. Notice what it cost, though: a browser, two clicks, three waits and a parser, to arrive where one <code>requests.get()</code> had already taken you. Keep that comparison in mind whenever you choose between the two.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="forms" class="lesson-section">
+                <h2>📝 Filling In a Form</h2>
+
+                <p>The shop's <strong>Search</strong> page has a form: a text box, a category menu, a maximum price and a checkbox. Its results are also filled in by JavaScript, and the page marks its list with <code>data-loaded="true"</code> when it has finished. That attribute is a gift: it is something precise to wait for.</p>
+
+                <pre><code class="language-python">from selenium.webdriver.support.ui import Select
+
+results_ready = EC.presence_of_element_located((By.CSS_SELECTOR, '#search-results[data-loaded="true"]'))
+
+driver.get(urljoin(BASE_URL, "search.html"))
+wait.until(results_ready)
+print(driver.find_element(By.ID, "search-count").text)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>242 products found</code></pre>
+                </div>
+
+                <p>With no filters the page reports the whole catalog. Now fill in the form the way a person would. Form fields are easiest to find by their <code>name</code> attribute.</p>
+
+                <pre><code class="language-python">driver.find_element(By.NAME, "q").send_keys("tent")
+Select(driver.find_element(By.NAME, "category")).select_by_visible_text("Tents")
+driver.find_element(By.NAME, "max_price").send_keys("300")
+driver.find_element(By.NAME, "in_stock").click()
+driver.find_element(By.CSS_SELECTOR, "#search-form button[type='submit']").click()
+
+wait.until(EC.url_contains("q=tent"))
+wait.until(results_ready)
+
+print(driver.current_url)
+print(driver.find_element(By.ID, "search-count").text)
+for item in driver.find_elements(By.CSS_SELECTOR, "#search-results li")[:3]:
+    print(item.get_attribute("data-sku"), item.find_element(By.CSS_SELECTOR, "h2 a").text)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>https://rays-python-datascience.netlify.app/practice/shop/search.html?q=tent&amp;category=Tents&amp;max_price=300&amp;in_stock=1
+9 products found
+TNT-1001 Granite Fork Drift 1-Person Tent
+TNT-1002 Cedar Notch Ridgeline 2-Person Tent
+TNT-1004 Wrenfield Skyline 4-Person Tent</code></pre>
+                </div>
+
+                <p>Four kinds of input, four small techniques:</p>
+                <ul>
+                    <li><code>send_keys()</code> types into a text or number box.</li>
+                    <li><code>Select</code> wraps a drop-down menu so that you can choose an option by its visible text.</li>
+                    <li><code>click()</code> ticks a checkbox and presses a button.</li>
+                    <li>Submitting loads a new page, so there are <strong>two waits</strong>: first for the address to change, then for the new page's results. Waiting only for the results could succeed instantly on the <em>old</em> page.</li>
+                </ul>
+
+                <h3>The Address Bar Is Telling You Something</h3>
+
+                <p>Look at the URL after submitting: the form's values are right there as query parameters. This form uses <code>GET</code>, so filling it in is just a slow way of building a URL. You can build it yourself and skip the typing.</p>
+
+                <pre><code class="language-python">from urllib.parse import urlencode
+
+query = urlencode({"q": "boots", "max_price": 150, "in_stock": 1})
+driver.get(urljoin(BASE_URL, "search.html") + "?" + query)
+wait.until(results_ready)
+
+print(driver.current_url)
+print(driver.find_element(By.ID, "search-count").text)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>https://rays-python-datascience.netlify.app/practice/shop/search.html?q=boots&amp;max_price=150&amp;in_stock=1
+1 product found</code></pre>
+                </div>
+
+                <p>Same result, one step. (And you already know where this page gets its data: <code>products.json</code>, the other file in the script. Exercise 4 closes that loop.) Reading the address bar, like reading the Network tab, is part of looking before you automate.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="screenshots" class="lesson-section">
+                <h2>📸 Screenshots</h2>
+
+                <p>A headless browser is invisible, which is unnerving when something goes wrong. A screenshot shows you what the browser "saw" at that moment. It is the first thing to reach for when a wait times out, and a useful record to keep next to scraped data.</p>
+
+                <pre><code class="language-python">driver.get(DEALS_URL)
+wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, "#deal-list li.deal")))
+
+saved = driver.save_screenshot("deals.png")
+print(saved)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>True</code></pre>
+                </div>
+
+                <figure>
+                    <img src="images/webscraping_selenium_deals.png" alt="Screenshot taken by Selenium of the practice shop's Deals of the week page in headless Chrome. Under a practice-site banner and a notice explaining that the list is added by JavaScript, the first deal cards are visible, each with a crossed-out price, a deal price and a Save percentage." width="1000" height="657" loading="lazy">
+                    <figcaption>What the headless browser was looking at: the deals are on the page, so the wait did its job.</figcaption>
+                </figure>
+
+                <p><code>save_screenshot()</code> captures the visible window (the size you set in the options) and returns <code>True</code> when the file was written. Open <code>deals.png</code> from your project folder to see your own.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="quitting" class="lesson-section">
+                <h2>🚪 Quitting Cleanly</h2>
+
+                <p>You have had a browser running for this whole lesson. Close it.</p>
+
+                <pre><code class="language-python">driver.quit()
+print("browser closed")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>browser closed</code></pre>
+                </div>
+
+                <p><code>quit()</code> ends the browser and its driver. (There is also <code>close()</code>, which closes only the current window and can leave the process running. Use <code>quit()</code>.) If a script crashes before reaching that line, the browser is orphaned: it stays in memory, invisible if it is headless, until you find it in your task manager. Do that a few times in an afternoon and your computer slows to a crawl.</p>
+
+                <p>The cure is the same one you use for files and database connections: guarantee the cleanup. Put the setup in one function and wrap the work in <code>try</code> / <code>finally</code>.</p>
+
+                <pre><code class="language-python">def make_driver(headless=True):
+    """Start Chrome with this course's settings. Whoever calls this must quit it."""
+    options = Options()
+    if headless:
+        options.add_argument("--headless=new")
+    options.add_argument("--window-size=1000,800")
+    options.add_argument(f"--user-agent={USER_AGENT}")
+    return webdriver.Chrome(options=options)
+
+
+driver = make_driver()
+try:
+    driver.get(DEALS_URL)
+    WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "li.deal")))
+    print(driver.find_element(By.ID, "deal-status").text)
+finally:
+    driver.quit()
+    print("browser closed")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>Showing 8 of 24 deals
+browser closed</code></pre>
+                </div>
+
+                <p>The <code>finally</code> block runs whether the <code>try</code> block finishes, raises an error, or is interrupted with <kbd>Ctrl</kbd>+<kbd>C</kbd>. From here on, every browser in this lesson is opened and closed this way. Call <code>make_driver(headless=False)</code> any time you want to watch.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="mistakes" class="lesson-section">
+                <h2>⚠️ Common Mistakes</h2>
+
+                <p>Selenium's error messages come with a long, unhelpful stack trace from inside the browser driver. The first line is the one to read. The examples below print just that line.</p>
+
+                <pre><code class="language-python">from selenium.common.exceptions import (NoSuchElementException,
+                                        StaleElementReferenceException,
+                                        TimeoutException)
+
+driver = make_driver()
+driver.get(DEALS_URL)</code></pre>
+
+                <h3>1. Looking Before the Page Is Ready</h3>
+
+                <pre><code class="language-python">try:
+    driver.find_element(By.CSS_SELECTOR, "li.deal")
+except NoSuchElementException as err:
+    print(type(err).__name__)
+    print(err.msg.splitlines()[0])</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>NoSuchElementException
+no such element: Unable to locate element: {"method":"css selector","selector":"li.deal"}</code></pre>
+                </div>
+                <p><strong>What it means:</strong> at the instant you asked, no such element existed. On a dynamic page that usually means "not yet". <strong>Fix:</strong> <code>WebDriverWait(driver, 10).until(EC.presence_of_element_located(...))</code>. If it still fails after a wait, see the next mistake.</p>
+
+                <h3>2. Waiting for Something That Will Never Come</h3>
+
+                <pre><code class="language-python">try:
+    WebDriverWait(driver, 3).until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, "li.deals")),
+        message="no li.deals after 3 seconds")
+except TimeoutException as err:
+    print(type(err).__name__)
+    print(err.msg)</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>TimeoutException
+no li.deals after 3 seconds</code></pre>
+                </div>
+                <p><strong>What it means:</strong> the condition never became true. Here the selector has a typo (<code>li.deals</code> for <code>li.deal</code>), so no amount of waiting would help. <strong>Fix:</strong> give every wait a <code>message</code> so the error says what you were waiting for, take a screenshot when one fires, and test the selector in the browser's developer tools.</p>
+
+                <h3>3. Holding On to an Element After the Page Changed</h3>
+
+                <pre><code class="language-python">status = WebDriverWait(driver, 10).until(
+    EC.visibility_of_element_located((By.ID, "deal-status")))
+driver.refresh()
+
+try:
+    print(status.text)
+except StaleElementReferenceException as err:
+    print(type(err).__name__)
+    print(err.msg.splitlines()[0])</code></pre>
+                <div class="card card-output">
+                    <h4>Error (the exact wording may differ with your Chrome version)</h4>
+                    <pre><code>StaleElementReferenceException
+stale element reference: stale element not found</code></pre>
+                </div>
+                <p><strong>What it means:</strong> a <code>WebElement</code> is a handle on one element in one loaded page. After a reload, a navigation, or a script that rebuilds that part of the page, the handle points at nothing. <strong>Fix:</strong> find the element again after anything that changes the page. Do not store elements for later; store the data you read from them.</p>
+
+                <h3>4. Using Selenium 3 Methods</h3>
+
+                <pre data-raises="AttributeError"><code class="language-python">driver.find_element_by_id("deal-status")</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>AttributeError: 'WebDriver' object has no attribute 'find_element_by_id'</code></pre>
+                </div>
+                <p><strong>What it means:</strong> the <code>find_element_by_...</code> family was removed in Selenium 4. <strong>Fix:</strong> <code>driver.find_element(By.ID, "deal-status")</code>.</p>
+
+                <pre><code class="language-python">driver.quit()</code></pre>
+
+                <h3>5. Leaving Browsers Running</h3>
+                <p>There is no error message for this one, only a slow computer and a task manager full of Chrome processes. <strong>Fix:</strong> <code>try</code> / <code>finally</code> with <code>driver.quit()</code>, every time, as in the previous section. That is why this section's own browser was closed in the cell above.</p>
+
+                <h3>6. Chrome Is Not Installed</h3>
+                <p>If <code>webdriver.Chrome()</code> fails with <code>NoSuchDriverException</code> or a message that it cannot find the browser, Selenium Manager could not locate Chrome, or could not reach the internet to download the driver. <strong>Fix:</strong> install Chrome and try again while online. If you prefer another browser, <code>webdriver.Firefox()</code> and <code>webdriver.Edge()</code> work the same way with their own <code>Options</code> classes.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="project" class="lesson-section">
+                <h2>🛠️ Project: Deals Watch</h2>
+
+                <p>Pinecrest's marketing team wants a weekly record of what the Deals page showed customers: every deal, a screenshot as evidence, and a few checks that the page is not advertising something silly. You will build it the careful way, collecting the deals with a browser and verifying them against the page's data file. Continue in your lesson notebook, where <code>make_driver()</code> and <code>parse_deals()</code> are defined. Allow about 30 minutes.</p>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 1: Get the answer key <span class="step-time">(3 min)</span></h3>
+                    <p>Data first. Fetch <code>deals.json</code> with <code>requests</code> and time it. This is what the browser's result will be checked against.</p>
+                    <pre><code class="language-python">t0 = time.perf_counter()
+resp = requests.get(urljoin(BASE_URL, "deals.json"), headers=HEADERS, timeout=10)
+resp.raise_for_status()
+expected = pd.DataFrame(resp.json()["deals"])
+json_seconds = time.perf_counter() - t0
+
+print(expected.shape)</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>(24, 6)</code></pre>
+                    </div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 2: Write collect_deals() <span class="step-time">(12 min)</span></h3>
+                    <p>One function does the whole browser job: open the page, wait for the first deals, click <strong>Load more</strong> until it is gone, take a screenshot, and return the parsed table. The browser is quit in <code>finally</code>, whatever happens.</p>
+                    <pre><code class="language-python">def collect_deals(screenshot_path="deals_full.png"):
+    """Collect every deal from the rendered deals page. Returns a DataFrame."""
+    driver = make_driver()
     try:
-        # Search for products
-        scraper.search_products("laptop")
-        
-        # Scrape listings
-        products = scraper.scrape_product_listings(max_pages=2)
-        
-        # Save to CSV
-        import pandas as pd
-        df = pd.DataFrame(products)
-        df.to_csv("amazon_products.csv", index=False)
-        
-        print(f"Scraped {len(products)} products")
-        
-        # Scrape details for first product
-        if products:
-            details = scraper.scrape_product_details(products[0]['link'])
-            print(f"Product details: {details}")
-    
+        wait = WebDriverWait(driver, 10)
+        driver.get(DEALS_URL)
+        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "#deal-list li.deal")),
+                   message="the first deals did not appear")
+
+        load_more = driver.find_element(By.ID, "load-more")
+        clicks = 0
+        while load_more.is_displayed() and clicks &lt; 20:
+            shown = len(driver.find_elements(By.CSS_SELECTOR, "li.deal"))
+            load_more.click()
+            clicks += 1
+            wait.until(lambda d: len(d.find_elements(By.CSS_SELECTOR, "li.deal")) &gt; shown,
+                       message="no new deals after clicking Load more")
+
+        driver.save_screenshot(screenshot_path)
+        return parse_deals(driver.page_source)
     finally:
-        scraper.close()</code></pre>
+        driver.quit()
 
-    <h3>Social Media Automation</h3>
-    <pre class="language-python"><code>class LinkedInScraper:
-    """LinkedIn profile scraper (educational purposes only)"""
-    
-    def __init__(self, email, password):
-        self.email = email
-        self.password = password
-        self.driver = self.setup_driver()
-        self.wait = WebDriverWait(self.driver, 20)
-    
-    def setup_driver(self):
-        """Setup driver for LinkedIn"""
-        options = webdriver.ChromeOptions()
-        options.add_argument('--disable-blink-features=AutomationControlled')
-        options.add_experimental_option("excludeSwitches", ["enable-automation"])
-        options.add_experimental_option('useAutomationExtension', False)
-        
-        # Use profiles to maintain login
-        options.add_argument("user-data-dir=selenium_profile")
-        
-        service = Service(ChromeDriverManager().install())
-        driver = webdriver.Chrome(service=service, options=options)
-        
-        return driver
-    
-    def login(self):
-        """Login to LinkedIn"""
-        self.driver.get("https://www.linkedin.com/login")
-        
-        # Enter credentials
-        email_field = self.wait.until(
-            EC.presence_of_element_located((By.ID, "username"))
-        )
-        email_field.send_keys(self.email)
-        
-        password_field = self.driver.find_element(By.ID, "password")
-        password_field.send_keys(self.password)
-        
-        # Click sign in
-        sign_in_button = self.driver.find_element(By.CSS_SELECTOR, "button[type='submit']")
-        sign_in_button.click()
-        
-        # Wait for login to complete
-        self.wait.until(EC.url_contains("feed"))
-    
-    def search_profiles(self, query):
-        """Search for profiles"""
-        # Navigate to people search
-        search_url = f"https://www.linkedin.com/search/results/people/?keywords={query}"
-        self.driver.get(search_url)
-        
-        # Wait for results
-        self.wait.until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, ".search-results"))
-        )
-    
-    def scrape_profile_list(self):
-        """Scrape list of profiles from search results"""
-        profiles = []
-        
-        # Scroll to load all results
-        last_height = self.driver.execute_script("return document.body.scrollHeight")
-        
-        while True:
-            # Scroll down
-            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(2)
-            
-            # Check if new content loaded
-            new_height = self.driver.execute_script("return document.body.scrollHeight")
-            if new_height == last_height:
-                break
-            last_height = new_height
-        
-        # Extract profile information
-        profile_cards = self.driver.find_elements(
-            By.CSS_SELECTOR, ".search-result__wrapper"
-        )
-        
-        for card in profile_cards:
-            try:
-                profile = {}
-                
-                # Name
-                name_element = card.find_element(By.CSS_SELECTOR, ".entity-result__title-text a")
-                profile['name'] = name_element.text
-                profile['url'] = name_element.get_attribute("href")
-                
-                # Title
-                try:
-                    title_element = card.find_element(By.CSS_SELECTOR, ".entity-result__primary-subtitle")
-                    profile['title'] = title_element.text
-                except:
-                    profile['title'] = "N/A"
-                
-                # Location
-                try:
-                    location_element = card.find_element(By.CSS_SELECTOR, ".entity-result__secondary-subtitle")
-                    profile['location'] = location_element.text
-                except:
-                    profile['location'] = "N/A"
-                
-                profiles.append(profile)
-            except:
-                continue
-        
-        return profiles
 
-# Note: Always respect robots.txt and terms of service
-# This is for educational purposes only</code></pre>
+t0 = time.perf_counter()
+deals = collect_deals()
+browser_seconds = time.perf_counter() - t0
 
-    <h2>Best Practices</h2>
-    
-    <pre class="language-python"><code># Selenium best practices
+print(deals.shape)
+print(deals.tail(3))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>(24, 6)
+         sku                                      name  category   price  deal_price  discount_pct
+21  SLP-1010        Larkspur Ridge Canyon Sleeping Pad  Sleeping  111.95       89.56            20
+22  SNW-1014  Pinecrest Ridgeline Hand Warmers 10-Pack      Snow   11.50        8.62            25
+23  CLM-1013          Larkspur Ridge Mesa Belay Device  Climbing   81.95       57.36            30</code></pre>
+                    </div>
+                    <p>The <code>clicks &lt; 20</code> limit is the same seat belt as <code>max_pages</code> in Lesson 6.2: if the button never disappeared, the loop would still end.</p>
+                </div>
 
-class SeleniumBestPractices:
-    """Best practices for Selenium automation"""
-    
-    def __init__(self):
-        self.driver = None
-    
-    # 1. Use Page Object Model (POM)
-    class LoginPage:
-        """Page Object for login page"""
-        
-        def __init__(self, driver):
-            self.driver = driver
-            self.wait = WebDriverWait(driver, 10)
-        
-        # Locators
-        USERNAME_FIELD = (By.ID, "username")
-        PASSWORD_FIELD = (By.ID, "password")
-        LOGIN_BUTTON = (By.CSS_SELECTOR, "button[type='submit']")
-        ERROR_MESSAGE = (By.CLASS_NAME, "error-message")
-        
-        def enter_username(self, username):
-            element = self.wait.until(EC.presence_of_element_located(self.USERNAME_FIELD))
-            element.clear()
-            element.send_keys(username)
-        
-        def enter_password(self, password):
-            element = self.driver.find_element(*self.PASSWORD_FIELD)
-            element.clear()
-            element.send_keys(password)
-        
-        def click_login(self):
-            element = self.driver.find_element(*self.LOGIN_BUTTON)
-            element.click()
-        
-        def login(self, username, password):
-            self.enter_username(username)
-            self.enter_password(password)
-            self.click_login()
-        
-        def get_error_message(self):
-            try:
-                element = self.driver.find_element(*self.ERROR_MESSAGE)
-                return element.text
-            except:
-                return None
-    
-    # 2. Use explicit waits over implicit waits
-    def good_wait_example(self):
-        """Use explicit waits for specific conditions"""
-        wait = WebDriverWait(self.driver, 10)
-        
-        # Good - explicit wait for specific condition
-        element = wait.until(EC.element_to_be_clickable((By.ID, "submit")))
-        
-        # Avoid - implicit wait affects all elements
-        # self.driver.implicitly_wait(10)
-    
-    # 3. Handle StaleElementReferenceException
-    def retry_on_stale_element(self, locator, max_retries=3):
-        """Retry on stale element exception"""
-        for _ in range(max_retries):
-            try:
-                element = self.driver.find_element(*locator)
-                return element
-            except StaleElementReferenceException:
-                time.sleep(0.5)
-        raise Exception(f"Element {locator} is stale after {max_retries} retries")
-    
-    # 4. Clean up resources
-    def cleanup(self):
-        """Always clean up driver resources"""
-        try:
-            # Take screenshot on failure
-            self.driver.save_screenshot("failure_screenshot.png")
-            
-            # Close all windows
-            for handle in self.driver.window_handles:
-                self.driver.switch_to.window(handle)
-                self.driver.close()
-        finally:
-            # Quit driver
-            if self.driver:
-                self.driver.quit()
-    
-    # 5. Use context managers
-    class WebDriverContext:
-        """Context manager for WebDriver"""
-        
-        def __init__(self, driver_class=webdriver.Chrome, **kwargs):
-            self.driver_class = driver_class
-            self.driver_kwargs = kwargs
-            self.driver = None
-        
-        def __enter__(self):
-            self.driver = self.driver_class(**self.driver_kwargs)
-            return self.driver
-        
-        def __exit__(self, exc_type, exc_val, exc_tb):
-            if self.driver:
-                self.driver.quit()
-    
-    # 6. Logging and debugging
-    def setup_logging(self):
-        """Setup logging for debugging"""
-        import logging
-        
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler('selenium.log'),
-                logging.StreamHandler()
-            ]
-        )
-        
-        # Enable browser logs
-        caps = webdriver.DesiredCapabilities.CHROME
-        caps['goog:loggingPrefs'] = {'browser': 'ALL'}
-        
-        options = webdriver.ChromeOptions()
-        options.add_experimental_option('w3c', False)
-        
-        driver = webdriver.Chrome(options=options, desired_capabilities=caps)
-        
-        # Get browser logs
-        logs = driver.get_log('browser')
-        for log in logs:
-            logging.info(f"Browser log: {log}")
-        
-        return driver
+                <div class="card card-info">
+                    <h3>🛠️ Step 3: Verify <span class="step-time">(5 min)</span></h3>
+                    <p>Compare the browser's table with the answer key, and check the page's arithmetic: is each deal price really the list price less the advertised percentage?</p>
+                    <pre><code class="language-python">print("matches deals.json:", deals.equals(expected[deals.columns]))
+print("unique SKUs:", deals["sku"].is_unique)
 
-# Performance optimization
-class PerformanceOptimization:
-    """Optimize Selenium performance"""
-    
-    @staticmethod
-    def fast_driver_setup():
-        """Setup optimized driver for speed"""
-        options = webdriver.ChromeOptions()
-        
-        # Disable images
-        prefs = {"profile.managed_default_content_settings.images": 2}
-        options.add_experimental_option("prefs", prefs)
-        
-        # Disable CSS
-        options.add_argument('--disable-dev-shm-usage')
-        options.add_argument('--no-sandbox')
-        options.add_argument('--disable-gpu')
-        
-        # Headless mode
-        options.add_argument('--headless')
-        
-        # Disable JavaScript (if not needed)
-        # options.add_experimental_option("prefs", {'profile.managed_default_content_settings.javascript': 2})
-        
-        driver = webdriver.Chrome(options=options)
-        
-        # Set page load strategy
-        driver.set_page_load_timeout(30)
-        
-        return driver</code></pre>
+computed = (deals["price"] * (1 - deals["discount_pct"] / 100)).round(2)
+off_by = (computed - deals["deal_price"]).abs()
+print("largest difference from the advertised discount:", off_by.max().round(2))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>matches deals.json: True
+unique SKUs: True
+largest difference from the advertised discount: 0.01</code></pre>
+                    </div>
+                    <p>The browser's table equals the data file, and every deal price is within one cent of the advertised percentage. The cent is rounding: a quarter off $24.95 is $18.7125, and the shop has to pick a side.</p>
+                </div>
 
-    <h2>Practice Exercises</h2>
-    
-    <h3>Exercise 1: Build a Job Scraper</h3>
-    <p>Create a job listing scraper that:</p>
-    <ol>
-        <li>Navigates to job sites (Indeed, LinkedIn, etc.)</li>
-        <li>Searches for specific job titles</li>
-        <li>Handles pagination and infinite scroll</li>
-        <li>Extracts job details from dynamic content</li>
-        <li>Exports data to CSV/Database</li>
-    </ol>
+                <div class="card card-info">
+                    <h3>🛠️ Step 4: Ask a business question <span class="step-time">(5 min)</span></h3>
+                    <p>A deal on something customers cannot buy is an annoyance, not a promotion. Join the deals to the product table, confirm that none is out of stock, and list the ones that are running low. Then find where the biggest savings in dollars are.</p>
+                    <pre><code class="language-python">catalog = pd.read_csv("data/products.csv")[["sku", "stock_status", "rating"]]
+watch = deals.merge(catalog, on="sku", how="left")
+watch["saving"] = (watch["price"] - watch["deal_price"]).round(2)
 
-    <h3>Exercise 2: Social Media Monitor</h3>
-    <p>Build a social media monitoring tool that:</p>
-    <ol>
-        <li>Logs into social platforms</li>
-        <li>Searches for specific hashtags/keywords</li>
-        <li>Scrolls through dynamic feeds</li>
-        <li>Extracts post content and metrics</li>
-        <li>Handles rate limiting and detection</li>
-    </ol>
+print(watch["stock_status"].value_counts().to_dict())
+print(watch.loc[watch["stock_status"] == "low_stock", ["sku", "name", "discount_pct"]])
+print()
+print(watch.nlargest(3, "saving")[["name", "price", "deal_price", "saving"]])</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>{'in_stock': 21, 'low_stock': 3}
+         sku                                 name  discount_pct
+10  CLM-1005        Larkspur Ridge Mesa Chalk Bag            25
+18  ACC-1020             Wrenfield Meadow Lantern            25
+19  FTW-1001  Juniper Vane Wayfinder Hiking Boots            30
 
-    <h3>Exercise 3: E-commerce Price Tracker</h3>
-    <p>Create a price tracking system that:</p>
-    <ol>
-        <li>Monitors multiple e-commerce sites</li>
-        <li>Handles product variations (size, color)</li>
-        <li>Captures JavaScript-rendered prices</li>
-        <li>Takes screenshots of products</li>
-        <li>Sends alerts on price changes</li>
-    </ol>
+                                   name   price  deal_price  saving
+19  Juniper Vane Wayfinder Hiking Boots  259.95      181.96   77.99
+14     Juniper Vane Tundra Sleeping Pad  173.95      130.46   43.49
+11     Tallgrass Switchback 30L Daypack  109.95       76.97   32.98</code></pre>
+                    </div>
+                </div>
 
-    <h2>Key Takeaways</h2>
-    <ul>
-        <li>🌐 Selenium controls real browsers to handle JavaScript-heavy sites</li>
-        <li>⏱️ Use explicit waits for reliable element interaction</li>
-        <li>🔍 Multiple strategies for finding elements (ID, XPath, CSS)</li>
-        <li>📱 Handle popups, frames, and multiple windows</li>
-        <li>🤖 Implement anti-detection measures for bot protection</li>
-        <li>📊 Page Object Model for maintainable code</li>
-        <li>⚡ Optimize performance with headless mode and disabled features</li>
-        <li>🛡️ Always handle exceptions and clean up resources</li>
-    </ul>
+                <div class="card card-info">
+                    <h3>🛠️ Step 5: Save, and compare the two routes <span class="step-time">(5 min)</span></h3>
+                    <pre><code class="language-python">watch.to_csv("deals_watch.csv", index=False)
 
-    <h2>Further Resources</h2>
-    <ul>
-        <li><a href="https://selenium-python.readthedocs.io/">Selenium Python Documentation</a></li>
-        <li><a href="https://www.selenium.dev/documentation/">Official Selenium Documentation</a></li>
-        <li><a href="https://github.com/SeleniumHQ/selenium">Selenium GitHub Repository</a></li>
-        <li><a href="https://pypi.org/project/undetected-chromedriver/">Undetected ChromeDriver</a></li>
-        <li><a href="https://github.com/ultrafunkamsterdam/nodriver">NoDriver - Next Gen Automation</a></li>
-        <li><a href="https://playwright.dev/python/">Playwright (Alternative to Selenium)</a></li>
-    </ul>
+print(f"JSON route   : {json_seconds:6.2f} s, 1 request")
+print(f"browser route: {browser_seconds:6.2f} s, a browser, 2 clicks, 3 waits")</code></pre>
+                    <div class="card card-output">
+                        <h4>Output (your times will differ)</h4>
+                        <pre><code>JSON route   :   0.00 s, 1 request
+browser route:   4.27 s, a browser, 2 clicks, 3 waits</code></pre>
+                    </div>
+                    <p>Both routes produced the same 24 rows. One of them is many times faster and asks far less of the server. For a weekly job you would schedule the JSON request, and keep the browser version for the screenshot and for the day the data file moves.</p>
+                </div>
 
-    <!-- Learning Journal (REQUIRED per the Courseware Authoring Standard) -->
-    <section id="journal" class="lesson-section">
-        <h2>📓 Learning Journal</h2>
-        <div class="card card-info">
-            <p>Keep a learning journal — digital or physical. After this lesson, take a few minutes to write down:</p>
-            <ul>
-                <li><strong>Key concepts</strong> you learned</li>
-                <li><strong>Techniques that clicked</strong> for you</li>
-                <li><strong>Questions or confusion points</strong> to revisit</li>
-                <li><strong>Ideas you want to try</strong></li>
-                <li><strong>Your progress and feelings</strong> about learning this</li>
-            </ul>
-            <p><strong>✍️ This lesson's prompt:</strong> Selenium can do almost anything a person can do in a browser, including
-            slipping past bot detection. Where do you personally draw the line between legitimate automation and behavior a site
-            has clearly asked you not to do?</p>
+                <div class="card card-success">
+                    <h3>✅ Project Completion Checklist</h3>
+                    <ul class="checklist">
+                        <li>You fetched <code>deals.json</code> first and kept it as the answer key</li>
+                        <li><code>collect_deals()</code> uses explicit waits with messages and contains no <code>time.sleep()</code></li>
+                        <li>The browser is quit in a <code>finally</code> block, and the click loop has a limit</li>
+                        <li>The browser's 24 rows equal the JSON's 24 rows</li>
+                        <li><code>deals_full.png</code> and <code>deals_watch.csv</code> are saved in your project folder</li>
+                        <li>You can name the low-stock deals and the three largest dollar savings</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="exercises" class="lesson-section">
+                <h2>🏋️ Hands-on Exercises</h2>
+
+                <p>Each solution opens its own browser with <code>make_driver()</code> and closes it in <code>finally</code>. Build that habit here.</p>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 1: Wait for the Words</h3>
+                    <p>Open the deals page and wait until the status line (<code>#deal-status</code>) contains the text <code>of 24 deals</code>, using <code>EC.text_to_be_present_in_element</code>. Then print the status line and the number of <code>li.deal</code> elements.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>The condition takes two arguments: a locator tuple and the text. <code>wait.until(EC.text_to_be_present_in_element((By.ID, "deal-status"), "of 24 deals"))</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">driver = make_driver()
+try:
+    driver.get(DEALS_URL)
+    WebDriverWait(driver, 10).until(
+        EC.text_to_be_present_in_element((By.ID, "deal-status"), "of 24 deals"))
+    print(driver.find_element(By.ID, "deal-status").text)
+    print(len(driver.find_elements(By.CSS_SELECTOR, "li.deal")))
+finally:
+    driver.quit()</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>Showing 8 of 24 deals
+8</code></pre>
+                        </div>
+                        <p>Waiting for the status text and waiting for the first list item are two ways of saying "the script has finished". Pick the signal that is closest to what you are about to read.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 2: Search by URL</h3>
+                    <p>Without touching the form, load the search page for products whose name contains <code>jacket</code>, in the <code>Apparel</code> category, with a maximum price of <code>200</code>. Print the result count and the SKU and name of every result.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Build the query string with <code>urlencode({...})</code> using the field names <code>q</code>, <code>category</code> and <code>max_price</code>. Wait for <code>#search-results[data-loaded="true"]</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">query = urlencode({"q": "jacket", "category": "Apparel", "max_price": 200})
+
+driver = make_driver()
+try:
+    driver.get(urljoin(BASE_URL, "search.html") + "?" + query)
+    WebDriverWait(driver, 10).until(results_ready)
+    print(driver.find_element(By.ID, "search-count").text)
+    for item in driver.find_elements(By.CSS_SELECTOR, "#search-results li"):
+        print(item.get_attribute("data-sku"), item.find_element(By.CSS_SELECTOR, "h2 a").text)
+finally:
+    driver.quit()</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>2 products found
+APL-1010 Tallgrass Drift Rain Jacket
+APL-1028 Cedar Notch Cairn Rain Jacket</code></pre>
+                        </div>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 3: The Form, the Human Way</h3>
+                    <p>Now do a search through the form: open <code>search.html</code>, choose the category <code>Snow</code> from the menu, tick <strong>Hide out of stock</strong>, and submit. Print the final URL and the result count. Remember that submitting loads a new page.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Wait for the results once before filling in the form and twice after submitting: <code>EC.url_contains("category=Snow")</code>, then <code>results_ready</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">driver = make_driver()
+try:
+    wait = WebDriverWait(driver, 10)
+    driver.get(urljoin(BASE_URL, "search.html"))
+    wait.until(results_ready)
+
+    Select(driver.find_element(By.NAME, "category")).select_by_visible_text("Snow")
+    driver.find_element(By.NAME, "in_stock").click()
+    driver.find_element(By.CSS_SELECTOR, "#search-form button[type='submit']").click()
+
+    wait.until(EC.url_contains("category=Snow"))
+    wait.until(results_ready)
+    print(driver.current_url)
+    print(driver.find_element(By.ID, "search-count").text)
+finally:
+    driver.quit()</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>https://rays-python-datascience.netlify.app/practice/shop/search.html?q=&amp;category=Snow&amp;max_price=&amp;in_stock=1
+20 products found</code></pre>
+                        </div>
+                        <p>The form sent the empty text boxes too (<code>q=</code> and <code>max_price=</code>), exactly as a browser does for a person.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 4: No Browser at All (Stretch)</h3>
+                    <p>The search page filters <code>products.json</code> inside the browser. Reproduce the lesson's search (name contains "tent", category Tents, price at most 300, not out of stock) with <code>requests</code> and pandas only. You should find the same 9 products the browser found. Which version would you rather maintain?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Load <code>products.json</code> into a DataFrame from its <code>"products"</code> key. Combine four boolean conditions with <code>&amp;</code>; <code>.str.contains("tent", case=False)</code> handles the name.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">resp = requests.get(urljoin(BASE_URL, "products.json"), headers=HEADERS, timeout=10)
+resp.raise_for_status()
+shop = pd.DataFrame(resp.json()["products"])
+
+hits = shop[shop["name"].str.contains("tent", case=False)
+            &amp; (shop["category"] == "Tents")
+            &amp; (shop["price"] &lt;= 300)
+            &amp; (shop["stock_status"] != "out_of_stock")]
+
+print(len(hits), "products found")
+print(hits[["sku", "name", "price"]].head(3))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>9 products found
+        sku                                 name   price
+0  TNT-1001     Granite Fork Drift 1-Person Tent  299.95
+1  TNT-1002  Cedar Notch Ridgeline 2-Person Tent  217.95
+3  TNT-1004      Wrenfield Skyline 4-Person Tent  294.95</code></pre>
+                        </div>
+                        <p>The same nine, starting with the same three, with no browser, no waits and no form. This is the question to ask of every dynamic page: where does the data come from, and may I ask for it directly?</p>
+                    </details>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="quiz" class="lesson-section">
+                <h2>🎯 Quick Quiz</h2>
+                <div class="card quiz-container">
+                    <h3>🎯 Check Your Understanding</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> You fetch the deals page with <code>requests</code> and Beautiful Soup finds zero <code>li.deal</code> elements, although your browser shows 8. What is the explanation?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="The same selector finds the deals once a browser has rendered the page. What is different about the HTML that requests received?">
+                                A) The selector <code>li.deal</code> is wrong
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="requests returns the HTML exactly as the server sent it: a shell with an empty list. The browser runs the page's script, which fetches the data and builds the list afterward.">
+                                B) The deals are added by JavaScript after the page loads, and <code>requests</code> does not run JavaScript
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="The request returned status 200 and the full HTML shell, so nothing was blocked. Look at what was in the list element and the loading message.">
+                                C) The server blocked the request because it did not come from a browser
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> Why is <code>WebDriverWait(driver, 10).until(...)</code> better than <code>time.sleep(10)</code> before reading dynamic content?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="An explicit wait checks repeatedly and returns the moment the condition holds, so it is as fast as the page allows. If the limit passes it raises TimeoutException instead of letting the code read a half-built page.">
+                                A) It continues as soon as the content is ready and raises a clear error if it never is
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Nothing in your Python code changes how fast the page works. Think about what your script does while the page is getting ready, and what happens if 10 seconds is not enough or far too much.">
+                                B) It makes the page's JavaScript run faster
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="sleep works fine; it is just a poor fit. What happens with a fixed sleep when the content takes 1 second? What about 12 seconds?">
+                                C) <code>time.sleep()</code> does not work while a browser is open
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> A page has no elements matching <code>li.gone</code>. What do these two calls do: <code>driver.find_elements(By.CSS_SELECTOR, "li.gone")</code> and <code>driver.find_element(By.CSS_SELECTOR, "li.gone")</code>?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="That is how select_one behaves in Beautiful Soup. Selenium makes a sharper distinction between the plural and the singular method.">
+                                A) Both return <code>None</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Only one of them raises. The plural method is the safe way to ask how many matches there are.">
+                                B) Both raise <code>NoSuchElementException</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="find_elements always returns a list, empty when nothing matches, which makes it handy for counting. find_element must return exactly one element, so it raises when there is none.">
+                                C) The first returns an empty list; the second raises <code>NoSuchElementException</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 4:</strong> In the browser's Network tab you see that a page fills its table from <code>/api/prices.json</code>, and the site's rules allow programs to request it. What is the best way to collect the table every day?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="A browser would work, but it loads scripts, styles and images and depends on the page layout. Is there a more direct source for the same numbers?">
+                                A) Drive a headless browser, since the page is dynamic
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="The JSON is the source the page itself uses: one light request, already structured, and unaffected by redesigns of the page. Reach for a browser only when no such source exists or you need what the rendered page shows.">
+                                B) Request the JSON directly with <code>requests</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="A screenshot is useful as evidence of what was displayed, not as a data source. Where do the numbers on the page come from in the first place?">
+                                C) Take a screenshot and read the numbers from the image
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 5:</strong> A script creates a headless browser with <code>webdriver.Chrome()</code> and then crashes with an error before reaching <code>driver.quit()</code>. What happens to the browser?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Selenium does not clean up for you when your own code raises. What would have to be true of the code for quit to run anyway?">
+                                A) It closes automatically when the error occurs
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Headless only means no window is drawn. It is still a full Chrome process using memory.">
+                                B) Nothing was started, because headless browsers do not use real processes
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="The Chrome process is separate from your Python code and can outlive the line that failed. A try and finally pair guarantees quit runs on success, on error and on interruption.">
+                                C) It keeps running in the background until something ends it, which is why <code>quit()</code> belongs in a <code>finally</code> block
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="faq" class="lesson-section">
+                <h2>❓ Common Questions at This Stage</h2>
+
+                <details>
+                    <summary>What about implicit waits? I saw <code>driver.implicitly_wait(10)</code> in a tutorial.</summary>
+                    <p>An implicit wait tells every <code>find_element()</code> call to keep retrying for up to that long. It is simple, but blunt: it only covers "the element exists", not "it is visible" or "the text changed", and it makes genuinely missing elements slow to report. Selenium's own documentation warns against mixing implicit and explicit waits because the combined timing is unpredictable. Explicit waits say precisely what you are waiting for, so this course uses only those.</p>
+                </details>
+                <details>
+                    <summary>Is Selenium the only tool for this? What is Playwright?</summary>
+                    <p>Playwright is a newer browser automation library with the same purpose and a similar shape: start a browser, go to a page, locate, wait, click. It waits automatically in more situations and is popular for testing. Selenium is the long-established standard with the widest language and browser support. The ideas in this lesson (rendering, locators, waiting for conditions, cleaning up) carry over to either.</p>
+                </details>
+                <details>
+                    <summary>Some sites show a CAPTCHA or block automated browsers. How do I get past that?</summary>
+                    <p>You do not. A CAPTCHA or a block is the site telling automated visitors no, which is rule 5 from Lesson 6.1. Tools and tricks that hide automation exist, and using them means deliberately defeating a site's stated wishes. Look for an official API or a data download, or ask the owner for access.</p>
+                </details>
+                <details>
+                    <summary>Can I use Selenium for pages behind my own login?</summary>
+                    <p>Technically yes: you can type into a login form like any other. Do it only for accounts that are yours, on sites whose terms allow automated access, and never put the password in your code. Lesson 6.4 shows how to keep secrets out of code, and shows the better route when a service offers one: an API with a key or token.</p>
+                </details>
+                <details>
+                    <summary>Does this work in a script as well as in a notebook?</summary>
+                    <p>Yes, and scripts are where <code>try</code> / <code>finally</code> matters most, because nobody is watching. In a notebook it is convenient to keep one browser open across cells while you explore, as this lesson did. Just make closing it the last thing you do.</p>
+                </details>
+
+                <div class="card card-accent">
+                    <h3>🌟 Going Further: Bonus Challenge</h3>
+                    <p>Make <code>collect_deals()</code> explain its own failures. Wrap the waits so that when a <code>TimeoutException</code> occurs, the function saves a screenshot named <code>failure.png</code> and the current <code>page_source</code> to <code>failure.html</code> before re-raising the error. Test it by temporarily changing a selector to something that does not exist. Then open the two files and see how much faster they make the diagnosis.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="journal" class="lesson-section">
+                <h2>📓 Learning Journal</h2>
+                <div class="card card-accent">
+                    <p>Take five minutes to write in your learning journal (the <code>journal.md</code> file you started in Lesson 0.1, or a paper notebook). Jot down:</p>
+                    <ul>
+                        <li><strong>Key concepts</strong> you learned today</li>
+                        <li><strong>Techniques that clicked</strong> (and the ones that have not, yet)</li>
+                        <li><strong>Questions or confusion</strong> to come back to</li>
+                        <li><strong>Ideas to try</strong> on your own</li>
+                        <li><strong>Progress and feelings</strong>: how did this lesson go for you?</li>
+                    </ul>
+                    <p><strong>✍️ This lesson's prompt:</strong> Explain the flat-pack furniture picture in your own words: what does <code>requests</code> receive, and what does a browser do next? Then write down your own three-question checklist for a page that looks empty to <code>requests</code>, in the order you would try things, and why that order.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="summary" class="lesson-section">
+                <h2>📝 Lesson Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎓 Key Takeaways</h3>
+                    <ul>
+                        <li>A <strong>dynamic</strong> page is a shell that JavaScript fills in after loading; <code>requests</code> gets the shell only</li>
+                        <li><strong>Look for the data first</strong>: the Network tab and the page's scripts often reveal a JSON file or API you can request directly</li>
+                        <li>Selenium 4 drives a real browser; Selenium Manager fetches the driver, and <code>--headless=new</code> hides the window</li>
+                        <li>Locate with <code>find_element(By.CSS_SELECTOR, ...)</code>; the plural <code>find_elements</code> returns a list and never raises</li>
+                        <li><strong>Wait for conditions, never sleep</strong>: <code>WebDriverWait(driver, 10).until(EC....)</code> or your own function</li>
+                        <li>Let the browser render and click, then parse <code>driver.page_source</code> with Beautiful Soup</li>
+                        <li>A <code>WebElement</code> goes stale when the page changes: find it again</li>
+                        <li>Always <code>driver.quit()</code> in a <code>finally</code> block</li>
+                    </ul>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🏆 What You've Accomplished</h3>
+                    <ul>
+                        <li>You diagnosed why a page looked empty and found the data file behind it</li>
+                        <li>You drove headless Chrome from Python: opened pages, waited, clicked, typed, chose from a menu and submitted a form</li>
+                        <li>You collected all 24 deals through the browser and proved they match the source data</li>
+                        <li>You took a screenshot of what an invisible browser saw</li>
+                        <li>You measured the cost of the browser route against the direct one and can now choose between them on evidence</li>
+                    </ul>
+                </div>
+
+                <h3>🔭 Looking Ahead</h3>
+                <p>In <a href="webscraping_api_authentication.html"><strong>Lesson 6.4: API Authentication</strong></a> you will go through the front door. Many of the most useful data sources are APIs that want to know who is asking. You will use the practice API from Lesson 6.1 with an API key and with a login token that expires, keep those secrets out of your code, and page through more than a thousand orders into a DataFrame.</p>
+
+                <h3>📋 Before the Next Lesson</h3>
+                <ul>
+                    <li>Check that no stray browsers are running: every <code>make_driver()</code> should have met its <code>quit()</code>.</li>
+                    <li>Find the terminal command that starts the practice API in Lesson 6.1 and make sure it still runs: <code>python data/mock_api.py</code>.</li>
+                    <li>Pick one website you use and open its Network tab while it loads. You do not need to scrape anything. Just notice how much of what you see arrives as JSON.</li>
+                </ul>
+
+                <div class="card card-accent">
+                    <h3>🌱 Encouragement for the Journey</h3>
+                    <p>Browser automation has a reputation for being fiddly, and you have just seen why: you are coordinating with a program that works on its own schedule. You also learned the one habit that removes most of the pain, which is to wait for what you need by name. If a wait timed out on you today, that was not failure. That was the tool doing its job and telling you something true about the page. Take the screenshot, read the first line, adjust.</p>
+                </div>
+            </section>
+
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="webscraping_beautifulsoup.html" class="prev-lesson">← Previous: Parsing HTML with Beautiful Soup</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="webscraping_api_authentication.html" class="next-lesson">Next: API Authentication →</a>
+            </nav>
         </div>
-    </section>
-
-    <!-- Lesson Summary (full standard block) -->
-    <section id="summary" class="lesson-section">
-        <h2>📝 Lesson Summary</h2>
-        <div class="card card-success">
-            <h3>🎓 Key Takeaways</h3>
-            <ul>
-                <li>Selenium drives a real browser, so it can reach content that only appears after JavaScript runs — where <code>requests</code> + BeautifulSoup fall short.</li>
-                <li>Reliable automation depends on waiting correctly: prefer explicit waits on specific conditions over fixed <code>sleep()</code> calls.</li>
-                <li>You can locate elements many ways (ID, CSS, XPath) and interact fully — clicks, typing, dropdowns, scrolling, and direct JavaScript execution.</li>
-                <li>Structure real projects with the Page Object Model, clean up the driver every time, and respect that anti-bot evasion carries real legal and ethical weight.</li>
-            </ul>
-        </div>
-        <h3>🎉 What You've Accomplished</h3>
-        <p>You can now automate a real browser to scrape the modern, JavaScript-heavy web — handling single-page apps, infinite
-        scroll, popups, and login forms — and organize that work into maintainable, resource-safe code.</p>
-        <h3>❓ Common Questions at This Stage</h3>
-        <details>
-            <summary>When should I use Selenium instead of requests + BeautifulSoup?</summary>
-            <p>Use requests + BeautifulSoup whenever the data is present in the initial HTML — it's far faster and lighter. Reach
-            for Selenium only when content is rendered by JavaScript, requires interaction (clicks, scrolling, logins), or when
-            you can't find an underlying API to call directly.</p>
-        </details>
-        <details>
-            <summary>Why avoid <code>time.sleep()</code> in favor of explicit waits?</summary>
-            <p>A fixed sleep either wastes time (too long) or fails intermittently (too short). An explicit wait polls for the exact
-            condition you need — element visible, clickable, text present — and continues the instant it's met, making scripts both
-            faster and more reliable.</p>
-        </details>
-        <details>
-            <summary>Is it OK to bypass bot detection like CAPTCHAs or Cloudflare?</summary>
-            <p>Tread very carefully. Evading protections a site deliberately put up can violate its Terms of Service and, in some
-            jurisdictions, the law. Prefer official APIs, request permission, and treat anti-detection techniques as knowledge to
-            use responsibly — not a license to scrape anything.</p>
-        </details>
-        <h3>🔭 Looking Ahead</h3>
-        <p>Having completed the web-scraping toolkit, you'll move on to new areas of data science — carrying forward the same
-        habits of patience, reliability, and ethics you practiced here.</p>
-        <h3>✅ Before the Next Lesson</h3>
-        <ul>
-            <li>Automate a search on a scraping-friendly practice site, using an explicit wait for the results to appear before extracting them.</li>
-            <li>Refactor one of your scripts to use the Page Object Model, separating locators from actions.</li>
-            <li>Write your Learning Journal entry for this lesson.</li>
-        </ul>
-        <div class="card card-accent" style="text-align: center; padding: 2rem;">
-            <h3>🌟 Encouragement for the Journey</h3>
-            <p>You can now automate the whole browser — the last barrier between you and the modern web is gone. Use this power
-            thoughtfully and it will serve you for years. You've built a complete, professional scraping toolkit. Be proud of that!</p>
-        </div>
-    </section>
-
-    <!-- Navigation at the bottom -->
-    <nav class="lesson-nav" aria-label="Lesson navigation">
-        <a href="webscraping_rate_limiting.html" class="prev-lesson" aria-label="Previous lesson">Previous: Rate Limiting and Ethics</a>
-        <a href="index.html" class="home-link" aria-label="Course home">Course Home</a>
-        <a href="timeseries_basics.html" class="next-lesson" aria-label="Next lesson">Next: Time Series Fundamentals</a>
-    </nav>
-    
     </main>
 
-    <!-- Footer -->
     <footer class="site-footer">
         <p>&copy; 2026 Ray de la Paz. Python Data Science. All rights reserved.</p>
         <div class="footer-links">
@@ -1737,6 +1146,10 @@ class PerformanceOptimization:
             <a href="https://rays-home.netlify.app/contact">Contact</a>
             <a href="#" id="print-button">Print Page</a>
         </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
     </footer>
+
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
 </body>
 </html>

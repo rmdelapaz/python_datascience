@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Participant Workbook: Session 5</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Student workbook —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">write in it · bring it to every session</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Participant Workbook</div>
+    <h1>Session 5: Cleaning and Grouping</h1>
+    <p class="sub">Your working pages for two of the most used skills in data work. Before the break: turning a damaged file into a table you can trust, and proving that you did. After the break: answering every question that starts with 'for each...'.</p>
+    <div class="meta-row">
+      <span class="chip">Lessons <b>2.3–2.4</b></span>
+      <span class="chip">Session <b>5</b> · 3 hours</span>
+      <span class="chip">Name: ____________________</span>
+    </div>
+  </header>
+
+  <div class="note"><div class="t">How to use this workbook</div><p>Each lesson has <b>By the end you can</b>, <b>Key ideas</b> (one page to keep), a <b>Worked example</b> with its real output, the <b>Guided lab</b> you do in class, three <b>Predict, then run</b> boxes, the lesson project's class and home parts, space for notes, and a six-question <b>Self-check</b>. Lab files are in <code class="inline">labs/module-05/</code>. Two habits for today: <b>count the rows before and after every step</b>, and, after the break, <b>ask what shape you want back</b> before you type a groupby.</p></div>
+  <div class="sec"><h2>Session Goals</h2><span class="rule"></span></div>
+  <ul class="tick">
+          <li>Audit a table you have never seen and write a repair list before changing anything</li>
+          <li>Repair structure, text, numbers and dates in code, on a copy, checking each step</li>
+          <li>Decide what to do with each kind of missing or suspicious value, and say why</li>
+          <li>Summarize 'for each...' questions with <code class="inline">groupby</code> and named aggregation</li>
+          <li>Choose between <code class="inline">agg</code>, <code class="inline">transform</code> and <code class="inline">filter</code> by the shape of the answer</li>
+          <li>Catch the quiet traps: lost rows, <code class="inline">count</code> versus <code class="inline">size</code>, averages of averages</li>
+        </ul>
+  <div class="sec"><h2>Lessons</h2><span class="rule"></span></div>
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">2.3</span><h3>Cleaning Data</h3><span class="dur">100 min lesson</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">By the end you can</div>
+        <ul class="tick">
+          <li>Audit an unfamiliar table and list its problems before changing anything</li>
+          <li>Repair structure: untidy headers, summary rows and duplicate rows</li>
+          <li>Standardize inconsistent text and convert numbers and dates that were stored as text, including dates in several formats</li>
+          <li>Decide, and defend, what to do with each kind of missing or suspicious value: repair, fill, flag or leave</li>
+          <li>Verify a cleaning job with a before-and-after audit and assertions, and package it as a function you can rerun</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Key ideas</div>
+        <ul class="tick">
+          <li><b>The repair bench.</b> Audit first and write the repair list. Fix one thing at a time, in code, on a copy. Check each repair. The raw file is read-only.</li>
+          <li><b>The order.</b> Structure (headers, rows that are not data, duplicates) → text → numbers → dates → missing values. Fixing the shape first makes every later step simpler.</li>
+          <li><b>Audit by counting.</b> <code class="inline">df.dtypes</code>, <code class="inline">df.isna().sum()</code>, <code class="inline">df.nunique()</code>, <code class="inline">df.duplicated().sum()</code>. Print <code class="inline">df.columns.tolist()</code> to see hidden spaces. A category column with more distinct values than the business has is damaged.</li>
+          <li><b>Text.</b> <code class="inline">.str.strip()</code>, then <code class="inline">.str.title()</code> / <code class="inline">.str.lower()</code> / <code class="inline">.str.upper()</code>, then a mapping dictionary with <code class="inline">.replace({...})</code>, built from <code class="inline">value_counts()</code> <b>after</b> the mechanical steps. Placeholders such as <code class="inline">none</code> and <code class="inline">-</code> become real missing values with <code class="inline">.where(...)</code>.</li>
+          <li><b>Numbers.</b> <code class="inline">pd.to_numeric(s, errors="coerce")</code> is a detector: what became NaN but was not empty? Remove symbols with <code class="inline">.str.replace("$", "")</code>, then convert without <code class="inline">errors=</code> as a guarantee. Then <code class="inline">.describe()</code>: is the minimum and maximum plausible?</li>
+          <li><b>An outlier is a question.</b> Never change a value for being extreme. Look for independent evidence (here: the order's item lines), then repair only the rows the evidence points to, with one <code class="inline">.loc</code>.</li>
+          <li><b>Dates.</b> One <code class="inline">pd.to_datetime(d, format=..., errors="coerce")</code> per known format, combined with <code class="inline">.fillna()</code>. Impossible dates become <code class="inline">NaT</code> and stay missing.</li>
+          <li><b>Missing values are decisions.</b> It is not missing (no promo code) · repair (a rule or another source) · leave and report · drop for one analysis with <code class="inline">dropna(subset=[...])</code>. Filling a number invents data. Write the decision down.</li>
+          <li><b>Prove it.</b> Run the audit again and compare. State the rules as <code class="inline">assert</code> lines. Package the job as a function so it can be rerun.</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Worked example: what is missing in the survey, and what should we do about it?</div>
+        <p><code class="inline">survey.csv</code> is tidy: no bad headers, no duplicates. Its problem is the quiet one, missing answers. This example practices the part of cleaning that is judgment, not typing: look at what is missing, find out why, and decide.</p>
+<p>Audit first. Seven columns have gaps, and two of them have hundreds.</p>
+<pre class="code">survey = pd.read_csv(<span class="s">"data/survey.csv"</span>)
+print(len(survey), survey.duplicated(subset=[<span class="s">"customer_id"</span>]).sum())
+missing = survey.isna().sum()
+print(missing[missing &gt; <span class="s">0</span>])</pre>
+<pre class="out">1800 0
+sat_overall       53
+sat_selection     53
+sat_price         47
+sat_staff        605
+sat_website      472
+recommend         54
+comment          977
+dtype: int64</pre>
+<p>What would <code class="inline">dropna()</code> do? Print the row count before and after every drop.</p>
+<pre class="code">print(len(survey), <span class="s">"-&gt;"</span>, len(survey.dropna()))
+print(len(survey), <span class="s">"-&gt;"</span>, len(survey.dropna(subset=[<span class="s">"sat_overall"</span>, <span class="s">"recommend"</span>])))</pre>
+<pre class="out">1800 -&gt; 295
+1800 -&gt; 1699</pre>
+<p>Why are 605 staff ratings missing? Compare the share of missing answers for online shoppers and store shoppers (the mean of a True/False column is a share).</p>
+<pre class="code">online = survey[<span class="s">"store"</span>] == <span class="s">"Online"</span>
+<span class="k">for</span> label, rows <span class="k">in</span> [(<span class="s">"online shoppers"</span>, online), (<span class="s">"store shoppers "</span>, ~online)]:
+    print(label, round(survey.loc[rows, <span class="s">"sat_staff"</span>].isna().mean() * <span class="s">100</span>, <span class="s">1</span>), <span class="s">"% missing staff rating,"</span>,
+          round(survey.loc[rows, <span class="s">"sat_website"</span>].isna().mean() * <span class="s">100</span>, <span class="s">1</span>), <span class="s">"% missing website rating"</span>)</pre>
+<pre class="out">online shoppers 69.9 % missing staff rating, 2.9 % missing website rating
+store shoppers  3.0 % missing staff rating, 45.9 % missing website rating</pre>
+<p>What would filling claim? Compare the mean as it is with the mean after filling every gap with a neutral 3.</p>
+<pre class="code">print(survey[<span class="s">"sat_staff"</span>].mean().round(<span class="s">2</span>), survey[<span class="s">"sat_staff"</span>].fillna(<span class="s">3</span>).mean().round(<span class="s">2</span>))
+<span class="k">assert</span> survey[<span class="s">"sat_staff"</span>].dropna().between(<span class="s">1</span>, <span class="s">5</span>).all()
+<span class="k">assert</span> survey[<span class="s">"recommend"</span>].dropna().between(<span class="s">0</span>, <span class="s">10</span>).all()
+print(<span class="s">"all checks passed"</span>)</pre>
+<pre class="out">4.02 3.68
+all checks passed</pre>
+        <p>Decision: leave the gaps and report them. Seven in ten online shoppers skipped the staff question because they never met staff: for them the honest value is 'does not apply', and filling it with 3 would pull the staff score from 4.02 down to 3.68 with invented answers. Dropping every row with any gap would keep 295 of 1,800 responses. What you write in the report: "Staff satisfaction is based on the 1,195 customers who answered, almost all of them store shoppers." </p>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab</div>
+        <ul class="tick lab">
+          <li><code class="inline">labs/module-05/l2_3-cleaning-data/register_log_starter.py</code> (about 25 min): Clean the Asheville manager's hand-typed log of May 2025 (<code class="inline">asheville_may_log.csv</code>) and score it against the same 31 days of <code class="inline">daily_sales.csv</code>.</li>
+          <li><code class="inline">labs/module-05/l2_3-cleaning-data/total_row_check_starter.py</code> (about 20 min): If someone simply added up <code class="inline">Order Total</code> in <code class="inline">orders_messy.csv</code>, how far off would they be, and which flaw moves the sum the most?</li>
+        </ul>
+        <ol class="steps lab">
+          <li>Open <code class="inline">register_log_starter.py</code> and run it once. Read the audit it prints. <b>Before you fix anything</b>, write your repair list (in the file, or here): ______________________</li>
+          <li>Work in the lesson's order: structure, text, numbers, dates, missing values. Run after every TODO and check the row count.</li>
+          <li>TODO 3 has a trap: one revenue figure is about 100 times too large, and one large figure is genuine. What evidence in the same row tells them apart? ______________________</li>
+          <li>You are done when the last line says <code class="inline">cells compared: 217 | still blank: 2 | wrong: 0</code>. Two honest blanks are not a failure.</li>
+          <li>Never edit <code class="inline">asheville_may_log.csv</code> itself. Every fix is a line of code.</li>
+          <li>If you finish: TODO 6 (repair one blank using the TOTAL row), then <code class="inline">total_row_check_starter.py</code>.</li>
+        </ol>
+      </div>
+      <div class="blk"><div class="h">Predict, then run</div>
+        <p>Write what you think each one prints <b>before</b> you run it. Being wrong here is useful: it shows you exactly which rule to look at again.</p>
+<p><b>P1.</b> Case without whitespace.</p>
+<pre class="code">s = pd.Series([<span class="s">" Bend"</span>, <span class="s">"bend "</span>, <span class="s">"BEND"</span>, <span class="s">"Bend OR"</span>])
+print(s.str.title().nunique(), s.str.strip().str.title().nunique())</pre>
+<div class="write"></div>
+<p><b>P2.</b> A detector for values that are not numbers.</p>
+<pre class="code">s = pd.Series([<span class="s">"$1,200.50"</span>, <span class="s">"80"</span>, <span class="s">"free"</span>, <span class="k">None</span>])
+n = pd.to_numeric(s.str.replace(<span class="s">"$"</span>, <span class="s">""</span>).str.replace(<span class="s">","</span>, <span class="s">""</span>), errors=<span class="s">"coerce"</span>)
+print(n.tolist(), n.isna().sum())</pre>
+<div class="write"></div>
+<p><b>P3.</b> Three ways to lose rows.</p>
+<pre class="code">df = pd.DataFrame({<span class="s">"id"</span>: [<span class="s">1</span>, <span class="s">2</span>, <span class="s">2</span>, <span class="s">3</span>], <span class="s">"promo"</span>: [<span class="k">None</span>, <span class="s">"A"</span>, <span class="s">"A"</span>, <span class="k">None</span>],
+                   <span class="s">"amt"</span>: [<span class="s">5.0</span>, <span class="s">7.0</span>, <span class="s">7.0</span>, <span class="k">None</span>]})
+print(len(df.drop_duplicates()), len(df.dropna()), len(df.dropna(subset=[<span class="s">"amt"</span>])))</pre>
+<div class="write"></div>
+      </div>
+      <div class="blk"><div class="h">Lesson project: start in class, finish at home</div>
+        <ul class="tick">
+          <li>Project: <b>The Cleaning Pipeline</b> (lesson page, six steps). In class: Step 1 <code class="inline">fix_structure</code> and Step 2 <code class="inline">fix_text</code> in <code class="inline">lesson_2_3_project</code>.</li>
+          <li>At home: Steps 3 to 6. You are done when <code class="inline">clean_orders()</code> runs from the raw file to a 20,302-row table, <code class="inline">validate()</code> passes, and your scorecard says 0 wrong and 623 still blank.</li>
+          <li>Test <code class="inline">validate()</code>: temporarily remove one store fix and confirm that it fails loudly.</li>
+          <li>Then the lesson's Exercises 1 to 3, the Quick Quiz and your journal entry. Exercise 4 is a stretch.</li>
+          <li>Keep <code class="inline">output/orders_clean.parquet</code> and your <code class="inline">clean_orders()</code> function.</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">My notes</div>
+        <div class="write tall"></div>
+      </div>
+      <div class="blk"><div class="h">Self-check</div>
+        <p>Six questions on Lesson 2.3. No notes on the first pass; then check with your instructor.</p>
+        <div class="q" data-sc="1"><div class="qn">Q1</div><div class="qt">An audit shows that the <code class="inline">Store</code> column has 31 distinct values. Pinecrest has four stores and an online shop. What is the right first move?</div><div class="opts"><div class="opt">A) Delete the rows whose store name is unusual</div><div class="opt">B) Print <code class="inline">value_counts()</code> to see the variants, then strip, fix the case, and map what is left</div><div class="opt">C) Convert the column to the <code class="inline">category</code> dtype</div><div class="opt">D) Fill the unusual names with the most common store</div></div></div>
+        <div class="q" data-sc="2" data-kind="short"><div class="qn">Q2</div><div class="qt">What does this print?</div><pre class="code">d = pd.Series([<span class="s">"2024-03-05"</span>, <span class="s">"03/05/2024"</span>, <span class="s">"March 5, 2024"</span>, <span class="s">"2024-02-30"</span>])
+iso = pd.to_datetime(d, format=<span class="s">"%Y-%m-%d"</span>, errors=<span class="s">"coerce"</span>)
+us = pd.to_datetime(d, format=<span class="s">"%m/%d/%Y"</span>, errors=<span class="s">"coerce"</span>)
+print(iso.notna().sum(), iso.fillna(us).notna().sum())</pre><div class="write"></div></div>
+        <div class="q" data-sc="3"><div class="qn">Q3</div><div class="qt">What does this print?</div><pre class="code">s = pd.Series([<span class="s">"none"</span>, <span class="s">"TRAIL15"</span>, <span class="s">"-"</span>, <span class="s">"trail15"</span>])
+p = s.str.upper()
+print(p.where(~p.isin([<span class="s">"NONE"</span>, <span class="s">"-"</span>])).tolist())</pre><div class="opts"><div class="opt">A) <code class="inline">['NONE', 'TRAIL15', '-', 'TRAIL15']</code></div><div class="opt">B) <code class="inline">['TRAIL15', 'TRAIL15']</code></div><div class="opt">C) <code class="inline">[nan, 'TRAIL15', nan, 'TRAIL15']</code></div><div class="opt">D) <code class="inline">[nan, 'TRAIL15', nan, 'trail15']</code></div></div></div>
+        <div class="q" data-sc="4"><div class="qn">Q4</div><div class="qt">In <code class="inline">orders_messy.csv</code> one order total is $4,990.00, while the largest genuine order is $4,893.00. What justified dividing the $4,990.00 by 100?</div><div class="opts"><div class="opt">A) It is above the 99th percentile of order totals</div><div class="opt">B) It is an online order, and online totals are less reliable</div><div class="opt">C) It is a round number, which suggests a typing error</div><div class="opt">D) Its item lines add up to $34.95, so the recorded total is over 100 times what was bought</div></div></div>
+        <div class="q" data-sc="5" data-kind="short"><div class="qn">Q5</div><div class="qt">What does this print?</div><pre class="code">df = pd.DataFrame({<span class="s">"total"</span>: [<span class="s">10.0</span>, <span class="k">None</span>, <span class="s">50.0</span>]})
+print(df[<span class="s">"total"</span>].mean(), df[<span class="s">"total"</span>].fillna(<span class="s">0</span>).mean())</pre><div class="write"></div></div>
+        <div class="q" data-sc="6"><div class="qn">Q6</div><div class="qt"><code class="inline">trial</code> has 406 missing payment methods. What happens when you run <code class="inline">trial["payment_method"].fillna("unknown", inplace=True)</code>?</div><div class="opts"><div class="opt">A) <code class="inline">trial</code> is unchanged, and pandas warns with <code class="inline">ChainedAssignmentError</code></div><div class="opt">B) The 406 gaps in <code class="inline">trial</code> are filled with <code class="inline">unknown</code></div><div class="opt">C) A <code class="inline">TypeError</code>, because text cannot be used to fill a column</div><div class="opt">D) The gaps are filled, but only in the first 406 rows</div></div></div>
+      </div>
+    </div>
+  </section>
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">2.4</span><h3>GroupBy Operations</h3><span class="dur">90 min lesson</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">By the end you can</div>
+        <ul class="tick">
+          <li>Explain split-apply-combine and read a groupby expression piece by piece</li>
+          <li>Summarize groups with built-in methods and with named aggregation, on one key or several</li>
+          <li>Choose correctly between <code class="inline">agg</code> (one row per group), <code class="inline">transform</code> (one row per original row) and <code class="inline">filter</code> (keep or drop whole groups)</li>
+          <li>Control what happens to missing keys and unused categories with <code class="inline">dropna=</code> and <code class="inline">observed=</code></li>
+          <li>Recognize the common traps: lost rows, a key hidden in the index, and averages of averages</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Key ideas</div>
+        <ul class="tick">
+          <li><b>Split, apply, combine.</b> <code class="inline">df.groupby("key")["column"].function()</code>: deal the rows into piles by key, compute on each pile, collect one answer per pile. Any question that starts 'for each...' is a groupby.</li>
+          <li><b>What comes back.</b> A Series or DataFrame whose <b>index is the group key</b>, sorted. Get the key back as a column with <code class="inline">.reset_index()</code> or <code class="inline">as_index=False</code>.</li>
+          <li><b>Counting.</b> <code class="inline">.size()</code> rows per group · <code class="inline">.count()</code> non-missing values of a column · <code class="inline">.nunique()</code> distinct values. They answer different questions.</li>
+          <li><b>Named aggregation.</b> <code class="inline">df.groupby("store").agg(orders=("order_id", "count"), revenue=("order_total", "sum"))</code>. New column name = (source column, function). Learn this form by heart.</li>
+          <li><b>Rates.</b> Make a True/False helper column; its mean within each group is the rate.</li>
+          <li><b>Several keys.</b> A list of keys gives one group per combination and a two-level index (MultiIndex). Flatten with <code class="inline">.reset_index()</code> or spread one level into columns with <code class="inline">.unstack()</code>. A key can be computed on the spot: <code class="inline">orders["order_date"].dt.year</code>.</li>
+          <li><b>What shape do I want back?</b> One row per group: <code class="inline">agg</code>. The same rows with a group number on each: <code class="inline">transform</code>. Fewer of the same rows: <code class="inline">filter</code> (or a <code class="inline">transform</code> and a mask, which is faster).</li>
+          <li><b>Quiet traps.</b> Rows whose key is missing vanish unless <code class="inline">dropna=False</code>: check that the groups add up to <code class="inline">len(df)</code>. Never average group means of unequal groups. <code class="inline">observed=False</code> shows categories that have no rows.</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Worked example: what do different age groups think of our prices?</div>
+        <p><code class="inline">survey.csv</code> again, with a 'for each' question: for each age group, how satisfied are customers with prices and with the website (1 = very dissatisfied, 5 = very satisfied)? The example uses the four moves you will repeat in the lab: named aggregation, a check that the groups add up, <code class="inline">transform</code>, and <code class="inline">filter</code>.</p>
+<p>One row per age group. <code class="inline">count</code> on <code class="inline">response_id</code> counts responses; <code class="inline">count</code> on <code class="inline">sat_price</code> counts answers, because <code class="inline">count</code> skips missing values.</p>
+<pre class="code">by_age = survey.groupby(<span class="s">"age_group"</span>).agg(
+    responses=(<span class="s">"response_id"</span>, <span class="s">"count"</span>),
+    answered_price=(<span class="s">"sat_price"</span>, <span class="s">"count"</span>),
+    price=(<span class="s">"sat_price"</span>, <span class="s">"mean"</span>),
+    website=(<span class="s">"sat_website"</span>, <span class="s">"mean"</span>),
+)
+print(by_age.round(<span class="s">2</span>))</pre>
+<pre class="out">           responses  answered_price  price  website
+age_group                                           
+18-24            192             186   2.80     3.69
+25-34            280             273   3.32     3.67
+35-44            318             309   3.38     3.67
+45-54            339             332   3.38     3.66
+55-64            279             273   3.44     3.72
+65+              392             380   3.33     3.04</pre>
+<p>Do the groups add up? And is the average of the six group averages the overall average?</p>
+<pre class="code">print(by_age[<span class="s">"responses"</span>].sum(), len(survey))
+print(by_age[<span class="s">"price"</span>].mean().round(<span class="s">3</span>), survey[<span class="s">"sat_price"</span>].mean().round(<span class="s">3</span>))</pre>
+<pre class="out">1800 1800
+3.276 3.309</pre>
+<p><code class="inline">transform</code> gives one value per original row: each response next to its own age group's average.</p>
+<pre class="code">survey[<span class="s">"age_avg_price"</span>] = survey.groupby(<span class="s">"age_group"</span>)[<span class="s">"sat_price"</span>].transform(<span class="s">"mean"</span>)
+print(survey[<span class="s">"age_avg_price"</span>].shape)
+print(survey[[<span class="s">"response_id"</span>, <span class="s">"age_group"</span>, <span class="s">"sat_price"</span>, <span class="s">"age_avg_price"</span>]].head(<span class="s">3</span>).round(<span class="s">2</span>))</pre>
+<pre class="out">(1800,)
+   response_id age_group  sat_price  age_avg_price
+0            1       65+        5.0           3.33
+1            2     18-24        3.0           2.80
+2            3     25-34        4.0           3.32</pre>
+<p><code class="inline">filter</code> keeps whole groups: here, only the responses from stores with at least 250 responses.</p>
+<pre class="code">busy = survey.groupby(<span class="s">"store"</span>).filter(<span class="k">lambda</span> g: len(g) &gt;= <span class="s">250</span>)
+print(len(busy), sorted(busy[<span class="s">"store"</span>].unique()))</pre>
+<pre class="out">1153 ['Boise', 'Online']</pre>
+        <p>Two groups stand out. Customers aged 18 to 24 rate prices at 2.80 when every other group is between 3.32 and 3.44, and customers aged 65 and over rate the website at 3.04 when every other group is near 3.7. Those are leads to investigate, not conclusions: Module 4 tests whether gaps like these could be chance. The average of the six group averages (3.276) is not the overall average (3.309), because the groups are different sizes.</p>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab</div>
+        <ul class="tick lab">
+          <li><code class="inline">labs/module-05/l2_4-groupby-operations/store_days_starter.py</code> (about 20 min): For each store: days, revenue and conversion; how much a promo day brings in; whether the lesson's growth claim (+19.7% Flagstaff, -5.0% Asheville) holds; and how many days were at least twice the store's own average.</li>
+          <li><code class="inline">labs/module-05/l2_4-groupby-operations/basket_sizes_starter.py</code> (about 20 min): How big is a typical basket, are the best sellers by units the best sellers by revenue, what share of its order is each line, and which orders have six or more lines?</li>
+        </ul>
+        <p>Extra: <code class="inline">labs/module-05/l2_4-groupby-operations/debug_groupby.py</code>. A file that is broken on purpose. Two bugs stop the program; three are quiet. Each has a 'should print' note.</p>
+        <ol class="steps lab">
+          <li>Open <code class="inline">store_days_starter.py</code>. Before each TODO, write the shape of the answer: how many rows will come back? TODO 1: ____ TODO 2: ____ TODO 3: ____ TODO 4: ____</li>
+          <li>TODO 1 has two counts, <code class="inline">days</code> and <code class="inline">days_with_revenue</code>. Why are they different? ______________________</li>
+          <li>TODO 2: before you run the last line, guess the average revenue of a store-day: ______</li>
+          <li>After every groupby, check that the groups add up to the number of rows in the table.</li>
+          <li>If you finish: <code class="inline">basket_sizes_starter.py</code>, then <code class="inline">debug_groupby.py</code>.</li>
+        </ol>
+      </div>
+      <div class="blk"><div class="h">Predict, then run</div>
+        <p>Write what you think each one prints <b>before</b> you run it. Being wrong here is useful: it shows you exactly which rule to look at again.</p>
+<p><b>P1.</b> An average of averages.</p>
+<pre class="code">df = pd.DataFrame({<span class="s">"team"</span>: [<span class="s">"a"</span>, <span class="s">"b"</span>, <span class="s">"a"</span>, <span class="s">"b"</span>, <span class="s">"a"</span>], <span class="s">"pts"</span>: [<span class="s">2</span>, <span class="s">10</span>, <span class="s">4</span>, <span class="s">20</span>, <span class="s">6</span>]})
+means = df.groupby(<span class="s">"team"</span>)[<span class="s">"pts"</span>].mean()
+print(means.tolist(), means.mean(), df[<span class="s">"pts"</span>].mean())</pre>
+<div class="write"></div>
+<p><b>P2.</b> A key with gaps.</p>
+<pre class="code">df = pd.DataFrame({<span class="s">"code"</span>: [<span class="s">"X"</span>, <span class="k">None</span>, <span class="s">"X"</span>, <span class="k">None</span>], <span class="s">"amt"</span>: [<span class="s">1</span>, <span class="s">2</span>, <span class="s">3</span>, <span class="s">4</span>]})
+print(len(df.groupby(<span class="s">"code"</span>)), len(df.groupby(<span class="s">"code"</span>, dropna=<span class="k">False</span>)),
+      df.groupby(<span class="s">"code"</span>)[<span class="s">"amt"</span>].sum().sum())</pre>
+<div class="write"></div>
+<p><b>P3.</b> Three shapes.</p>
+<pre class="code">df = pd.DataFrame({<span class="s">"k"</span>: [<span class="s">"a"</span>, <span class="s">"a"</span>, <span class="s">"b"</span>], <span class="s">"v"</span>: [<span class="s">1</span>, <span class="s">2</span>, <span class="s">3</span>]})
+a = df.groupby(<span class="s">"k"</span>)[<span class="s">"v"</span>].sum()
+t = df.groupby(<span class="s">"k"</span>)[<span class="s">"v"</span>].transform(<span class="s">"sum"</span>)
+f = df.groupby(<span class="s">"k"</span>).filter(<span class="k">lambda</span> g: len(g) &gt; <span class="s">1</span>)
+print(len(a), len(t), len(f))</pre>
+<div class="write"></div>
+      </div>
+      <div class="blk"><div class="h">Lesson project: start in class, finish at home</div>
+        <ul class="tick">
+          <li>Project: <b>The Store Scorecard</b> (lesson page, six steps). In class: Step 1 (helper columns) and Step 2 (the scorecard) in <code class="inline">lesson_2_4_project</code>.</li>
+          <li>At home: Steps 3 to 6. You are done when completed revenue totals $3,624,306.27, <code class="inline">customers</code> has 3,942 rows, and both CSV files are in <code class="inline">output/</code>.</li>
+          <li>Then the lesson's Exercises 1 to 4, the Quick Quiz and your journal entry. Exercise 5 is a stretch.</li>
+          <li>Keep <code class="inline">output/customer_summary.csv</code> for Session 6.</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">My notes</div>
+        <div class="write tall"></div>
+      </div>
+      <div class="blk"><div class="h">Self-check</div>
+        <p>Six questions on Lesson 2.4. No notes on the first pass; then check with your instructor.</p>
+        <div class="q" data-sc="7"><div class="qn">Q7</div><div class="qt">What does this print?</div><pre class="code">df = pd.DataFrame({<span class="s">"store"</span>: [<span class="s">"a"</span>, <span class="s">"a"</span>, <span class="s">"b"</span>], <span class="s">"amt"</span>: [<span class="s">10</span>, <span class="s">30</span>, <span class="s">5</span>]})
+r = df.groupby(<span class="s">"store"</span>)[<span class="s">"amt"</span>].agg([<span class="s">"count"</span>, <span class="s">"mean"</span>])
+print(r.shape, r.loc[<span class="s">"a"</span>, <span class="s">"mean"</span>])</pre><div class="opts"><div class="opt">A) <code class="inline">(3, 2) 20.0</code></div><div class="opt">B) <code class="inline">(2, 2) 40.0</code></div><div class="opt">C) <code class="inline">(2,) 20.0</code></div><div class="opt">D) <code class="inline">(2, 2) 20.0</code></div></div></div>
+        <div class="q" data-sc="8" data-kind="short"><div class="qn">Q8</div><div class="qt">What does this print?</div><pre class="code">df = pd.DataFrame({<span class="s">"k"</span>: [<span class="s">"x"</span>, <span class="s">"x"</span>, <span class="s">"y"</span>], <span class="s">"v"</span>: [<span class="s">1</span>, <span class="s">3</span>, <span class="s">10</span>]})
+df[<span class="s">"share"</span>] = df[<span class="s">"v"</span>] / df.groupby(<span class="s">"k"</span>)[<span class="s">"v"</span>].transform(<span class="s">"sum"</span>)
+print(df[<span class="s">"share"</span>].tolist())</pre><div class="write"></div></div>
+        <div class="q" data-sc="9"><div class="qn">Q9</div><div class="qt"><code class="inline">orders</code> has a True/False column <code class="inline">returned</code>. Which expression gives the fraction of each channel's orders that were returned?</div><div class="opts"><div class="opt">A) <code class="inline">orders.groupby("channel")["returned"].mean()</code></div><div class="opt">B) <code class="inline">orders.groupby("channel")["returned"].count()</code></div><div class="opt">C) <code class="inline">orders.groupby("channel")["returned"].size()</code></div><div class="opt">D) <code class="inline">orders.groupby("channel")["returned"].nunique()</code></div></div></div>
+        <div class="q" data-sc="10"><div class="qn">Q10</div><div class="qt"><code class="inline">orders.groupby("promo_code").size().sum()</code> gives 2,148, but <code class="inline">orders</code> has 20,302 rows. Why?</div><div class="opts"><div class="opt">A) <code class="inline">size()</code> skips rows whose order total is missing</div><div class="opt">B) <code class="inline">groupby</code> removes duplicate rows before it counts</div><div class="opt">C) Rows whose key is missing are dropped by default; <code class="inline">dropna=False</code> keeps them as a group</div><div class="opt">D) <code class="inline">promo_code</code> is text and must be a category before grouping</div></div></div>
+        <div class="q" data-sc="11" data-kind="short"><div class="qn">Q11</div><div class="qt">What does this print?</div><pre class="code">df = pd.DataFrame({<span class="s">"g"</span>: [<span class="s">"a"</span>, <span class="s">"a"</span>, <span class="s">"b"</span>], <span class="s">"x"</span>: [<span class="s">1.0</span>, <span class="k">None</span>, <span class="s">3.0</span>]})
+print(df.groupby(<span class="s">"g"</span>)[<span class="s">"x"</span>].size().tolist(), df.groupby(<span class="s">"g"</span>)[<span class="s">"x"</span>].count().tolist())</pre><div class="write"></div></div>
+        <div class="q" data-sc="12"><div class="qn">Q12</div><div class="qt">You want the original order rows of every customer who placed 25 or more orders. Which call returns them?</div><div class="opts"><div class="opt">A) <code class="inline">orders.groupby("customer_id")["order_id"].count() &gt;= 25</code></div><div class="opt">B) <code class="inline">orders.groupby("customer_id").filter(lambda g: len(g) &gt;= 25)</code></div><div class="opt">C) <code class="inline">orders.groupby("customer_id").agg(n=("order_id", "count"))</code></div><div class="opt">D) <code class="inline">orders.groupby("customer_id")["order_id"].transform("count")</code></div></div></div>
+      </div>
+    </div>
+  </section>
+  <div class="sec"><h2>Notes</h2><span class="rule"></span></div>
+  <div class="notes-lines"></div>
+  <div class="sec"><h2>Homework Checklist</h2><span class="rule"></span></div>
+  <ul class="tick lab">
+          <li>☐ 2.3 project finished: <code class="inline">clean_orders()</code> runs, <code class="inline">validate()</code> passes, 0 wrong cells, 623 still blank</li>
+          <li>☐ 2.3 exercises 1 to 3, Quick Quiz, journal entry</li>
+          <li>☐ 2.4 project finished: revenue $3,624,306.27, 3,942 customers, both CSV files saved</li>
+          <li>☐ 2.4 exercises 1 to 4, Quick Quiz, journal entry</li>
+          <li>☐ Labs: <code class="inline">register_log</code> (and TODO 6), <code class="inline">store_days</code>; then <code class="inline">total_row_check</code>, <code class="inline">basket_sizes</code>, <code class="inline">debug_groupby.py</code></li>
+          <li>☐ Counted the distinct customer ids in <code class="inline">orders.csv</code> and the rows in <code class="inline">customers.csv</code>, and wrote down which is larger</li>
+          <li>☐ Bring to Session 6: laptop, this workbook, <code class="inline">output/customer_summary.csv</code>. Nothing new to install</li>
+        </ul>
+  <div class="sec"><h2>Glossary for Session 5</h2><span class="rule"></span></div>
+  <ul class="tick">
+          <li><b>Audit:</b> a systematic count of what is in a table (dtypes, missing values, distinct values, duplicates) before changing anything.</li>
+          <li><b>Raw file:</b> the data as received. Read-only: all fixes are code applied to a copy.</li>
+          <li><b>Duplicate:</b> a row that is an exact copy of an earlier row (<code class="inline">duplicated()</code>, <code class="inline">drop_duplicates()</code>); <code class="inline">subset=</code> compares only some columns.</li>
+          <li><b>Placeholder:</b> text that stands for 'nothing', such as <code class="inline">none</code>, <code class="inline">-</code> or <code class="inline">pending</code>. It must become a real missing value.</li>
+          <li><b>Coerce:</b> <code class="inline">errors="coerce"</code>: convert what can be converted and turn the rest into NaN or NaT instead of raising an error.</li>
+          <li><b>NaT:</b> 'not a time': the missing value of a datetime column.</li>
+          <li><b>Mapping dictionary:</b> a dictionary of wrong spelling to right spelling, applied with <code class="inline">.replace()</code>; it documents each judgment call.</li>
+          <li><b>Outlier:</b> an extreme value. A question to investigate with independent evidence, not an error by itself.</li>
+          <li><b>Assertion:</b> an <code class="inline">assert</code> line that states a rule and stops the program when the rule is broken.</li>
+          <li><b>Pipeline:</b> cleaning steps packaged as functions and chained (<code class="inline">.pipe()</code>), so the whole job can be rerun.</li>
+          <li><b>Split-apply-combine:</b> the groupby pattern: split rows into groups by a key, compute on each group, combine the answers.</li>
+          <li><b>Aggregation:</b> reducing each group to one row (<code class="inline">sum</code>, <code class="inline">mean</code>, <code class="inline">agg</code>).</li>
+          <li><b>Named aggregation:</b> <code class="inline">agg(new_name=("column", "function"))</code>: one output column per argument.</li>
+          <li><b>Transform:</b> a group calculation that returns one value per original row.</li>
+          <li><b>Filter (groupby):</b> keeping or dropping whole groups according to a test on the group.</li>
+          <li><b>MultiIndex:</b> an index with more than one level, as produced by grouping on several keys.</li>
+          <li><b>Average of averages:</b> the mean of group means; it equals the overall mean only when the groups are the same size.</li>
+        </ul>
+
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 5 · Participant Workbook · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

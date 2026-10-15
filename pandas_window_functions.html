@@ -3,757 +3,1214 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Window Functions - Python Data Science Path</title>
-    <link rel="icon" href="/favicon.png" type="image/png">
+    <meta name="description" content="Rolling, expanding and exponentially weighted windows in pandas, running totals, windows within groups, ranking, and how to avoid look-ahead leakage. Python Data Science Lesson 2.8.">
+    <meta name="author" content="Ray de la Paz">
+    <title>Window Functions - Python Data Science</title>
     <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/enhanced.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid: rendered (and re-rendered on theme change) by js/course-enhancements.js -->
     <script type="module">
         import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({ startOnLoad: true });
+        window.__mermaid = mermaid;
+        mermaid.initialize({ startOnLoad: false });
+        document.dispatchEvent(new Event('mermaid-ready'));
     </script>
-    <style>
-        :root {
-            --primary-color: #2563eb;
-            --secondary-color: #1e40af;
-            --accent-color: #10b981;
-            --bg-dark: #1e293b;
-            --bg-light: #f8fafc;
-            --text-dark: #0f172a;
-            --text-light: #64748b;
-            --border-color: #e2e8f0;
-            --code-bg: #f1f5f9;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.6;
-            color: var(--text-dark);
-            background: linear-gradient(135deg, var(--bg-light) 0%, #e0f2fe 100%);
-            min-height: 100vh;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 1rem;
-        }
-
-        header {
-            background: white;
-            border-radius: 1rem;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            border-left: 5px solid var(--accent-color);
-        }
-
-        h1 {
-            color: var(--primary-color);
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .breadcrumb {
-            color: var(--text-light);
-            font-size: 0.9rem;
-            margin-bottom: 1rem;
-        }
-
-        .breadcrumb a {
-            color: var(--primary-color);
-            text-decoration: none;
-            transition: color 0.3s ease;
-        }
-
-        .breadcrumb a:hover {
-            color: var(--secondary-color);
-            text-decoration: underline;
-        }
-
-        .intro {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 2rem;
-            border-radius: 1rem;
-            margin-bottom: 2rem;
-            animation: slideIn 0.6s ease;
-        }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .window-section {
-            background: white;
-            border-radius: 1rem;
-            padding: 2rem;
-            margin: 2rem 0;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .concept-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .concept-card {
-            background: white;
-            border-radius: 1rem;
-            padding: 1.5rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            border-top: 4px solid var(--accent-color);
-        }
-
-        .concept-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-        }
-
-        .concept-card h3 {
-            color: var(--primary-color);
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .code-example {
-            background: var(--code-bg);
-            border-radius: 0.5rem;
-            padding: 1rem;
-            margin: 1rem 0;
-            border-left: 4px solid var(--primary-color);
-            overflow-x: auto;
-        }
-
-        pre {
-            margin: 0;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 0.9rem;
-        }
-
-        code {
-            background: var(--code-bg);
-            padding: 0.2rem 0.4rem;
-            border-radius: 0.25rem;
-            font-family: 'Courier New', Courier, monospace;
-            color: var(--secondary-color);
-        }
-
-        canvas {
-            border: 2px solid var(--border-color);
-            border-radius: 0.5rem;
-            margin: 1rem 0;
-            display: block;
-            width: 100%;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.9rem;
-        }
-
-        th {
-            background: var(--primary-color);
-            color: white;
-            padding: 0.5rem;
-            text-align: left;
-        }
-
-        td {
-            padding: 0.5rem;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        tr:nth-child(even) { background: rgba(0, 0, 0, 0.02); }
-
-        .tip-box {
-            background: linear-gradient(135deg, #10b98120, #06b67420);
-            border-left: 4px solid var(--accent-color);
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin: 1rem 0;
-        }
-
-        .warning-box {
-            background: linear-gradient(135deg, #f5922020, #ef444420);
-            border-left: 4px solid #ef4444;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin: 1rem 0;
-        }
-
-        /* ---- Window-function reconstructed styles ---- */
-        .controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.75rem 1.25rem;
-            align-items: center;
-            margin: 1rem 0;
-        }
-
-        .controls label { font-weight: 600; margin-right: 0.25rem; }
-        .controls input[type="range"] { vertical-align: middle; }
-
-        .window-viz {
-            position: relative;
-            margin: 1.5rem 0;
-            padding: 1rem 0;
-        }
-
-        .data-points {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            position: relative;
-        }
-
-        .data-point {
-            width: 46px;
-            height: 46px;
-            border-radius: 0.5rem;
-            background: var(--code-bg);
-            color: var(--text-dark);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            border: 2px solid var(--border-color);
-            transition: all 0.25s ease;
-        }
-
-        .data-point.in-window {
-            background: #dbeafe;
-            border-color: var(--primary-color);
-            color: var(--secondary-color);
-        }
-
-        .data-point.current {
-            background: var(--accent-color);
-            border-color: var(--accent-color);
-            color: white;
-            transform: scale(1.08);
-        }
-
-        .window-frame {
-            position: absolute;
-            border: 3px solid var(--accent-color);
-            border-radius: 0.5rem;
-            background: rgba(16, 185, 129, 0.08);
-            pointer-events: none;
-            transition: left 0.25s ease, width 0.25s ease;
-        }
-
-        .func-buttons { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1rem 0; }
-
-        .func-btn {
-            padding: 0.45rem 0.9rem;
-            border: none;
-            border-radius: 0.5rem;
-            background: var(--code-bg);
-            color: var(--secondary-color);
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.25s ease;
-        }
-
-        .func-btn:hover { background: #dbeafe; }
-        .func-btn.active { background: var(--primary-color); color: white; }
-
-        .result-readout {
-            display: inline-flex;
-            align-items: baseline;
-            gap: 0.5rem;
-            background: var(--code-bg);
-            border-radius: 0.5rem;
-            padding: 0.75rem 1.25rem;
-            margin-top: 0.5rem;
-        }
-
-        .result-readout .result-label { color: var(--text-light); font-weight: 600; }
-        .result-readout #windowResult { font-size: 1.6rem; font-weight: 800; color: var(--primary-color); }
-
-        .expanding-visualization {
-            display: flex;
-            align-items: flex-end;
-            gap: 10px;
-            height: 180px;
-            margin: 1rem 0;
-            padding: 0 0.5rem;
-        }
-
-        .expanding-bar {
-            flex: 1;
-            background: linear-gradient(180deg, var(--primary-color), var(--secondary-color));
-            border-radius: 0.4rem 0.4rem 0 0;
-            position: relative;
-            min-height: 8px;
-            display: flex;
-            justify-content: center;
-        }
-
-        .expanding-value {
-            position: absolute;
-            top: -1.4rem;
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: var(--secondary-color);
-        }
-
-        .weight-visualization {
-            display: flex;
-            align-items: flex-end;
-            gap: 12px;
-            height: 160px;
-            margin: 1rem 0;
-        }
-
-        .weight-bar {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-end;
-            height: 100%;
-        }
-
-        .weight-indicator {
-            width: 100%;
-            background: linear-gradient(180deg, var(--accent-color), #059669);
-            border-radius: 0.4rem 0.4rem 0 0;
-            min-height: 4px;
-        }
-
-        .weight-label {
-            margin-top: 0.4rem;
-            font-size: 0.75rem;
-            color: var(--text-light);
-            font-weight: 600;
-        }
-
-        .rank-badge {
-            display: inline-block;
-            min-width: 1.7rem;
-            text-align: center;
-            padding: 0.15rem 0.4rem;
-            border-radius: 0.5rem;
-            background: var(--primary-color);
-            color: white;
-            font-weight: 700;
-            font-size: 0.85rem;
-        }
-
-        .quick-reference {
-            background: white;
-            border-radius: 1rem;
-            padding: 2rem;
-            margin: 2rem 0;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .quick-reference h2 { color: var(--primary-color); margin-bottom: 1rem; }
-        .quick-reference h3 { color: var(--secondary-color); margin: 1rem 0 0.5rem; }
-        .quick-reference ul { columns: 2; column-gap: 2rem; padding-left: 1.25rem; }
-        .quick-reference li { margin-bottom: 0.3rem; }
-
-        .navigation-buttons {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 3rem;
-            padding: 1rem;
-            background: white;
-            border-radius: 1rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .nav-button {
-            padding: 0.75rem 1.5rem;
-            background: var(--primary-color);
-            color: white;
-            text-decoration: none;
-            border-radius: 0.5rem;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .nav-button:hover { background: var(--secondary-color); }
-
-        @media (max-width: 768px) {
-            h1 { font-size: 1.8rem; }
-            .concept-grid { grid-template-columns: 1fr; }
-            .quick-reference ul { columns: 1; }
-            .navigation-buttons { flex-direction: column; gap: 1rem; }
-            .nav-button { width: 100%; justify-content: center; }
-        }
-    </style>
-    <script src="/js/course-enhancements.js" defer></script>
-    <script src="/js/clipboard.js" defer></script>
-    <link rel="stylesheet" href="styles/standard.css">
 </head>
 <body>
-    <!-- Skip to main content for accessibility -->
     <a href="#main-content" class="skip-to-main">Skip to main content</a>
 
-    <!-- Progress indicator -->
     <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
         <div class="progress-bar"></div>
     </div>
-    <div class="container" id="main-content">
-        <header>
-            <div class="breadcrumb">
-                <a href="index.html">Home</a> /
-                <a href="foundation.html">Foundation Module</a> /
-                <a href="pandas_essentials.html">Pandas Essentials</a> /
-                Window Functions
-            </div>
-            <h1>🪟 Window Functions</h1>
 
-            <!-- What You'll Learn (learning objectives) -->
-            <div class="card card-info">
-                <h2>📚 What You'll Learn</h2>
-                <p>By the end of this lesson, you will be able to:</p>
-                <ul>
-                    <li>Explain what a "window" is and how window functions differ from a plain aggregation</li>
-                    <li>Use <code>.rolling()</code> for fixed-size sliding windows (moving averages, rolling std, and more)</li>
-                    <li>Use <code>.expanding()</code> for cumulative, growing-from-the-start windows</li>
-                    <li>Use <code>.ewm()</code> for exponentially weighted windows that favor recent observations</li>
-                    <li>Apply any aggregation — mean, sum, min/max, std, custom — inside a window</li>
-                    <li>Combine windows with <code>.rank()</code>, <code>.shift()</code>, and cumulative functions for real feature engineering</li>
-                </ul>
-                <p><strong>⏱️ Estimated Time:</strong> 45–60 minutes</p>
-                <p><strong>🎯 Project:</strong> Build a moving-metrics toolkit — rolling averages and volatility, expanding running totals, EWM smoothing, and window-based rankings — on a numeric series.</p>
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">📊 Python Data Science</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">☰</button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
             </div>
-            <p>Compute statistics over a moving slice of your data instead of the whole column at once.</p>
-        </header>
-
-        <div class="intro">
-            <h2>🌟 Statistics That Slide</h2>
-            <p>A normal aggregation collapses an entire column into a single number: one mean, one sum, one max. A <strong>window function</strong> is different — it computes that statistic over a moving <em>slice</em> of the data and returns a value for every position. The result lines up with your original rows, so you can attach a 7-day moving average, a running total, or a smoothed trend right next to the raw numbers.</p>
-            <p>Windows come in three flavors: a <strong>rolling</strong> window is a fixed-size frame that slides along; an <strong>expanding</strong> window starts small and grows to include everything seen so far; and an <strong>exponentially weighted</strong> window keeps all the history but gives recent points more say. Master these three and you can describe how any measurement behaves <em>over</em> its sequence, not just on average.</p>
         </div>
+    </nav>
 
-        <div class="window-section">
-            <h2>🔎 The Three Window Types</h2>
-            <div class="mermaid">
-                graph TD
-                    A[A numeric Series] --> B[.rolling&#40;n&#41;<br/>fixed sliding frame]
-                    A --> C[.expanding&#40;&#41;<br/>grows from the start]
-                    A --> D[.ewm&#40;&#41;<br/>weighted toward recent]
-                    B --> E[same-length result<br/>aligned to each row]
-                    C --> E
-                    D --> E
-                    style A fill:#f9f,stroke:#333,stroke-width:2px
-                    style E fill:#9f9,stroke:#333,stroke-width:2px
-            </div>
-            <div class="concept-grid">
-                <div class="concept-card">
-                    <h3>🪟 .rolling()</h3>
-                    <p>A fixed-size window slides across the series, one step at a time.</p>
-                    <div class="code-example">
-                        <pre><code># 3-period moving average
-s.rolling(window=3).mean()
+    <main id="main-content">
+        <div class="container">
+            <header>
+                <h1>🪟 Lesson 2.8: Window Functions</h1>
+                <p class="lead">Compute a statistic for every row from the rows around it: moving averages that reveal a trend, running totals, rankings, and the discipline of never letting a calculation peek at the future.</p>
 
-# Rolling std (volatility)
-s.rolling(window=5).std()
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Explain how a window calculation differs from a <code>groupby</code> summary, and choose between rolling, expanding and exponentially weighted windows</li>
+                        <li>Smooth a series with <code>rolling()</code>, and control the edges and gaps with <code>min_periods</code>, time-based windows and <code>center=True</code></li>
+                        <li>Build running totals and year-to-date figures with <code>cumsum()</code> and <code>expanding()</code></li>
+                        <li>Apply windows and ranks within groups, and attach the result to the original table without misaligning it</li>
+                        <li>Recognize look-ahead leakage and write a window that uses only the past</li>
+                    </ul>
+                </div>
 
-# Require full window before output
-s.rolling(3, min_periods=3).sum()</code></pre>
+                <ul class="lesson-meta">
+                    <li><span class="meta-label">⏱️ Time</span> 90 minutes</li>
+                    <li><span class="meta-label">📋 Prerequisites</span> <a href="pandas_time_series.html">Lesson 2.7: Time Series</a> (and <code>transform</code> from <a href="pandas_groupby_operations.html">Lesson 2.4: GroupBy Operations</a>)</li>
+                    <li><span class="meta-label">🛠️ You will build</span> A sale-day detector that flags unusual store-days against a leak-free baseline and scores itself against the promotion calendar</li>
+                    <li><span class="meta-label">📂 Data</span> <code>data/daily_sales.csv</code>, <code>data/orders.csv</code></li>
+                </ul>
+            </header>
+
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#idea" class="toc-link">A Summary for Every Row</a></li>
+                        <li><a href="#rolling" class="toc-link">Rolling Windows</a></li>
+                        <li><a href="#edges" class="toc-link">Edges, Gaps and min_periods</a></li>
+                        <li><a href="#centered" class="toc-link">Trailing or Centered?</a></li>
+                        <li><a href="#expanding" class="toc-link">Expanding Windows and Running Totals</a></li>
+                        <li><a href="#ewm" class="toc-link">Exponentially Weighted Windows</a></li>
+                        <li><a href="#groups" class="toc-link">Windows Within Groups</a></li>
+                        <li><a href="#rank" class="toc-link">Ranking</a></li>
+                        <li><a href="#leakage" class="toc-link">Look-Ahead Leakage</a></li>
+                        <li><a href="#mistakes" class="toc-link">Common Mistakes</a></li>
+                        <li><a href="#project" class="toc-link">Project: The Sale-Day Detector</a></li>
+                        <li><a href="#exercises" class="toc-link">Hands-on Exercises</a></li>
+                        <li><a href="#quiz" class="toc-link">Quick Quiz</a></li>
+                        <li><a href="#faq" class="toc-link">Common Questions</a></li>
+                        <li><a href="#journal" class="toc-link">Learning Journal</a></li>
+                        <li><a href="#summary" class="toc-link">Lesson Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
+
+            <!-- ============================================================ -->
+            <section id="idea" class="lesson-section">
+                <h2>🧭 A Summary for Every Row</h2>
+
+                <p>The daily Boise chart at the end of Lesson 2.7 was a zigzag: quiet Tuesdays, busy Saturdays, and a trend buried somewhere underneath. Monthly totals smoothed it, but at a price. 731 days became 24 numbers, and you could no longer say what was happening <em>this week</em>.</p>
+
+                <p>A <strong>window function</strong> gives you both. It computes a summary (a mean, a sum, a maximum) for <em>every row</em>, using only a small set of nearby rows called the window. The table keeps its length. Each row simply gains some context.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Mental Model: Looking Out of a Train Window</h4>
+                    <p>From a train you never see the whole route at once. You see what fits in the window, and the view changes a little with every meter you travel. A <strong>rolling</strong> window is that fixed pane of glass: always the last 7 days, sliding forward one day at a time. An <strong>expanding</strong> window is a camera that started filming at the first station and never stops: everything so far. An <strong>exponentially weighted</strong> window is your memory of the trip: the last few minutes are vivid and the earlier stations fade.</p>
+                </div>
+
+                <div class="diagram">
+                    <svg viewBox="0 0 440 300" width="440" height="300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Three strips of nine days. In the rolling strip, days 5 to 7 are highlighted as a 3-day window ending on day 7. In the expanding strip, days 1 to 7 are highlighted. In the exponentially weighted strip, day 7 is strongest and earlier days fade.">
+                        <text x="20" y="20" class="svg-text" font-size="13" font-weight="bold">rolling(3): a fixed pane that slides</text>
+                        <rect x="20" y="30" width="44" height="30" class="svg-box"/><text x="42" y="50" text-anchor="middle" class="svg-muted" font-size="12">1</text>
+                        <rect x="64" y="30" width="44" height="30" class="svg-box"/><text x="86" y="50" text-anchor="middle" class="svg-muted" font-size="12">2</text>
+                        <rect x="108" y="30" width="44" height="30" class="svg-box"/><text x="130" y="50" text-anchor="middle" class="svg-muted" font-size="12">3</text>
+                        <rect x="152" y="30" width="44" height="30" class="svg-box"/><text x="174" y="50" text-anchor="middle" class="svg-muted" font-size="12">4</text>
+                        <rect x="196" y="30" width="44" height="30" class="svg-box-1"/><text x="218" y="50" text-anchor="middle" class="svg-text" font-size="12">5</text>
+                        <rect x="240" y="30" width="44" height="30" class="svg-box-1"/><text x="262" y="50" text-anchor="middle" class="svg-text" font-size="12">6</text>
+                        <rect x="284" y="30" width="44" height="30" class="svg-solid"/><text x="306" y="50" text-anchor="middle" class="svg-on-color" font-size="12" font-weight="bold">7</text>
+                        <rect x="328" y="30" width="44" height="30" class="svg-box"/><text x="350" y="50" text-anchor="middle" class="svg-muted" font-size="12">8</text>
+                        <rect x="372" y="30" width="44" height="30" class="svg-box"/><text x="394" y="50" text-anchor="middle" class="svg-muted" font-size="12">9</text>
+                        <text x="20" y="78" class="svg-muted" font-size="12">The value for day 7 uses days 5, 6 and 7.</text>
+
+                        <text x="20" y="118" class="svg-text" font-size="13" font-weight="bold">expanding(): everything so far</text>
+                        <rect x="20" y="128" width="44" height="30" class="svg-box-2"/><text x="42" y="148" text-anchor="middle" class="svg-text" font-size="12">1</text>
+                        <rect x="64" y="128" width="44" height="30" class="svg-box-2"/><text x="86" y="148" text-anchor="middle" class="svg-text" font-size="12">2</text>
+                        <rect x="108" y="128" width="44" height="30" class="svg-box-2"/><text x="130" y="148" text-anchor="middle" class="svg-text" font-size="12">3</text>
+                        <rect x="152" y="128" width="44" height="30" class="svg-box-2"/><text x="174" y="148" text-anchor="middle" class="svg-text" font-size="12">4</text>
+                        <rect x="196" y="128" width="44" height="30" class="svg-box-2"/><text x="218" y="148" text-anchor="middle" class="svg-text" font-size="12">5</text>
+                        <rect x="240" y="128" width="44" height="30" class="svg-box-2"/><text x="262" y="148" text-anchor="middle" class="svg-text" font-size="12">6</text>
+                        <rect x="284" y="128" width="44" height="30" class="svg-solid"/><text x="306" y="148" text-anchor="middle" class="svg-on-color" font-size="12" font-weight="bold">7</text>
+                        <rect x="328" y="128" width="44" height="30" class="svg-box"/><text x="350" y="148" text-anchor="middle" class="svg-muted" font-size="12">8</text>
+                        <rect x="372" y="128" width="44" height="30" class="svg-box"/><text x="394" y="148" text-anchor="middle" class="svg-muted" font-size="12">9</text>
+                        <text x="20" y="176" class="svg-muted" font-size="12">The value for day 7 uses days 1 through 7 (a running total).</text>
+
+                        <text x="20" y="216" class="svg-text" font-size="13" font-weight="bold">ewm(): recent days count more</text>
+                        <rect x="20" y="226" width="44" height="30" class="svg-box"/><text x="42" y="246" text-anchor="middle" class="svg-muted" font-size="11">2%</text>
+                        <rect x="64" y="226" width="44" height="30" class="svg-box"/><text x="86" y="246" text-anchor="middle" class="svg-muted" font-size="11">3%</text>
+                        <rect x="108" y="226" width="44" height="30" class="svg-box"/><text x="130" y="246" text-anchor="middle" class="svg-muted" font-size="11">6%</text>
+                        <rect x="152" y="226" width="44" height="30" class="svg-box-3"/><text x="174" y="246" text-anchor="middle" class="svg-text" font-size="11">13%</text>
+                        <rect x="196" y="226" width="44" height="30" class="svg-box-3"/><text x="218" y="246" text-anchor="middle" class="svg-text" font-size="11">25%</text>
+                        <rect x="240" y="226" width="44" height="30" class="svg-box-3"/><text x="262" y="246" text-anchor="middle" class="svg-text" font-size="11">50%</text>
+                        <rect x="284" y="226" width="44" height="30" class="svg-solid"/><text x="306" y="246" text-anchor="middle" class="svg-on-color" font-size="11" font-weight="bold">100%</text>
+                        <rect x="328" y="226" width="44" height="30" class="svg-box"/><text x="350" y="246" text-anchor="middle" class="svg-muted" font-size="12">8</text>
+                        <rect x="372" y="226" width="44" height="30" class="svg-box"/><text x="394" y="246" text-anchor="middle" class="svg-muted" font-size="12">9</text>
+                        <text x="20" y="274" class="svg-muted" font-size="12">Relative weight of each day in the value for day 7 (here each</text>
+                        <text x="20" y="290" class="svg-muted" font-size="12">step back counts half as much). Nothing is ever dropped entirely.</text>
+                    </svg>
+                </div>
+
+                <h3>How This Differs from GroupBy</h3>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th></th><th><code>groupby().agg()</code> / <code>resample()</code></th><th>Window function</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Rows out</td><td>One per group</td><td>One per input row</td></tr>
+                            <tr><td>Each row belongs to</td><td>Exactly one group</td><td>Many overlapping windows</td></tr>
+                            <tr><td>Typical question</td><td>"What was July's total?"</td><td>"What was the average of the last 7 days, on each day?"</td></tr>
+                            <tr><td>Closest relative</td><td></td><td><code>groupby().transform()</code>, which also returns one value per row</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="rolling" class="lesson-section">
+                <h2>🎢 Rolling Windows</h2>
+
+                <p>Rebuild the clean daily calendar from the Lesson 2.7 project: one row per day, one column per store, holiday closures as 0 and the 11 unknown store-days as <code>NaN</code>.</p>
+
+                <pre><code class="language-python">import pandas as pd
+import matplotlib.pyplot as plt
+
+pd.set_option("display.width", 150)
+pd.set_option("display.max_columns", 20)
+
+daily = pd.read_csv("data/daily_sales.csv", parse_dates=["date"])
+revenue = daily.pivot(index="date", columns="store", values="revenue")
+
+calendar = pd.date_range(revenue.index.min(), revenue.index.max(), freq="D")
+closed_days = calendar.difference(revenue.index)
+revenue = revenue.asfreq("D")
+revenue.loc[closed_days] = 0
+
+boise = revenue["Boise"]
+print(revenue.shape, int(revenue.isna().sum().sum()))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>(731, 4) 11</code></pre>
+                </div>
+
+                <p><code>rolling(7)</code> says "for each row, take this row and the 6 before it". On its own it computes nothing. Like <code>groupby</code>, it waits for you to say what to do with each window.</p>
+
+                <pre><code class="language-python">week_view = pd.DataFrame({"revenue": boise, "avg_7d": boise.rolling(7).mean()})
+print(week_view.head(9).round(2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>             revenue   avg_7d
+date
+2024-01-01   5962.00      NaN
+2024-01-02   6583.13      NaN
+2024-01-03   3866.59      NaN
+2024-01-04   7667.88      NaN
+2024-01-05   9570.46      NaN
+2024-01-06  12388.57      NaN
+2024-01-07   9361.59  7914.32
+2024-01-08   6173.31  7944.50
+2024-01-09   6636.06  7952.07</code></pre>
+                </div>
+
+                <p>The first six rows are <code>NaN</code>: a 7-day average needs 7 days, and on January 6 only six exist. From January 7 onward every row holds the mean of itself and the six days before it. Check one by hand: the January 7 value is the mean of the first seven revenues, and on January 8 the window has slid forward, dropping January 1 and taking in January 8.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Why 7?</h4>
+                    <p>Store revenue has a strong weekly cycle. A 7-day window always contains exactly one Monday, one Tuesday, and so on through one Sunday, so the weekly ups and downs cancel out and what remains is the level. A 5-day or 10-day window would contain different mixes of weekdays as it slides, and would wobble for that reason alone. <strong>Match the window to the cycle you want to remove.</strong> A 28-day window (four whole weeks) is smoother still.</p>
+                </div>
+
+                <pre><code class="language-python">smooth = pd.DataFrame({
+    "daily": boise,
+    "7-day average": boise.rolling(7).mean(),
+    "28-day average": boise.rolling(28).mean(),
+}).loc["2025"]
+
+fig, ax = plt.subplots(figsize=(9, 4), layout="constrained")
+smooth.plot(ax=ax, title="Boise revenue, 2025", ylabel="Revenue ($)", xlabel="",
+            color=["#c5cae9", "#667eea", "#e67e22"], linewidth=1.5)
+plt.show()</code></pre>
+
+                <figure>
+                    <img src="images/pandas_window_functions_rolling.png" alt="Line chart of Boise revenue for 2025. The pale daily line zigzags every week. The 7-day average is a much calmer line that still jumps at the sale weekends in late May, early September and late November. The 28-day average is the smoothest, rising from about 7,500 dollars in February to about 13,000 in midsummer, settling near 10,000 in autumn and rising again in December. The daily line touches zero on Thanksgiving and Christmas, when the store was closed." width="990" height="440" loading="lazy">
+                    <figcaption>The same year at three levels of detail. The 7-day average removes the weekly zigzag but still shows each sale weekend. The 28-day average shows only the season.</figcaption>
+                </figure>
+
+                <p>Because the 2025 slice was taken <em>after</em> the rolling calculation, the averages in January already have a full window behind them (December 2024). Compute on the whole series, then select what to show.</p>
+
+                <h3>More Than Means</h3>
+
+                <p>Any aggregation can follow <code>rolling()</code>. A rolling standard deviation measures how jumpy recent days have been. A rolling sum gives "sales in the last 7 days". A rolling maximum gives "best day in the last month".</p>
+
+                <pre><code class="language-python">stats = boise.rolling(28).agg(["mean", "std", "min", "max"])
+stats["sum_7d"] = boise.rolling(7).sum()
+print(stats.loc["2025-07-01":"2025-07-04"].round(0))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>               mean     std     min      max   sum_7d
+date
+2025-07-01  11874.0  3554.0  8340.0  23021.0  93593.0
+2025-07-02  11918.0  3521.0  8340.0  23021.0  93653.0
+2025-07-03  11953.0  3498.0  8340.0  23021.0  92897.0
+2025-07-04  11965.0  3498.0  8340.0  23021.0  92167.0</code></pre>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="edges" class="lesson-section">
+                <h2>🧩 Edges, Gaps and min_periods</h2>
+
+                <p>By default a window must be <strong>completely full of real values</strong> or the result is <code>NaN</code>. That rule produced the six empty rows at the start. It also means a single missing day knocks out every window that contains it. Boise has one blank revenue value, on December 3, 2024.</p>
+
+                <pre><code class="language-python">gap_view = pd.DataFrame({
+    "revenue": boise,
+    "strict": boise.rolling(7).mean(),
+    "min_6": boise.rolling(7, min_periods=6).mean(),
+})
+print(gap_view.loc["2024-12-01":"2024-12-10"].round(0))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>            revenue   strict    min_6
+date
+2024-12-01  25160.0  12895.0  12895.0
+2024-12-02  16367.0  14262.0  14262.0
+2024-12-03      NaN      NaN  15528.0
+2024-12-04   8558.0      NaN  15528.0
+2024-12-05  11482.0      NaN  17442.0
+2024-12-06  16251.0      NaN  17503.0
+2024-12-07  18336.0      NaN  16026.0
+2024-12-08  13736.0      NaN  14122.0
+2024-12-09  10025.0      NaN  13065.0
+2024-12-10  10822.0  12744.0  12744.0</code></pre>
+                </div>
+
+                <p>One missing day cost the strict version seven days of averages, from December 3 to December 9. <code>min_periods=6</code> says "give me an answer if at least 6 of the 7 values are present". The mean is then taken over the values that exist.</p>
+
+                <div class="card card-warning">
+                    <h4>⚠️ min_periods Is a Trade</h4>
+                    <p>A lower <code>min_periods</code> fills holes, and it also lets averages through that are built on less. With <code>min_periods=1</code>, the "7-day average" on the first day of the data is one day's revenue. And a 6-day mean no longer has every weekday in it: if the missing day is a Saturday, the average dips for a week for no real reason. Choose a threshold you can defend, such as 6 of 7 or 21 of 28, not 1.</p>
+                </div>
+
+                <h3>Windows Measured in Time</h3>
+
+                <p>On a date index you can give the window as a length of time instead of a number of rows. <code>"7D"</code> means "all rows within the last 7 days", however many that is.</p>
+
+                <pre><code class="language-python">print(boise.rolling("7D").mean().head(3).round(2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>date
+2024-01-01    5962.00
+2024-01-02    6272.56
+2024-01-03    5470.57
+Freq: D, Name: Boise, dtype: float64</code></pre>
+                </div>
+
+                <p>Two differences from <code>rolling(7)</code>. A time window has <code>min_periods=1</code> unless you say otherwise, so there are no <code>NaN</code> rows at the start (and the first few averages are built on very little). And it counts <em>days</em>, not rows, so it stays correct on data with missing rows, where <code>rolling(7)</code> would silently reach back more than a week. On a complete calendar like this one the two agree once the window is full. You did the work of completing the calendar in Lesson 2.7 precisely so that "7 rows" and "7 days" mean the same thing.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="centered" class="lesson-section">
+                <h2>🎯 Trailing or Centered?</h2>
+
+                <p>So far every window has been <strong>trailing</strong>: today and the days before it. A trailing average always lags a little behind the data, because it is really a summary of a period whose middle was three days ago. <code>center=True</code> puts the row in the <em>middle</em> of its window instead: three days before, the day, three days after.</p>
+
+                <pre><code class="language-python">both = pd.DataFrame({
+    "revenue": boise,
+    "trailing": boise.rolling(7).mean(),
+    "centered": boise.rolling(7, center=True).mean(),
+})
+print(both.loc["2025-05-21":"2025-05-27"].round(0))
+print(both.tail(4).round(0))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>            revenue  trailing  centered
+date
+2025-05-21   8026.0   10324.0   12425.0
+2025-05-22   8755.0   10408.0   12628.0
+2025-05-23  19002.0   11292.0   13973.0
+2025-05-24  24213.0   12425.0   13791.0
+2025-05-25  14034.0   12628.0   13356.0
+2025-05-26  15109.0   13973.0   13501.0
+2025-05-27   7395.0   13791.0   12248.0
+            revenue  trailing  centered
+date
+2025-12-28  15555.0   10855.0   10253.0
+2025-12-29   8051.0   10666.0       NaN
+2025-12-30   7083.0   10221.0       NaN
+2025-12-31  10680.0   10253.0       NaN</code></pre>
+                </div>
+
+                <p>Memorial Day weekend, with its sale, starts on Friday, May 23. The centered average is already climbing on May 21, <em>before the sale has happened</em>, because its window reaches three days into the future. It lines up beautifully with the spike on a chart. It also ends three days early: the last three rows have no future to look at, so they are <code>NaN</code>.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th></th><th>Trailing (default)</th><th>Centered</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Uses</td><td>Today and the past</td><td>Past, today and <strong>future</strong></td></tr>
+                            <tr><td>Position on a chart</td><td>Lags behind turning points</td><td>Lines up with them</td></tr>
+                            <tr><td>Available today?</td><td>Yes</td><td>No, not until the future days arrive</td></tr>
+                            <tr><td>Use for</td><td>Monitoring, alerts, anything used to predict</td><td>Describing history after the fact</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>Keep the phrase "reaches into the future" in mind. It comes back, with consequences, in <a href="#leakage">Look-Ahead Leakage</a>.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="expanding" class="lesson-section">
+                <h2>📈 Expanding Windows and Running Totals</h2>
+
+                <p>An expanding window starts at the first row and only grows. Its most familiar form is the running total, which has its own shortcut, <code>cumsum()</code>.</p>
+
+                <pre><code class="language-python">running = pd.DataFrame({
+    "revenue": boise,
+    "total_so_far": boise.cumsum(),
+    "avg_so_far": boise.expanding().mean(),
+    "best_so_far": boise.cummax(),
+})
+print(running.head(4).round(2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>            revenue  total_so_far  avg_so_far  best_so_far
+date
+2024-01-01  5962.00       5962.00     5962.00      5962.00
+2024-01-02  6583.13      12545.13     6272.56      6583.13
+2024-01-03  3866.59      16411.72     5470.57      6583.13
+2024-01-04  7667.88      24079.60     6019.90      7667.88</code></pre>
+                </div>
+
+                <p><code>cumsum()</code>, <code>cummax()</code>, <code>cummin()</code> and <code>cumprod()</code> are shortcuts for the common cases. <code>expanding()</code> is the general form and accepts any aggregation, such as <code>.mean()</code> or <code>.std()</code>. A neat use of <code>cummax()</code>: a day is a record high exactly when it equals the best so far.</p>
+
+                <pre><code class="language-python">records = boise[boise == boise.cummax()]
+print(len(records))
+print(records.tail(3))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>12
+date
+2024-05-24    19117.36
+2024-05-25    22093.08
+2024-08-31    27677.10
+Name: Boise, dtype: float64</code></pre>
+                </div>
+
+                <p>Boise set a new record 12 times, the last of them on the Saturday of Labor Day weekend 2024, and has not beaten it since.</p>
+
+                <h3>Year to Date</h3>
+
+                <p>A running total over two years is rarely what a business wants. "Year to date" restarts every January 1. That is a cumulative sum <em>within each year</em>, and you already know how to say "within each": <code>groupby</code>.</p>
+
+                <pre><code class="language-python">ytd = revenue.groupby(revenue.index.year).cumsum()
+print(ytd.loc["2024-12-30":"2025-01-02"].round(0))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>store       Asheville       Bend      Boise  Flagstaff
+date
+2024-12-30  2119272.0  2471460.0  3511195.0  2264827.0
+2024-12-31  2123278.0  2476118.0  3518292.0  2270180.0
+2025-01-01     5867.0     4477.0     8442.0     4442.0
+2025-01-02     9466.0    11215.0    17411.0     9270.0</code></pre>
+                </div>
+
+                <p>The totals climb through December 31 and start again from one day's revenue on January 1. <code>groupby(...).cumsum()</code> returns one value per row, in the original order, so the result has the same shape as <code>revenue</code>.</p>
+
+                <div class="card card-info">
+                    <h4>💡 What cumsum Does with a Gap</h4>
+                    <p>A cumulative sum skips a <code>NaN</code> and carries on: the row with the missing value shows <code>NaN</code>, and the next row continues the total as if that day had contributed nothing. The running total is therefore a slight undercount after any gap. That is the same silent undercount you met with monthly sums in Lesson 2.7, and the same footnote applies.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="ewm" class="lesson-section">
+                <h2>⚖️ Exponentially Weighted Windows</h2>
+
+                <p>A rolling mean treats the 7 days in its window as equals, and then forgets a day completely the moment it slides out. An <strong>exponentially weighted</strong> mean never forgets completely. It counts today most, yesterday a bit less, the day before less again, with the weights shrinking by a constant factor at each step back.</p>
+
+                <pre><code class="language-python">compare = pd.DataFrame({
+    "revenue": boise,
+    "rolling_7": boise.rolling(7).mean(),
+    "ewm_7": boise.ewm(span=7).mean(),
+})
+print(compare.loc["2025-05-22":"2025-05-30"].round(0))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>            revenue  rolling_7    ewm_7
+date
+2025-05-22   8755.0    10408.0   9279.0
+2025-05-23  19002.0    11292.0  11709.0
+2025-05-24  24213.0    12425.0  14835.0
+2025-05-25  14034.0    12628.0  14635.0
+2025-05-26  15109.0    13973.0  14753.0
+2025-05-27   7395.0    13791.0  12914.0
+2025-05-28   4983.0    13356.0  10931.0
+2025-05-29   9771.0    13501.0  10641.0
+2025-05-30  10229.0    12248.0  10538.0</code></pre>
+                </div>
+
+                <p><code>span=7</code> makes the weighted mean about as smooth as a 7-day rolling mean. Watch how the two behave around the sale. When Friday's big number arrives, the weighted mean jumps further, because the newest day carries the most weight (with <code>span=7</code>, a quarter of the total). After the sale, it comes back down sooner for the same reason. The rolling mean stays high until the sale days slide out of its window, then drops.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Window</th><th>Remembers</th><th>Good for</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>rolling(n)</code></td><td>The last <em>n</em> rows, equally</td><td>Removing a known cycle (7 days); easy to explain to anyone</td></tr>
+                            <tr><td><code>expanding()</code></td><td>Everything, equally</td><td>Running totals, year to date, records, "average so far"</td></tr>
+                            <tr><td><code>ewm(span=n)</code></td><td>Everything, recent rows more</td><td>Tracking a level that drifts; reacting quickly to change</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>A weighted mean does not have the neat "one of each weekday" property, so on data with a weekly cycle it keeps a little of the zigzag. For store revenue, the 7-day rolling mean is the cleaner smoother. Weighted means earn their place on series without a strong cycle, such as a product's price or a sensor reading.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="groups" class="lesson-section">
+                <h2>👥 Windows Within Groups</h2>
+
+                <p>The wide table made per-store windows free: each column is one store, and <code>revenue.rolling(7).mean()</code> handles them separately. Much real data stays long, though, with several groups stacked in one column. Then a plain rolling window is a trap.</p>
+
+                <pre><code class="language-python">print(daily[["date", "store", "revenue"]].head(8))
+print(daily["revenue"].rolling(4).mean().head(8).round(2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>        date      store  revenue
+0 2024-01-01  Asheville  5017.07
+1 2024-01-01       Bend  4132.92
+2 2024-01-01      Boise  5962.00
+3 2024-01-01  Flagstaff  3061.66
+4 2024-01-02  Asheville  3605.81
+5 2024-01-02       Bend  3675.57
+6 2024-01-02      Boise  6583.13
+7 2024-01-02  Flagstaff  3575.24
+0        NaN
+1        NaN
+2        NaN
+3    4543.41
+4    4190.60
+5    4076.26
+6    4231.54
+7    4359.94
+Name: revenue, dtype: float64</code></pre>
+                </div>
+
+                <p>The file is sorted by date and then store, so consecutive rows are <em>different stores on the same day</em>. That "4-row rolling mean" is the average of Asheville, Bend, Boise and Flagstaff, then of Bend, Boise, Flagstaff and the next day's Asheville. It is a number, it has no error, and it means nothing.</p>
+
+                <p>The fix has two parts: sort so that each store's days are in order, and compute the window inside each store. <code>groupby</code> with <code>transform</code>, which you met in Lesson 2.4, does exactly this and hands back a result lined up with the original rows.</p>
+
+                <pre><code class="language-python">long = daily.sort_values(["store", "date"]).copy()
+long["avg_7d"] = long.groupby("store")["revenue"].transform(lambda s: s.rolling(7).mean())
+
+print(long.loc[long["store"] == "Bend", ["date", "store", "revenue", "avg_7d"]].head(8).round({"avg_7d": 2}))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>         date store  revenue   avg_7d
+1  2024-01-01  Bend  4132.92      NaN
+5  2024-01-02  Bend  3675.57      NaN
+9  2024-01-03  Bend  6275.05      NaN
+13 2024-01-04  Bend  5487.11      NaN
+17 2024-01-05  Bend  4755.15      NaN
+21 2024-01-06  Bend  7083.36      NaN
+25 2024-01-07  Bend  6719.33  5446.93
+29 2024-01-08  Bend  5111.35  5586.70</code></pre>
+                </div>
+
+                <p>Bend's first six days are <code>NaN</code>: its window started fresh and did not borrow the end of Asheville's data. The same pattern works for any per-group window: <code>s.shift(1)</code> for "the previous row of this group", <code>s.diff()</code> for the change, <code>s.expanding().mean()</code> for the group's average so far. Common cumulative operations are built in, without a lambda:</p>
+
+                <pre><code class="language-python">long["day_number"] = long.groupby("store").cumcount() + 1          # 1, 2, 3 ... within each store
+long["revenue_to_date"] = long.groupby("store")["revenue"].cumsum()
+print(long.loc[long["store"] == "Flagstaff", ["date", "revenue", "day_number", "revenue_to_date"]].head(3))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>         date  revenue  day_number  revenue_to_date
+3  2024-01-01  3061.66           1          3061.66
+7  2024-01-02  3575.24           2          6636.90
+11 2024-01-03  3974.93           3         10611.83</code></pre>
+                </div>
+
+                <div class="card card-success">
+                    <h4>✅ Sort, Group, Window</h4>
+                    <p>Window functions trust the row order completely. Before any window on a long table, ask two questions: "Is it sorted by time within each group?" and "Did I group?" If you remember only one thing from this section, remember that the order of the rows is part of the calculation.</p>
+                </div>
+
+                <p>Keep in mind that this long table still has the 21 missing store-day rows, so here 7 rows is occasionally more than 7 days. When that matters, compute on the completed wide calendar, as the project does.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="rank" class="lesson-section">
+                <h2>🏅 Ranking</h2>
+
+                <p>A rank replaces each value with its position in the sorted order. It answers "where does this row stand?" without your having to sort the table.</p>
+
+                <pre><code class="language-python">july4 = daily.loc[daily["date"] == "2025-07-04", ["store", "revenue"]].copy()
+july4["rank"] = july4["revenue"].rank(ascending=False)
+print(july4)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>          store   revenue  rank
+2187  Asheville   6851.90   4.0
+2188       Bend   9000.13   3.0
+2189      Boise  11957.68   1.0
+2190  Flagstaff   9937.66   2.0</code></pre>
+                </div>
+
+                <p>By default rank 1 goes to the <em>smallest</em> value. <code>ascending=False</code> gives rank 1 to the largest, which is what "first place" usually means. Ties need a rule, and <code>method=</code> chooses it.</p>
+
+                <pre><code class="language-python">scores = pd.Series([50, 80, 80, 95, 60])
+print(pd.DataFrame({
+    "score": scores,
+    "average": scores.rank(),
+    "min": scores.rank(method="min"),
+    "dense": scores.rank(method="dense"),
+    "first": scores.rank(method="first"),
+    "pct": scores.rank(pct=True),
+}))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>   score  average  min  dense  first  pct
+0     50      1.0  1.0    1.0    1.0  0.2
+1     80      3.5  3.0    3.0    3.0  0.7
+2     80      3.5  3.0    3.0    4.0  0.7
+3     95      5.0  5.0    4.0    5.0  1.0
+4     60      2.0  2.0    2.0    2.0  0.4</code></pre>
+                </div>
+
+                <ul>
+                    <li><code>"average"</code> (the default) gives tied values the mean of the positions they occupy: 3.5 and 3.5.</li>
+                    <li><code>"min"</code> is sports ranking: both get 3, and the next value gets 5.</li>
+                    <li><code>"dense"</code> also gives both 3, and leaves no gap: the next value gets 4.</li>
+                    <li><code>"first"</code> breaks ties by order of appearance, so every rank is unique.</li>
+                    <li><code>pct=True</code> rescales ranks to between 0 and 1: a percentile.</li>
+                </ul>
+
+                <h3>Ranking Within Groups</h3>
+
+                <p>Ranks become really useful inside a group. Rank the four stores against each other on every day, then count how often each store came first, second, third and fourth.</p>
+
+                <pre><code class="language-python">daily["rank_in_day"] = daily.groupby("date")["revenue"].rank(ascending=False, method="min")
+print(pd.crosstab(daily["store"], daily["rank_in_day"]))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>rank_in_day  1.0  2.0  3.0  4.0
+store
+Asheville     11   90  172  453
+Bend          37  315  272   97
+Boise        646   56   22    2
+Flagstaff     33  266  261  164</code></pre>
+                </div>
+
+                <p>Boise won 646 of 726 days. Asheville came last on 453. (The six days with missing revenue get no rank, so they drop out of the count.) Grouping the other way ranks each day within its own store, and <code>pct=True</code> turns that into "how good was this day, for this store?"</p>
+
+                <pre><code class="language-python">daily["pct_in_store"] = daily.groupby("store")["revenue"].rank(pct=True).round(3)
+print(daily.loc[daily["date"] == "2025-07-04", ["store", "revenue", "rank_in_day", "pct_in_store"]])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>          store   revenue  rank_in_day  pct_in_store
+2187  Asheville   6851.90          4.0         0.771
+2188       Bend   9000.13          3.0         0.813
+2189      Boise  11957.68          1.0         0.755
+2190  Flagstaff   9937.66          2.0         0.884</code></pre>
+                </div>
+
+                <p>Asheville was last of the four on July 4, 2025, yet for Asheville it was a good day, better than about three quarters of its own days. Rank within the right group and the same number tells a fairer story. A filter on a group rank also gives "top N per group" in one line: <code>daily[daily["rank_in_day"] &lt;= 2]</code> keeps the two best stores of every day.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="leakage" class="lesson-section">
+                <h2>🚨 Look-Ahead Leakage</h2>
+
+                <p>Here is the most important idea in this lesson, and one of the most important in the course. Suppose you want to predict a day's revenue, or decide whether a day was unusual. A natural baseline is "the recent average". But which rows may that average use?</p>
+
+                <pre><code class="language-python">leak = pd.DataFrame({
+    "revenue": boise,
+    "avg7_with_today": boise.rolling(7).mean(),
+    "avg7_before_today": boise.shift(1).rolling(7).mean(),
+})
+print(leak.loc["2025-05-21":"2025-05-25"].round(0))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>            revenue  avg7_with_today  avg7_before_today
+date
+2025-05-21   8026.0          10324.0            10192.0
+2025-05-22   8755.0          10408.0            10324.0
+2025-05-23  19002.0          11292.0            10408.0
+2025-05-24  24213.0          12425.0            11292.0
+2025-05-25  14034.0          12628.0            12425.0</code></pre>
+                </div>
+
+                <p>Look at Friday, May 23, the first day of the sale. <code>avg7_with_today</code> has already risen, because <em>the day you are trying to judge is inside its own baseline</em>. <code>avg7_before_today</code> shifts the series down one row first, so the window for May 23 covers May 16 to May 22: only what was known when the doors opened.</p>
+
+                <div class="card card-danger">
+                    <h4>🛑 Leakage</h4>
+                    <p><strong>Look-ahead leakage</strong> is using information in a calculation that would not have been available at the moment the calculation is supposed to describe. A feature that leaks makes a forecast look accurate in testing and then fail in real use, because in real use the future is not in the table yet. It never raises an error. The only defense is to ask, for every window: "On that day, could I have known every number in it?"</p>
+                </div>
+
+                <p>How much does it flatter the results? Pretend each candidate below is a forecast of the day's revenue, and measure the average miss in dollars.</p>
+
+                <pre><code class="language-python">candidates = {
+    "3-day avg, centered (leaks)": boise.rolling(3, center=True).mean(),
+    "3-day avg, with today (leaks)": boise.rolling(3).mean(),
+    "3-day avg, before today": boise.shift(1).rolling(3).mean(),
+    "7-day avg, before today": boise.shift(1).rolling(7).mean(),
+    "same weekday last week": boise.shift(7),
+}
+for name, guess in candidates.items():
+    print(f"{name:&lt;30} average miss ${(boise - guess).abs().mean():&gt;6,.0f}")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>3-day avg, centered (leaks)    average miss $ 1,417
+3-day avg, with today (leaks)  average miss $ 2,012
+3-day avg, before today        average miss $ 3,132
+7-day avg, before today        average miss $ 2,504
+same weekday last week         average miss $ 2,158</code></pre>
+                </div>
+
+                <p>The two leaking versions "predict" far better than the honest 3-day average, for the simple reason that the answer is one third of each of them. If you had tested these as forecasts without thinking, you would have picked the centered average and it would have been useless, since tomorrow's revenue is not available today. Among the honest candidates, the simplest idea of all wins: the same weekday last week. Knowing your data's weekly rhythm beat a fancier calculation.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Three Ways to Keep a Window in the Past</h4>
+                    <ul>
+                        <li><code>s.shift(1).rolling(7).mean()</code>: shift first, then roll. The clearest to read.</li>
+                        <li><code>s.rolling(7, closed="left").mean()</code>: the same result, by telling the window to leave out its newest row.</li>
+                        <li>Never <code>center=True</code>, and never a statistic of the whole column (such as the overall mean), in anything used to predict or to flag.</li>
+                    </ul>
+                </div>
+
+                <div class="mermaid">
+graph TD
+    A["A window for day T"] --> B{"Used to predict or flag day T?"}
+    B -->|"no, describing history"| C["Centered or trailing is fine"]
+    B -->|"yes"| D{"Does it include day T or later?"}
+    D -->|"yes"| E["Leak: shift first"]
+    D -->|"no"| F["Safe"]
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="mistakes" class="lesson-section">
+                <h2>⚠️ Common Mistakes</h2>
+
+                <p>Two of these announce themselves with an error. The other three are silent, which is why they get more space in this lesson than the syntax did.</p>
+
+                <h3>1. A Time Window on an Index That Is Not Dates</h3>
+                <pre data-raises="ValueError"><code class="language-python">daily["revenue"].rolling("7D").mean()</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>ValueError: window must be an integer 0 or greater</code></pre>
+                </div>
+                <p><strong>What it means:</strong> <code>"7D"</code> only makes sense when the index is dates. <code>daily</code> has a plain 0, 1, 2 index, so pandas expected a whole number of rows and got text. <strong>Fix:</strong> set a date index first, or pass <code>on="date"</code> to <code>rolling</code> on a DataFrame. (On this table you would also need to group by store.)</p>
+
+                <h3>2. Assigning a Grouped Rolling Result Straight Back</h3>
+                <pre data-raises="TypeError"><code class="language-python">grouped_roll = long.groupby("store")["revenue"].rolling(7).mean()
+print(grouped_roll.index.names)
+long["avg_7d_again"] = grouped_roll</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>['store', None]
+TypeError: incompatible index of inserted column with frame index</code></pre>
+                </div>
+                <p><strong>What it means:</strong> <code>groupby(...).rolling(...)</code> returns its result with a two-level index (the store, then the original row label), which does not match the table's single-level index. <strong>Fix:</strong> use the <code>transform</code> form from this lesson, which keeps the original index, or drop the extra level: <code>grouped_roll.reset_index(level=0, drop=True)</code>.</p>
+
+                <h3>3. Rolling Across Groups</h3>
+                <p>You saw <code>daily["revenue"].rolling(4).mean()</code> average four different stores together. No error. <strong>Fix:</strong> sort, then group, then window. A quick test for any per-group window: the first rows of <em>each</em> group should be <code>NaN</code>. If only the very top of the table is, the window is running across groups.</p>
+
+                <h3>4. One NaN Erasing a Week</h3>
+                <p>A single missing value blanks every window that contains it, as on December 3 to 9. <strong>Fix:</strong> a deliberate <code>min_periods</code>, slightly below the window size. Do not reach for <code>min_periods=1</code> just to make the <code>NaN</code>s go away.</p>
+
+                <h3>5. A Baseline That Contains the Thing It Judges</h3>
+                <p><code>boise.rolling(7).mean()</code> includes today. Comparing today with it understates every spike and every drop. A centered window is worse. <strong>Fix:</strong> <code>shift(1)</code> before the window whenever the result is used to predict, flag or score the current row.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="project" class="lesson-section">
+                <h2>🛠️ Project: The Sale-Day Detector</h2>
+
+                <p>Pinecrest ran six sale weekends in two years, 24 days, at all four stores: 96 promoted store-days. Imagine nobody had told you when. Could you find them from revenue alone? You will build a detector that flags any store-day far above its recent normal, then score it against the real promotion calendar. It will do poorly at first, and the reason why is the point of the project. Work in a new notebook called <code>lesson_2_8_project</code>. Allow about 35 minutes.</p>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 1: Clean calendar and answer key <span class="step-time">(5 min)</span></h3>
+                    <p>Build the daily revenue table as before, and a matching table of the promotion flags to check against later. <code>promo_day</code> has no value on the days with no row, so fill those with 0.</p>
+                    <pre><code class="language-python">import pandas as pd
+
+daily = pd.read_csv("data/daily_sales.csv", parse_dates=["date"])
+revenue = daily.pivot(index="date", columns="store", values="revenue")
+
+calendar = pd.date_range(revenue.index.min(), revenue.index.max(), freq="D")
+closed_days = calendar.difference(revenue.index)
+revenue = revenue.asfreq("D")
+revenue.loc[closed_days] = 0
+
+promo = daily.pivot(index="date", columns="store", values="promo_day").asfreq("D").fillna(0).astype(bool)
+print(revenue.shape, promo.shape)
+print(promo.sum())</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>(731, 4) (731, 4)
+store
+Asheville    24
+Bend         24
+Boise        24
+Flagstaff    24
+dtype: int64</code></pre>
                     </div>
                 </div>
-                <div class="concept-card">
-                    <h3>📈 .expanding()</h3>
-                    <p>The window starts at the first row and grows to include every prior value.</p>
-                    <div class="code-example">
-                        <pre><code># Running (cumulative) mean
-s.expanding().mean()
 
-# Running maximum so far
-s.expanding().max()
+                <div class="card card-info">
+                    <h3>🛠️ Step 2: A first baseline <span class="step-time">(5 min)</span></h3>
+                    <p>"Normal" for a store-day is the average of the 28 days <em>before</em> it. Shift first so the day is not in its own baseline, and require at least 21 real values. Flag any day that reaches 1.5 times its baseline.</p>
+                    <pre><code class="language-python">baseline = revenue.shift(1).rolling(28, min_periods=21).mean()
+lift = revenue / baseline
+flags = lift &gt;= 1.5
 
-# Same idea as cumsum for sums
-s.expanding().sum()</code></pre>
+print(lift.loc["2025-05-22":"2025-05-24"].round(2))
+print(flags.sum())
+print(int(flags.sum().sum()), "store-days flagged")</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>store       Asheville  Bend  Boise  Flagstaff
+date
+2025-05-22       0.80  0.84   0.88       0.96
+2025-05-23       1.62  1.48   1.92       1.73
+2025-05-24       2.93  2.19   2.34       2.51
+store
+Asheville    66
+Bend         62
+Boise        66
+Flagstaff    66
+dtype: int64
+260 store-days flagged</code></pre>
+                    </div>
+                    <p>The sale days light up as expected. But 260 flags for 96 promoted store-days is far too many.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 3: Score it <span class="step-time">(5 min)</span></h3>
+                    <p>Write a small function that compares any table of flags with the answer key. Two numbers matter: of the days flagged, how many were really promotions (are the alarms trustworthy?), and of the real promotions, how many were caught?</p>
+                    <pre><code class="language-python">def score(flags, promo):
+    hits = int((flags &amp; promo).sum().sum())
+    flagged = int(flags.sum().sum())
+    actual = int(promo.sum().sum())
+    print(f"flagged {flagged}, of which real promotions {hits} ({hits / flagged:.0%})")
+    print(f"promotions caught {hits} of {actual} ({hits / actual:.0%})")
+
+score(flags, promo)</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>flagged 260, of which real promotions 66 (25%)
+promotions caught 66 of 96 (69%)</code></pre>
+                    </div>
+                    <p>Three alarms in four are false. Before changing anything, look at <em>which</em> days are being flagged wrongly. <code>stack()</code> turns each True/False grid into a long Series, as in Lesson 2.6.</p>
+                    <pre><code class="language-python">false_alarms = (flags &amp; ~promo).stack()
+false_alarms = false_alarms[false_alarms].reset_index()
+print(false_alarms["date"].dt.day_name().value_counts())</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>date
+Saturday    151
+Sunday       38
+Friday        4
+Thursday      1
+Name: count, dtype: int64</code></pre>
+                    </div>
+                    <p>Almost all of them are Saturdays and Sundays. The detector has discovered the weekend. A 28-day average blends quiet Tuesdays with busy Saturdays, so every ordinary Saturday looks "far above normal". The baseline is comparing unlike things.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 4: Compare like with like <span class="step-time">(10 min)</span></h3>
+                    <p>A fair baseline for a Saturday is recent <em>Saturdays</em>. Group the rows by day of the week, and inside each group take the mean of the previous 4 values: a per-group window with a shift, exactly the pattern from <a href="#groups">Windows Within Groups</a>. Allow 3 of 4 so a single gap does not blank a month.</p>
+                    <pre><code class="language-python">weekday_baseline = revenue.groupby(revenue.index.dayofweek).transform(
+    lambda s: s.shift(1).rolling(4, min_periods=3).mean())
+
+check = pd.DataFrame({"revenue": revenue["Boise"], "baseline": weekday_baseline["Boise"]})
+print(check.loc[["2025-05-03", "2025-05-10", "2025-05-17", "2025-05-24", "2025-05-31"]].round(0))
+
+lift = revenue / weekday_baseline
+flags = lift &gt;= 1.5
+score(flags, promo)</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>            revenue  baseline
+date
+2025-05-03  14184.0   12627.0
+2025-05-10  16671.0   12371.0
+2025-05-17  16277.0   13334.0
+2025-05-24  24213.0   15257.0
+2025-05-31  15287.0   17836.0
+flagged 142, of which real promotions 72 (51%)
+promotions caught 72 of 96 (75%)</code></pre>
+                    </div>
+                    <p>Those five dates are consecutive Saturdays. The baseline on May 24 is the mean of the four Saturdays before it and does not include May 24 itself. The flags dropped by almost half, more real promotions were caught, and now about half of all alarms are genuine instead of a quarter. One better idea about what "normal" means did more than any amount of threshold tuning would have.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 5: Report and save <span class="step-time">(10 min)</span></h3>
+                    <p>Summarize by store, list the strongest days, and save the flags in tidy form.</p>
+                    <pre><code class="language-python">report = pd.DataFrame({
+    "flagged": flags.sum(),
+    "real_promos_caught": (flags &amp; promo).sum(),
+    "promos_missed": (~flags &amp; promo).sum(),
+})
+print(report)
+
+result = pd.DataFrame({
+    "revenue": revenue.stack(),
+    "baseline": weekday_baseline.stack().round(2),
+    "lift": lift.stack().round(2),
+    "flag": flags.stack(),
+    "promo_day": promo.stack(),
+}).reset_index()
+result.to_csv("sale_day_flags.csv", index=False)
+
+print(result.shape)
+print(result.sort_values("lift", ascending=False).head(5))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>           flagged  real_promos_caught  promos_missed
+store
+Asheville       44                  19              5
+Bend            34                  17              7
+Boise           29                  18              6
+Flagstaff       35                  18              6
+(2924, 7)
+           date      store   revenue  baseline  lift  flag  promo_day
+2871 2025-12-18  Flagstaff  12306.29   4169.22  2.95  True      False
+1345 2024-12-02       Bend  12351.47   4877.24  2.53  True       True
+1342 2024-12-01      Boise  25160.28  10145.89  2.48  True       True
+1333 2024-11-29       Bend  13840.72   5901.10  2.35  True       True
+1346 2024-12-02      Boise  16366.74   6998.18  2.34  True       True</code></pre>
+                    </div>
+                    <p>Look at the top row of that list. The highest lift in two years is a Flagstaff Thursday in December that was <em>not</em> a promotion, measured against a baseline of only $4,169. A baseline that low for a December Thursday should make you suspicious, and the bonus challenge asks you to work out what went wrong. Write two or three sentences under your table: what the detector does, how well it does it, and one thing it gets wrong. The misses and the remaining false alarms are not failures. They are the next questions, and the bonus challenge picks one of them up.</p>
+                </div>
+
+                <div class="card card-success">
+                    <h3>✅ Project Completion Checklist</h3>
+                    <ul class="checklist">
+                        <li><code>revenue</code> and <code>promo</code> are both 731 × 4, and <code>promo</code> has 24 True days per store</li>
+                        <li>Both baselines use <code>shift(1)</code> before the window, so no day is part of its own baseline</li>
+                        <li>Your first detector flagged 260 store-days, and you found that most false alarms were weekends</li>
+                        <li>Your weekday baseline for a Saturday is the mean of the previous Saturdays only</li>
+                        <li>The second detector's score improved on both measures, and you can state both in a sentence</li>
+                        <li><code>sale_day_flags.csv</code> has 2,924 rows (731 days × 4 stores) and 7 columns</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="exercises" class="lesson-section">
+                <h2>🏋️ Hands-on Exercises</h2>
+
+                <p>These use <code>revenue</code> (the clean daily table) and <code>boise</code> from the lesson.</p>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 1: The Best Week</h3>
+                    <p>Using a 7-day rolling <strong>sum</strong>, find Asheville's best 7 consecutive days in the two years. On what date did that stretch end, and how much revenue did it bring in? What was going on?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>revenue["Asheville"].rolling(7).sum()</code> gives, for each day, the total of the 7 days ending on it. <code>idxmax()</code> finds the date of the largest.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">ash_week = revenue["Asheville"].rolling(7).sum()
+end = ash_week.idxmax()
+print(end.date(), end.day_name(), round(ash_week.max(), 2))
+print(revenue.loc[end - pd.Timedelta(days=6):end, "Asheville"])</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>2025-05-29 Thursday 60530.9
+date
+2025-05-23     8898.76
+2025-05-24    16558.00
+2025-05-25    12533.19
+2025-05-26     7158.57
+2025-05-27     5108.94
+2025-05-28     4450.92
+2025-05-29     5822.52
+Freq: D, Name: Asheville, dtype: float64</code></pre>
+                        </div>
+                        <p>The best seven days ended on Thursday, May 29, 2025, so they ran from Friday, May 23: the whole Memorial Day sale weekend plus the days after it. Unlike a calendar week from <code>resample("W")</code>, a rolling sum finds the best stretch wherever it starts.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 2: Passing Last Year</h3>
+                    <p>Compute year-to-date revenue for every store. On what date in 2025 did each store's year-to-date total pass its <em>full-year</em> 2024 total? Which store never got there?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>revenue.groupby(revenue.index.year).cumsum()</code> is the year-to-date table. For each store, filter the 2025 rows to those greater than the 2024 total and take the first index label. Expect one store to have no such row.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">ytd = revenue.groupby(revenue.index.year).cumsum()
+total_2024 = revenue.loc["2024"].sum()
+
+for store in revenue.columns:
+    ahead = ytd.loc["2025", store]
+    ahead = ahead[ahead &gt; total_2024[store]]
+    print(f"{store:&lt;10}", ahead.index[0].date() if len(ahead) else "did not pass 2024")</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>Asheville  did not pass 2024
+Bend       2025-12-19
+Boise      2025-12-06
+Flagstaff  2025-11-11</code></pre>
+                        </div>
+                        <p>Flagstaff matched all of 2024 with seven weeks of the year to spare. Asheville never did, which is the -5.0% from Lesson 2.7 seen another way.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 3: Each Customer's Timeline</h3>
+                    <p>Load <code>data/orders.csv</code> with parsed dates. For every order, add three columns computed <em>within each customer</em>: <code>order_number</code> (1 for their first order in the data, 2 for the second, and so on), <code>days_since_prev</code> (days since that customer's previous order) and <code>spend_to_date</code> (running total of <code>order_total</code>, including this order). What is the median gap between a customer's orders?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Sort by <code>customer_id</code> and <code>order_date</code> first. Then <code>groupby("customer_id")</code> with <code>cumcount()</code>, <code>["order_date"].diff()</code> and <code>["order_total"].cumsum()</code>. A difference of dates is a Timedelta column: <code>.dt.days</code> turns it into numbers.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">orders = pd.read_csv("data/orders.csv", parse_dates=["order_date"])
+orders = orders.sort_values(["customer_id", "order_date", "order_id"])
+
+by_customer = orders.groupby("customer_id")
+orders["order_number"] = by_customer.cumcount() + 1
+orders["days_since_prev"] = by_customer["order_date"].diff().dt.days
+orders["spend_to_date"] = by_customer["order_total"].cumsum()
+
+cols = ["customer_id", "order_date", "order_total", "order_number", "days_since_prev", "spend_to_date"]
+print(orders[cols].head(4))
+print(orders["days_since_prev"].median())
+print(int(orders["days_since_prev"].isna().sum()))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>      customer_id order_date  order_total  order_number  days_since_prev  spend_to_date
+1554        10001 2024-03-17       325.20             1              NaN         325.20
+2899        10001 2024-05-09        51.90             2             53.0         377.10
+4765        10001 2024-07-15       142.75             3             67.0         519.85
+6918        10001 2024-10-02        41.90             4             79.0         561.75
+52.0
+3942</code></pre>
+                        </div>
+                        <p>Half of all repeat orders come within 52 days of the previous one. The 3,942 <code>NaN</code> gaps are first orders, one per buyer: there is no previous order to measure from. Every one of these columns uses only the customer's past, so they are leak-free. You will build features just like these in the next lesson.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 4: Which Smoother Forecasts Best? (Stretch)</h3>
+                    <p>Treat each of these as a forecast of Boise's revenue for the day, made the night before, and compute its average absolute miss: a 7-day rolling mean, a 28-day rolling mean, an exponentially weighted mean with <code>span=7</code>, and the mean of the same weekday in the previous 4 weeks. Make every one of them leak-free. Which wins, and why do you think so?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>For the first three, compute the smoother and then <code>shift(1)</code> (or shift before rolling: the result is the same). For the last, group by <code>boise.index.dayofweek</code> and use <code>transform</code> with <code>s.shift(1).rolling(4).mean()</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">forecasts = {
+    "rolling 7": boise.shift(1).rolling(7).mean(),
+    "rolling 28": boise.shift(1).rolling(28).mean(),
+    "ewm span 7": boise.ewm(span=7).mean().shift(1),
+    "same weekday, 4 weeks": boise.groupby(boise.index.dayofweek).transform(
+        lambda s: s.shift(1).rolling(4).mean()),
+}
+for name, guess in forecasts.items():
+    print(f"{name:&lt;22} average miss ${(boise - guess).abs().mean():&gt;6,.0f}")</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>rolling 7              average miss $ 2,504
+rolling 28             average miss $ 2,500
+ewm span 7             average miss $ 2,642
+same weekday, 4 weeks  average miss $ 1,878</code></pre>
+                        </div>
+                        <p>The three general-purpose smoothers land within about $150 of each other. The weekday-aware average beats them all by a wide margin, because the weekly cycle is the biggest predictable thing in this series and it is the only forecast that uses it. Tools matter less than knowing the shape of your data.</p>
+                    </details>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="quiz" class="lesson-section">
+                <h2>🎯 Quick Quiz</h2>
+                <div class="card quiz-container">
+                    <h3>🎯 Check Your Understanding</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> A Series has 100 daily values and no missing data. How many <code>NaN</code> values does <code>s.rolling(7).mean()</code> contain, and where?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="A 7-day window is complete on the 7th row, since that row and the six before it make seven values. How many rows come before the 7th?">
+                                A) 7, at the start
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="A trailing window of 7 is full for the first time on the 7th row. The 6 rows before it have fewer than 7 values available, so they are NaN.">
+                                B) 6, at the start
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="That describes a centered window, which needs rows on both sides. The default window is trailing: the row itself and the rows before it.">
+                                C) 6, split as 3 at the start and 3 at the end
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> What does this print?</p>
+                        <pre><code class="language-python">quiz_s = pd.Series([1, 2, 3, 4])
+print(quiz_s.rolling(2).sum().tolist())</code></pre>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="That is a running total, which is what cumsum or expanding would give. A rolling window of 2 only ever holds two values.">
+                                A) <code>[1.0, 3.0, 6.0, 10.0]</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="The window is trailing, so each row is paired with the row before it, not the row after. Which row has nothing before it?">
+                                B) <code>[3.0, 5.0, 7.0, nan]</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Each value is the sum of the row and the one before it: 1+2, 2+3, 3+4. The first row has no row before it, so its window is incomplete and the result is NaN.">
+                                C) <code>[nan, 3.0, 5.0, 7.0]</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> A long table has columns <code>store</code>, <code>date</code>, <code>revenue</code> and is sorted by <code>date</code>, then <code>store</code>. You run <code>df["avg"] = df["revenue"].rolling(7).mean()</code>. What is in <code>avg</code>?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="rolling works on consecutive rows whatever they contain. With this sort order, neighboring rows are different stores, so each window mixes stores. Sort by store and date, then use groupby('store') with transform.">
+                                A) Averages over 7 consecutive rows, which mix different stores together
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="pandas does not know that store is a grouping column unless you tell it with groupby. What does rolling look at?">
+                                B) Each store's own 7-day average, because pandas detects the store column
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="There is no error here, which is exactly the danger. The code runs and returns a number for every row from the 7th on.">
+                                C) An error, because rolling requires one row per date
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 4:</strong> You want a feature to help predict <em>today's</em> revenue, computed each morning before the store opens. Which is safe from look-ahead leakage?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="A trailing window includes the current row. This morning, today's revenue does not exist yet.">
+                                A) <code>rev.rolling(7).mean()</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="A centered 7-day window includes the current day and the three days after it.">
+                                B) <code>rev.rolling(7, center=True).mean()</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Shifting by one row first means the window for today covers yesterday and the six days before it: only values that are known this morning.">
+                                C) <code>rev.shift(1).rolling(7).mean()</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 5:</strong> What does this print?</p>
+                        <pre><code class="language-python">quiz_r = pd.Series([50, 80, 80, 95])
+print(quiz_r.rank(ascending=False, method="min").tolist())</code></pre>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="With ascending=False the largest value, 95, gets rank 1. The two 80s tie for positions 2 and 3, and method min gives both the lower number, 2. The next rank is then 4.">
+                                A) <code>[4.0, 2.0, 2.0, 1.0]</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="That is the default method, average, which gives tied values the mean of their positions. This code asks for min.">
+                                B) <code>[4.0, 2.5, 2.5, 1.0]</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="That would be method dense, which leaves no gap after a tie. With min, the rank after two values tied at 2 is 4.">
+                                C) <code>[3.0, 2.0, 2.0, 1.0]</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
                     </div>
                 </div>
-                <div class="concept-card">
-                    <h3>⚖️ .ewm()</h3>
-                    <p>Every past point counts, but weights decay geometrically toward the present.</p>
-                    <div class="code-example">
-                        <pre><code># Exponentially weighted mean
-s.ewm(alpha=0.3).mean()
+            </section>
 
-# Specify by span (like a 10-period EMA)
-s.ewm(span=10).mean()
+            <!-- ============================================================ -->
+            <section id="faq" class="lesson-section">
+                <h2>❓ Common Questions at This Stage</h2>
 
-# Weighted volatility
-s.ewm(span=10).std()</code></pre>
-                    </div>
+                <details>
+                    <summary>How do I choose the window size?</summary>
+                    <p>Start from the cycle in the data: 7 for daily data with a weekly pattern, 12 for monthly data with a yearly one. Beyond that it is a trade between smoothness and speed: a longer window is calmer and slower to show a real change. Plot two or three sizes on the same chart, as you did with 7 and 28, and pick the one that answers the question you are asking. There is no single correct number, and saying which window you used is part of reporting the result.</p>
+                </details>
+                <details>
+                    <summary>What is the difference between <code>resample("W").mean()</code> and <code>rolling(7).mean()</code>?</summary>
+                    <p><code>resample</code> cuts the calendar into separate weeks and returns one row per week: 105 rows for two years. <code>rolling</code> slides one day at a time and returns one row per day: 731 rows, where each value overlaps six sevenths with its neighbor. Use <code>resample</code> for a report by week, and <code>rolling</code> for a smooth line or a per-day baseline.</p>
+                </details>
+                <details>
+                    <summary>What do <code>span</code>, <code>alpha</code> and <code>adjust</code> mean in <code>ewm</code>?</summary>
+                    <p><code>alpha</code> is the weight given to the newest value, between 0 and 1. <code>span</code> is a friendlier way to set it, <code>alpha = 2 / (span + 1)</code>, chosen so that <code>span=7</code> smooths about as much as a 7-row rolling mean. <code>adjust</code> only affects the first few rows, where there is little history: the default (<code>True</code>) rescales the weights so early values are proper weighted averages. For long series you can ignore it.</p>
+                </details>
+                <details>
+                    <summary>Are these the same "window functions" that SQL has?</summary>
+                    <p>Yes, the same idea with different spelling. SQL's <code>AVG(revenue) OVER (PARTITION BY store ORDER BY date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW)</code> is <code>groupby("store")</code> plus <code>rolling(7).mean()</code> on sorted rows, and <code>RANK() OVER (PARTITION BY ...)</code> is <code>groupby(...).rank(method="min")</code>. Lesson 5.3 covers the SQL versions, and what you learned today will transfer directly.</p>
+                </details>
+
+                <div class="card card-accent">
+                    <h3>🌟 Going Further: Bonus Challenge</h3>
+                    <p>Your detector still raises about 70 false alarms. Print their weekday counts as you did in Step 3. One weekday now stands out. Look at which dates those are and what happened on the same weekday in the weeks just before them (hint: you filled something with 0 in Step 1). Then fix the baseline so that closed days are ignored instead of counted as $0 days, rescore, and write down how many false alarms disappeared. Finally, ask the harder question: some of the remaining "false" alarms may be real events that simply were not company promotions. How would you find out?</p>
                 </div>
-            </div>
-        </div>
+            </section>
 
-        <div class="window-section">
-            <h2>🎮 Interactive Sliding Window</h2>
-            <p>Slide the frame across the data and choose an aggregation to see exactly what a rolling window computes at each step.</p>
+            <!-- ============================================================ -->
+            <section id="journal" class="lesson-section">
+                <h2>📓 Learning Journal</h2>
+                <div class="card card-accent">
+                    <p>Take five minutes to write in your learning journal (the <code>journal.md</code> file you started in Lesson 0.1, or a paper notebook). Jot down:</p>
+                    <ul>
+                        <li><strong>Key concepts</strong> you learned today</li>
+                        <li><strong>Techniques that clicked</strong> (and the ones that have not, yet)</li>
+                        <li><strong>Questions or confusion</strong> to come back to</li>
+                        <li><strong>Ideas to try</strong> on your own</li>
+                        <li><strong>Progress and feelings</strong>: how did this lesson go for you?</li>
+                    </ul>
+                    <p><strong>✍️ This lesson's prompt:</strong> Explain look-ahead leakage to a friend using an example that has nothing to do with data (a quiz, a weather forecast, a sports bet). Then describe one number you see regularly that is probably a rolling average, a running total or a rank (a fitness app, a bank statement, a leaderboard), and say which kind of window you think is behind it.</p>
+                </div>
+            </section>
 
-            <div class="controls">
-                <span>
-                    <label for="windowSize">Window size</label>
-                    <input type="range" id="windowSize" min="1" max="6" value="3">
-                    <span id="windowSizeDisplay">3</span>
-                </span>
-                <span>
-                    <label for="stepPosition">Position</label>
-                    <input type="range" id="stepPosition" min="0" max="7" value="0">
-                    <span>step <span id="stepDisplay">1</span></span>
-                </span>
-            </div>
+            <!-- ============================================================ -->
+            <section id="summary" class="lesson-section">
+                <h2>📝 Lesson Summary</h2>
 
-            <div class="func-buttons">
-                <button class="func-btn active" onclick="selectWindowFunc('mean')">mean</button>
-                <button class="func-btn" onclick="selectWindowFunc('sum')">sum</button>
-                <button class="func-btn" onclick="selectWindowFunc('min')">min</button>
-                <button class="func-btn" onclick="selectWindowFunc('max')">max</button>
-                <button class="func-btn" onclick="selectWindowFunc('std')">std</button>
-                <button class="func-btn" onclick="selectWindowFunc('count')">count</button>
-            </div>
+                <div class="card card-success">
+                    <h3>🎓 Key Takeaways</h3>
+                    <ul>
+                        <li>A window function returns <strong>one value per row</strong>, computed from nearby rows; <code>groupby().agg()</code> returns one per group</li>
+                        <li><code>rolling(n)</code> is a fixed sliding window. Match <em>n</em> to the cycle you want to remove (7 for a weekly pattern)</li>
+                        <li>A window must be full by default: the first <em>n</em> - 1 rows are <code>NaN</code>, and one missing value blanks <em>n</em> results. <code>min_periods</code> relaxes that, at a cost</li>
+                        <li><code>center=True</code> aligns a smoother with the data by using future rows: fine for describing history, never for predicting</li>
+                        <li><code>cumsum()</code>, <code>cummax()</code> and <code>expanding()</code> accumulate from the start; <code>groupby(year).cumsum()</code> gives year to date</li>
+                        <li><code>ewm(span=n)</code> weights recent rows more and reacts faster to change</li>
+                        <li>On long data: <strong>sort, group, window</strong>. <code>groupby().transform(lambda s: s.rolling(...))</code> keeps the result aligned</li>
+                        <li><code>rank()</code> gives positions; <code>method</code> settles ties, <code>pct=True</code> gives percentiles, and <code>groupby().rank()</code> ranks within groups</li>
+                        <li><strong>Leakage:</strong> a baseline must not contain the row it judges or anything after it. <code>shift(1)</code> first</li>
+                    </ul>
+                </div>
 
-            <div class="window-viz">
-                <div class="data-points" id="dataPoints"></div>
-                <div class="window-frame" id="windowFrame"></div>
-            </div>
+                <div class="card card-info">
+                    <h3>🏆 What You've Accomplished</h3>
+                    <ul>
+                        <li>You smoothed two years of jagged daily revenue into a readable trend at two levels of detail</li>
+                        <li>You built running totals, year-to-date figures and a list of record days</li>
+                        <li>You ranked stores within days and days within stores, and saw how the group changes the story</li>
+                        <li>You measured how much a leaking feature flatters a forecast, and learned three ways to prevent it</li>
+                        <li>You built a detector, found out why it was wrong, and nearly doubled its precision with one better idea</li>
+                    </ul>
+                </div>
 
-            <div class="result-readout">
-                <span class="result-label">window result:</span>
-                <span id="windowResult">-</span>
-            </div>
-        </div>
+                <h3>🔭 Looking Ahead</h3>
+                <p>In <a href="pandas_feature_engineering_basics.html"><strong>Lesson 2.9: Feature Engineering Basics</strong></a>, the last lesson of the pandas module, you will pull everything together. Derived columns, date parts, bins, categories, per-customer aggregates and window calculations all become <strong>features</strong>: columns built so that a pattern is easy to see, for a person or for a model. Leakage comes with you, because it matters even more there.</p>
 
-        <div class="window-section">
-            <h2>📉 Rolling Average in Action</h2>
-            <p>The classic use of a rolling window is smoothing. The faint line is raw, noisy data; the bold line is its 10-period rolling mean — the same signal with the jitter removed.</p>
-            <canvas id="rollingChart"></canvas>
-            <div class="code-example">
-                <pre><code># Smooth noisy data with a moving average
-df['smooth'] = df['value'].rolling(window=10).mean()
-
-# Bollinger-style bands from a rolling window
-roll = df['value'].rolling(20)
-df['upper'] = roll.mean() + 2 * roll.std()
-df['lower'] = roll.mean() - 2 * roll.std()</code></pre>
-            </div>
-        </div>
-
-        <div class="window-section">
-            <h2>📈 Expanding Windows</h2>
-            <p>An expanding window answers "what is the statistic using everything up to <em>now</em>?" Each bar below is a data point; the number above it is the running mean of all points seen so far — notice how it stabilizes as more data accumulates.</p>
-            <div class="expanding-visualization"></div>
-            <div class="code-example">
-                <pre><code># Running average that never forgets
-df['running_mean'] = df['value'].expanding().mean()
-
-# Running total (equivalent to cumsum)
-df['running_total'] = df['value'].expanding().sum()
-
-# Best value seen so far
-df['record'] = df['value'].expanding().max()</code></pre>
-            </div>
-        </div>
-
-        <div class="window-section">
-            <h2>⚖️ Exponentially Weighted Windows</h2>
-            <p>An EWM keeps the whole history but weights it with a decaying factor. The bars show how much influence each past observation (t, t-1, t-2, …) has on today's value — recent points dominate, distant ones fade.</p>
-            <div class="weight-visualization" id="weightViz"></div>
-            <div class="code-example">
-                <pre><code># alpha controls how fast old data fades
-df['ewm'] = df['value'].ewm(alpha=0.3).mean()
-
-# Equivalent parameterizations
-df['value'].ewm(span=10).mean()       # like a 10-period EMA
-df['value'].ewm(halflife=5).mean()    # weight halves every 5 steps</code></pre>
-            </div>
-        </div>
-
-        <div class="window-section">
-            <h2>🏅 Ranking Within Windows</h2>
-            <p>Rankings are close cousins of window functions — they compare each value against the others in a group. Below, the same six scores are ranked several ways at once.</p>
-            <div class="table-example" style="background:var(--code-bg);border-radius:0.5rem;padding:1rem;overflow-x:auto;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Name</th><th>Score</th><th>Rank</th>
-                            <th>Dense Rank</th><th>Percentile</th><th>Quartile</th>
-                        </tr>
-                    </thead>
-                    <tbody id="rankTableBody"></tbody>
-                </table>
-            </div>
-            <div class="code-example">
-                <pre><code># Standard competition rank (ties share a rank, gaps follow)
-df['rank'] = df['score'].rank(ascending=False)
-
-# Dense rank (no gaps after ties)
-df['dense'] = df['score'].rank(method='dense', ascending=False)
-
-# Percentile rank in [0, 1]
-df['pct'] = df['score'].rank(pct=True)</code></pre>
-            </div>
-        </div>
-
-        <div class="tip-box">
-            <h3>💡 Pro Tips for Window Functions</h3>
-            <ul>
-                <li><strong>Mind the warm-up:</strong> the first <code>window-1</code> rolling results are <code>NaN</code>; use <code>min_periods</code> to relax this.</li>
-                <li><strong><code>center=True</code></strong> aligns the window on each point instead of trailing behind it — great for visualization, risky for forecasting (it peeks ahead).</li>
-                <li><strong>EWM never returns NaN</strong> after the first point, which makes it handy for gap-free smoothing.</li>
-                <li><strong>Chain <code>.shift()</code></strong> with a rolling result to build leak-free lag features for models.</li>
-                <li><strong>Prefer built-in window methods</strong> over <code>.apply()</code> — they run in optimized C.</li>
-            </ul>
-        </div>
-
-        <div class="warning-box">
-            <h3>⚠️ Common Pitfalls to Avoid</h3>
-            <ul>
-                <li><strong>Look-ahead bias:</strong> a centered window or forward fill can leak future data into a feature you use for prediction.</li>
-                <li><strong>Forgetting to sort:</strong> rolling and expanding assume the rows are already in order.</li>
-                <li><strong>Confusing rolling with resample:</strong> rolling keeps the same rows; resample changes the frequency.</li>
-                <li><strong>Ignoring NaNs in the window:</strong> some functions skip them, changing effective window size.</li>
-            </ul>
-        </div>
-
-        <!-- Quick Reference -->
-        <div class="quick-reference">
-            <h2>📋 Quick Reference</h2>
-
-            <h3>Window Types:</h3>
-            <ul>
-                <li><code>.rolling()</code> - Fixed-size sliding window</li>
-                <li><code>.expanding()</code> - Cumulative window from start</li>
-                <li><code>.ewm()</code> - Exponentially weighted window</li>
-            </ul>
-
-            <h3>Common Window Functions:</h3>
-            <ul>
-                <li><code>.mean()</code> - Average within window</li>
-                <li><code>.sum()</code> - Sum within window</li>
-                <li><code>.std()</code> - Standard deviation</li>
-                <li><code>.var()</code> - Variance</li>
-                <li><code>.min() / .max()</code> - Minimum/Maximum</li>
-                <li><code>.median()</code> - Median value</li>
-                <li><code>.quantile()</code> - Quantile calculation</li>
-                <li><code>.apply()</code> - Custom function</li>
-                <li><code>.corr()</code> - Correlation</li>
-                <li><code>.cov()</code> - Covariance</li>
-            </ul>
-
-            <h3>Shift Operations:</h3>
-            <ul>
-                <li><code>.shift(n)</code> - Lag by n periods (positive n)</li>
-                <li><code>.shift(-n)</code> - Lead by n periods (negative n)</li>
-                <li><code>.diff()</code> - First difference</li>
-                <li><code>.pct_change()</code> - Percentage change</li>
-            </ul>
-
-            <h3>Ranking Functions:</h3>
-            <ul>
-                <li><code>.rank()</code> - Assign ranks</li>
-                <li><code>method='average'</code> - Average rank for ties</li>
-                <li><code>method='min'</code> - Minimum rank for ties</li>
-                <li><code>method='dense'</code> - Dense ranking</li>
-                <li><code>pct=True</code> - Percentile ranks</li>
-                <li><code>ascending=False</code> - Reverse ranking</li>
-            </ul>
-
-            <h3>Cumulative Functions:</h3>
-            <ul>
-                <li><code>.cumsum()</code> - Cumulative sum</li>
-                <li><code>.cumprod()</code> - Cumulative product</li>
-                <li><code>.cummax()</code> - Cumulative maximum</li>
-                <li><code>.cummin()</code> - Cumulative minimum</li>
-            </ul>
-        </div>
-
-        <!-- Learning Journal (REQUIRED per the Courseware Authoring Standard) -->
-        <section id="journal" class="lesson-section">
-            <h2>📓 Learning Journal</h2>
-            <div class="card card-info">
-                <p>Keep a learning journal — digital or physical. After this lesson, take a few minutes to write down:</p>
+                <h3>📋 Before the Next Lesson</h3>
                 <ul>
-                    <li><strong>Key concepts</strong> you learned</li>
-                    <li><strong>Techniques that clicked</strong> for you</li>
-                    <li><strong>Questions or confusion points</strong> to revisit</li>
-                    <li><strong>Ideas you want to try</strong></li>
-                    <li><strong>Your progress and feelings</strong> about learning this</li>
+                    <li>Keep <code>sale_day_flags.csv</code> and your project notebook.</li>
+                    <li>Do Exercise 3 if you skipped it. The per-customer columns it builds are a preview of Lesson 2.9.</li>
+                    <li>Look at <code>data/customers.csv</code> and list three new columns you could compute for each customer that might help predict whether they will order again.</li>
                 </ul>
-                <p><strong>✍️ This lesson's prompt:</strong> Rolling, expanding, and EWM each "remember" the past differently. Pick a measurement you track over time and decide which window fits: would a fixed recent window, a running-since-the-start view, or a recency-weighted average tell the most honest story — and why?</p>
-            </div>
-        </section>
 
-        <!-- Lesson Summary (full standard block) -->
-        <section id="summary" class="lesson-section">
-            <h2>📝 Lesson Summary</h2>
-            <div class="card card-success">
-                <h3>🎓 Key Takeaways</h3>
-                <ul>
-                    <li>Window functions compute a statistic over a moving slice and return a value aligned to every row — unlike an aggregation that returns one number.</li>
-                    <li><code>.rolling(n)</code> uses a fixed sliding frame, <code>.expanding()</code> grows from the start, and <code>.ewm()</code> weights recent points more heavily.</li>
-                    <li>Any aggregation — <code>mean</code>, <code>sum</code>, <code>std</code>, <code>min</code>/<code>max</code>, or a custom <code>.apply()</code> — can run inside a window.</li>
-                    <li>Mind the warm-up <code>NaN</code>s, sort first, and avoid look-ahead bias when building features for prediction.</li>
-                </ul>
-            </div>
-            <h3>🎉 What You've Accomplished</h3>
-            <p>You can now describe how a measurement behaves across its own sequence — smoothing noise with rolling means, tracking running totals with expanding windows, emphasizing recency with EWM, and ranking values within a window. These are the building blocks of time-aware feature engineering.</p>
-            <h3>❓ Common Questions at This Stage</h3>
-            <details>
-                <summary>When should I use <code>expanding()</code> instead of <code>rolling()</code>?</summary>
-                <p>Use <code>rolling()</code> when only the recent past matters and older data should drop out of the window (e.g. a 30-day moving average). Use <code>expanding()</code> when every observation so far should keep contributing — running totals, cumulative averages, or "best/worst to date" metrics.</p>
-            </details>
-            <details>
-                <summary>What does <code>alpha</code> mean in <code>.ewm()</code>?</summary>
-                <p><code>alpha</code> (between 0 and 1) is the smoothing factor: it is the weight given to the most recent point, with every older point weighted by <code>alpha·(1-alpha)^k</code>. A larger alpha reacts faster to change; a smaller alpha smooths more. You can also specify the decay indirectly via <code>span</code> or <code>halflife</code>.</p>
-            </details>
-            <details>
-                <summary>Why are the first few values of my rolling result <code>NaN</code>?</summary>
-                <p>A rolling window needs a full <code>window</code> worth of observations before it can produce a value, so the first <code>window-1</code> results are <code>NaN</code>. Set <code>min_periods</code> to a smaller number if you are willing to compute on a partial window at the start.</p>
-            </details>
-            <h3>🔭 Looking Ahead</h3>
-            <p>Window operations can get expensive on large data. Next you'll focus on performance — vectorization, efficient dtypes, and avoiding slow <code>.apply()</code> calls — so your rolling and grouped computations stay fast at scale.</p>
-            <h3>✅ Before the Next Lesson</h3>
-            <ul>
-                <li>Add a rolling mean and a rolling std to a numeric series and plot them together.</li>
-                <li>Compare <code>expanding().mean()</code> with <code>ewm(span=10).mean()</code> on the same data.</li>
-                <li>Rank a column three ways (<code>method='min'</code>, <code>'dense'</code>, <code>pct=True</code>) and note the differences.</li>
-                <li>Write your Learning Journal entry for this lesson.</li>
-            </ul>
-            <div class="card card-accent" style="text-align: center; padding: 2rem;">
-                <h3>🌟 Encouragement for the Journey</h3>
-                <p>Window functions are the quiet workhorses of real analytics — the moving averages behind every dashboard and the smoothed lines behind every trend. Once you can slide a window in your head, a whole layer of data behavior becomes visible. Keep sliding!</p>
-            </div>
-        </section>
+                <div class="card card-accent">
+                    <h3>🌱 Encouragement for the Journey</h3>
+                    <p>Your first detector was wrong three times out of four, and that was the best thing that happened in this lesson. You did not shrug and tune a threshold. You looked at what it was getting wrong, understood why, and fixed the idea underneath. That loop of build, score, inspect the errors, improve is what real analytical work looks like. Rolling and ranking syntax you can always look up. The habit of asking "could I have known this number on that day?" is yours now, and many people who have worked with data for years have never learned to ask it.</p>
+                </div>
+            </section>
 
-        <!-- Navigation -->
-        <div class="navigation-buttons">
-            <a href="pandas_pivot_tables.html" class="nav-button">← Previous: Pivot Tables</a>
-            <a href="pandas_performance_optimization.html" class="nav-button">Next: Performance Optimization →</a>
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="pandas_time_series.html" class="prev-lesson">← Previous: Time Series</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="pandas_feature_engineering_basics.html" class="next-lesson">Next: Feature Engineering Basics →</a>
+            </nav>
         </div>
-    </div>
+    </main>
 
-    <!-- Footer -->
     <footer class="site-footer">
         <p>&copy; 2026 Ray de la Paz. Python Data Science. All rights reserved.</p>
         <div class="footer-links">
@@ -761,395 +1218,10 @@ df['pct'] = df['score'].rank(pct=True)</code></pre>
             <a href="https://rays-home.netlify.app/contact">Contact</a>
             <a href="#" id="print-button">Print Page</a>
         </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
     </footer>
 
-    <script src="scripts/clipboard.js"></script>
-    <script>
-        // Sample data for visualization
-        const sampleData = [10, 15, 8, 22, 18, 25, 12, 30, 28, 35];
-        let currentWindowSize = 3;
-        let currentStep = 0;
-        let currentWindowFunc = 'mean';
-
-        // Initialize window visualization
-        function initWindowVisualization() {
-            const container = document.getElementById('dataPoints');
-            container.innerHTML = '';
-
-            sampleData.forEach((value, index) => {
-                const point = document.createElement('div');
-                point.className = 'data-point';
-                point.textContent = value;
-                point.id = `point-${index}`;
-                container.appendChild(point);
-            });
-
-            updateWindowFrame();
-        }
-
-        // Update window frame position and highlighting
-        function updateWindowFrame() {
-            const frame = document.getElementById('windowFrame');
-            const points = document.querySelectorAll('.data-point');
-
-            // Reset all points
-            points.forEach(point => {
-                point.classList.remove('in-window', 'current');
-            });
-
-            // Calculate window bounds
-            const start = Math.max(0, currentStep);
-            const end = Math.min(currentStep + currentWindowSize, sampleData.length);
-
-            // Highlight points in window
-            for (let i = start; i < end; i++) {
-                const point = document.getElementById(`point-${i}`);
-                if (point) {
-                    point.classList.add('in-window');
-                    if (i === currentStep + currentWindowSize - 1) {
-                        point.classList.add('current');
-                    }
-                }
-            }
-
-            // Update frame position
-            if (start < sampleData.length) {
-                const firstPoint = document.getElementById(`point-${start}`);
-                const lastPoint = document.getElementById(`point-${Math.min(end - 1, sampleData.length - 1)}`);
-
-                if (firstPoint && lastPoint) {
-                    const rect1 = firstPoint.getBoundingClientRect();
-                    const rect2 = lastPoint.getBoundingClientRect();
-                    const containerRect = firstPoint.parentElement.getBoundingClientRect();
-
-                    frame.style.left = (rect1.left - containerRect.left - 5) + 'px';
-                    frame.style.width = (rect2.right - rect1.left + 10) + 'px';
-                    frame.style.height = '50px';
-                    frame.style.top = '50%';
-                    frame.style.transform = 'translateY(-50%)';
-                }
-            }
-
-            // Calculate and display result
-            calculateWindowResult();
-        }
-
-        // Calculate window function result
-        function calculateWindowResult() {
-            const start = Math.max(0, currentStep);
-            const end = Math.min(currentStep + currentWindowSize, sampleData.length);
-            const windowData = sampleData.slice(start, end);
-
-            if (windowData.length === 0) {
-                document.getElementById('windowResult').textContent = '-';
-                return;
-            }
-
-            let result;
-            switch(currentWindowFunc) {
-                case 'mean':
-                    result = windowData.reduce((a, b) => a + b, 0) / windowData.length;
-                    break;
-                case 'sum':
-                    result = windowData.reduce((a, b) => a + b, 0);
-                    break;
-                case 'min':
-                    result = Math.min(...windowData);
-                    break;
-                case 'max':
-                    result = Math.max(...windowData);
-                    break;
-                case 'std':
-                    const mean = windowData.reduce((a, b) => a + b, 0) / windowData.length;
-                    const variance = windowData.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / windowData.length;
-                    result = Math.sqrt(variance);
-                    break;
-                case 'count':
-                    result = windowData.length;
-                    break;
-            }
-
-            document.getElementById('windowResult').textContent =
-                typeof result === 'number' ? result.toFixed(2) : result;
-        }
-
-        // Window size slider
-        document.getElementById('windowSize').addEventListener('input', function(e) {
-            currentWindowSize = parseInt(e.target.value);
-            document.getElementById('windowSizeDisplay').textContent = currentWindowSize;
-
-            // Adjust step if necessary
-            const maxStep = Math.max(0, sampleData.length - currentWindowSize);
-            if (currentStep > maxStep) {
-                currentStep = maxStep;
-                document.getElementById('stepPosition').value = currentStep;
-                document.getElementById('stepDisplay').textContent = currentStep + 1;
-            }
-            document.getElementById('stepPosition').max = maxStep;
-
-            updateWindowFrame();
-        });
-
-        // Step position slider
-        document.getElementById('stepPosition').addEventListener('input', function(e) {
-            currentStep = parseInt(e.target.value);
-            document.getElementById('stepDisplay').textContent = currentStep + 1;
-            updateWindowFrame();
-        });
-
-        // Function selection
-        function selectWindowFunc(func) {
-            currentWindowFunc = func;
-
-            // Update button states
-            document.querySelectorAll('.func-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.classList.add('active');
-
-            calculateWindowResult();
-        }
-
-        // Draw rolling chart
-        function drawRollingChart() {
-            const canvas = document.getElementById('rollingChart');
-            const ctx = canvas.getContext('2d');
-
-            // Set canvas size
-            canvas.width = canvas.offsetWidth;
-            canvas.height = 350;
-
-            // Generate sample data
-            const n = 100;
-            const data = [];
-            let value = 100;
-
-            for (let i = 0; i < n; i++) {
-                value += (Math.random() - 0.5) * 10;
-                data.push(value);
-            }
-
-            // Calculate rolling average
-            const windowSize = 10;
-            const rollingAvg = [];
-
-            for (let i = 0; i < data.length; i++) {
-                if (i < windowSize - 1) {
-                    rollingAvg.push(null);
-                } else {
-                    const window = data.slice(i - windowSize + 1, i + 1);
-                    const avg = window.reduce((a, b) => a + b, 0) / window.length;
-                    rollingAvg.push(avg);
-                }
-            }
-
-            // Clear canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Draw axes
-            ctx.strokeStyle = '#e0e0e0';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(40, 10);
-            ctx.lineTo(40, canvas.height - 30);
-            ctx.lineTo(canvas.width - 10, canvas.height - 30);
-            ctx.stroke();
-
-            // Scale data
-            const minVal = Math.min(...data);
-            const maxVal = Math.max(...data);
-            const range = maxVal - minVal;
-            const padding = 50;
-
-            // Draw original data
-            ctx.strokeStyle = '#ddd';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-
-            data.forEach((value, i) => {
-                const x = 40 + (i / (data.length - 1)) * (canvas.width - 50);
-                const y = canvas.height - 30 - ((value - minVal) / range) * (canvas.height - padding);
-
-                if (i === 0) {
-                    ctx.moveTo(x, y);
-                } else {
-                    ctx.lineTo(x, y);
-                }
-            });
-            ctx.stroke();
-
-            // Draw rolling average
-            ctx.strokeStyle = '#667eea';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-
-            let firstPoint = true;
-            rollingAvg.forEach((value, i) => {
-                if (value !== null) {
-                    const x = 40 + (i / (rollingAvg.length - 1)) * (canvas.width - 50);
-                    const y = canvas.height - 30 - ((value - minVal) / range) * (canvas.height - padding);
-
-                    if (firstPoint) {
-                        ctx.moveTo(x, y);
-                        firstPoint = false;
-                    } else {
-                        ctx.lineTo(x, y);
-                    }
-                }
-            });
-            ctx.stroke();
-
-            // Add labels
-            ctx.fillStyle = '#333';
-            ctx.font = '12px Arial';
-            ctx.fillText('Value', 5, 20);
-            ctx.fillText('Time', canvas.width - 30, canvas.height - 10);
-
-            // Add legend
-            ctx.fillStyle = '#ddd';
-            ctx.fillRect(canvas.width - 150, 20, 15, 3);
-            ctx.fillStyle = '#333';
-            ctx.fillText('Original', canvas.width - 130, 25);
-
-            ctx.fillStyle = '#667eea';
-            ctx.fillRect(canvas.width - 150, 35, 15, 3);
-            ctx.fillStyle = '#333';
-            ctx.fillText('Rolling Avg', canvas.width - 130, 40);
-        }
-
-        // Draw expanding visualization
-        function drawExpandingVisualization() {
-            const container = document.querySelector('.expanding-visualization');
-            container.innerHTML = '';
-
-            const values = [10, 15, 20, 18, 25, 30, 28, 35];
-            const expandingMeans = [];
-
-            // Calculate expanding means
-            for (let i = 0; i < values.length; i++) {
-                const subset = values.slice(0, i + 1);
-                const mean = subset.reduce((a, b) => a + b, 0) / subset.length;
-                expandingMeans.push(mean);
-            }
-
-            // Create bars
-            values.forEach((value, i) => {
-                const bar = document.createElement('div');
-                bar.className = 'expanding-bar';
-                bar.style.height = (value / 40) * 150 + 'px';
-
-                const label = document.createElement('div');
-                label.className = 'expanding-value';
-                label.textContent = expandingMeans[i].toFixed(1);
-                bar.appendChild(label);
-
-                container.appendChild(bar);
-            });
-        }
-
-        // Draw weight visualization for EWM
-        function drawWeightVisualization() {
-            const container = document.getElementById('weightViz');
-            container.innerHTML = '';
-
-            const numWeights = 8;
-            const alpha = 0.3;
-
-            for (let i = 0; i < numWeights; i++) {
-                const weightBar = document.createElement('div');
-                weightBar.className = 'weight-bar';
-
-                const weight = alpha * Math.pow(1 - alpha, i);
-                const heightPercent = weight * 100 / alpha;
-
-                const indicator = document.createElement('div');
-                indicator.className = 'weight-indicator';
-                indicator.style.height = heightPercent + 'px';
-
-                const label = document.createElement('div');
-                label.className = 'weight-label';
-                label.textContent = `t-${i}`;
-
-                weightBar.appendChild(indicator);
-                weightBar.appendChild(label);
-                container.appendChild(weightBar);
-            }
-        }
-
-        // Populate rank table
-        function populateRankTable() {
-            const tbody = document.getElementById('rankTableBody');
-            const data = [
-                {name: 'Alice', score: 92},
-                {name: 'Bob', score: 87},
-                {name: 'Charlie', score: 92},
-                {name: 'David', score: 78},
-                {name: 'Eve', score: 95},
-                {name: 'Frank', score: 87},
-            ];
-
-            // Sort by score
-            data.sort((a, b) => b.score - a.score);
-
-            // Calculate ranks
-            let rank = 1;
-            let denseRank = 1;
-            data.forEach((item, i) => {
-                item.rank = rank;
-                item.denseRank = denseRank;
-                item.percentRank = ((data.length - rank) / (data.length - 1) * 100).toFixed(1);
-                item.quartile = Math.ceil((rank / data.length) * 4);
-
-                // Update ranks for next iteration
-                if (i < data.length - 1 && data[i + 1].score < item.score) {
-                    rank = i + 2;
-                    denseRank++;
-                } else if (i < data.length - 1) {
-                    rank = i + 2;
-                }
-            });
-
-            // Populate table
-            tbody.innerHTML = '';
-            data.forEach(item => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${item.name}</td>
-                    <td>${item.score}</td>
-                    <td><span class="rank-badge">${item.rank}</span></td>
-                    <td><span class="rank-badge">${item.denseRank}</span></td>
-                    <td>${item.percentRank}%</td>
-                    <td>Q${item.quartile}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        // Copy code function
-        function copyCode(button) {
-            const codeBlock = button.parentElement.nextElementSibling.querySelector('code');
-            const text = codeBlock.textContent;
-            navigator.clipboard.writeText(text).then(() => {
-                button.textContent = 'Copied!';
-                setTimeout(() => {
-                    button.textContent = 'Copy';
-                }, 2000);
-            });
-        }
-
-        // Initialize on load
-        window.addEventListener('load', function() {
-            initWindowVisualization();
-            drawRollingChart();
-            drawExpandingVisualization();
-            drawWeightVisualization();
-            populateRankTable();
-        });
-
-        // Handle window resize
-        window.addEventListener('resize', function() {
-            drawRollingChart();
-        });
-    </script>
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
 </body>
 </html>

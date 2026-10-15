@@ -3,876 +3,1384 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GroupBy Operations - Python Data Science Path</title>
-    <link rel="icon" href="/favicon.png" type="image/png">
+    <meta name="description" content="Split a table into groups, summarize each with named aggregations, and choose between agg, transform and filter, with multiple keys, missing keys and categorical keys handled correctly. Python Data Science Lesson 2.4.">
+    <meta name="author" content="Ray de la Paz">
+    <title>GroupBy Operations - Python Data Science</title>
     <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/enhanced.css">
-    <script type="module">
-        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({ startOnLoad: true });
-    </script>
-    <style>
-        :root {
-            --primary-color: #2563eb;
-            --secondary-color: #1e40af;
-            --accent-color: #10b981;
-            --bg-dark: #1e293b;
-            --bg-light: #f8fafc;
-            --text-dark: #0f172a;
-            --text-light: #64748b;
-            --border-color: #e2e8f0;
-            --code-bg: #f1f5f9;
-            --group-color-1: #3b82f6;
-            --group-color-2: #8b5cf6;
-            --group-color-3: #f59e0b;
-            --group-color-4: #10b981;
-            --group-color-5: #ef4444;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.6;
-            color: var(--text-dark);
-            background: linear-gradient(135deg, var(--bg-light) 0%, #e0f2fe 100%);
-            min-height: 100vh;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 1rem;
-        }
-
-        header {
-            background: white;
-            border-radius: 1rem;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            border-left: 5px solid var(--accent-color);
-        }
-
-        h1 {
-            color: var(--primary-color);
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .breadcrumb {
-            color: var(--text-light);
-            font-size: 0.9rem;
-            margin-bottom: 1rem;
-        }
-
-        .breadcrumb a {
-            color: var(--primary-color);
-            text-decoration: none;
-            transition: color 0.3s ease;
-        }
-
-        .breadcrumb a:hover {
-            color: var(--secondary-color);
-            text-decoration: underline;
-        }
-
-        .intro {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 2rem;
-            border-radius: 1rem;
-            margin-bottom: 2rem;
-            animation: slideIn 0.6s ease;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .groupby-pipeline {
-            background: white;
-            border-radius: 1rem;
-            padding: 2rem;
-            margin: 2rem 0;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .concept-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .concept-card {
-            background: white;
-            border-radius: 1rem;
-            padding: 1.5rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            border-top: 4px solid var(--accent-color);
-        }
-
-        .concept-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-        }
-
-        .concept-card h3 {
-            color: var(--primary-color);
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .aggregate-functions {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 0.5rem;
-            margin: 1rem 0;
-        }
-
-        .agg-func {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            padding: 0.5rem;
-            border-radius: 0.5rem;
-            text-align: center;
-            font-weight: bold;
-            transition: transform 0.3s ease;
-        }
-
-        .agg-func:hover {
-            transform: scale(1.05);
-        }
-
-        .visual-groupby {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            margin: 1rem 0;
-        }
-
-        .group-box {
-            border: 2px dashed var(--border-color);
-            border-radius: 0.5rem;
-            padding: 1rem;
-            background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
-        }
-
-        .group-header {
-            font-weight: bold;
-            color: var(--primary-color);
-            margin-bottom: 0.5rem;
-        }
-
-        .group-items {
-            font-size: 0.9rem;
-            color: var(--text-dark);
-        }
-
-        .code-example {
-            background: var(--code-bg);
-            border-radius: 0.5rem;
-            padding: 1rem;
-            margin: 1rem 0;
-            border-left: 4px solid var(--primary-color);
-            overflow-x: auto;
-        }
-
-        pre {
-            margin: 0;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 0.9rem;
-        }
-
-        code {
-            background: var(--code-bg);
-            padding: 0.2rem 0.4rem;
-            border-radius: 0.25rem;
-            font-family: 'Courier New', Courier, monospace;
-            color: var(--secondary-color);
-        }
-
-        .interactive-demo {
-            background: white;
-            border-radius: 1rem;
-            padding: 2rem;
-            margin: 2rem 0;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        canvas {
-            border: 2px solid var(--border-color);
-            border-radius: 0.5rem;
-            margin: 1rem 0;
-            display: block;
-            width: 100%;
-            max-width: 800px;
-        }
-
-        .table-example {
-            background: var(--code-bg);
-            border-radius: 0.5rem;
-            padding: 1rem;
-            margin: 1rem 0;
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.9rem;
-        }
-
-        th {
-            background: var(--primary-color);
-            color: white;
-            padding: 0.5rem;
-            text-align: left;
-        }
-
-        td {
-            padding: 0.5rem;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        tr:nth-child(even) {
-            background: rgba(0, 0, 0, 0.02);
-        }
-
-        .tip-box {
-            background: linear-gradient(135deg, #10b98120, #06b67420);
-            border-left: 4px solid var(--accent-color);
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin: 1rem 0;
-        }
-
-        .warning-box {
-            background: linear-gradient(135deg, #f5922020, #ef444420);
-            border-left: 4px solid #ef4444;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin: 1rem 0;
-        }
-
-        .navigation {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 3rem;
-            padding: 1rem;
-            background: white;
-            border-radius: 1rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .nav-button {
-            padding: 0.75rem 1.5rem;
-            background: var(--primary-color);
-            color: white;
-            text-decoration: none;
-            border-radius: 0.5rem;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .nav-button:hover {
-            background: var(--secondary-color);
-            transform: translateX(5px);
-        }
-
-        .nav-button.prev:hover {
-            transform: translateX(-5px);
-        }
-
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 1.8rem;
-            }
-
-            .concept-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .visual-groupby {
-                grid-template-columns: 1fr;
-            }
-
-            .navigation {
-                flex-direction: column;
-                gap: 1rem;
-            }
-
-            .nav-button {
-                width: 100%;
-                justify-content: center;
-            }
-        }
-    </style>
-    <script src="/js/course-enhancements.js" defer></script>
-    <script src="/js/clipboard.js" defer></script>
-    <link rel="stylesheet" href="styles/standard.css">
+    <link rel="icon" type="image/png" href="favicon.png">
 </head>
 <body>
-    <!-- Skip to main content for accessibility -->
     <a href="#main-content" class="skip-to-main">Skip to main content</a>
-    
-    <!-- Progress indicator -->
+
     <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
         <div class="progress-bar"></div>
     </div>
-    <div class="container">
-        <header>
-            <div class="breadcrumb">
-                <a href="index.html">Home</a> / 
-                <a href="foundation.html">Foundation Module</a> / 
-                <a href="pandas_essentials.html">Pandas Essentials</a> / 
-                GroupBy Operations
-            </div>
-            <h1>📊 GroupBy Operations</h1>
 
-    <!-- What You'll Learn (learning objectives) -->
-    <div class="card card-info">
-        <h2>📚 What You'll Learn</h2>
-        <p>By the end of this lesson, you will be able to:</p>
-        <ul>
-            <li>Explain the split-apply-combine paradigm that powers every GroupBy operation</li>
-            <li>Group a DataFrame by one or several columns and apply aggregate functions like <code>sum</code>, <code>mean</code>, and <code>count</code></li>
-            <li>Use <code>agg()</code> with multiple, named, and custom aggregation functions</li>
-            <li>Use <code>transform()</code> to broadcast group-level results back to every original row (normalize, rank, fill)</li>
-            <li>Use <code>filter()</code> to keep or drop entire groups based on a condition</li>
-            <li>Group by time periods with <code>pd.Grouper</code>, build pivot tables, and speed grouping up with categorical dtypes</li>
-        </ul>
-        <p><strong>⏱️ Estimated Time:</strong> 45–60 minutes</p>
-        <p><strong>🎯 Project:</strong> Build a sales analytics dashboard that summarizes revenue by product, region, month, and sales rep using aggregation, pivot tables, and growth metrics.</p>
-    </div>
-            <p>Transform data with split-apply-combine: the Swiss Army knife of data analysis</p>
-        </header>
-
-        <div class="intro">
-            <h2>🌟 The Magic of GroupBy</h2>
-            <p>Imagine you're organizing a library. You could group books by genre, then count how many are in each category, find the average page count per genre, or identify the oldest book in each group. GroupBy operations work the same way with data!</p>
-            <p>The GroupBy mechanism is pandas' answer to the age-old question: "What's the average/sum/max/min of X for each Y?" It's like having a team of specialized accountants who can instantly reorganize and summarize your data in countless ways. This is where data analysis becomes truly powerful!</p>
-        </div>
-
-        <div class="groupby-pipeline">
-            <h2>🔄 The Split-Apply-Combine Pattern</h2>
-            <div class="mermaid">
-                graph LR
-                    A[Original DataFrame] --> B[SPLIT<br/>Group by categories]
-                    B --> C[APPLY<br/>Perform operations]
-                    C --> D[COMBINE<br/>Merge results]
-                    D --> E[Result DataFrame]
-                    
-                    B --> F[Group 1]
-                    B --> G[Group 2]
-                    B --> H[Group 3]
-                    
-                    F --> I[Aggregate]
-                    G --> J[Transform]
-                    H --> K[Filter]
-                    
-                    I --> D
-                    J --> D
-                    K --> D
-                    
-                    style A fill:#f9f,stroke:#333,stroke-width:2px
-                    style E fill:#9f9,stroke:#333,stroke-width:2px
-                    style B fill:#ff9,stroke:#333,stroke-width:2px
-                    style C fill:#9ff,stroke:#333,stroke-width:2px
-                    style D fill:#f99,stroke:#333,stroke-width:2px
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">📊 Python Data Science</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">☰</button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
             </div>
         </div>
+    </nav>
 
-        <div class="interactive-demo">
-            <h2>🎮 Interactive GroupBy Visualizer</h2>
-            <p>Watch how data gets grouped and aggregated in real-time:</p>
-            <canvas id="groupbyCanvas" width="800" height="400"></canvas>
-            <div style="margin-top: 1rem;">
-                <button onclick="demonstrateGroupBy('sum')" style="padding: 0.5rem 1rem; background: var(--group-color-1); color: white; border: none; border-radius: 0.5rem; cursor: pointer; margin-right: 0.5rem;">Sum</button>
-                <button onclick="demonstrateGroupBy('mean')" style="padding: 0.5rem 1rem; background: var(--group-color-2); color: white; border: none; border-radius: 0.5rem; cursor: pointer; margin-right: 0.5rem;">Mean</button>
-                <button onclick="demonstrateGroupBy('count')" style="padding: 0.5rem 1rem; background: var(--group-color-3); color: white; border: none; border-radius: 0.5rem; cursor: pointer; margin-right: 0.5rem;">Count</button>
-                <button onclick="demonstrateGroupBy('max')" style="padding: 0.5rem 1rem; background: var(--group-color-4); color: white; border: none; border-radius: 0.5rem; cursor: pointer;">Max</button>
-            </div>
-        </div>
+    <main id="main-content">
+        <div class="container">
+            <header>
+                <h1>🧮 Lesson 2.4: GroupBy Operations</h1>
+                <p class="lead">Answer every question that starts with "for each…": for each store, each month, each customer, with one of the most useful patterns in all of data analysis.</p>
 
-        <div class="concept-grid">
-            <div class="concept-card">
-                <h3>🎯 Basic GroupBy</h3>
-                <p>Group by one or more columns and apply aggregate functions</p>
-                <div class="code-example">
-                    <pre><code># Simple groupby
-df.groupby('category').mean()
-
-# Group by multiple columns
-df.groupby(['category', 'region']).sum()
-
-# Select specific columns after grouping
-df.groupby('category')['sales'].sum()
-
-# Multiple aggregations
-df.groupby('category').agg({
-    'sales': 'sum',
-    'quantity': 'mean',
-    'price': ['min', 'max']
-})</code></pre>
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Explain split-apply-combine and read a <code>groupby</code> expression piece by piece</li>
+                        <li>Summarize groups with built-in methods and with named aggregation, on one key or several</li>
+                        <li>Choose correctly between <code>agg</code> (one row per group), <code>transform</code> (one row per original row) and <code>filter</code> (keep or drop whole groups)</li>
+                        <li>Control what happens to missing keys and unused categories with <code>dropna=</code> and <code>observed=</code></li>
+                        <li>Recognize the common traps: lost rows, a key hidden in the index, and averages of averages</li>
+                    </ul>
                 </div>
-                <div class="visual-groupby">
-                    <div class="group-box">
-                        <div class="group-header">Original Data</div>
-                        <div class="group-items">
-                            Category | Sales<br>
-                            A | 100<br>
-                            B | 200<br>
-                            A | 150<br>
-                            B | 250
-                        </div>
+
+                <ul class="lesson-meta">
+                    <li><span class="meta-label">⏱️ Time</span> 90 minutes</li>
+                    <li><span class="meta-label">📋 Prerequisites</span> <a href="pandas_dataframes_series.html">Lesson 2.1: DataFrames and Series</a> and <a href="pandas_data_cleaning.html">Lesson 2.3: Cleaning Data</a></li>
+                    <li><span class="meta-label">🛠️ You will build</span> A store scorecard and a customer summary table from two years of orders</li>
+                    <li><span class="meta-label">📂 Data</span> <code>data/orders.csv</code>, <code>data/survey.csv</code>, <code>data/order_items.csv</code></li>
+                </ul>
+            </header>
+
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#why" class="toc-link">Split, Apply, Combine</a></li>
+                        <li><a href="#first" class="toc-link">Your First GroupBy</a></li>
+                        <li><a href="#agg" class="toc-link">Several Summaries at Once</a></li>
+                        <li><a href="#keys" class="toc-link">More Than One Key</a></li>
+                        <li><a href="#three" class="toc-link">agg, transform or filter?</a></li>
+                        <li><a href="#missing-keys" class="toc-link">Missing Keys and Categories</a></li>
+                        <li><a href="#mistakes" class="toc-link">Common Mistakes</a></li>
+                        <li><a href="#project" class="toc-link">Project: The Store Scorecard</a></li>
+                        <li><a href="#exercises" class="toc-link">Hands-on Exercises</a></li>
+                        <li><a href="#quiz" class="toc-link">Quick Quiz</a></li>
+                        <li><a href="#faq" class="toc-link">Common Questions</a></li>
+                        <li><a href="#journal" class="toc-link">Learning Journal</a></li>
+                        <li><a href="#summary" class="toc-link">Lesson Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
+
+            <!-- ============================================================ -->
+            <section id="why" class="lesson-section">
+                <h2>🗂️ Split, Apply, Combine</h2>
+
+                <p>A table of 20,302 orders is too much to look at. What a manager wants is five lines: one per store. What marketing wants is one line per customer. What finance wants is one line per month. Nearly every business question takes many rows and reduces them to one row <em>per something</em>.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Mental Model: Sorting the Mail</h4>
+                    <p>Imagine the day's receipts from all of Pinecrest dumped on one table. To get revenue by store you would do three things without thinking about it. <strong>Split</strong>: deal the receipts into piles, one pile per store. <strong>Apply</strong>: add up each pile. <strong>Combine</strong>: write the totals on one sheet, one line per pile. That is all <code>groupby</code> is, and it has a name: <strong>split-apply-combine</strong>.</p>
+                </div>
+
+                <div class="diagram">
+                    <svg viewBox="0 0 440 330" width="440" height="330" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Split-apply-combine. Six order rows, each with a store and a total, are split into three groups by store. Each group is summed. The three sums are combined into a result with one row per store.">
+                        <text x="6" y="16" class="svg-text" font-size="13" font-weight="bold">Six orders</text>
+                        <rect x="6" y="24" width="68" height="26" rx="4" class="svg-box-1"/><text x="40" y="42" text-anchor="middle" class="svg-text" font-size="12">Bend 40</text>
+                        <rect x="78" y="24" width="68" height="26" rx="4" class="svg-box-2"/><text x="112" y="42" text-anchor="middle" class="svg-text" font-size="12">Boise 90</text>
+                        <rect x="150" y="24" width="68" height="26" rx="4" class="svg-box-1"/><text x="184" y="42" text-anchor="middle" class="svg-text" font-size="12">Bend 60</text>
+                        <rect x="222" y="24" width="68" height="26" rx="4" class="svg-box-3"/><text x="256" y="42" text-anchor="middle" class="svg-text" font-size="12">Online 25</text>
+                        <rect x="294" y="24" width="68" height="26" rx="4" class="svg-box-2"/><text x="328" y="42" text-anchor="middle" class="svg-text" font-size="12">Boise 30</text>
+                        <rect x="366" y="24" width="68" height="26" rx="4" class="svg-box-3"/><text x="400" y="42" text-anchor="middle" class="svg-text" font-size="12">Online 75</text>
+
+                        <text x="6" y="84" class="svg-accent" font-size="13" font-weight="bold">1. Split by store</text>
+                        <rect x="40" y="94" width="100" height="74" rx="6" class="svg-box"/>
+                        <rect x="56" y="102" width="68" height="26" rx="4" class="svg-box-1"/><text x="90" y="120" text-anchor="middle" class="svg-text" font-size="12">Bend 40</text>
+                        <rect x="56" y="134" width="68" height="26" rx="4" class="svg-box-1"/><text x="90" y="152" text-anchor="middle" class="svg-text" font-size="12">Bend 60</text>
+                        <rect x="170" y="94" width="100" height="74" rx="6" class="svg-box"/>
+                        <rect x="186" y="102" width="68" height="26" rx="4" class="svg-box-2"/><text x="220" y="120" text-anchor="middle" class="svg-text" font-size="12">Boise 90</text>
+                        <rect x="186" y="134" width="68" height="26" rx="4" class="svg-box-2"/><text x="220" y="152" text-anchor="middle" class="svg-text" font-size="12">Boise 30</text>
+                        <rect x="300" y="94" width="100" height="74" rx="6" class="svg-box"/>
+                        <rect x="316" y="102" width="68" height="26" rx="4" class="svg-box-3"/><text x="350" y="120" text-anchor="middle" class="svg-text" font-size="12">Online 25</text>
+                        <rect x="316" y="134" width="68" height="26" rx="4" class="svg-box-3"/><text x="350" y="152" text-anchor="middle" class="svg-text" font-size="12">Online 75</text>
+
+                        <text x="6" y="190" class="svg-accent" font-size="13" font-weight="bold">2. Apply sum() to each group</text>
+                        <path d="M90,198 L90,212" class="svg-line"/><path d="M220,198 L220,212" class="svg-line"/><path d="M350,198 L350,212" class="svg-line"/>
+                        <text x="90" y="230" text-anchor="middle" class="svg-text svg-mono" font-size="13">100</text>
+                        <text x="220" y="230" text-anchor="middle" class="svg-text svg-mono" font-size="13">120</text>
+                        <text x="350" y="230" text-anchor="middle" class="svg-text svg-mono" font-size="13">100</text>
+
+                        <text x="6" y="258" class="svg-accent" font-size="13" font-weight="bold">3. Combine: one row per store</text>
+                        <rect x="110" y="268" width="74" height="26" class="svg-box-1"/><text x="147" y="286" text-anchor="middle" class="svg-text" font-size="12">Bend</text>
+                        <rect x="184" y="268" width="74" height="26" class="svg-box-2"/><text x="221" y="286" text-anchor="middle" class="svg-text" font-size="12">Boise</text>
+                        <rect x="258" y="268" width="74" height="26" class="svg-box-3"/><text x="295" y="286" text-anchor="middle" class="svg-text" font-size="12">Online</text>
+                        <rect x="110" y="294" width="74" height="26" class="svg-box"/><text x="147" y="312" text-anchor="middle" class="svg-text svg-mono" font-size="12">100</text>
+                        <rect x="184" y="294" width="74" height="26" class="svg-box"/><text x="221" y="312" text-anchor="middle" class="svg-text svg-mono" font-size="12">120</text>
+                        <rect x="258" y="294" width="74" height="26" class="svg-box"/><text x="295" y="312" text-anchor="middle" class="svg-text svg-mono" font-size="12">100</text>
+                    </svg>
+                </div>
+
+                <h3>🤔 Why This Matters</h3>
+                <p>Once you see the pattern you find it everywhere: a pivot table in a spreadsheet, <code>GROUP BY</code> in SQL (Module 5), the bars in most bar charts (Module 3), and the group comparisons behind most statistical tests (Module 4). The one-line version you used in Lessons 0.1 and 2.3 was this pattern. Today you take it apart and learn to control every piece.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="first" class="lesson-section">
+                <h2>🚀 Your First GroupBy</h2>
+
+                <p>Start a notebook called <code>lesson_2_4</code> and load the clean orders table.</p>
+
+                <pre><code class="language-python">import numpy as np
+import pandas as pd
+
+pd.set_option("display.width", 150)
+pd.set_option("display.max_columns", 20)
+
+orders = pd.read_csv("data/orders.csv", parse_dates=["order_date"])
+print(orders.shape)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>(20302, 11)</code></pre>
+                </div>
+
+                <p>You already have the tools to compute one store's revenue: filter, then sum. Doing it for every store means a loop.</p>
+
+                <pre><code class="language-python">for store in ["Bend", "Boise"]:
+    one_store = orders[orders["store"] == store]
+    print(store, round(one_store["order_total"].sum(), 2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>Bend 298263.94
+Boise 459714.9</code></pre>
+                </div>
+
+                <p>It works, and it is exactly split (the filter) and apply (the sum), done by hand, with the combining left to you. <code>groupby</code> does all three:</p>
+
+                <pre><code class="language-python">revenue = orders.groupby("store")["order_total"].sum()
+print(revenue)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>store
+Asheville     247133.35
+Bend          298263.94
+Boise         459714.90
+Flagstaff     315077.90
+Online       2630511.36
+Name: order_total, dtype: float64</code></pre>
+                </div>
+
+                <p>Read the expression from left to right, because each piece is one step of the pattern:</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Piece</th><th>Step</th><th>In words</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="nowrap"><code>orders.groupby("store")</code></td><td>Split</td><td>Make one group of rows per distinct store</td></tr>
+                            <tr><td class="nowrap"><code>["order_total"]</code></td><td>(select)</td><td>From each group, take this column</td></tr>
+                            <tr><td class="nowrap"><code>.sum()</code></td><td>Apply + combine</td><td>Add it up within each group; collect the answers</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>What Comes Back</h3>
+
+                <pre><code class="language-python">print(type(revenue))
+print(revenue.index)
+print(revenue["Boise"].round(2))
+print(revenue.sort_values(ascending=False).round(2).head(3))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>&lt;class 'pandas.Series'&gt;
+Index(['Asheville', 'Bend', 'Boise', 'Flagstaff', 'Online'], dtype='str', name='store')
+459714.9
+store
+Online       2630511.36
+Boise         459714.90
+Flagstaff     315077.90
+Name: order_total, dtype: float64</code></pre>
+                </div>
+
+                <p>The result is an ordinary Series. Its <strong>index is the group key</strong>: the store names, sorted alphabetically, with the index itself named <code>store</code>. So everything from Lesson 2.1 applies: look one group up by label, sort the values, take the top three.</p>
+
+                <h3>The GroupBy Object Is a Plan, Not a Result</h3>
+
+                <pre><code class="language-python">grouped = orders.groupby("store")
+print(type(grouped))
+print(grouped.ngroups)
+print(grouped.get_group("Bend").shape)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>&lt;class 'pandas.api.typing.DataFrameGroupBy'&gt;
+5
+(1725, 11)</code></pre>
+                </div>
+
+                <p><code>orders.groupby("store")</code> alone computes nothing. It returns a <code>GroupBy</code> object that knows <em>how</em> the rows are divided (5 groups) and waits to be told what to do with them. <code>get_group()</code> lets you look inside one pile, which is handy when a result surprises you. You can keep the object in a variable and ask it several questions:</p>
+
+                <pre><code class="language-python">by_store = orders.groupby("store")["order_total"]
+print(by_store.mean().round(2))
+print(by_store.median())
+print(by_store.max())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>store
+Asheville    174.90
+Bend         172.91
+Boise        177.22
+Flagstaff    183.61
+Online       204.65
+Name: order_total, dtype: float64
+store
+Asheville    130.90
+Bend         130.85
+Boise        133.90
+Flagstaff    136.95
+Online       156.40
+Name: order_total, dtype: float64
+store
+Asheville     968.75
+Bend         1004.60
+Boise        1676.65
+Flagstaff    1126.75
+Online       4893.00
+Name: order_total, dtype: float64</code></pre>
+                </div>
+
+                <p>Online orders are the largest on every measure, and the median is far below the mean everywhere, the mark of a few big orders. The built-in group methods include <code>sum</code>, <code>mean</code>, <code>median</code>, <code>min</code>, <code>max</code>, <code>count</code>, <code>nunique</code>, <code>std</code>, <code>first</code> and <code>last</code>, and all of them skip missing values.</p>
+
+                <h3>Counting: size, count and nunique</h3>
+
+                <pre><code class="language-python">print(orders.groupby("store").size())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>store
+Asheville     1413
+Bend          1725
+Boise         2594
+Flagstaff     1716
+Online       12854
+dtype: int64</code></pre>
+                </div>
+
+                <p><code>.size()</code> is the number of rows in each group. It needs no column, because it counts rows, whatever they contain. Two near relatives answer different questions:</p>
+
+                <pre><code class="language-python">print(orders.groupby("channel").size())
+print(orders.groupby("channel")["promo_code"].count())
+print(orders.groupby("channel")["customer_id"].nunique())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>channel
+online    12854
+store      7448
+dtype: int64
+channel
+online    1338
+store      810
+Name: promo_code, dtype: int64
+channel
+online    3456
+store     2511
+Name: customer_id, dtype: int64</code></pre>
+                </div>
+
+                <ul>
+                    <li><code>.size()</code>: how many <strong>rows</strong> (12,854 online orders)</li>
+                    <li><code>.count()</code>: how many <strong>non-missing values</strong> in a column (1,338 online orders have a promo code)</li>
+                    <li><code>.nunique()</code>: how many <strong>distinct values</strong> (3,456 different customers ordered online)</li>
+                </ul>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="agg" class="lesson-section">
+                <h2>📊 Several Summaries at Once</h2>
+
+                <p>One number per group is rarely enough. <code>.agg()</code> (short for "aggregate") takes a list of function names and returns one column for each.</p>
+
+                <pre><code class="language-python">print(orders.groupby("store")["order_total"].agg(["count", "sum", "mean", "median"]).round(2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>           count         sum    mean  median
+store
+Asheville   1413   247133.35  174.90  130.90
+Bend        1725   298263.94  172.91  130.85
+Boise       2594   459714.90  177.22  133.90
+Flagstaff   1716   315077.90  183.61  136.95
+Online     12854  2630511.36  204.65  156.40</code></pre>
+                </div>
+
+                <h3>Named Aggregation</h3>
+
+                <p>Real summaries draw on <em>different</em> columns and deserve clear column names. <strong>Named aggregation</strong> does both. Each argument reads <code>new_column=("source_column", "function")</code>.</p>
+
+                <pre><code class="language-python">summary = orders.groupby("store").agg(
+    orders=("order_id", "count"),
+    revenue=("order_total", "sum"),
+    avg_order=("order_total", "mean"),
+    biggest=("order_total", "max"),
+    customers=("customer_id", "nunique"),
+)
+print(summary.round(2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>           orders     revenue  avg_order  biggest  customers
+store
+Asheville    1413   247133.35     174.90   968.75        592
+Bend         1725   298263.94     172.91  1004.60        677
+Boise        2594   459714.90     177.22  1676.65        873
+Flagstaff    1716   315077.90     183.61  1126.75        601
+Online      12854  2630511.36     204.65  4893.00       3456</code></pre>
+                </div>
+
+                <p>This is the form to learn by heart. The output has exactly the columns you named, in the order you wrote them, and anyone reading the code can see where each number comes from. It works with dates too:</p>
+
+                <pre><code class="language-python">print(orders.groupby("store")["order_date"].agg(["min", "max"]))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>                 min        max
+store
+Asheville 2024-01-01 2025-12-31
+Bend      2024-01-01 2025-12-30
+Boise     2024-01-02 2025-12-31
+Flagstaff 2024-01-01 2025-12-30
+Online    2024-01-01 2025-12-31</code></pre>
+                </div>
+
+                <h3>Rates: The Mean of True and False</h3>
+
+                <p>"What fraction of each group's orders were returned?" has a neat answer. Make a boolean column. Since <code>True</code> counts as 1 and <code>False</code> as 0, its <strong>mean within each group is the rate</strong>.</p>
+
+                <pre><code class="language-python">orders["returned"] = orders["status"] == "returned"
+orders["used_promo"] = orders["promo_code"].notna()
+
+rates = orders.groupby("channel").agg(
+    orders=("order_id", "count"),
+    return_rate=("returned", "mean"),
+    promo_rate=("used_promo", "mean"),
+)
+print(rates.round(3))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>         orders  return_rate  promo_rate
+channel
+online    12854        0.069       0.104
+store      7448        0.034       0.109</code></pre>
+                </div>
+
+                <p>That is a real finding: online orders are returned twice as often as in-store ones (6.9% against 3.4%), while promo codes are used at about the same rate in both channels. Creating a helper column first and then aggregating it is almost always clearer, and faster, than trying to do the logic inside the aggregation.</p>
+
+                <h3>Your Own Function</h3>
+
+                <p>When no built-in fits, pass a function that takes a Series (one group's values) and returns a single number.</p>
+
+                <pre><code class="language-python">def spread(s):
+    """Difference between the 90th and 10th percentile."""
+    return s.quantile(0.9) - s.quantile(0.1)
+
+print(orders.groupby("channel")["order_total"].agg(["median", spread]).round(2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>         median  spread
+channel
+online    156.4  372.39
+store     133.9  342.36</code></pre>
+                </div>
+
+                <p>Custom functions are called once per group in ordinary Python, so they are much slower than the built-in names. With 5 groups nobody notices. With 500,000 groups you would. Use the built-in name as a string whenever one exists.</p>
+
+                <h3>Getting the Key Back as a Column</h3>
+
+                <p>The group key lands in the index. That is convenient for lookups and awkward when you want an ordinary table to save or to combine with another. Either ask for it up front with <code>as_index=False</code>, or call <code>.reset_index()</code> afterward.</p>
+
+                <pre><code class="language-python">flat = orders.groupby("store", as_index=False)["order_total"].sum()
+print(flat)
+print(summary.reset_index().columns.tolist())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>       store  order_total
+0  Asheville    247133.35
+1       Bend    298263.94
+2      Boise    459714.90
+3  Flagstaff    315077.90
+4     Online   2630511.36
+['store', 'orders', 'revenue', 'avg_order', 'biggest', 'customers']</code></pre>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="keys" class="lesson-section">
+                <h2>🔑 More Than One Key</h2>
+
+                <p>Pass a list of columns and you get one group for every <em>combination</em> that occurs.</p>
+
+                <pre><code class="language-python">counts = orders.groupby(["channel", "status"]).size()
+print(counts)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>channel  status
+online   cancelled      360
+         completed    11604
+         returned       890
+store    cancelled       37
+         completed     7158
+         returned       253
+dtype: int64</code></pre>
+                </div>
+
+                <p>Two channels times three statuses gives six groups. The index now has two levels, <code>channel</code> and <code>status</code>: a <strong>MultiIndex</strong>. pandas prints the outer label once per block to make it readable. A tuple selects one combination, and an outer label alone selects its whole block.</p>
+
+                <pre><code class="language-python">print(counts.index[:3])
+print(counts.loc[("online", "returned")])
+print(counts.loc["store"])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>MultiIndex([('online', 'cancelled'),
+            ('online', 'completed'),
+            ('online',  'returned')],
+           names=['channel', 'status'])
+890
+status
+cancelled      37
+completed    7158
+returned      253
+dtype: int64</code></pre>
+                </div>
+
+                <p>If the two-level index feels awkward, flatten it. <code>reset_index()</code> turns every level into an ordinary column, and <code>name=</code> labels the counts.</p>
+
+                <pre><code class="language-python">print(counts.reset_index(name="orders"))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>  channel     status  orders
+0  online  cancelled     360
+1  online  completed   11604
+2  online   returned     890
+3   store  cancelled      37
+4   store  completed    7158
+5   store   returned     253</code></pre>
+                </div>
+
+                <p>Or turn one level into columns with <code>.unstack()</code>, which gives the familiar cross-table layout:</p>
+
+                <pre><code class="language-python">print(counts.unstack())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>status   cancelled  completed  returned
+channel
+online         360      11604       890
+store           37       7158       253</code></pre>
+                </div>
+
+                <p>Take <code>.unstack()</code> as a preview. Reshaping between "long" and "wide" tables, and <code>pivot_table</code>, which does a groupby and an unstack in one call, are the subject of <a href="pandas_pivot_tables.html">Lesson 2.6</a>.</p>
+
+                <h3>Keys You Compute on the Spot</h3>
+
+                <p>A key does not have to be a column of the table. Any Series with one value per row will do, for example the year taken from the order date.</p>
+
+                <pre><code class="language-python">by_year = orders.groupby(orders["order_date"].dt.year)["order_total"].sum()
+print(by_year.round(2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>order_date
+2024    1841397.44
+2025    2109304.01
+Name: order_total, dtype: float64</code></pre>
+                </div>
+
+                <p>Mix computed keys and column names freely. Here is completed revenue by year and channel, unstacked so that the two years sit side by side and growth is one line of arithmetic. (<code>.rename("year")</code> gives the computed key a clear name.)</p>
+
+                <pre><code class="language-python">completed = orders[orders["status"] == "completed"]
+yearly = completed.groupby([completed["order_date"].dt.year.rename("year"), "channel"])["order_total"].sum()
+print(yearly.round(2))
+
+table = yearly.unstack("year")
+table["growth_pct"] = ((table[2025] / table[2024] - 1) * 100).round(1)
+print(table.round(2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>year  channel
+2024  online     1077800.75
+      store       605498.76
+2025  online     1280183.70
+      store       660823.06
+Name: order_total, dtype: float64
+year           2024        2025  growth_pct
+channel
+online   1077800.75  1280183.70        18.8
+store     605498.76   660823.06         9.1</code></pre>
+                </div>
+
+                <p>Completed online revenue grew 18.8% from 2024 to 2025, against 9.1% for account-holder orders in the stores. Grouping by month, week or quarter works the same way, and dates have a dedicated tool for it, <code>resample</code>, that <a href="pandas_time_series.html">Lesson 2.7</a> covers.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="three" class="lesson-section">
+                <h2>🔀 agg, transform or filter?</h2>
+
+                <p>Everything so far has been <strong>aggregation</strong>: many rows in, one row per group out. There are two other things you can do with groups, and the difference between the three is simply the <strong>shape of what comes back</strong>.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Operation</th><th>Returns</th><th>Use it to</th><th>Example question</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="nowrap"><code>agg</code></td><td>One row <strong>per group</strong></td><td>Summarize</td><td>What is each store's average order?</td></tr>
+                            <tr><td class="nowrap"><code>transform</code></td><td>One value <strong>per original row</strong></td><td>Attach a group statistic to every row</td><td>How does each order compare with its store's average?</td></tr>
+                            <tr><td class="nowrap"><code>filter</code></td><td>The original rows of <strong>some groups</strong></td><td>Keep or drop whole groups</td><td>Which orders belong to customers with 25 or more orders?</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>transform: A Group Statistic on Every Row</h3>
+
+                <pre><code class="language-python">store_avg = orders.groupby("store")["order_total"].transform("mean")
+print(store_avg.shape, orders.shape)
+print(store_avg.head(4).round(2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>(20302,) (20302, 13)
+0    183.61
+1    174.90
+2    204.65
+3    204.65
+Name: order_total, dtype: float64</code></pre>
+                </div>
+
+                <p><code>.transform("mean")</code> computed the same five store averages as before, but instead of returning five rows it <strong>broadcast each average back to every row of its group</strong>. The result has 20,302 values, in the original row order, with the original index. That means it can go straight into a new column.</p>
+
+                <pre><code class="language-python">orders["store_avg"] = store_avg
+orders["vs_store_avg"] = orders["order_total"] / orders["store_avg"]
+print(orders[["order_id", "store", "order_total", "store_avg", "vs_store_avg"]].head(4).round(2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>   order_id      store  order_total  store_avg  vs_store_avg
+0    100001  Flagstaff        434.9     183.61          2.37
+1    100002  Asheville        278.9     174.90          1.59
+2    100003     Online         75.9     204.65          0.37
+3    100004     Online        399.8     204.65          1.95</code></pre>
+                </div>
+
+                <p>Order 100001 was 2.37 times the average Flagstaff order. Order 100003 was about a third of the average online order. Comparing each row with its own group is one of the most common needs in analysis, and <code>transform</code> is the tool. Two more examples, per customer:</p>
+
+                <pre><code class="language-python">orders["customer_orders"] = orders.groupby("customer_id")["order_id"].transform("count")
+orders["share_of_customer"] = orders["order_total"] / orders.groupby("customer_id")["order_total"].transform("sum")
+print(orders.loc[orders["customer_id"] == 12673, ["order_id", "order_total", "customer_orders", "share_of_customer"]].round(3))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>      order_id  order_total  customer_orders  share_of_customer
+0       100001       434.90                4              0.408
+873     100874       180.90                4              0.170
+1145    101146       139.40                4              0.131
+6279    106280       310.46                4              0.291</code></pre>
+                </div>
+
+                <p>Customer 12673 placed four orders, and now every one of those rows knows it, along with the share of that customer's spending it represents (the four shares add up to 1). Running totals, ranks and moving averages within groups are close cousins of <code>transform</code>. They are called window functions, and <a href="pandas_window_functions.html">Lesson 2.8</a> is about them.</p>
+
+                <h3>filter: Keep or Drop Whole Groups</h3>
+
+                <p><code>.filter()</code> takes a function that receives one group (as a DataFrame) and returns <code>True</code> to keep all of its rows or <code>False</code> to drop them all.</p>
+
+                <pre><code class="language-python">loyal = orders.groupby("customer_id").filter(lambda g: len(g) &gt;= 25)
+print(loyal.shape)
+print(loyal["customer_id"].nunique())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>(496, 17)
+16</code></pre>
+                </div>
+
+                <p>The result is not a summary: it is 496 of the original order rows, belonging to the 16 customers who each placed 25 or more orders. Notice that a <code>transform</code> followed by an ordinary boolean filter gives the identical answer:</p>
+
+                <pre><code class="language-python">loyal2 = orders[orders["customer_orders"] &gt;= 25]
+print(loyal2.shape, loyal2.equals(loyal))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>(496, 17) True</code></pre>
+                </div>
+
+                <p>You already built <code>customer_orders</code>, so this version is free, and on large tables it is far faster because no Python function runs per group. Many analysts use the transform-then-mask pattern nearly all the time. <code>.filter()</code> earns its place when the condition is easier to write as a function of the whole group:</p>
+
+                <pre><code class="language-python">big_spend_stores = orders.groupby("store").filter(lambda g: g["order_total"].mean() &gt; 200)
+print(big_spend_stores["store"].unique())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>&lt;ArrowStringArray&gt;
+['Online']
+Length: 1, dtype: str</code></pre>
+                </div>
+
+                <div class="card card-success">
+                    <h4>✅ Ask "What Shape Do I Want Back?"</h4>
+                    <p>One row per group: <code>agg</code>. The same rows I started with, plus a group number on each: <code>transform</code>. Fewer of the same rows: <code>filter</code> (or a transform and a mask). When you are unsure which you need, say the shape of the answer out loud first.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="missing-keys" class="lesson-section">
+                <h2>🕳️ Missing Keys and Categories</h2>
+
+                <p>Two settings decide which groups appear in the result. Both have sensible defaults, and both will surprise you once.</p>
+
+                <h3>dropna=: Rows with a Missing Key Vanish</h3>
+
+                <pre><code class="language-python">print(orders.groupby("promo_code")["order_total"].agg(["count", "mean"]).round(2))
+print(orders.groupby("promo_code").size().sum(), len(orders))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>            count    mean
+promo_code
+GEARUP5       396  180.80
+SUMMIT20      254  148.53
+TRAIL15       359  167.28
+WELCOME10    1139  177.78
+2148 20302</code></pre>
+                </div>
+
+                <p>Four groups, 2,148 orders. But the table has 20,302. By default, <strong><code>groupby</code> silently drops every row whose key is missing</strong>, and 18,154 orders have no promo code. If you were asked "how do orders with a promo code compare with the rest?", the rest is not in this result at all. <code>dropna=False</code> keeps the missing key as its own group.</p>
+
+                <pre><code class="language-python">print(orders.groupby("promo_code", dropna=False)["order_total"].agg(["count", "mean"]).round(2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>            count    mean
+promo_code
+GEARUP5       396  180.80
+SUMMIT20      254  148.53
+TRAIL15       359  167.28
+WELCOME10    1139  177.78
+NaN         18154  197.14</code></pre>
+                </div>
+
+                <p>Now the comparison is possible: orders with no code average $197.14, and every promo group averages less. (Tempting conclusion: promo codes shrink orders. Careful: the total is recorded <em>after</em> the discount, and WELCOME10 goes only to first-time buyers. A difference between groups is where an investigation starts, not where it ends.)</p>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Check That the Groups Add Up</h4>
+                    <p>After a <code>groupby</code>, compare <code>result.sum()</code> of the sizes with <code>len(df)</code>. If the groups do not account for every row, some keys were missing. It takes five seconds and catches the most silent error in this lesson.</p>
+                </div>
+
+                <h3>observed=: Categories That Do Not Occur</h3>
+
+                <p>In Lesson 2.2 you learned that a <code>category</code> column stores the list of possible values separately from the data. So a category can exist with no rows that use it, and <code>groupby</code> has to decide whether to show it. Take the online orders only and group by a categorical store column:</p>
+
+                <pre><code class="language-python">orders["store_cat"] = orders["store"].astype("category")
+online = orders[orders["channel"] == "online"]
+print(online.groupby("store_cat").size())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>store_cat
+Online    12854
+dtype: int64</code></pre>
+                </div>
+
+                <p>By default (<code>observed=True</code>) you get only the categories that actually occur: one group. Ask for <code>observed=False</code> and every category gets a row, with the empty ones counted as 0:</p>
+
+                <pre><code class="language-python">print(online.groupby("store_cat", observed=False).size())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>store_cat
+Asheville        0
+Bend             0
+Boise            0
+Flagstaff        0
+Online       12854
+dtype: int64</code></pre>
+                </div>
+
+                <p>Neither is wrong. For a report where "Boise: 0" is information, you want <code>observed=False</code>. For most analysis the default is what you expect. The reason to know about it: with two or three categorical keys, <code>observed=False</code> produces a row for every <em>possible combination</em>, and that can be an enormous table of zeros. Older tutorials set <code>observed=True</code> explicitly because the default used to be the other way around. Writing it out does no harm.</p>
+
+                <p>You meet categorical keys most often through <code>pd.cut()</code>, which sorts numbers into labeled bins and returns a categorical Series:</p>
+
+                <pre><code class="language-python">tiers = pd.cut(orders["order_total"], bins=[0, 50, 150, 500, 5000], labels=["under 50", "50 to 150", "150 to 500", "over 500"])
+print(tiers.dtype)
+print(orders.groupby(tiers).agg(orders=("order_id", "count"), return_rate=("returned", "mean")).round(3))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>category
+             orders  return_rate
+order_total
+under 50       2722        0.045
+50 to 150      7633        0.046
+150 to 500     8816        0.066
+over 500       1131        0.073</code></pre>
+                </div>
+
+                <p>Bigger orders are returned more often: 4.7% of orders under $50 against 7.6% of orders over $500. <code>pd.cut</code> returns in <a href="pandas_feature_engineering_basics.html">Lesson 2.9</a>.</p>
+
+                <h3>One More Default: Groups Are Sorted</h3>
+
+                <pre><code class="language-python">print(orders.groupby("store", sort=False)["order_total"].sum().round(2).head(3))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>store
+Flagstaff     315077.90
+Asheville     247133.35
+Online       2630511.36
+Name: order_total, dtype: float64</code></pre>
+                </div>
+
+                <p>Group keys come back sorted. <code>sort=False</code> keeps them in order of first appearance instead, which is slightly faster and occasionally what you want. The order of rows <em>within</em> each group is never changed.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="mistakes" class="lesson-section">
+                <h2>⚠️ Common Mistakes</h2>
+
+                <p>GroupBy mistakes come in two kinds: the ones with an error message, which are easy, and the ones that quietly return a plausible wrong number. Both kinds are here. Mistakes 3 and 6 are the quiet ones, so read those twice.</p>
+
+                <h3>1. Aggregating Every Column</h3>
+                <pre data-raises="TypeError"><code class="language-python">orders.groupby("store").mean()</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>TypeError: dtype 'str' does not support operation 'mean'</code></pre>
+                </div>
+                <p><strong>What it means:</strong> with no column selected, pandas tried to average all of them, including text columns such as <code>channel</code>. <strong>Fix:</strong> select the columns you mean (or use named aggregation).</p>
+                <pre><code class="language-python">print(orders.groupby("store")[["order_total", "shipping_cost"]].mean().round(2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>           order_total  shipping_cost
+store
+Asheville       174.90           0.00
+Bend            172.91           0.00
+Boise           177.22           0.00
+Flagstaff       183.61           0.00
+Online          204.65           2.56</code></pre>
+                </div>
+
+                <h3>2. Looking for the Key Among the Columns</h3>
+                <pre data-raises="KeyError"><code class="language-python">summary["store"]</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>KeyError: 'store'</code></pre>
+                </div>
+                <p><strong>What it means:</strong> after a groupby, <code>store</code> is the <em>index</em>, not a column. <strong>Fix:</strong> use <code>summary.index</code>, or <code>.reset_index()</code>, or group with <code>as_index=False</code>.</p>
+                <pre><code class="language-python">print(summary.index.tolist())
+print(summary.reset_index()["store"].tolist())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>['Asheville', 'Bend', 'Boise', 'Flagstaff', 'Online']
+['Asheville', 'Bend', 'Boise', 'Flagstaff', 'Online']</code></pre>
+                </div>
+
+                <h3>3. The Average of Averages</h3>
+                <pre><code class="language-python">store_means = orders.groupby("store")["order_total"].mean()
+print(store_means.mean().round(2))
+print(orders["order_total"].mean().round(2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>182.66
+194.6</code></pre>
+                </div>
+                <p><strong>What happened:</strong> no error, two different "average order values". The first averages the five store averages, giving tiny Asheville the same weight as the online shop with nine times as many orders. The second is the true average over all orders. <strong>Fix:</strong> never average group means unless the groups are the same size. Go back to the rows, or carry sums and counts and divide at the end.</p>
+
+                <h3>4. Renaming with a Nested Dictionary</h3>
+                <pre data-raises="Exception"><code class="language-python">orders.groupby("store").agg({"order_total": {"revenue": "sum"}})</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>SpecificationError: nested renamer is not supported</code></pre>
+                </div>
+                <p><strong>What it means:</strong> this dictionary-inside-a-dictionary syntax appears in old tutorials and was removed from pandas long ago. <strong>Fix:</strong> named aggregation.</p>
+                <pre><code class="language-python">print(orders.groupby("store").agg(revenue=("order_total", "sum")).round(2).head(2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>             revenue
+store
+Asheville  247133.35
+Bend       298263.94</code></pre>
+                </div>
+
+                <h3>5. A Key That Is Not a Column</h3>
+                <pre data-raises="KeyError"><code class="language-python">orders.groupby("Store")["order_total"].sum()</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>KeyError: 'Store'</code></pre>
+                </div>
+                <p><strong>What it means:</strong> the same case-sensitive <code>KeyError</code> as ever. The column is <code>store</code>. <strong>Fix:</strong> <code>print(orders.columns.tolist())</code>.</p>
+
+                <h3>6. count When You Meant size</h3>
+                <pre><code class="language-python">print(orders.groupby("payment_method")["promo_code"].count())
+print(orders.groupby("payment_method")["promo_code"].size())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>payment_method
+card              1271
+cash               189
+digital_wallet     522
+gift_card          166
+Name: promo_code, dtype: int64
+payment_method
+card              12392
+cash               1614
+digital_wallet     4794
+gift_card          1502
+Name: promo_code, dtype: int64</code></pre>
+                </div>
+                <p><strong>What happened:</strong> "how many orders per payment method?" has the answer in the second block. The first counted only the orders that have a promo code, because <code>.count()</code> skips missing values in the column it is applied to. <strong>Fix:</strong> <code>.size()</code> for rows; <code>.count()</code> only when "non-missing values of this column" is really the question.</p>
+
+                <h3>7. Rows Lost to a Missing Key</h3>
+                <p>From <a href="#missing-keys">Missing Keys and Categories</a>: grouping by <code>promo_code</code> silently ignored 18,154 of 20,302 orders. <strong>Fix:</strong> <code>dropna=False</code>, and check that group sizes add up to the table.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="project" class="lesson-section">
+                <h2>🛠️ Project: The Store Scorecard</h2>
+
+                <p>Pinecrest's leadership meets every quarter and wants two tables: a scorecard with one row per sales channel, and a summary with one row per customer that marketing can use. You will build both from <code>orders.csv</code>, using named aggregation, a computed key, <code>transform</code> and <code>pd.cut</code>. Use a new notebook, <code>lesson_2_4_project</code>. Allow about 35 minutes.</p>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 1: Prepare helper columns <span class="step-time">(5 min)</span></h3>
+                    <p>Revenue should count completed orders only: a returned or cancelled order brought in nothing. <code>.where(condition, 0.0)</code> keeps the total where the order was completed and puts 0 elsewhere. Two boolean columns will become rates.</p>
+                    <pre><code class="language-python">import pandas as pd
+
+pd.set_option("display.width", 150)
+pd.set_option("display.max_columns", 20)
+
+orders = pd.read_csv("data/orders.csv", parse_dates=["order_date"])
+orders["returned"] = orders["status"] == "returned"
+orders["cancelled"] = orders["status"] == "cancelled"
+orders["revenue"] = orders["order_total"].where(orders["status"] == "completed", 0.0)
+
+print(orders[["order_id", "status", "order_total", "revenue", "returned"]].iloc[[0, 25, 30]])</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>    order_id     status  order_total  revenue  returned
+0     100001  completed        434.9    434.9     False
+25    100026  completed        229.8    229.8     False
+30    100031  cancelled        271.9      0.0     False</code></pre>
                     </div>
-                    <div class="group-box">
-                        <div class="group-header">After GroupBy Sum</div>
-                        <div class="group-items">
-                            Category | Sales<br>
-                            A | 250<br>
-                            B | 450
-                        </div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 2: The scorecard <span class="step-time">(10 min)</span></h3>
+                    <p>One named aggregation, six measures, sorted by revenue. Then each row's share of the total, which is ordinary column arithmetic on the result.</p>
+                    <pre><code class="language-python">scorecard = orders.groupby("store").agg(
+    orders=("order_id", "count"),
+    customers=("customer_id", "nunique"),
+    revenue=("revenue", "sum"),
+    median_order=("order_total", "median"),
+    return_rate=("returned", "mean"),
+    cancel_rate=("cancelled", "mean"),
+).sort_values("revenue", ascending=False)
+
+scorecard["revenue_share"] = scorecard["revenue"] / scorecard["revenue"].sum()
+print(scorecard.round(3))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>           orders  customers     revenue  median_order  return_rate  cancel_rate  revenue_share
+store
+Online      12854       3456  2357984.45        156.40        0.069        0.028          0.651
+Boise        2594        873   443386.85        133.90        0.032        0.003          0.122
+Flagstaff    1716        601   300580.35        136.95        0.031        0.008          0.083
+Bend         1725        677   284575.25        130.85        0.038        0.006          0.079
+Asheville    1413        592   237779.37        130.90        0.036        0.003          0.066</code></pre>
+                    </div>
+                    <p>The online shop brings in 65% of account-holder revenue and has by far the highest return and cancellation rates. The four stores have similar order sizes.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 3: Growth by store <span class="step-time">(5 min)</span></h3>
+                    <p>Group by store and by a computed year, unstack the years into columns, and compare them.</p>
+                    <pre><code class="language-python">year = orders["order_date"].dt.year.rename("year")
+by_year = orders.groupby(["store", year])["revenue"].sum().unstack("year")
+by_year = by_year.round(0)
+by_year["growth_pct"] = ((by_year[2025] / by_year[2024] - 1) * 100).round(1)
+print(by_year.sort_values("growth_pct", ascending=False))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>year            2024       2025  growth_pct
+store
+Flagstaff   129032.0   171548.0        32.9
+Online     1077801.0  1280184.0        18.8
+Boise       212140.0   231247.0         9.0
+Bend        136989.0   147586.0         7.7
+Asheville   127337.0   110442.0       -13.3</code></pre>
+                    </div>
+                    <p>Flagstaff grew 38% and Asheville shrank 9.4%. That is the kind of line that changes the agenda of a meeting. One caution about the basis: <code>orders.csv</code> holds online orders plus store purchases by signed-in account holders, not every sale at the registers. The register totals for all in-store sales (<code>daily_sales.csv</code>, <a href="pandas_time_series.html">Lesson 2.7</a>) show the same direction with different sizes: Flagstaff +19.7% and Asheville -5.0%. Always say which table a growth figure comes from.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 4: One row per customer <span class="step-time">(5 min)</span></h3>
+                    <p>The same pattern with a different key. The favorite store uses a small custom function: <code>.mode()</code> returns the most frequent value or values, and <code>.iloc[0]</code> takes the first.</p>
+                    <pre><code class="language-python">customers = orders.groupby("customer_id").agg(
+    orders=("order_id", "count"),
+    spend=("revenue", "sum"),
+    first_order=("order_date", "min"),
+    last_order=("order_date", "max"),
+    favorite_store=("store", lambda s: s.mode().iloc[0]),
+)
+print(customers.head(3))
+print(customers["orders"].describe().round(2))
+print((customers["orders"] == 1).sum(), "customers ordered once")</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>             orders    spend first_order last_order favorite_store
+customer_id
+10001             8  2129.65  2024-03-17 2025-06-25         Online
+10002             4  1013.40  2024-12-04 2025-12-18         Online
+10003             9  1873.75  2024-02-16 2025-12-06      Flagstaff
+count    3942.00
+mean        5.15
+std         4.42
+min         1.00
+25%         2.00
+50%         4.00
+75%         7.00
+max        41.00
+Name: orders, dtype: float64
+719 customers ordered once</code></pre>
+                    </div>
+                    <p>3,942 customers ordered, a median of 4 times each. One ordered 41 times, and 719 ordered exactly once.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 5: How much do repeat buyers matter? <span class="step-time">(5 min)</span></h3>
+                    <p>Put each customer's order count on every order row with <code>transform</code>, bin it with <code>pd.cut</code>, and aggregate by the bins.</p>
+                    <pre><code class="language-python">orders["customer_orders"] = orders.groupby("customer_id")["order_id"].transform("count")
+orders["buyer_type"] = pd.cut(orders["customer_orders"], bins=[0, 1, 5, 100],
+                              labels=["one order", "2 to 5", "6 or more"])
+
+by_type = orders.groupby("buyer_type").agg(
+    customers=("customer_id", "nunique"),
+    orders=("order_id", "count"),
+    revenue=("revenue", "sum"),
+    avg_order=("order_total", "mean"),
+)
+by_type["revenue_share"] = by_type["revenue"] / by_type["revenue"].sum()
+print(by_type.round(3))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>            customers  orders     revenue  avg_order  revenue_share
+buyer_type
+one order         719     719   126300.16    190.854          0.035
+2 to 5           1848    6023  1074018.94    193.576          0.296
+6 or more        1375   13560  2423987.17    195.249          0.669</code></pre>
+                    </div>
+                    <p>The 1,375 customers with six or more orders are 35% of buyers and bring in 67% of revenue. Their average order is no bigger than anyone else's (between about $191 and $195 in every group): they are valuable because they come back.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 6: Save and summarize <span class="step-time">(5 min)</span></h3>
+                    <p>Write both tables out, keeping the index this time because it holds the key, and print the headline numbers. <code>.idxmax()</code> returns the index label of the largest value.</p>
+                    <pre><code class="language-python">from pathlib import Path
+
+Path("output").mkdir(exist_ok=True)
+scorecard.round(4).to_csv("output/store_scorecard.csv")
+customers.to_csv("output/customer_summary.csv")
+
+top = scorecard.index[0]
+fastest = by_year["growth_pct"].idxmax()
+print(f"Completed revenue, 2024-2025 : ${scorecard['revenue'].sum():,.2f}")
+print(f"Largest channel              : {top} ({scorecard.loc[top, 'revenue_share']:.1%} of revenue)")
+print(f"Fastest-growing              : {fastest} (+{by_year.loc[fastest, 'growth_pct']}%)")
+print(f"Highest return rate          : {scorecard['return_rate'].idxmax()} ({scorecard['return_rate'].max():.1%})")
+print(f"Buyers / median orders each  : {len(customers):,} / {customers['orders'].median():.0f}")
+print(f"Revenue from 6+ order buyers : {by_type.loc['6 or more', 'revenue_share']:.1%}")</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>Completed revenue, 2024-2025 : $3,624,306.27
+Largest channel              : Online (65.1% of revenue)
+Fastest-growing              : Flagstaff (+32.9%)
+Highest return rate          : Online (6.9%)
+Buyers / median orders each  : 3,942 / 4
+Revenue from 6+ order buyers : 66.9%</code></pre>
                     </div>
                 </div>
-            </div>
 
-            <div class="concept-card">
-                <h3>📈 Aggregate Functions</h3>
-                <p>The toolkit of operations you can apply to groups</p>
-                <div class="aggregate-functions">
-                    <div class="agg-func">sum()</div>
-                    <div class="agg-func">mean()</div>
-                    <div class="agg-func">median()</div>
-                    <div class="agg-func">count()</div>
-                    <div class="agg-func">min()</div>
-                    <div class="agg-func">max()</div>
-                    <div class="agg-func">std()</div>
-                    <div class="agg-func">var()</div>
-                    <div class="agg-func">first()</div>
-                    <div class="agg-func">last()</div>
-                    <div class="agg-func">nunique()</div>
-                    <div class="agg-func">size()</div>
+                <div class="card card-success">
+                    <h3>✅ Project Completion Checklist</h3>
+                    <ul class="checklist">
+                        <li><code>scorecard</code> has 5 rows and its <code>orders</code> column adds up to 20,302</li>
+                        <li>Revenue counts completed orders only and totals $3,624,306.27</li>
+                        <li>Return and cancellation rates come from the mean of a boolean column</li>
+                        <li><code>customers</code> has 3,942 rows, one per customer, with first and last order dates</li>
+                        <li><code>customer_orders</code> was added with <code>transform</code>, not with a loop</li>
+                        <li>Both CSV files are in <code>output/</code>, each with its key as the first column</li>
+                    </ul>
                 </div>
-                <div class="code-example">
-                    <pre><code># Using agg() with multiple functions
-result = df.groupby('category').agg({
-    'sales': ['sum', 'mean', 'std'],
-    'quantity': ['min', 'max'],
-    'customer_id': 'nunique'
-})
+            </section>
 
-# Custom aggregation functions
-def range_calc(x):
-    return x.max() - x.min()
+            <!-- ============================================================ -->
+            <section id="exercises" class="lesson-section">
+                <h2>🏋️ Hands-on Exercises</h2>
 
-df.groupby('category')['price'].agg([
-    'mean',
-    'std',
-    ('range', range_calc),
-    ('q25', lambda x: x.quantile(0.25)),
-    ('q75', lambda x: x.quantile(0.75))
-])</code></pre>
+                <p>These continue with the project's <code>orders</code> table. For each one, decide the shape of the answer before you type: how many rows should come back?</p>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 1: Two Keys</h3>
+                    <p>For each combination of <code>channel</code> and <code>payment_method</code>, find the number of orders and the average order total. Which payment method is missing from one channel?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>A list of two keys, and named aggregation with two entries.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">pay = orders.groupby(["channel", "payment_method"]).agg(
+    orders=("order_id", "count"),
+    avg_total=("order_total", "mean"),
+)
+print(pay.round(2))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>                        orders  avg_total
+channel payment_method
+online  card              7953     205.81
+        digital_wallet    3876     204.23
+        gift_card         1025     197.17
+store   card              4439     177.96
+        cash              1614     174.61
+        digital_wallet     918     174.60
+        gift_card          477     184.72</code></pre>
+                        </div>
+                        <p>Seven rows, not eight: there is no (online, cash) group, because nobody pays cash online. Combinations that never occur simply do not appear.</p>
+                    </details>
                 </div>
-            </div>
 
-            <div class="concept-card">
-                <h3>🔄 Transform Operations</h3>
-                <p>Apply operations that return same-sized results as the input</p>
-                <div class="code-example">
-                    <pre><code># Normalize values within each group
-df['normalized'] = df.groupby('category')['value'].transform(
-    lambda x: (x - x.mean()) / x.std()
+                <div class="card">
+                    <h3>🏋️ Exercise 2: Every Order Counts</h3>
+                    <p>Summarize orders by <code>promo_code</code>, including the orders with no code: number of orders, the discount percentage, average total, the first date the code was used, and the number of distinct days on which it was used. What do the last two columns tell you about how each code works?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>dropna=False</code>. A date column accepts <code>"min"</code> and <code>"nunique"</code> like any other.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">promo = orders.groupby("promo_code", dropna=False).agg(
+    orders=("order_id", "count"),
+    discount=("discount_pct", "max"),
+    avg_total=("order_total", "mean"),
+    first_used=("order_date", "min"),
+    days_used=("order_date", "nunique"),
 )
-
-# Fill missing values with group mean
-df['filled'] = df.groupby('category')['value'].transform(
-    lambda x: x.fillna(x.mean())
-)
-
-# Rank within groups
-df['rank'] = df.groupby('category')['sales'].rank(
-    method='dense', ascending=False
-)
-
-# Calculate percentage of group total
-df['pct_of_group'] = df.groupby('category')['sales'].transform(
-    lambda x: x / x.sum() * 100
-)</code></pre>
+promo["avg_total"] = promo["avg_total"].round(2)
+print(promo)</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>            orders  discount  avg_total first_used  days_used
+promo_code
+GEARUP5        396         5     180.80 2024-01-21        299
+SUMMIT20       254        20     148.53 2024-11-29          8
+TRAIL15        359        15     167.28 2024-05-24         16
+WELCOME10     1139        10     177.78 2024-01-01        493
+NaN          18154         0     197.14 2024-01-01        731</code></pre>
+                        </div>
+                        <p>SUMMIT20 was used on only 8 days and TRAIL15 on 16: they are sale-weekend codes. GEARUP5 and WELCOME10 run all year. The summary reveals the promotion calendar without anyone telling you.</p>
+                    </details>
                 </div>
-            </div>
 
-            <div class="concept-card">
-                <h3>🔍 Filter Operations</h3>
-                <p>Keep or remove entire groups based on conditions</p>
-                <div class="code-example">
-                    <pre><code># Keep groups with sum > threshold
-filtered = df.groupby('category').filter(
-    lambda x: x['sales'].sum() > 1000
+                <div class="card">
+                    <h3>🏋️ Exercise 3: The Weekly Rhythm</h3>
+                    <p>How many orders were placed on each day of the week, and what was the average total? Present the days in calendar order, Monday first, with their names.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>.dt.day_name()</code> gives names, but they sort alphabetically. <code>.dt.dayofweek</code> gives 0 for Monday to 6 for Sunday. Group by both, number first.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">day_number = orders["order_date"].dt.dayofweek.rename("day_number")
+day_name = orders["order_date"].dt.day_name().rename("day")
+weekdays = orders.groupby([day_number, day_name]).agg(
+    orders=("order_id", "count"),
+    avg_total=("order_total", "mean"),
 )
-
-# Keep groups with at least n members
-filtered = df.groupby('category').filter(
-    lambda x: len(x) >= 5
-)
-
-# Keep groups where mean is above overall mean
-overall_mean = df['value'].mean()
-filtered = df.groupby('category').filter(
-    lambda x: x['value'].mean() > overall_mean
-)
-
-# Complex filtering
-filtered = df.groupby('region').filter(
-    lambda x: (x['sales'].sum() > 5000) & 
-              (x['customers'].nunique() > 10)
-)</code></pre>
+print(weekdays.round(2))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>                      orders  avg_total
+day_number day
+0          Monday       2897     194.42
+1          Tuesday      2712     201.58
+2          Wednesday    2666     201.39
+3          Thursday     2640     197.65
+4          Friday       2775     189.01
+5          Saturday     3276     185.92
+6          Sunday       3336     194.40</code></pre>
+                        </div>
+                        <p>Weekends bring the most orders and slightly smaller ones. Grouping by the number and the name together is a handy trick: the number controls the order and the name makes it readable.</p>
+                    </details>
                 </div>
-            </div>
 
-            <div class="concept-card">
-                <h3>🎨 Advanced GroupBy</h3>
-                <p>Sophisticated techniques for complex analyses</p>
-                <div class="code-example">
-                    <pre><code># Named aggregations (pandas 0.25+)
-result = df.groupby('category').agg(
-    total_sales=('sales', 'sum'),
-    avg_price=('price', 'mean'),
-    customer_count=('customer_id', 'nunique')
+                <div class="card">
+                    <h3>🏋️ Exercise 4: A Fair Comparison</h3>
+                    <p>In <code>data/survey.csv</code>, customers rated staff from 1 to 5 in <code>sat_staff</code> and named the <code>store</code> where they shop most. For each store, compute the number of responses, the number who answered the staff question, and the mean and median rating. Which store stands out? Which group's figure should you trust least, and why?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>"count"</code> on <code>response_id</code> counts responses and <code>"count"</code> on <code>sat_staff</code> counts answers, since count skips missing values. Here that difference is the point.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">survey = pd.read_csv("data/survey.csv")
+staff = survey.groupby("store").agg(
+    responses=("response_id", "count"),
+    answered=("sat_staff", "count"),
+    mean_staff=("sat_staff", "mean"),
+    median_staff=("sat_staff", "median"),
 )
-
-# Group by time periods
-df['date'] = pd.to_datetime(df['date'])
-monthly = df.groupby(pd.Grouper(
-    key='date', freq='M'
-))['sales'].sum()
-
-# Group by custom function
-df.groupby(df['name'].str[0])['value'].mean()  # By first letter
-
-# Multi-index operations
-grouped = df.groupby(['year', 'quarter', 'category'])
-result = grouped['sales'].sum().unstack(level='category')</code></pre>
+staff["answered_pct"] = (staff["answered"] / staff["responses"] * 100).round(1)
+print(staff.round(2))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>           responses  answered  mean_staff  median_staff  answered_pct
+store
+Asheville        202       193        3.62           4.0          95.5
+Bend             232       228        4.16           4.0          98.3
+Boise            329       320        4.11           4.0          97.3
+Flagstaff        213       206        4.02           4.0          96.7
+Online           824       248        4.07           4.0          30.1</code></pre>
+                        </div>
+                        <p>Asheville's staff rating (3.62) is well below the other stores (4.02 to 4.16), although the medians are all 4: the mean picks up a difference the median hides. And only 30% of online shoppers answered the question at all, which is reasonable since they rarely meet staff, so their 4.07 describes an unusual minority. Always report how many values are behind each group's number. Module 4 will test whether Asheville's gap could be chance.</p>
+                    </details>
                 </div>
-            </div>
 
-            <div class="concept-card">
-                <h3>⚡ Performance Optimization</h3>
-                <p>Make your GroupBy operations lightning fast</p>
-                <div class="code-example">
-                    <pre><code># Use categorical data for grouping columns
-df['category'] = df['category'].astype('category')
+                <div class="card">
+                    <h3>🏋️ Exercise 5: Seasons by Category (Stretch)</h3>
+                    <p><code>data/order_items.csv</code> has one row per product line. The first three letters of a <code>sku</code> identify its category (<code>SNW</code> snow gear, <code>TNT</code> tents, and so on). Compute merchandise revenue (<code>quantity * unit_price</code>) for each category prefix and calendar month, as a table with prefixes down the side and months across the top, and show months 1, 4, 7, 10 and 12. The items table has no date: bring it in from <code>orders</code> with the <code>.map()</code> lookup from Lesson 2.3.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>orders.set_index("order_id")["order_date"]</code> is a lookup Series. <code>items["order_id"].map(...)</code> fetches each line's date. <code>.str[:3]</code> slices the first three characters of every SKU.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">items = pd.read_csv("data/order_items.csv")
+items["line_total"] = items["quantity"] * items["unit_price"]
+items["prefix"] = items["sku"].str[:3]
+items["month"] = items["order_id"].map(orders.set_index("order_id")["order_date"]).dt.month
 
-# Avoid lambda when possible
-# Slow:
-df.groupby('category').apply(lambda x: x['value'].sum())
-# Fast:
-df.groupby('category')['value'].sum()
+seasonal = items.groupby(["prefix", "month"])["line_total"].sum().unstack("month").round(0)
+print(seasonal[[1, 4, 7, 10, 12]])
 
-# Use numba for custom functions
-from numba import jit
-
-@jit
-def custom_agg(values):
-    # Complex calculation
-    return result
-
-df.groupby('category')['value'].agg(custom_agg)
-
-# Parallel processing for large datasets
-import dask.dataframe as dd
-ddf = dd.from_pandas(df, npartitions=4)
-result = ddf.groupby('category').mean().compute()</code></pre>
+share = items.groupby("prefix")["line_total"].sum()
+print((share / share.sum()).sort_values(ascending=False).round(3).head(3))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>month        1        4        7        10       12
+prefix
+ACC     43291.0  44774.0  55077.0  52089.0  68103.0
+APL     42275.0  31416.0  28753.0  50472.0  69918.0
+CLM     15722.0  28600.0  22122.0  28085.0  19044.0
+FTW     26287.0  39393.0  34517.0  41894.0  39053.0
+KIT     21412.0  32061.0  43897.0  24856.0  38926.0
+PCK     25518.0  32709.0  39817.0  32457.0  38827.0
+SLP     21089.0  50302.0  66924.0  35628.0  40195.0
+SNW     50982.0   3617.0    368.0  20679.0  65156.0
+TNT     12723.0  43143.0  63712.0  33332.0  31668.0
+prefix
+ACC    0.155
+SLP    0.139
+APL    0.125
+Name: line_total, dtype: float64</code></pre>
+                        </div>
+                        <p>Snow gear sells $65,156 in the two Decembers and $368 in the two Julys. Tents do the opposite. (These sums count every order line, including lines on returned and cancelled orders. Later lessons that keep only completed orders get smaller figures for the same months, $60,100 and $169: same pattern, different basis.) A yearly total would have hidden both. Fetching a column from another table by key is so common that it has its own lesson, next.</p>
+                    </details>
                 </div>
-            </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="quiz" class="lesson-section">
+                <h2>🎯 Quick Quiz</h2>
+                <div class="card quiz-container">
+                    <h3>🎯 Check Your Understanding</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> What does this print?</p>
+                        <pre><code class="language-python">qdf = pd.DataFrame({"team": ["a", "a", "b", "b", "b"], "pts": [1, 3, 2, 4, 6]})
+qres = qdf.groupby("team")["pts"].transform("mean")
+print(len(qres), qres.tolist())</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>5 [2.0, 2.0, 4.0, 4.0, 4.0]</code></pre>
+                        </div>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="That would be the result of an aggregation, one value per team. What shape does transform return?">
+                                A) <code>2 [2.0, 4.0]</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="transform returns one value for every original row: each row gets the mean of its own group. Team a averages 2 and team b averages 4, repeated for their two and three rows.">
+                                B) <code>5 [2.0, 2.0, 4.0, 4.0, 4.0]</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="The length is right, but these are the original points. transform replaces each value with a statistic of its group.">
+                                C) <code>5 [1.0, 3.0, 2.0, 4.0, 6.0]</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> You want one row per store, with a column <code>orders</code> (the number of orders) and a column <code>revenue</code> (the sum of <code>order_total</code>). Which call produces it?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="A dictionary inside a dictionary is an old renaming syntax that pandas no longer accepts. It raises a SpecificationError.">
+                                A) <code>orders.groupby("store").agg({"order_total": {"revenue": "sum"}})</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="transform returns one row per original order, not one row per store.">
+                                B) <code>orders.groupby("store")["order_total"].transform("sum")</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Named aggregation: each keyword is the new column name, and its tuple gives the source column and the function. The result has one row per store and exactly these two columns.">
+                                C) <code>orders.groupby("store").agg(orders=("order_id", "count"), revenue=("order_total", "sum"))</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> Two of the five rows have no <code>code</code>. What does this print?</p>
+                        <pre><code class="language-python">qd2 = pd.DataFrame({"code": ["X", None, "X", None, "Y"], "amt": [1, 2, 3, 4, 5]})
+print(qd2.groupby("code")["amt"].sum().sum())</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>9</code></pre>
+                        </div>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="By default groupby drops rows whose key is missing. Only X (1 + 3) and Y (5) form groups, so the group sums total 9, not 15. dropna=False would keep the missing key as a group.">
+                                A) <code>9</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="15 is the sum of all five amounts. Do the two rows with no code belong to any group by default?">
+                                B) <code>15</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="A missing key does not spoil the other groups. Those rows are simply left out. Which amounts remain?">
+                                C) <code>nan</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 4:</strong> The five stores' average order totals are $174.90, $172.91, $177.22, $183.61 and $204.65. Their mean is $182.66, but the average over all orders is $194.60. Why do the two differ?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Rounding to the cent could explain a difference of a cent or two, not twelve dollars.">
+                                A) Rounding errors build up when averages are averaged
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="mean skips missing values in both calculations in the same way, and order_total has none in this file.">
+                                B) Missing order totals were skipped in one calculation and not in the other
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Averaging the five store averages gives each store equal weight, but the online shop has 12,854 orders and Asheville 1,413. The true overall average weights every order equally, so the large online group pulls it up.">
+                                C) The groups are very different sizes, and a mean of means weights each group equally
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 5:</strong> Which statement about <code>orders.groupby("payment_method")["promo_code"]</code> is true?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="size counts the rows in each group whatever they contain. count counts only the non-missing values of the selected column, so it reports how many orders in each group used a promo code.">
+                                A) <code>.size()</code> counts all orders in each group; <code>.count()</code> counts only those with a promo code
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="In the lesson the two gave very different numbers for the same groups: 1,271 against 12,392 for card. What does count leave out?">
+                                B) <code>.size()</code> and <code>.count()</code> always return the same numbers
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Counting distinct values is the job of nunique. count does something simpler with missing values.">
+                                C) <code>.count()</code> returns the number of distinct promo codes in each group
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="faq" class="lesson-section">
+                <h2>❓ Common Questions at This Stage</h2>
+
+                <details>
+                    <summary>I have seen <code>.groupby(...).apply(...)</code> used for everything. Should I use it?</summary>
+                    <p>Treat it as the last resort. <code>.apply()</code> hands each group's whole DataFrame to your function and tries to stitch together whatever comes back, which makes it flexible, slow, and occasionally surprising in the shape of its result. Nearly every task is clearer as an <code>agg</code>, a <code>transform</code>, or a helper column followed by one of those. Reach for <code>apply</code> only when a calculation truly needs several columns of the group at once and cannot be split into steps.</p>
+                </details>
+                <details>
+                    <summary>How do I get the top few rows within each group?</summary>
+                    <p>Sort the table first, then take the head of each group: <code>orders.sort_values("order_total", ascending=False).groupby("store").head(3)</code> returns each store's three largest orders, as original rows. Ranking rows within groups more generally is a window operation, covered in <a href="pandas_window_functions.html">Lesson 2.8</a>.</p>
+                </details>
+                <details>
+                    <summary>Is the two-level index something I have to learn to love?</summary>
+                    <p>No. It is useful for lookups and for <code>unstack</code>, and many working analysts call <code>.reset_index()</code> straight after a multi-key groupby and carry on with ordinary columns. Do whichever keeps your next step simple. You will get more practice with it in the next two lessons.</p>
+                </details>
+                <details>
+                    <summary>How is this different from a pivot table?</summary>
+                    <p>A pivot table is a groupby on two sets of keys with one set spread across the columns: exactly what you did with <code>groupby([...])</code> followed by <code>.unstack()</code>. <code>pd.pivot_table()</code> wraps that into one call with extras such as totals. If you understand today's lesson, <a href="pandas_pivot_tables.html">Lesson 2.6</a> will feel like a convenient shortcut.</p>
+                </details>
+
+                <div class="card card-accent">
+                    <h3>🌟 Going Further: Bonus Challenge</h3>
+                    <p>Find each customer's <strong>first order</strong> and study it. Use <code>orders.groupby("customer_id")["order_date"].transform("min")</code> to put every customer's first order date on each row, and a mask to keep only the orders placed on that date. What share of first orders used the code WELCOME10? Does that code ever appear on an order that is <em>not</em> a customer's first? Then compare the average total of first orders with later ones. Write two sentences on what you would tell the marketing team.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="journal" class="lesson-section">
+                <h2>📓 Learning Journal</h2>
+                <div class="card card-accent">
+                    <p>Take five minutes to write in your learning journal (the <code>journal.md</code> file you started in Lesson 0.1, or a paper notebook). Jot down:</p>
+                    <ul>
+                        <li><strong>Key concepts</strong> you learned today</li>
+                        <li><strong>Techniques that clicked</strong> (and the ones that have not, yet)</li>
+                        <li><strong>Questions or confusion</strong> to come back to</li>
+                        <li><strong>Ideas to try</strong> on your own</li>
+                        <li><strong>Progress and feelings</strong>: how did this lesson go for you?</li>
+                    </ul>
+                    <p><strong>✍️ This lesson's prompt:</strong> Write three questions about Pinecrest that begin "for each…". For each one, name the key, the column and the function, and say whether the answer needs <code>agg</code>, <code>transform</code> or <code>filter</code>. Then explain, as if to a manager, why the average of the store averages is not the company average.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="summary" class="lesson-section">
+                <h2>📝 Lesson Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎓 Key Takeaways</h3>
+                    <ul>
+                        <li><code>groupby</code> is <strong>split-apply-combine</strong>: divide the rows by a key, compute on each pile, collect the answers</li>
+                        <li>The result's <strong>index is the group key</strong>; use <code>as_index=False</code> or <code>.reset_index()</code> to get it back as a column</li>
+                        <li><strong>Named aggregation</strong>, <code>new=("column", "function")</code>, is the clearest way to build a summary table</li>
+                        <li>The mean of a boolean column within each group is a <strong>rate</strong></li>
+                        <li><code>agg</code> returns one row per group, <code>transform</code> one value per original row, <code>filter</code> the rows of the groups that pass a test</li>
+                        <li>Several keys give a MultiIndex; keys can be computed on the spot, such as <code>.dt.year</code></li>
+                        <li>Rows with a <strong>missing key are dropped</strong> unless <code>dropna=False</code>; unused categories appear only with <code>observed=False</code></li>
+                        <li><code>size</code> counts rows, <code>count</code> counts non-missing values, <code>nunique</code> counts distinct values; never average averages of unequal groups</li>
+                    </ul>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🏆 What You've Accomplished</h3>
+                    <ul>
+                        <li>You took a groupby expression apart and can name what each piece does</li>
+                        <li>You found that online orders are returned twice as often as store orders, and that online revenue grew 18.8%</li>
+                        <li>You attached group statistics to individual rows with <code>transform</code></li>
+                        <li>You caught a groupby silently ignoring 89% of the table</li>
+                        <li>You built a store scorecard and a 3,942-row customer summary, and showed that a third of customers produce two thirds of revenue</li>
+                    </ul>
+                </div>
+
+                <h3>🔭 Looking Ahead</h3>
+                <p>In <a href="pandas_merging_joining.html"><strong>Lesson 2.5: Merging and Joining</strong></a> you will connect tables. Today's customer summary has ids but no names, tiers or cities, because those live in <code>customers.csv</code>. Revenue by product category needs <code>products.csv</code>. Merging brings columns from one table into another by matching keys, and it has traps of its own: keys with no match, and rows that multiply.</p>
+
+                <h3>📋 Before the Next Lesson</h3>
+                <ul>
+                    <li>Keep <code>output/customer_summary.csv</code>. In Lesson 2.5 you will be able to attach each customer's name and loyalty tier to it.</li>
+                    <li>Check a claim from the data README: how many distinct <code>customer_id</code> values are in <code>orders.csv</code>, and how many rows are in <code>customers.csv</code>? Which is larger, and what might that mean?</li>
+                    <li>Rewrite one of today's aggregations from memory, without looking. It is the pattern you will type most often for the rest of the course.</li>
+                </ul>
+
+                <div class="card card-accent">
+                    <h3>🌱 Encouragement for the Journey</h3>
+                    <p>GroupBy is the point where pandas stops being a way to look at data and becomes a way to answer questions. If <code>transform</code> still feels slippery, that is normal: it took most of us several real problems before "one value per original row" became second nature. You have now produced findings a real retailer would act on, from raw rows, in a few lines each. That is analysis, and you are doing it.</p>
+                </div>
+            </section>
+
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="pandas_data_cleaning.html" class="prev-lesson">← Previous: Cleaning Data</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="pandas_merging_joining.html" class="next-lesson">Next: Merging and Joining →</a>
+            </nav>
         </div>
+    </main>
 
-        <div class="groupby-pipeline">
-            <h2>🌍 Real-World Scenario: Sales Analytics Dashboard</h2>
-            <p>Let's build a comprehensive sales analysis using GroupBy operations:</p>
-            
-            <div class="code-example">
-                <pre><code>import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
-
-# Create sample sales data
-np.random.seed(42)
-dates = pd.date_range('2024-01-01', periods=365, freq='D')
-n_records = 1000
-
-sales_data = pd.DataFrame({
-    'date': np.random.choice(dates, n_records),
-    'product': np.random.choice(['Laptop', 'Phone', 'Tablet', 'Watch', 'Headphones'], n_records),
-    'category': np.random.choice(['Electronics', 'Accessories'], n_records),
-    'region': np.random.choice(['North', 'South', 'East', 'West'], n_records),
-    'sales_rep': np.random.choice(['Alice', 'Bob', 'Charlie', 'Diana', 'Eve'], n_records),
-    'quantity': np.random.randint(1, 10, n_records),
-    'unit_price': np.random.uniform(50, 1500, n_records).round(2),
-})
-
-# Calculate total revenue
-sales_data['revenue'] = sales_data['quantity'] * sales_data['unit_price']
-
-# Add month and quarter columns for time-based analysis
-sales_data['month'] = sales_data['date'].dt.to_period('M')
-sales_data['quarter'] = sales_data['date'].dt.to_period('Q')
-
-print("📊 SALES ANALYTICS DASHBOARD")
-print("=" * 60)
-
-# 1. Overall Performance by Product
-print("\n1. PRODUCT PERFORMANCE:")
-product_stats = sales_data.groupby('product').agg({
-    'revenue': ['sum', 'mean', 'count'],
-    'quantity': 'sum'
-}).round(2)
-product_stats.columns = ['Total Revenue', 'Avg Revenue', 'Transactions', 'Units Sold']
-print(product_stats.sort_values('Total Revenue', ascending=False))
-
-# 2. Regional Analysis
-print("\n2. REGIONAL BREAKDOWN:")
-regional_summary = sales_data.groupby(['region', 'category']).agg({
-    'revenue': 'sum',
-    'quantity': 'sum'
-}).round(2)
-print(regional_summary.unstack(fill_value=0))
-
-# 3. Time Series Analysis
-print("\n3. MONTHLY TRENDS:")
-monthly_sales = sales_data.groupby('month').agg({
-    'revenue': 'sum',
-    'quantity': 'sum',
-    'date': 'count'
-}).rename(columns={'date': 'transactions'})
-print(monthly_sales.tail())  # Show last 5 months
-
-# 4. Sales Rep Performance
-print("\n4. SALES REP LEADERBOARD:")
-rep_performance = sales_data.groupby('sales_rep').agg({
-    'revenue': ['sum', 'mean'],
-    'quantity': 'sum',
-    'product': lambda x: x.value_counts().index[0]  # Most sold product
-}).round(2)
-rep_performance.columns = ['Total Revenue', 'Avg Deal Size', 'Units Sold', 'Top Product']
-print(rep_performance.sort_values('Total Revenue', ascending=False))
-
-# 5. Product-Region Cross Analysis
-print("\n5. PRODUCT SUCCESS BY REGION:")
-pivot_table = pd.pivot_table(
-    sales_data,
-    values='revenue',
-    index='product',
-    columns='region',
-    aggfunc='sum',
-    fill_value=0
-).round(2)
-print(pivot_table)
-
-# 6. Advanced Metrics
-print("\n6. ADVANCED METRICS:")
-
-# Customer concentration (using sales_rep as proxy)
-concentration = sales_data.groupby('product').apply(
-    lambda x: x.groupby('sales_rep')['revenue'].sum().std() / 
-              x.groupby('sales_rep')['revenue'].sum().mean()
-).round(2)
-print("Product Revenue Concentration (lower = more balanced):")
-print(concentration.sort_values())
-
-# Growth metrics (comparing quarters)
-quarterly_growth = sales_data.groupby('quarter')['revenue'].sum()
-growth_rate = quarterly_growth.pct_change() * 100
-print(f"\nQuarterly Growth Rates:")
-print(growth_rate.dropna().round(2))
-
-# 7. Statistical Summary by Category
-print("\n7. CATEGORY STATISTICS:")
-category_stats = sales_data.groupby('category')['revenue'].describe()
-print(category_stats.round(2))
-
-# 8. Top Performers
-print("\n8. TOP PERFORMERS:")
-# Top 3 products by region
-top_by_region = sales_data.groupby(['region', 'product'])['revenue'].sum().reset_index()
-top_3_per_region = top_by_region.groupby('region').apply(
-    lambda x: x.nlargest(3, 'revenue')
-).reset_index(drop=True)
-print(top_3_per_region)
-
-print("\n✅ Analysis Complete!")
-print(f"Total Revenue: ${sales_data['revenue'].sum():,.2f}")
-print(f"Total Transactions: {len(sales_data):,}")
-print(f"Average Transaction Value: ${sales_data['revenue'].mean():.2f}")</code></pre>
-            </div>
-        </div>
-
-        <div class="tip-box">
-            <h3>💡 Pro Tips for GroupBy Mastery</h3>
-            <ul>
-                <li><strong>Chain operations:</strong> Combine multiple GroupBy operations for complex analyses</li>
-                <li><strong>Use named aggregations:</strong> Makes code more readable and results clearer</li>
-                <li><strong>Leverage categorical types:</strong> Faster grouping on categorical columns</li>
-                <li><strong>Reset index wisely:</strong> Use <code>as_index=False</code> or <code>.reset_index()</code> for flat DataFrames</li>
-                <li><strong>Explore with <code>describe()</code>:</strong> Quick statistical overview of groups</li>
-                <li><strong>Combine with pivot tables:</strong> Create multi-dimensional summaries easily</li>
-                <li><strong>Use <code>pipe()</code>:</strong> Chain custom functions elegantly</li>
-            </ul>
-        </div>
-
-        <div class="warning-box">
-            <h3>⚠️ Common Pitfalls to Avoid</h3>
-            <ul>
-                <li><strong>Memory explosion:</strong> Large groups with complex operations can consume massive RAM</li>
-                <li><strong>Slow lambdas:</strong> Avoid lambda functions when built-in methods exist</li>
-                <li><strong>Lost data:</strong> Filter operations permanently remove groups - keep backups</li>
-                <li><strong>Index confusion:</strong> Be aware of when index is preserved vs. reset</li>
-                <li><strong>Type mismatches:</strong> Ensure consistent data types in grouped columns</li>
-            </ul>
-        </div>
-
-        <div class="groupby-pipeline">
-            <h2>📋 GroupBy Cheat Sheet</h2>
-            <div class="table-example">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Operation</th>
-                            <th>Code</th>
-                            <th>Description</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Basic Aggregation</td>
-                            <td><code>df.groupby('col').sum()</code></td>
-                            <td>Sum values by group</td>
-                        </tr>
-                        <tr>
-                            <td>Multiple Aggregations</td>
-                            <td><code>df.groupby('col').agg(['sum', 'mean'])</code></td>
-                            <td>Apply multiple functions</td>
-                        </tr>
-                        <tr>
-                            <td>Custom Aggregation</td>
-                            <td><code>df.groupby('col').agg(lambda x: x.max() - x.min())</code></td>
-                            <td>Apply custom function</td>
-                        </tr>
-                        <tr>
-                            <td>Transform</td>
-                            <td><code>df.groupby('col')['val'].transform('mean')</code></td>
-                            <td>Broadcast result to original shape</td>
-                        </tr>
-                        <tr>
-                            <td>Filter</td>
-                            <td><code>df.groupby('col').filter(lambda x: len(x) > 2)</code></td>
-                            <td>Keep/remove entire groups</td>
-                        </tr>
-                        <tr>
-                            <td>Apply</td>
-                            <td><code>df.groupby('col').apply(lambda x: x.nlargest(2, 'val'))</code></td>
-                            <td>Apply any function to groups</td>
-                        </tr>
-                        <tr>
-                            <td>Size</td>
-                            <td><code>df.groupby('col').size()</code></td>
-                            <td>Count group members</td>
-                        </tr>
-                        <tr>
-                            <td>Nth Element</td>
-                            <td><code>df.groupby('col').nth(0)</code></td>
-                            <td>Get nth row from each group</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-    <!-- Learning Journal (REQUIRED per the Courseware Authoring Standard) -->
-    <section id="journal" class="lesson-section">
-        <h2>📓 Learning Journal</h2>
-        <div class="card card-info">
-            <p>Keep a learning journal — digital or physical. After this lesson, take a few minutes to write down:</p>
-            <ul>
-                <li><strong>Key concepts</strong> you learned</li>
-                <li><strong>Techniques that clicked</strong> for you</li>
-                <li><strong>Questions or confusion points</strong> to revisit</li>
-                <li><strong>Ideas you want to try</strong></li>
-                <li><strong>Your progress and feelings</strong> about learning this</li>
-            </ul>
-            <p><strong>✍️ This lesson's prompt:</strong> "What's the average/sum/max of X for each Y?" is a question you can now answer instantly. What is one real question in that shape — from work, a hobby, or a dataset you care about — that GroupBy would let you answer?</p>
-        </div>
-    </section>
-
-    <!-- Lesson Summary (full standard block) -->
-    <section id="summary" class="lesson-section">
-        <h2>📝 Lesson Summary</h2>
-        <div class="card card-success">
-            <h3>🎓 Key Takeaways</h3>
-            <ul>
-                <li>Every GroupBy follows split-apply-combine: partition rows by key, run an operation per group, then reassemble the results.</li>
-                <li><code>agg()</code> summarizes each group to fewer rows; <code>transform()</code> returns a result the same shape as the input; <code>filter()</code> keeps or drops whole groups.</li>
-                <li>Named aggregations (<code>total=('col','sum')</code>) produce clean, readable output columns.</li>
-                <li>Grouping on categorical dtypes and preferring built-in methods over lambdas keeps GroupBy fast.</li>
-            </ul>
-        </div>
-        <h3>🎉 What You've Accomplished</h3>
-        <p>You can now slice a dataset by any dimension and summarize it — computing per-group totals, averages, rankings, and time-based trends — which is the core of nearly every real analytics report and dashboard.</p>
-        <h3>❓ Common Questions at This Stage</h3>
-        <details>
-            <summary>When should I use <code>transform()</code> instead of <code>agg()</code>?</summary>
-            <p>Use <code>agg()</code> when you want one summary row per group (e.g. total sales per region). Use <code>transform()</code> when you want to keep every original row but attach a group-level value — like each row's percentage of its group's total, or a group-mean fill for missing values.</p>
-        </details>
-        <details>
-            <summary>Why did my grouping column disappear into the index?</summary>
-            <p>By default the group keys become the result's index. Pass <code>as_index=False</code> to the <code>groupby</code> call, or chain <code>.reset_index()</code>, to get a flat DataFrame with the keys back as ordinary columns.</p>
-        </details>
-        <details>
-            <summary>My GroupBy is slow — how do I speed it up?</summary>
-            <p>Convert grouping columns to the <code>category</code> dtype, replace <code>apply(lambda ...)</code> with built-in aggregations wherever possible, and for very large data consider tools like Dask that parallelize the operation.</p>
-        </details>
-        <h3>🔭 Looking Ahead</h3>
-        <p>You can now summarize data within a single table. Next you'll bring multiple tables together with merges and joins — and combining that with GroupBy is where serious analysis begins.</p>
-        <h3>✅ Before the Next Lesson</h3>
-        <ul>
-            <li>Take a dataset and answer three "per-group" questions using <code>agg()</code> with named aggregations.</li>
-            <li>Add a column that shows each row's share of its group total using <code>transform()</code>.</li>
-            <li>Write your Learning Journal entry for this lesson</li>
-        </ul>
-        <div class="card card-accent" style="text-align: center; padding: 2rem;">
-            <h3>🌟 Encouragement for the Journey</h3>
-            <p>GroupBy is the moment raw rows turn into real insight. Once split-apply-combine clicks, you'll see it everywhere — and you'll answer questions in seconds that used to take hours in a spreadsheet. Keep grouping!</p>
-        </div>
-    </section>
-
-        <div class="navigation">
-            <a href="pandas_merging_joining.html" class="nav-button prev">← Merging and Joining</a>
-            <a href="matplotlib_line_scatter_bar.html" class="nav-button">Data Visualization with Matplotlib →</a>
-        </div>
-    </div>
-
-    <!-- Footer -->
     <footer class="site-footer">
         <p>&copy; 2026 Ray de la Paz. Python Data Science. All rights reserved.</p>
         <div class="footer-links">
@@ -880,171 +1388,10 @@ print(f"Average Transaction Value: ${sales_data['revenue'].mean():.2f}")</code><
             <a href="https://rays-home.netlify.app/contact">Contact</a>
             <a href="#" id="print-button">Print Page</a>
         </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
     </footer>
 
-    <script>
-        function demonstrateGroupBy(operation) {
-            const canvas = document.getElementById('groupbyCanvas');
-            const ctx = canvas.getContext('2d');
-            
-            // Clear canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Sample data
-            const data = [
-                { category: 'A', value: 10 },
-                { category: 'B', value: 20 },
-                { category: 'A', value: 15 },
-                { category: 'C', value: 25 },
-                { category: 'B', value: 30 },
-                { category: 'A', value: 20 },
-                { category: 'C', value: 15 },
-                { category: 'B', value: 25 }
-            ];
-            
-            // Group data
-            const groups = {};
-            data.forEach(item => {
-                if (!groups[item.category]) {
-                    groups[item.category] = [];
-                }
-                groups[item.category].push(item.value);
-            });
-            
-            // Calculate aggregates
-            const results = {};
-            Object.keys(groups).forEach(key => {
-                const values = groups[key];
-                switch(operation) {
-                    case 'sum':
-                        results[key] = values.reduce((a, b) => a + b, 0);
-                        break;
-                    case 'mean':
-                        results[key] = values.reduce((a, b) => a + b, 0) / values.length;
-                        break;
-                    case 'count':
-                        results[key] = values.length;
-                        break;
-                    case 'max':
-                        results[key] = Math.max(...values);
-                        break;
-                }
-            });
-            
-            // Animation variables
-            let step = 0;
-            const steps = ['original', 'split', 'apply', 'combine'];
-            
-            function animate() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                
-                // Title
-                ctx.fillStyle = '#333';
-                ctx.font = 'bold 18px Arial';
-                ctx.fillText(`GroupBy Operation: ${operation.toUpperCase()}`, 20, 30);
-                
-                if (step === 0) {
-                    // Show original data
-                    ctx.font = '14px Arial';
-                    ctx.fillText('Original Data:', 20, 60);
-                    
-                    data.forEach((item, i) => {
-                        const y = 80 + i * 25;
-                        ctx.fillStyle = '#666';
-                        ctx.fillText(`${item.category}: ${item.value}`, 40, y);
-                    });
-                } else if (step === 1) {
-                    // Show split groups
-                    ctx.font = '14px Arial';
-                    ctx.fillText('Step 1: SPLIT into groups', 20, 60);
-                    
-                    const colors = ['#3b82f6', '#8b5cf6', '#f59e0b'];
-                    let xOffset = 40;
-                    
-                    Object.keys(groups).forEach((key, groupIndex) => {
-                        // Draw group box
-                        ctx.strokeStyle = colors[groupIndex];
-                        ctx.lineWidth = 2;
-                        ctx.strokeRect(xOffset, 80, 100, 30 + groups[key].length * 25);
-                        
-                        ctx.fillStyle = colors[groupIndex];
-                        ctx.font = 'bold 14px Arial';
-                        ctx.fillText(`Group ${key}`, xOffset + 25, 100);
-                        
-                        ctx.font = '12px Arial';
-                        groups[key].forEach((val, i) => {
-                            ctx.fillText(val.toString(), xOffset + 35, 120 + i * 20);
-                        });
-                        
-                        xOffset += 120;
-                    });
-                } else if (step === 2) {
-                    // Show apply operation
-                    ctx.font = '14px Arial';
-                    ctx.fillText(`Step 2: APPLY ${operation} to each group`, 20, 60);
-                    
-                    const colors = ['#3b82f6', '#8b5cf6', '#f59e0b'];
-                    let xOffset = 40;
-                    
-                    Object.keys(groups).forEach((key, groupIndex) => {
-                        // Draw calculation
-                        ctx.fillStyle = colors[groupIndex];
-                        ctx.font = 'bold 14px Arial';
-                        ctx.fillText(`Group ${key}`, xOffset + 25, 100);
-                        
-                        ctx.font = '12px Arial';
-                        const values = groups[key];
-                        ctx.fillText(values.join(' + '), xOffset + 10, 130);
-                        ctx.fillText('=', xOffset + 35, 155);
-                        ctx.font = 'bold 14px Arial';
-                        ctx.fillText(results[key].toFixed(2), xOffset + 25, 180);
-                        
-                        xOffset += 120;
-                    });
-                } else if (step === 3) {
-                    // Show combined result
-                    ctx.font = '14px Arial';
-                    ctx.fillText('Step 3: COMBINE results', 20, 60);
-                    
-                    // Draw result table
-                    ctx.strokeStyle = '#10b981';
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(200, 100, 200, 150);
-                    
-                    ctx.fillStyle = '#10b981';
-                    ctx.font = 'bold 16px Arial';
-                    ctx.fillText('Final Result', 260, 90);
-                    
-                    ctx.fillStyle = '#333';
-                    ctx.font = 'bold 14px Arial';
-                    ctx.fillText('Category', 220, 130);
-                    ctx.fillText(operation.charAt(0).toUpperCase() + operation.slice(1), 320, 130);
-                    
-                    ctx.font = '14px Arial';
-                    let yPos = 155;
-                    Object.keys(results).forEach(key => {
-                        ctx.fillText(key, 240, yPos);
-                        ctx.fillText(results[key].toFixed(2), 330, yPos);
-                        yPos += 25;
-                    });
-                }
-                
-                // Progress indicator
-                ctx.fillStyle = '#666';
-                ctx.font = '12px Arial';
-                ctx.fillText(`Step ${step + 1} of 4`, 700, 380);
-                
-                step++;
-                if (step < 4) {
-                    setTimeout(animate, 1500);
-                }
-            }
-            
-            animate();
-        }
-        
-        // Auto-play demonstration on load
-        setTimeout(() => demonstrateGroupBy('sum'), 500);
-    </script>
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
 </body>
 </html>

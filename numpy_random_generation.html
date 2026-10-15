@@ -1,1387 +1,1091 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="NumPy's Generator API: default_rng, seeds and reproducibility, sampling and shuffling, common distributions, and simple Monte Carlo simulation. Python Data Science Lesson 1.4.">
+    <meta name="author" content="Ray de la Paz">
     <title>Random Number Generation - Python Data Science</title>
-    <link href="styles/main.css" rel="stylesheet"/>
-    <link href="/styles/enhanced.css" rel="stylesheet"/>
-    <link href="/favicon.png" rel="icon" type="image/png"/>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid: rendered (and re-rendered on theme change) by js/course-enhancements.js -->
     <script type="module">
         import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({ startOnLoad: true });
+        window.__mermaid = mermaid;
+        mermaid.initialize({ startOnLoad: false });
+        document.dispatchEvent(new Event('mermaid-ready'));
     </script>
-    <style>
-        .breadcrumb {
-            background: #f8f9fa;
-            padding: 1rem;
-            border-radius: 5px;
-            margin-bottom: 2rem;
-            font-size: 0.9rem;
-        }
-        
-        .breadcrumb a {
-            color: #667eea;
-            text-decoration: none;
-        }
-        
-        .breadcrumb a:hover {
-            text-decoration: underline;
-        }
-        
-        .navigation-links {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 2rem 0;
-            margin-top: 3rem;
-            border-top: 2px solid #e0e0e0;
-        }
-        
-        .navigation-links a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 500;
-            padding: 0.5rem 1rem;
-            border-radius: 5px;
-            transition: all 0.3s ease;
-        }
-        
-        .navigation-links a:hover {
-            background: #f0f0f0;
-        }
-        
-        .nav-prev, .nav-next {
-            flex: 1;
-        }
-        
-        .nav-next {
-            text-align: right;
-        }
-        
-        .nav-home {
-            text-align: center;
-        }
-        
-        canvas {
-            display: block;
-            margin: 20px auto;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background: white;
-        }
-        
-        .distribution-card {
-            border: 2px solid #667eea;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 20px 0;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        }
-        
-        .distribution-card h3 {
-            background: none;
-            color: #333;
-            margin: 0 0 10px 0;
-            padding: 0;
-        }
-        
-        .random-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
-            margin: 20px 0;
-        }
-        
-        .random-example {
-            padding: 15px;
-            background: #fff;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        .seed-demo {
-            background: #f0f9ff;
-            border-left: 4px solid #0284c7;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 0 8px 8px 0;
-        }
-        
-        .histogram-container {
-            display: flex;
-            justify-content: center;
-            align-items: flex-end;
-            height: 200px;
-            margin: 20px 0;
-            padding: 10px;
-            background: #f9f9f9;
-            border-radius: 8px;
-        }
-        
-        .histogram-bar {
-            width: 30px;
-            margin: 0 2px;
-            background: linear-gradient(to top, #667eea, #764ba2);
-            transition: height 0.3s ease;
-        }
-        
-        .warning-box {
-            background: #fef2f2;
-            border: 2px solid #ef4444;
-            color: #991b1b;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
-        }
-        
-        .success-box {
-            background: #f0fdf4;
-            border: 2px solid #22c55e;
-            color: #166534;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 20px 0;
-        }
-    </style>
-    <script src="/js/course-enhancements.js" defer></script>
-    <script src="/js/clipboard.js" defer></script>
-    <link rel="stylesheet" href="styles/standard.css">
 </head>
 <body>
-    <!-- Skip to main content for accessibility -->
     <a href="#main-content" class="skip-to-main">Skip to main content</a>
-    
-    <!-- Progress indicator -->
+
     <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
         <div class="progress-bar"></div>
     </div>
-    <nav class="breadcrumb">
-        <a href="index.html">Home</a> &gt; 
-        <a href="index.html#foundation">Foundation Module</a> &gt; 
-        <a href="index.html#numpy-fundamentals">NumPy Fundamentals</a> &gt;
-        <span>Random Number Generation</span>
+
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">📊 Python Data Science</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">☰</button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
     </nav>
 
-
     <main id="main-content">
-    <h1>🎲 Random Number Generation: The Art of Controlled Chaos</h1>
+        <div class="container">
+            <header>
+                <h1>🎲 Lesson 1.4: Random Number Generation</h1>
+                <p class="lead">Generate random numbers you can reproduce exactly, draw fair samples from real data, and answer "what could happen?" by simulating it thousands of times.</p>
 
-    <!-- What You'll Learn (learning objectives) -->
-    <div class="card card-info">
-        <h2>📚 What You'll Learn</h2>
-        <p>By the end of this lesson, you will be able to:</p>
-        <ul>
-            <li>Generate random floats, integers, choices, and shuffles with NumPy's random tools</li>
-            <li>Explain what a seed is and why setting one makes pseudorandom results reproducible</li>
-            <li>Sample from key probability distributions (uniform, normal, exponential, binomial, Poisson, multivariate normal) and match each to its use case</li>
-            <li>Build Monte Carlo simulations to estimate quantities like π, stock prices, and option values</li>
-            <li>Apply random sampling, bootstrapping, and permutation tests to quantify uncertainty</li>
-            <li>Follow best practices — set seeds, prefer <code>default_rng</code>, and generate random numbers in a vectorized way</li>
-        </ul>
-        <p><strong>⏱️ Estimated Time:</strong> 45–60 minutes</p>
-        <p><strong>🎯 Project:</strong> Estimate π with a Monte Carlo simulation and show how the estimate converges toward the true value as you increase the number of samples.</p>
-    </div>
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Create a random number generator with <code>np.random.default_rng</code> and draw floats, integers and arrays of any shape from it</li>
+                        <li>Explain what a seed does, and structure your code so its random results can be reproduced</li>
+                        <li>Sample from an array with and without replacement, shuffle it, and split rows at random</li>
+                        <li>Draw from the normal, Poisson and binomial distributions and say what kind of quantity each one models</li>
+                        <li>Estimate a probability by simulation, and judge how far to trust the estimate and the model behind it</li>
+                    </ul>
+                </div>
 
-    <p>Imagine you're a casino owner who needs perfectly fair dice, but also needs to replay exact games for security reviews. That's random number generation in NumPy! 🎰 It gives you randomness when you need it, reproducibility when you require it, and distributions for every occasion - from simulating quantum physics to generating synthetic datasets for machine learning.</p>
+                <ul class="lesson-meta">
+                    <li><span class="meta-label">⏱️ Time</span> 85 minutes</li>
+                    <li><span class="meta-label">📋 Prerequisites</span> <a href="numpy_broadcasting.html">Lesson 1.3: Broadcasting</a> (masks, <code>axis=</code> and shapes from Lessons 1.2 and 1.3)</li>
+                    <li><span class="meta-label">🛠️ You will build</span> A simulation of 10,000 possible months of Boise revenue, a chart of the results, and an honest check of the simulation against the real months</li>
+                    <li><span class="meta-label">📂 Data</span> <code>data/daily_sales.csv</code></li>
+                </ul>
+            </header>
 
-    <h2>The Random Universe: More Than Just Dice Rolls 🌌</h2>
-    
-    <p>Random numbers are the lifeblood of data science. They power Monte Carlo simulations, bootstrap statistics, neural network initialization, data augmentation, A/B testing, and so much more. But here's the secret: computer-generated random numbers aren't truly random - they're pseudorandom, following deterministic algorithms that appear random. This is actually a feature, not a bug!</p>
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#why" class="toc-link">Why Make Numbers Up?</a></li>
+                        <li><a href="#generator" class="toc-link">Your First Generator</a></li>
+                        <li><a href="#seeds" class="toc-link">Seeds and Reproducibility</a></li>
+                        <li><a href="#sampling" class="toc-link">Sampling and Shuffling</a></li>
+                        <li><a href="#distributions" class="toc-link">Distributions: Shaped Randomness</a></li>
+                        <li><a href="#simulation" class="toc-link">Simulation: Asking "What If?"</a></li>
+                        <li><a href="#mistakes" class="toc-link">Common Mistakes</a></li>
+                        <li><a href="#project" class="toc-link">Project: How Much Could a Month Vary?</a></li>
+                        <li><a href="#exercises" class="toc-link">Hands-on Exercises</a></li>
+                        <li><a href="#quiz" class="toc-link">Quick Quiz</a></li>
+                        <li><a href="#faq" class="toc-link">Common Questions</a></li>
+                        <li><a href="#journal" class="toc-link">Learning Journal</a></li>
+                        <li><a href="#summary" class="toc-link">Lesson Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
 
-    <div class="mermaid">
-    graph TB
-        A[Random Number Generation] --> B[Pseudorandom]
-        A --> C[Uses]
-        
-        B --> D[Seed-based]
-        B --> E[Reproducible]
-        B --> F[Deterministic]
-        
-        C --> G[Simulation]
-        C --> H[Sampling]
-        C --> I[Testing]
-        C --> J[ML Training]
-        
-        G --> K[Monte Carlo]
-        H --> L[Bootstrap]
-        I --> M[Synthetic Data]
-        J --> N[Weight Init]
-        
-        style A fill:#667eea
-        style B fill:#4ecdc4
-        style C fill:#ffd93d
-    </div>
+            <!-- ============================================================ -->
+            <section id="why" class="lesson-section">
+                <h2>🤔 Why Make Numbers Up?</h2>
 
-    <h3>The Slot Machine Analogy 🎰</h3>
-    
-    <p>Think of NumPy's random number generator as a sophisticated slot machine. The <strong>seed</strong> is like setting the starting position of all the reels. Pull the lever (call a random function) and you get a result. Reset to the same seed, pull again, and you get the exact same sequence! This is crucial for debugging, reproducible research, and testing.</p>
+                <p>It can seem odd for a course about real data to spend a lesson on invented numbers. In practice, random numbers are one of an analyst's most-used tools:</p>
 
-    <canvas id="randomCanvas" width="800" height="400"></canvas>
-    <script>
-        const canvas = document.getElementById('randomCanvas');
-        const ctx = canvas.getContext('2d');
-        
-        let animFrame = 0;
-        let dots = [];
-        let histogram = new Array(10).fill(0);
-        
-        // Initialize random dots
-        for(let i = 0; i < 100; i++) {
-            dots.push({
-                x: Math.random() * 300,
-                y: Math.random() * 300,
-                vx: (Math.random() - 0.5) * 2,
-                vy: (Math.random() - 0.5) * 2,
-                color: `hsl(${Math.random() * 360}, 70%, 50%)`
-            });
-        }
-        
-        function drawRandomVisualization() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Title
-            ctx.fillStyle = '#333';
-            ctx.font = 'bold 16px Arial';
-            ctx.fillText('Random Number Generation Visualization', 250, 30);
-            
-            // Left panel: Random scatter
-            ctx.strokeStyle = '#ddd';
-            ctx.strokeRect(50, 60, 300, 300);
-            ctx.fillStyle = '#666';
-            ctx.font = '12px Arial';
-            ctx.fillText('Uniform Random Distribution', 140, 380);
-            
-            // Draw dots
-            dots.forEach(dot => {
-                ctx.fillStyle = dot.color;
-                ctx.beginPath();
-                ctx.arc(50 + dot.x, 60 + dot.y, 3, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Update position
-                dot.x += dot.vx;
-                dot.y += dot.vy;
-                
-                // Bounce off walls
-                if(dot.x <= 0 || dot.x >= 300) dot.vx *= -1;
-                if(dot.y <= 0 || dot.y >= 300) dot.vy *= -1;
-            });
-            
-            // Right panel: Normal distribution
-            ctx.strokeRect(450, 60, 300, 300);
-            ctx.fillText('Normal Distribution Histogram', 530, 380);
-            
-            // Generate new random sample occasionally
-            if(animFrame % 5 === 0) {
-                // Generate normal random (Box-Muller transform visualization)
-                let u1 = Math.random();
-                let u2 = Math.random();
-                let z0 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-                
-                // Map to histogram bucket (0-9)
-                let bucket = Math.floor((z0 + 3) * 10 / 6);
-                bucket = Math.max(0, Math.min(9, bucket));
-                histogram[bucket]++;
-                
-                // Decay histogram for animation
-                for(let i = 0; i < 10; i++) {
-                    histogram[i] *= 0.98;
-                }
-            }
-            
-            // Draw histogram
-            let maxHeight = Math.max(...histogram, 1);
-            for(let i = 0; i < 10; i++) {
-                let barHeight = (histogram[i] / maxHeight) * 250;
-                ctx.fillStyle = '#667eea';
-                ctx.fillRect(460 + i * 28, 310 - barHeight, 25, barHeight);
-            }
-            
-            // Draw normal curve overlay
-            ctx.strokeStyle = '#ff6b6b';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            for(let x = 0; x <= 280; x += 5) {
-                let normalX = (x / 280) * 6 - 3; // Map to -3 to 3
-                let y = Math.exp(-normalX * normalX / 2) / Math.sqrt(2 * Math.PI);
-                let plotY = 310 - y * 600;
-                
-                if(x === 0) {
-                    ctx.moveTo(460 + x, plotY);
-                } else {
-                    ctx.lineTo(460 + x, plotY);
-                }
-            }
-            ctx.stroke();
-            ctx.lineWidth = 1;
-            
-            animFrame++;
-        }
-        
-        function animate() {
-            drawRandomVisualization();
-            requestAnimationFrame(animate);
-        }
-        
-        animate();
-    </script>
+                <ul>
+                    <li><strong>Sampling.</strong> Pick 200 orders to check by hand, or split customers into two groups for an experiment, in a way nobody can accuse of being biased.</li>
+                    <li><strong>Shuffling.</strong> Put rows in random order, or scramble labels to see what "no real difference" looks like.</li>
+                    <li><strong>Simulation.</strong> When a question is too tangled for a formula ("what are the chances we run out of stock on Saturday?"), act it out thousands of times and count.</li>
+                    <li><strong>Test data.</strong> Build an array with known properties to try your code on before the real data arrives.</li>
+                </ul>
 
-    <pre><code>import numpy as np
-import matplotlib.pyplot as plt
+                <p>The statistics module leans on all four. Ideas such as "how much would this average change if we collected the data again?" are hard to grasp from a formula and almost obvious once you have simulated them. This lesson gives you the machinery.</p>
 
-# Random Number Generation Fundamentals 🎲
+                <div class="card card-info">
+                    <h4>💡 Mental Model: The Book of Random Digits</h4>
+                    <p>Imagine an enormous book filled with digits that pass every test of randomness. You open it at some page and read off numbers as you need them. A computer's random numbers work like that book. They come from a fixed recipe that produces a sequence which <em>looks</em> random, so they are called <strong>pseudo-random</strong>.</p>
+                    <p>The <strong>seed</strong> is the page you open at. Open at the same page tomorrow and you read the same numbers in the same order. That is not a weakness. It is the feature that lets someone else rerun your analysis and get your result.</p>
+                </div>
+            </section>
 
-def explore_random_basics():
-    """
-    Understanding the foundations of random number generation.
-    Every data scientist's essential toolkit!
-    """
-    print("🎲 Random Number Generation Basics")
-    print("=" * 60)
-    
-    # The Random Number Generator (RNG)
-    rng = np.random.RandomState(42)  # Create a generator with seed
-    
-    print("Creating Random Numbers:")
-    print("-" * 40)
-    
-    # Basic random generation
-    random_float = rng.random()  # Single random float [0, 1)
-    random_array = rng.random(5)  # Array of random floats
-    random_matrix = rng.random((3, 3))  # Random matrix
-    
-    print(f"Single random float: {random_float:.6f}")
-    print(f"Random array: {random_array}")
-    print(f"Random matrix:\n{random_matrix}")
-    
-    # Different ranges
-    print("\n📊 Random Numbers in Different Ranges:")
-    
-    # Random integers
-    random_ints = rng.randint(0, 10, size=10)  # 10 random ints [0, 10)
-    print(f"Random integers (0-9): {random_ints}")
-    
-    # Random floats in custom range
-    random_range = rng.uniform(-5, 5, size=5)  # Uniform in [-5, 5]
-    print(f"Random floats (-5 to 5): {random_range}")
-    
-    # Random choice from array
-    options = ['red', 'green', 'blue', 'yellow']
-    random_colors = rng.choice(options, size=10, replace=True)
-    print(f"Random choices: {random_colors}")
-    
-    # Shuffling
-    deck = np.arange(52)  # Card deck
-    rng.shuffle(deck)  # In-place shuffle
-    print(f"Shuffled deck (first 10): {deck[:10]}")
+            <!-- ============================================================ -->
+            <section id="generator" class="lesson-section">
+                <h2>🚀 Your First Generator</h2>
 
-explore_random_basics()
+                <p>In NumPy you first create a <strong>generator</strong> object, by convention called <code>rng</code> (for "random number generator"), and then ask it for numbers. <code>np.random.default_rng(42)</code> creates one with the seed 42.</p>
+            <pre><code class="language-python">import numpy as np
 
-# The Importance of Seeds 🌱
-def demonstrate_seed_importance():
-    """
-    Seeds: The key to reproducibility in data science!
-    """
-    print("\n🌱 The Power of Seeds")
-    print("=" * 60)
-    
-    # Without setting seed - different every time
-    print("Without seed (run multiple times - different results):")
-    for i in range(3):
-        print(f"  Run {i+1}: {np.random.random(3).round(3)}")
-    
-    # With seed - same every time
-    print("\nWith seed=42 (always same results):")
-    for i in range(3):
-        np.random.seed(42)
-        print(f"  Run {i+1}: {np.random.random(3).round(3)}")
-    
-    # Practical example: Train/test split
-    print("\n🔄 Reproducible Train/Test Split:")
-    
-    data = np.arange(100)
-    
-    # First split
-    np.random.seed(123)
-    np.random.shuffle(data)
-    train1, test1 = data[:80], data[80:]
-    
-    # Reset and split again
-    data = np.arange(100)
-    np.random.seed(123)  # Same seed
-    np.random.shuffle(data)
-    train2, test2 = data[:80], data[80:]
-    
-    print(f"First split - test set (first 5): {test1[:5]}")
-    print(f"Second split - test set (first 5): {test2[:5]}")
-    print(f"Identical splits: {np.array_equal(test1, test2)}")
-
-demonstrate_seed_importance()</code></pre>
-
-    <h2>Probability Distributions: Your Random Toolkit 📊</h2>
-    
-    <p>Different problems need different types of randomness. NumPy provides a rich collection of probability distributions, each with unique properties and use cases. Think of them as different dice - some fair, some weighted, some with infinite sides!</p>
-
-    <div class="distribution-card">
-        <h3>🎯 Uniform Distribution</h3>
-        <p><strong>Use Case:</strong> Equal probability for all outcomes</p>
-        <p><strong>Real World:</strong> Dice rolls, random sampling, Monte Carlo</p>
-        <pre><code>np.random.uniform(low=0, high=1, size=1000)</code></pre>
-    </div>
-
-    <div class="distribution-card">
-        <h3>📈 Normal (Gaussian) Distribution</h3>
-        <p><strong>Use Case:</strong> Natural phenomena, measurement errors</p>
-        <p><strong>Real World:</strong> Heights, test scores, stock returns</p>
-        <pre><code>np.random.normal(loc=0, scale=1, size=1000)</code></pre>
-    </div>
-
-    <div class="distribution-card">
-        <h3>⏱️ Exponential Distribution</h3>
-        <p><strong>Use Case:</strong> Time between events</p>
-        <p><strong>Real World:</strong> Customer arrivals, component failures</p>
-        <pre><code>np.random.exponential(scale=1.0, size=1000)</code></pre>
-    </div>
-
-    <div class="distribution-card">
-        <h3>🎯 Binomial Distribution</h3>
-        <p><strong>Use Case:</strong> Number of successes in n trials</p>
-        <p><strong>Real World:</strong> Coin flips, A/B testing, quality control</p>
-        <pre><code>np.random.binomial(n=10, p=0.5, size=1000)</code></pre>
-    </div>
-
-    <pre><code>import numpy as np
-import matplotlib.pyplot as plt
-
-class DistributionExplorer:
-    """
-    Master class for exploring probability distributions.
-    Your guide to the random universe! 🌟
-    """
-    
-    def __init__(self, seed=42):
-        self.rng = np.random.RandomState(seed)
-        
-    def uniform_distribution(self):
-        """Uniform: Every outcome equally likely"""
-        print("🎲 Uniform Distribution")
-        print("=" * 60)
-        
-        # Generate uniform random numbers
-        uniform_data = self.rng.uniform(0, 10, size=10000)
-        
-        print("Properties:")
-        print(f"  Range: [0, 10)")
-        print(f"  Mean (theoretical): {5.0}")
-        print(f"  Mean (actual): {uniform_data.mean():.3f}")
-        print(f"  Std (theoretical): {10/np.sqrt(12):.3f}")
-        print(f"  Std (actual): {uniform_data.std():.3f}")
-        
-        # Real-world example: Random sampling
-        print("\n📊 Example: Random Sampling")
-        population = np.arange(1, 101)  # Population of 100 items
-        sample = self.rng.choice(population, size=10, replace=False)
-        print(f"Random sample of 10: {sorted(sample)}")
-        
-        # Dice simulation
-        print("\n🎲 Example: Dice Rolling")
-        dice_rolls = self.rng.randint(1, 7, size=1000)
-        for face in range(1, 7):
-            prob = (dice_rolls == face).mean()
-            print(f"  Face {face}: {prob*100:.1f}% (expected: 16.7%)")
-    
-    def normal_distribution(self):
-        """Normal: The bell curve - nature's favorite"""
-        print("\n📊 Normal (Gaussian) Distribution")
-        print("=" * 60)
-        
-        # Generate normal random numbers
-        mean, std = 100, 15  # IQ scores example
-        normal_data = self.rng.normal(mean, std, size=10000)
-        
-        print("Properties:")
-        print(f"  Mean (μ): {mean}")
-        print(f"  Std Dev (σ): {std}")
-        print(f"  Actual mean: {normal_data.mean():.3f}")
-        print(f"  Actual std: {normal_data.std():.3f}")
-        
-        # 68-95-99.7 rule
-        within_1_std = np.sum(np.abs(normal_data - mean) <= std) / len(normal_data)
-        within_2_std = np.sum(np.abs(normal_data - mean) <= 2*std) / len(normal_data)
-        within_3_std = np.sum(np.abs(normal_data - mean) <= 3*std) / len(normal_data)
-        
-        print("\n📐 68-95-99.7 Rule:")
-        print(f"  Within 1σ: {within_1_std*100:.1f}% (expected: 68.3%)")
-        print(f"  Within 2σ: {within_2_std*100:.1f}% (expected: 95.4%)")
-        print(f"  Within 3σ: {within_3_std*100:.1f}% (expected: 99.7%)")
-        
-        # Real-world example: Height distribution
-        print("\n👥 Example: Height Distribution")
-        male_heights = self.rng.normal(175, 7, size=1000)  # cm
-        female_heights = self.rng.normal(162, 6, size=1000)  # cm
-        
-        print(f"Male heights: mean={male_heights.mean():.1f}cm, std={male_heights.std():.1f}cm")
-        print(f"Female heights: mean={female_heights.mean():.1f}cm, std={female_heights.std():.1f}cm")
-        print(f"Tallest 5% of males: >{np.percentile(male_heights, 95):.1f}cm")
-        
-        # Central Limit Theorem demonstration
-        print("\n🎯 Central Limit Theorem Demo:")
-        sample_means = []
-        for _ in range(1000):
-            # Average of 30 uniform random numbers
-            sample = self.rng.uniform(0, 1, size=30)
-            sample_means.append(sample.mean())
-        
-        sample_means = np.array(sample_means)
-        print(f"Uniform samples become normal when averaged!")
-        print(f"Mean of sample means: {sample_means.mean():.3f} (expected: 0.5)")
-        print(f"Std of sample means: {sample_means.std():.3f}")
-    
-    def exponential_distribution(self):
-        """Exponential: Time until next event"""
-        print("\n⏱️ Exponential Distribution")
-        print("=" * 60)
-        
-        # Customer arrival times (average 1 every 5 minutes)
-        avg_time = 5.0  # minutes
-        arrival_intervals = self.rng.exponential(avg_time, size=1000)
-        
-        print("Properties:")
-        print(f"  Average interval (λ): {avg_time} minutes")
-        print(f"  Actual mean: {arrival_intervals.mean():.3f} minutes")
-        print(f"  Median: {np.median(arrival_intervals):.3f} minutes")
-        
-        # Memoryless property
-        print("\n🔄 Memoryless Property:")
-        print("  Probability of waiting > 5 min: "
-              f"{(arrival_intervals > 5).mean()*100:.1f}%")
-        print("  If already waited 5 min, prob of 5 more: "
-              f"{(arrival_intervals > 10).sum() / (arrival_intervals > 5).sum()*100:.1f}%")
-        
-        # Real-world example: Server response times
-        print("\n💻 Example: Server Response Times")
-        response_times = self.rng.exponential(0.1, size=10000)  # 100ms average
-        
-        print(f"Average response: {response_times.mean()*1000:.1f}ms")
-        print(f"95th percentile: {np.percentile(response_times, 95)*1000:.1f}ms")
-        print(f"99th percentile: {np.percentile(response_times, 99)*1000:.1f}ms")
-    
-    def binomial_distribution(self):
-        """Binomial: Counting successes"""
-        print("\n🎯 Binomial Distribution")
-        print("=" * 60)
-        
-        # Coin flips
-        n_flips = 10
-        p_heads = 0.5
-        coin_results = self.rng.binomial(n_flips, p_heads, size=1000)
-        
-        print("Coin Flip Experiment:")
-        print(f"  Flips per trial: {n_flips}")
-        print(f"  Probability of heads: {p_heads}")
-        print(f"  Expected heads: {n_flips * p_heads}")
-        print(f"  Actual mean heads: {coin_results.mean():.3f}")
-        
-        # Distribution of results
-        for k in range(11):
-            prob = (coin_results == k).mean()
-            print(f"  Exactly {k} heads: {prob*100:5.1f}%")
-        
-        # Real-world example: A/B testing
-        print("\n🧪 Example: A/B Testing")
-        
-        # Version A: 10% conversion rate
-        # Version B: 12% conversion rate
-        visitors_per_version = 1000
-        
-        conversions_A = self.rng.binomial(1, 0.10, size=visitors_per_version)
-        conversions_B = self.rng.binomial(1, 0.12, size=visitors_per_version)
-        
-        print(f"Version A: {conversions_A.sum()} conversions ({conversions_A.mean()*100:.1f}%)")
-        print(f"Version B: {conversions_B.sum()} conversions ({conversions_B.mean()*100:.1f}%)")
-        
-        # Statistical significance (simplified)
-        difference = conversions_B.mean() - conversions_A.mean()
-        print(f"Observed lift: {difference*100:.1f}%")
-    
-    def poisson_distribution(self):
-        """Poisson: Counting events in fixed time/space"""
-        print("\n📈 Poisson Distribution")
-        print("=" * 60)
-        
-        # Website visits per hour
-        avg_visits = 100
-        hourly_visits = self.rng.poisson(avg_visits, size=24)  # 24 hours
-        
-        print("Website Traffic Model:")
-        print(f"  Average visits/hour: {avg_visits}")
-        print(f"  Actual daily total: {hourly_visits.sum()}")
-        print(f"  Peak hour: {hourly_visits.max()} visits")
-        print(f"  Quiet hour: {hourly_visits.min()} visits")
-        
-        # Relationship to exponential
-        print("\n🔗 Poisson-Exponential Connection:")
-        print("  Poisson: Number of events in fixed time")
-        print("  Exponential: Time between events")
-        
-        # If average is 100 visits/hour, time between visits:
-        time_between = 60 / avg_visits  # minutes
-        print(f"  Average time between visits: {time_between:.2f} minutes")
-        
-        # Real-world example: Call center
-        print("\n☎️ Example: Call Center Planning")
-        calls_per_minute = self.rng.poisson(3, size=60)  # 60 minutes
-        
-        print(f"Calls in 1 hour: {calls_per_minute.sum()}")
-        print(f"Minutes with 0 calls: {(calls_per_minute == 0).sum()}")
-        print(f"Minutes with >5 calls: {(calls_per_minute > 5).sum()}")
-        print(f"Staff needed (1 per 2 calls): {int(np.ceil(calls_per_minute.max() / 2))}")
-    
-    def multivariate_normal(self):
-        """Multivariate Normal: Correlated random variables"""
-        print("\n🌐 Multivariate Normal Distribution")
-        print("=" * 60)
-        
-        # Correlated variables: Height and Weight
-        mean = [175, 75]  # Mean height (cm), weight (kg)
-        
-        # Covariance matrix
-        # Variance of height: 49 (std=7)
-        # Variance of weight: 100 (std=10)
-        # Correlation: 0.7
-        correlation = 0.7
-        cov = [[49, correlation * 7 * 10],
-               [correlation * 7 * 10, 100]]
-        
-        data = self.rng.multivariate_normal(mean, cov, size=1000)
-        heights = data[:, 0]
-        weights = data[:, 1]
-        
-        print("Correlated Variables (Height & Weight):")
-        print(f"  Height: mean={heights.mean():.1f}cm, std={heights.std():.1f}cm")
-        print(f"  Weight: mean={weights.mean():.1f}kg, std={weights.std():.1f}kg")
-        
-        # Calculate actual correlation
-        actual_corr = np.corrcoef(heights, weights)[0, 1]
-        print(f"  Correlation (expected): {correlation}")
-        print(f"  Correlation (actual): {actual_corr:.3f}")
-        
-        # Conditional distribution
-        tall_people = weights[heights > 185]
-        short_people = weights[heights < 165]
-        
-        print(f"\nConditional Distributions:")
-        print(f"  Weight of tall people (>185cm): {tall_people.mean():.1f}kg")
-        print(f"  Weight of short people (<165cm): {short_people.mean():.1f}kg")
-        print(f"  Difference: {tall_people.mean() - short_people.mean():.1f}kg")
-
-# Explore all distributions
-explorer = DistributionExplorer()
-explorer.uniform_distribution()
-explorer.normal_distribution()
-explorer.exponential_distribution()
-explorer.binomial_distribution()
-explorer.poisson_distribution()
-explorer.multivariate_normal()</code></pre>
-
-    <h2>Monte Carlo Simulations: Solving Problems with Randomness 🎰</h2>
-    
-    <p>Monte Carlo methods use random sampling to solve problems that might be deterministic in principle. It's like estimating the area of a lake by randomly throwing stones and counting how many land in the water!</p>
-
-    <div class="mermaid">
-    graph LR
-        A[Complex Problem] --> B[Monte Carlo Simulation]
-        B --> C[Random Sampling]
-        C --> D[Many Iterations]
-        D --> E[Statistical Analysis]
-        E --> F[Solution Estimate]
-        
-        G[Examples] --> H[π Estimation]
-        G --> I[Option Pricing]
-        G --> J[Risk Analysis]
-        G --> K[Integration]
-        
-        H --> B
-        I --> B
-        J --> B
-        K --> B
-        
-        style B fill:#4ecdc4
-        style F fill:#51cf66
-    </div>
-
-    <pre><code>import numpy as np
-
-class MonteCarloSimulations:
-    """
-    Monte Carlo methods: Solving complex problems with random numbers.
-    When in doubt, simulate it out! 🎲
-    """
-    
-    def __init__(self, seed=42):
-        self.rng = np.random.RandomState(seed)
-    
-    def estimate_pi(self, n_samples=1000000):
-        """
-        Estimate π by randomly throwing darts at a square!
-        Classic Monte Carlo example.
-        """
-        print("🎯 Estimating π with Monte Carlo")
-        print("=" * 60)
-        
-        # Generate random points in [0,1] x [0,1]
-        x = self.rng.random(n_samples)
-        y = self.rng.random(n_samples)
-        
-        # Check if points fall inside unit circle
-        inside_circle = (x**2 + y**2) <= 1
-        
-        # π/4 = area of quarter circle / area of square
-        pi_estimate = 4 * inside_circle.mean()
-        
-        print(f"Number of samples: {n_samples:,}")
-        print(f"Points inside circle: {inside_circle.sum():,}")
-        print(f"π estimate: {pi_estimate:.6f}")
-        print(f"Actual π: {np.pi:.6f}")
-        print(f"Error: {abs(pi_estimate - np.pi):.6f}")
-        
-        # Show convergence
-        print("\n📈 Convergence Analysis:")
-        sample_sizes = [100, 1000, 10000, 100000, 1000000]
-        for n in sample_sizes:
-            x_subset = x[:n]
-            y_subset = y[:n]
-            inside = (x_subset**2 + y_subset**2) <= 1
-            estimate = 4 * inside.mean()
-            error = abs(estimate - np.pi)
-            print(f"  n={n:>7,}: π≈{estimate:.5f}, error={error:.5f}")
-        
-        return pi_estimate
-    
-    def stock_price_simulation(self, S0=100, mu=0.05, sigma=0.2, 
-                              T=1.0, n_steps=252, n_paths=10000):
-        """
-        Simulate stock prices using Geometric Brownian Motion.
-        The foundation of option pricing!
-        """
-        print("\n📈 Stock Price Monte Carlo Simulation")
-        print("=" * 60)
-        
-        print(f"Initial price: ${S0}")
-        print(f"Annual return (μ): {mu*100:.1f}%")
-        print(f"Annual volatility (σ): {sigma*100:.1f}%")
-        print(f"Time horizon: {T} year")
-        print(f"Paths simulated: {n_paths:,}")
-        
-        # Time steps
-        dt = T / n_steps
-        
-        # Generate random shocks
-        Z = self.rng.randn(n_paths, n_steps)
-        
-        # Simulate paths using GBM formula
-        # dS = μS dt + σS dW
-        returns = (mu - 0.5 * sigma**2) * dt + sigma * np.sqrt(dt) * Z
-        
-        # Calculate prices
-        price_paths = np.zeros((n_paths, n_steps + 1))
-        price_paths[:, 0] = S0
-        
-        for t in range(1, n_steps + 1):
-            price_paths[:, t] = price_paths[:, t-1] * np.exp(returns[:, t-1])
-        
-        # Statistics
-        final_prices = price_paths[:, -1]
-        
-        print(f"\n📊 Results after {T} year:")
-        print(f"  Mean price: ${final_prices.mean():.2f}")
-        print(f"  Median price: ${np.median(final_prices):.2f}")
-        print(f"  Std deviation: ${final_prices.std():.2f}")
-        
-        # Percentiles (Value at Risk)
-        percentiles = [1, 5, 25, 50, 75, 95, 99]
-        print(f"\n📉 Price Distribution:")
-        for p in percentiles:
-            value = np.percentile(final_prices, p)
-            print(f"  {p:>2}th percentile: ${value:.2f}")
-        
-        # Probability of profit/loss
-        prob_profit = (final_prices > S0).mean()
-        prob_double = (final_prices > 2 * S0).mean()
-        prob_loss_50 = (final_prices < 0.5 * S0).mean()
-        
-        print(f"\n🎲 Probabilities:")
-        print(f"  Profit (>$100): {prob_profit*100:.1f}%")
-        print(f"  Double (>$200): {prob_double*100:.1f}%")
-        print(f"  Loss >50% (<$50): {prob_loss_50*100:.1f}%")
-        
-        return price_paths
-    
-    def option_pricing_black_scholes(self, S0=100, K=105, r=0.05, 
-                                    sigma=0.2, T=0.25, n_simulations=100000):
-        """
-        Price a European call option using Monte Carlo.
-        Compare with Black-Scholes formula.
-        """
-        print("\n💰 Option Pricing with Monte Carlo")
-        print("=" * 60)
-        
-        print("Option Parameters:")
-        print(f"  Current price (S₀): ${S0}")
-        print(f"  Strike price (K): ${K}")
-        print(f"  Risk-free rate: {r*100:.1f}%")
-        print(f"  Volatility: {sigma*100:.1f}%")
-        print(f"  Time to expiry: {T} years")
-        
-        # Simulate final prices
-        Z = self.rng.randn(n_simulations)
-        ST = S0 * np.exp((r - 0.5 * sigma**2) * T + sigma * np.sqrt(T) * Z)
-        
-        # Calculate payoffs
-        payoffs = np.maximum(ST - K, 0)  # Call option payoff
-        
-        # Discount to present value
-        option_price = np.exp(-r * T) * payoffs.mean()
-        
-        print(f"\n📊 Monte Carlo Results:")
-        print(f"  Simulations: {n_simulations:,}")
-        print(f"  Option price: ${option_price:.3f}")
-        
-        # Standard error
-        std_error = payoffs.std() / np.sqrt(n_simulations) * np.exp(-r * T)
-        print(f"  Standard error: ${std_error:.4f}")
-        print(f"  95% CI: [${option_price - 1.96*std_error:.3f}, "
-              f"${option_price + 1.96*std_error:.3f}]")
-        
-        # Black-Scholes formula for comparison
-        from scipy.stats import norm
-        d1 = (np.log(S0/K) + (r + 0.5*sigma**2)*T) / (sigma*np.sqrt(T))
-        d2 = d1 - sigma*np.sqrt(T)
-        bs_price = S0*norm.cdf(d1) - K*np.exp(-r*T)*norm.cdf(d2)
-        
-        print(f"\n✅ Black-Scholes price: ${bs_price:.3f}")
-        print(f"Monte Carlo error: ${abs(option_price - bs_price):.4f}")
-        
-        # Greeks estimation via Monte Carlo
-        print(f"\n🔢 Greeks Estimation:")
-        
-        # Delta: price sensitivity to stock price
-        S_up = S0 * 1.01
-        Z_new = self.rng.randn(n_simulations)
-        ST_up = S_up * np.exp((r - 0.5*sigma**2)*T + sigma*np.sqrt(T)*Z_new)
-        payoffs_up = np.maximum(ST_up - K, 0)
-        price_up = np.exp(-r*T) * payoffs_up.mean()
-        
-        delta = (price_up - option_price) / (S_up - S0)
-        print(f"  Delta (∂V/∂S): {delta:.4f}")
-        
-        return option_price
-    
-    def portfolio_var_simulation(self, n_assets=5, n_days=252, n_simulations=10000):
-        """
-        Calculate Value at Risk (VaR) for a portfolio.
-        Risk management through simulation.
-        """
-        print("\n⚠️ Portfolio Value at Risk (VaR)")
-        print("=" * 60)
-        
-        # Portfolio setup
-        weights = self.rng.dirichlet(np.ones(n_assets))  # Random weights sum to 1
-        initial_value = 1000000  # $1M portfolio
-        
-        print(f"Portfolio Setup:")
-        print(f"  Initial value: ${initial_value:,}")
-        print(f"  Number of assets: {n_assets}")
-        print(f"  Weights: {weights.round(3)}")
-        
-        # Historical returns parameters (annualized)
-        mean_returns = self.rng.uniform(0.05, 0.15, n_assets)
-        volatilities = self.rng.uniform(0.15, 0.30, n_assets)
-        
-        # Correlation matrix (realistic correlations)
-        correlation = 0.3 + 0.5 * self.rng.random((n_assets, n_assets))
-        np.fill_diagonal(correlation, 1)
-        correlation = (correlation + correlation.T) / 2  # Symmetrize
-        
-        # Covariance matrix
-        cov_matrix = np.outer(volatilities, volatilities) * correlation
-        
-        # Simulate portfolio returns
-        daily_returns = self.rng.multivariate_normal(
-            mean_returns/252, 
-            cov_matrix/252, 
-            size=(n_simulations, n_days)
-        )
-        
-        # Calculate portfolio returns
-        portfolio_returns = daily_returns @ weights
-        
-        # Calculate portfolio values
-        portfolio_values = initial_value * np.cumprod(1 + portfolio_returns, axis=1)
-        final_values = portfolio_values[:, -1]
-        
-        # VaR calculations
-        var_95 = initial_value - np.percentile(final_values, 5)
-        var_99 = initial_value - np.percentile(final_values, 1)
-        cvar_95 = initial_value - final_values[final_values <= np.percentile(final_values, 5)].mean()
-        
-        print(f"\n📊 Risk Metrics (1 year horizon):")
-        print(f"  VaR 95%: ${var_95:,.2f}")
-        print(f"  VaR 99%: ${var_99:,.2f}")
-        print(f"  CVaR 95% (Expected Shortfall): ${cvar_95:,.2f}")
-        
-        # Probability of various losses
-        prob_loss = (final_values < initial_value).mean()
-        prob_loss_10 = (final_values < 0.9 * initial_value).mean()
-        prob_loss_25 = (final_values < 0.75 * initial_value).mean()
-        
-        print(f"\n🎯 Loss Probabilities:")
-        print(f"  Any loss: {prob_loss*100:.1f}%")
-        print(f"  Loss > 10%: {prob_loss_10*100:.1f}%")
-        print(f"  Loss > 25%: {prob_loss_25*100:.1f}%")
-        
-        # Best and worst scenarios
-        print(f"\n📈 Scenario Analysis:")
-        print(f"  Best case (99th percentile): ${np.percentile(final_values, 99):,.2f}")
-        print(f"  Worst case (1st percentile): ${np.percentile(final_values, 1):,.2f}")
-        print(f"  Expected value: ${final_values.mean():,.2f}")
-        
-        return final_values
-
-# Run Monte Carlo simulations
-mc = MonteCarloSimulations()
-mc.estimate_pi()
-price_paths = mc.stock_price_simulation()
-option_price = mc.option_pricing_black_scholes()
-portfolio_values = mc.portfolio_var_simulation()</code></pre>
-
-    <h2>Random Sampling and Bootstrapping 🎯</h2>
-    
-    <p>Random sampling is the foundation of statistical inference. Bootstrapping takes this further - it's like creating parallel universes of your data to understand uncertainty!</p>
-
-    <pre><code>import numpy as np
-
-class RandomSampling:
-    """
-    Advanced sampling techniques for data science.
-    From simple random sampling to sophisticated bootstrap methods!
-    """
-    
-    def __init__(self, seed=42):
-        self.rng = np.random.RandomState(seed)
-    
-    def sampling_methods(self):
-        """Demonstrate various sampling techniques"""
-        print("🎯 Sampling Methods")
-        print("=" * 60)
-        
-        # Create a population
-        population = np.arange(1, 101)  # 100 items
-        
-        # 1. Simple Random Sampling
-        print("1️⃣ Simple Random Sampling:")
-        simple_sample = self.rng.choice(population, size=10, replace=False)
-        print(f"  Sample: {sorted(simple_sample)}")
-        
-        # 2. Systematic Sampling
-        print("\n2️⃣ Systematic Sampling:")
-        k = len(population) // 10  # Every kth element
-        start = self.rng.randint(0, k)
-        systematic_sample = population[start::k]
-        print(f"  Every {k}th element starting at {start}: {systematic_sample}")
-        
-        # 3. Stratified Sampling
-        print("\n3️⃣ Stratified Sampling:")
-        # Divide into strata
-        strata1 = population[:25]   # Low
-        strata2 = population[25:75]  # Medium  
-        strata3 = population[75:]    # High
-        
-        # Sample from each stratum
-        sample1 = self.rng.choice(strata1, size=3, replace=False)
-        sample2 = self.rng.choice(strata2, size=5, replace=False)
-        sample3 = self.rng.choice(strata3, size=2, replace=False)
-        
-        stratified_sample = np.concatenate([sample1, sample2, sample3])
-        print(f"  Low stratum: {sorted(sample1)}")
-        print(f"  Medium stratum: {sorted(sample2)}")
-        print(f"  High stratum: {sorted(sample3)}")
-        
-        # 4. Weighted Sampling
-        print("\n4️⃣ Weighted Sampling:")
-        # Higher numbers have higher probability
-        weights = population / population.sum()
-        weighted_sample = self.rng.choice(population, size=10, 
-                                        replace=True, p=weights)
-        print(f"  Sample (biased toward higher values): {sorted(weighted_sample)}")
-        
-        # 5. Reservoir Sampling (for streaming data)
-        print("\n5️⃣ Reservoir Sampling (streaming):")
-        
-        def reservoir_sampling(stream, k):
-            """Sample k items from a stream of unknown length"""
-            reservoir = []
-            
-            for i, item in enumerate(stream):
-                if i < k:
-                    reservoir.append(item)
-                else:
-                    # Replace with probability k/(i+1)
-                    j = self.rng.randint(0, i + 1)
-                    if j < k:
-                        reservoir[j] = item
-            
-            return reservoir
-        
-        # Simulate a stream
-        stream = iter(range(1, 1001))  # 1000 items
-        reservoir = reservoir_sampling(stream, 10)
-        print(f"  Sample from stream: {sorted(reservoir)}")
-    
-    def bootstrap_confidence_intervals(self):
-        """
-        Bootstrap: Estimate uncertainty by resampling.
-        The statistician's time machine!
-        """
-        print("\n🔄 Bootstrap Confidence Intervals")
-        print("=" * 60)
-        
-        # Original sample (e.g., customer satisfaction scores)
-        original_data = self.rng.normal(75, 10, size=100)
-        
-        print(f"Original sample:")
-        print(f"  Size: {len(original_data)}")
-        print(f"  Mean: {original_data.mean():.2f}")
-        print(f"  Std: {original_data.std():.2f}")
-        
-        # Bootstrap resampling
-        n_bootstrap = 10000
-        bootstrap_means = []
-        
-        for _ in range(n_bootstrap):
-            # Resample with replacement
-            bootstrap_sample = self.rng.choice(original_data, 
-                                             size=len(original_data), 
-                                             replace=True)
-            bootstrap_means.append(bootstrap_sample.mean())
-        
-        bootstrap_means = np.array(bootstrap_means)
-        
-        # Calculate confidence intervals
-        confidence_levels = [90, 95, 99]
-        
-        print(f"\n📊 Bootstrap Results ({n_bootstrap} resamples):")
-        print(f"  Bootstrap mean: {bootstrap_means.mean():.2f}")
-        print(f"  Bootstrap SE: {bootstrap_means.std():.3f}")
-        
-        print(f"\n🎯 Confidence Intervals:")
-        for conf in confidence_levels:
-            alpha = (100 - conf) / 2
-            lower = np.percentile(bootstrap_means, alpha)
-            upper = np.percentile(bootstrap_means, 100 - alpha)
-            print(f"  {conf}% CI: [{lower:.2f}, {upper:.2f}]")
-        
-        # Compare with theoretical CI (assuming normal)
-        theoretical_se = original_data.std() / np.sqrt(len(original_data))
-        theoretical_ci_95 = [
-            original_data.mean() - 1.96 * theoretical_se,
-            original_data.mean() + 1.96 * theoretical_se
-        ]
-        print(f"\n📐 Theoretical 95% CI: [{theoretical_ci_95[0]:.2f}, {theoretical_ci_95[1]:.2f}]")
-        
-        return bootstrap_means
-    
-    def permutation_testing(self):
-        """
-        Permutation tests: Non-parametric hypothesis testing.
-        When assumptions don't hold, shuffle it!
-        """
-        print("\n🔀 Permutation Testing")
-        print("=" * 60)
-        
-        # Two groups (e.g., treatment vs control)
-        group_A = self.rng.normal(100, 15, size=50)  # Control
-        group_B = self.rng.normal(105, 15, size=50)  # Treatment (5 point improvement)
-        
-        observed_diff = group_B.mean() - group_A.mean()
-        
-        print("Hypothesis Test: Is there a difference between groups?")
-        print(f"  Group A mean: {group_A.mean():.2f}")
-        print(f"  Group B mean: {group_B.mean():.2f}")
-        print(f"  Observed difference: {observed_diff:.2f}")
-        
-        # Permutation test
-        n_permutations = 10000
-        combined = np.concatenate([group_A, group_B])
-        permuted_diffs = []
-        
-        for _ in range(n_permutations):
-            # Shuffle and split
-            self.rng.shuffle(combined)
-            perm_A = combined[:50]
-            perm_B = combined[50:]
-            
-            # Calculate difference
-            perm_diff = perm_B.mean() - perm_A.mean()
-            permuted_diffs.append(perm_diff)
-        
-        permuted_diffs = np.array(permuted_diffs)
-        
-        # Calculate p-value
-        p_value = (np.abs(permuted_diffs) >= np.abs(observed_diff)).mean()
-        
-        print(f"\n📊 Permutation Test Results:")
-        print(f"  Permutations: {n_permutations}")
-        print(f"  P-value: {p_value:.4f}")
-        print(f"  Significant at α=0.05? {'Yes ✅' if p_value < 0.05 else 'No ❌'}")
-        
-        # Effect size
-        pooled_std = np.sqrt((group_A.var() + group_B.var()) / 2)
-        cohens_d = observed_diff / pooled_std
-        print(f"  Cohen's d (effect size): {cohens_d:.3f}")
-        
-        return permuted_diffs
-    
-    def cross_validation_splits(self):
-        """
-        Random splits for cross-validation.
-        Essential for machine learning!
-        """
-        print("\n✂️ Cross-Validation Splits")
-        print("=" * 60)
-        
-        # Dataset
-        n_samples = 100
-        X = np.arange(n_samples).reshape(-1, 1)  # Features
-        y = np.arange(n_samples)  # Labels
-        
-        # 1. Train/Test Split
-        print("1️⃣ Train/Test Split (80/20):")
-        
-        indices = np.arange(n_samples)
-        self.rng.shuffle(indices)
-        
-        train_size = int(0.8 * n_samples)
-        train_idx = indices[:train_size]
-        test_idx = indices[train_size:]
-        
-        print(f"  Train indices (first 10): {sorted(train_idx[:10])}")
-        print(f"  Test indices (first 10): {sorted(test_idx[:10])}")
-        
-        # 2. K-Fold Cross-Validation
-        print("\n2️⃣ K-Fold Cross-Validation (k=5):")
-        
-        k = 5
-        fold_size = n_samples // k
-        
-        for fold in range(k):
-            start = fold * fold_size
-            end = start + fold_size if fold < k-1 else n_samples
-            
-            val_idx = indices[start:end]
-            train_idx = np.concatenate([indices[:start], indices[end:]])
-            
-            print(f"  Fold {fold+1}: Val size={len(val_idx)}, Train size={len(train_idx)}")
-        
-        # 3. Stratified K-Fold (for imbalanced classes)
-        print("\n3️⃣ Stratified K-Fold (preserving class distribution):")
-        
-        # Create imbalanced labels
-        y_imbalanced = np.array([0]*70 + [1]*30)  # 70% class 0, 30% class 1
-        
-        # Stratified split
-        class_0_idx = np.where(y_imbalanced == 0)[0]
-        class_1_idx = np.where(y_imbalanced == 1)[0]
-        
-        self.rng.shuffle(class_0_idx)
-        self.rng.shuffle(class_1_idx)
-        
-        fold_size_0 = len(class_0_idx) // k
-        fold_size_1 = len(class_1_idx) // k
-        
-        for fold in range(k):
-            val_0 = class_0_idx[fold*fold_size_0:(fold+1)*fold_size_0]
-            val_1 = class_1_idx[fold*fold_size_1:(fold+1)*fold_size_1]
-            val_idx = np.concatenate([val_0, val_1])
-            
-            print(f"  Fold {fold+1}: Class 0={len(val_0)}, Class 1={len(val_1)}")
-
-# Explore sampling techniques
-sampler = RandomSampling()
-sampler.sampling_methods()
-bootstrap_means = sampler.bootstrap_confidence_intervals()
-permuted_diffs = sampler.permutation_testing()
-sampler.cross_validation_splits()</code></pre>
-
-    <h2>Best Practices and Common Pitfalls 🎯</h2>
-    
-    <div class="seed-demo">
-        <h3>🌱 Always Set Seeds for Reproducibility</h3>
-        <pre><code># Good: Reproducible
-np.random.seed(42)
-results = np.random.random(100)
-
-# Better: Use RandomState
-rng = np.random.RandomState(42)
-results = rng.random(100)
-
-# Best: Use new Generator (NumPy 1.17+)
 rng = np.random.default_rng(42)
-results = rng.random(100)</code></pre>
-    </div>
 
-    <div class="warning-box">
-        <h3>⚠️ Common Pitfalls</h3>
-        <ul>
-            <li><strong>Not setting seeds:</strong> Results change every run</li>
-            <li><strong>Using global random state:</strong> Functions affect each other</li>
-            <li><strong>Wrong distribution:</strong> Using uniform when you need normal</li>
-            <li><strong>Ignoring numerical stability:</strong> Log of zero, division issues</li>
-            <li><strong>Sample size too small:</strong> Monte Carlo needs many samples</li>
-        </ul>
-    </div>
+print(rng.random())        # one float, from 0 up to (not including) 1
+print(rng.random(5))       # an array of five</code></pre>
 
-    <div class="success-box">
-        <h3>✅ Best Practices</h3>
-        <ul>
-            <li><strong>Use appropriate distributions:</strong> Match the problem domain</li>
-            <li><strong>Check convergence:</strong> Increase samples until stable</li>
-            <li><strong>Validate with known solutions:</strong> Test on problems with analytical answers</li>
-            <li><strong>Document random choices:</strong> Explain why you chose specific distributions</li>
-            <li><strong>Use vectorization:</strong> Generate all random numbers at once</li>
-        </ul>
-    </div>
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>0.7739560485559633
+[0.43887844 0.85859792 0.69736803 0.09417735 0.97562235]</code></pre>
+            </div>
 
-    <h2>Summary: Your Random Number Toolkit 🎲</h2>
-    
-    <div class="comment-block">
-        <p><strong>🎯 Key Takeaways:</strong></p>
-        <ul>
-            <li><strong>Reproducibility:</strong> Always set seeds for reproducible research</li>
-            <li><strong>Distributions Matter:</strong> Choose the right distribution for your problem</li>
-            <li><strong>Monte Carlo Power:</strong> Solve complex problems through simulation</li>
-            <li><strong>Bootstrap Magic:</strong> Estimate uncertainty without assumptions</li>
-            <li><strong>Vectorize Generation:</strong> Generate all random numbers at once for speed</li>
-            <li><strong>Test and Validate:</strong> Always verify your random procedures</li>
-        </ul>
-    </div>
+                <p>If you run these blocks in order in a fresh notebook, you will see <em>exactly</em> these numbers. That is the seed at work, and it is why a lesson about randomness can print its output.</p>
 
-    <pre><code># Quick Random Reference Card
-import numpy as np
+                <h3>Whole Numbers</h3>
 
-# SETUP
-# -----
-rng = np.random.RandomState(42)  # Reproducible generator
+                <p><code>rng.integers(low, high)</code> draws whole numbers. Like <code>range()</code> and slicing, it <strong>leaves out the upper end</strong>, so a six-sided die is <code>integers(1, 7)</code>.</p>
+            <pre><code class="language-python">print(rng.integers(1, 7, size=10))                   # ten dice rolls: 1 to 6
+print(rng.integers(0, 2, size=10))                   # ten coin flips: 0 or 1
+print(rng.integers(1, 6, size=10, endpoint=True))    # endpoint=True includes the 6</code></pre>
 
-# BASIC GENERATION
-# ----------------
-rng.random(size)           # Uniform [0, 1)
-rng.randint(low, high, size)  # Integers [low, high)
-rng.choice(array, size)    # Random selection
-rng.shuffle(array)         # In-place shuffle
-rng.permutation(array)     # Return shuffled copy
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[5 5 5 5 4 1 6 3 4 3]
+[0 1 1 1 0 1 1 0 0 0]
+[1 4 6 1 6 5 2 4 1 5]</code></pre>
+            </div>
 
-# DISTRIBUTIONS
-# -------------
-rng.uniform(low, high, size)      # Uniform
-rng.normal(mu, sigma, size)        # Normal/Gaussian
-rng.exponential(scale, size)       # Exponential
-rng.poisson(lam, size)            # Poisson
-rng.binomial(n, p, size)          # Binomial
-rng.multivariate_normal(mean, cov, size)  # Multivariate
+                <h3>Any Range, Any Shape</h3>
 
-# SAMPLING
-# --------
-# Simple random sample
-sample = rng.choice(population, size=n, replace=False)
+                <p><code>rng.uniform(low, high)</code> draws floats spread evenly over a range of your choosing. Every drawing method takes a <code>size</code> argument, and <code>size</code> can be a shape tuple, so you can fill a whole table in one call.</p>
+            <pre><code class="language-python">print(rng.uniform(5, 15, size=4).round(2))     # four prices between $5 and $15
+print(rng.integers(0, 100, size=(3, 4)))       # a 3 x 4 table</code></pre>
 
-# Bootstrap sample
-boot = rng.choice(data, size=len(data), replace=True)
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[ 8.55 14.71 13.93 12.78]
+[[75 19 36 46]
+ [49  4 54 15]
+ [74 68 92 74]]</code></pre>
+            </div>
 
-# Stratified sample
-strata_samples = [rng.choice(s, size=n) for s in strata]
+                <div class="card card-success">
+                    <h4>✅ One Call, Not a Loop</h4>
+                    <p>Asking for a million numbers with <code>size=1_000_000</code> is the vectorized way to do it, for the same reasons as in Lesson 1.2. A Python loop that calls <code>rng.random()</code> a million times gives equally good numbers and takes far longer.</p>
+                </div>
+            </section>
 
-# MONTE CARLO PATTERN
-# -------------------
-n_simulations = 10000
-results = []
-for _ in range(n_simulations):
-    simulation = rng.random()  # Your random process
-    results.append(simulation)
-estimate = np.mean(results)
-std_error = np.std(results) / np.sqrt(n_simulations)
+            <!-- ============================================================ -->
+            <section id="seeds" class="lesson-section">
+                <h2>🌱 Seeds and Reproducibility</h2>
 
-print("🎲 Master randomness to master data science!")</code></pre>    </main>
+                <p>Two generators created with the same seed produce the same sequence. A different seed gives a different sequence.</p>
+            <pre><code class="language-python">a = np.random.default_rng(2024)
+b = np.random.default_rng(2024)
+c = np.random.default_rng(2025)
 
+print(a.integers(0, 100, size=5))
+print(b.integers(0, 100, size=5))
+print(c.integers(0, 100, size=5))</code></pre>
 
-    <footer>
-        <!-- Learning Journal (REQUIRED per the Courseware Authoring Standard) -->
-        <section id="journal" class="lesson-section">
-            <h2>📓 Learning Journal</h2>
-            <div class="card card-info">
-                <p>Keep a learning journal — digital or physical. After this lesson, take a few minutes to write down:</p>
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[24 67  9 21 31]
+[24 67  9 21 31]
+[44 99 99 38 95]</code></pre>
+            </div>
+
+                <p>A generator <strong>moves forward</strong> each time you draw from it, like a bookmark moving through the book. Asking again gives the <em>next</em> numbers, not the same ones. To start over, create the generator again.</p>
+            <pre><code class="language-python">print(a.integers(0, 100, size=5))     # the next five: different
+
+a = np.random.default_rng(2024)       # back to the first page
+print(a.integers(0, 100, size=5))     # the first five again</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[30 90 79 91 99]
+[24 67  9 21 31]</code></pre>
+            </div>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Why Rerunning a Cell Changes Your Numbers</h4>
+                    <p>In a notebook, running a cell that draws from <code>rng</code> a second time moves the bookmark again, so you get new numbers. Nothing is broken. To reproduce a result, rerun from the cell that <em>creates</em> the generator (or use <strong>Restart and Run All</strong>). Reproducible means "same code, run from the top, same answer".</p>
+                </div>
+
+                <p>With no seed at all, NumPy takes fresh, unpredictable starting material from the operating system, and every run differs.</p>
+            <pre><code class="language-python">fresh = np.random.default_rng()
+print(fresh.integers(0, 100, size=5))</code></pre>
+
+            <div class="card card-output">
+                <h4>Output (your numbers will differ, and so will mine next time)</h4>
+                <pre><code>[80 73 42 59 86]</code></pre>
+            </div>
+
+                <h3>How to Organize Random Code</h3>
+
                 <ul>
-                    <li><strong>Key concepts</strong> you learned</li>
-                    <li><strong>Techniques that clicked</strong> for you</li>
-                    <li><strong>Questions or confusion points</strong> to revisit</li>
-                    <li><strong>Ideas you want to try</strong></li>
-                    <li><strong>Your progress and feelings</strong> about learning this</li>
+                    <li><strong>Create one generator near the top</strong> of the notebook or script, with a seed, and use it everywhere below.</li>
+                    <li><strong>Pass it into functions</strong> that need randomness (<code>def simulate(rng, ...)</code>), or pass a seed and create the generator inside. Either way the caller controls the randomness.</li>
+                    <li><strong>Do not create a new seeded generator inside a loop.</strong> You would open the book at the same page every time. This mistake is shown below.</li>
+                    <li><strong>The seed's value does not matter.</strong> 42, 7 and 20240101 are equally good. What matters is that you write it down by putting it in the code.</li>
                 </ul>
-                <p><strong>✍️ This lesson's prompt:</strong> "Reproducible randomness" sounds like a contradiction. In your own words, why is being able to replay the exact same random sequence so valuable in data science and research?</p>
-            </div>
-        </section>
 
-        <!-- Lesson Summary (full standard block) -->
-        <section id="summary" class="lesson-section">
-            <h2>📝 Lesson Summary</h2>
-            <div class="card card-success">
-                <h3>🎓 Key Takeaways</h3>
+                <div class="card card-info">
+                    <h4>💡 The Older Style You Will See in Other People's Code</h4>
+                    <p>Before the generator object existed, NumPy had one hidden, global generator that you seeded with <code>np.random.seed(42)</code> and drew from with functions such as <code>np.random.rand()</code>. Those functions still work, and a great many tutorials and answers online use them. The generator style taught here is the one NumPy recommends for new code: it is faster, its statistical quality is better, and because nothing is global, one part of a program cannot silently disturb another's random numbers.</p>
+                </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Older style (reading knowledge only)</th><th>Generator style (write this)</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>np.random.seed(42)</code></td><td><code>rng = np.random.default_rng(42)</code></td></tr>
+                            <tr><td><code>np.random.rand(5)</code></td><td><code>rng.random(5)</code></td></tr>
+                            <tr><td><code>np.random.randint(1, 7, 10)</code></td><td><code>rng.integers(1, 7, size=10)</code></td></tr>
+                            <tr><td><code>np.random.randn(5)</code></td><td><code>rng.standard_normal(5)</code></td></tr>
+                            <tr><td><code>np.random.choice(x, 3)</code></td><td><code>rng.choice(x, size=3)</code></td></tr>
+                            <tr><td><code>np.random.shuffle(x)</code></td><td><code>rng.shuffle(x)</code></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="sampling" class="lesson-section">
+                <h2>🎯 Sampling and Shuffling</h2>
+
+                <p>Drawing numbers from a range is one job. More often in data work you want to draw from <em>your own values</em>. That is <code>rng.choice</code>.</p>
+            <pre><code class="language-python">store_names = np.array(["Asheville", "Bend", "Boise", "Flagstaff"])
+
+print(rng.choice(store_names, size=6))                    # with replacement: repeats allowed
+print(rng.choice(store_names, size=3, replace=False))     # without: three different stores</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>['Bend' 'Flagstaff' 'Bend' 'Bend' 'Flagstaff' 'Bend']
+['Bend' 'Flagstaff' 'Asheville']</code></pre>
+            </div>
+
+                <div class="card card-info">
+                    <h4>💡 With or Without Replacement?</h4>
+                    <p>Picture names on slips of paper in a hat. <strong>With replacement</strong> (the default), you put each slip back after reading it, so the same name can come up again. Use it when draws are independent events: dice, simulated days, visitors arriving. <strong>Without replacement</strong> (<code>replace=False</code>), a slip stays out once drawn. Use it to select distinct things: 200 orders to audit, 5 prize winners.</p>
+                </div>
+
+                <p>By default every value is equally likely. The <code>p</code> argument sets your own probabilities, one per value, adding up to 1. Boise gets about a third of Pinecrest's store visitors, so a simulated visitor should be more likely to be in Boise.</p>
+            <pre><code class="language-python">visits = rng.choice(store_names, size=10_000, p=[0.19, 0.24, 0.34, 0.23])
+names, counts = np.unique(visits, return_counts=True)
+print(names)
+print(counts)</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>['Asheville' 'Bend' 'Boise' 'Flagstaff']
+[1934 2408 3401 2257]</code></pre>
+            </div>
+
+                <p>The counts are close to 1,900, 2,400, 3,400 and 2,300 but not exactly equal to them. That gap between what the probabilities say and what a particular sample shows is called <strong>sampling variation</strong>, and learning to reason about it is most of what statistics is.</p>
+
+                <h3>Shuffling</h3>
+
+                <p>There are two ways to put an array in random order, and they differ in the way that matters most: one returns a new array and the other changes yours.</p>
+            <pre><code class="language-python">deck = np.arange(10)
+
+mixed = rng.permutation(deck)    # returns a shuffled COPY
+print(mixed)
+print(deck)                      # the original is untouched
+
+rng.shuffle(deck)                # shuffles IN PLACE and returns None
+print(deck)</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[7 1 4 5 3 2 9 0 6 8]
+[0 1 2 3 4 5 6 7 8 9]
+[3 2 9 4 7 0 6 5 1 8]</code></pre>
+            </div>
+
+                <h3>Sampling Rows of Real Data</h3>
+
+                <p>With parallel arrays (Lesson 1.2), the thing to sample is the <strong>row position</strong>. Draw positions once, then use them on every column, so the columns stay matched. <code>rng.choice(n, ...)</code> with a whole number <code>n</code> draws from <code>0</code> to <code>n - 1</code>.</p>
+            <pre><code class="language-python">def load(col, dtype=float):
+    """Read one column of daily_sales.csv into an array."""
+    return np.genfromtxt("data/daily_sales.csv", delimiter=",",
+                         skip_header=1, usecols=col, dtype=dtype)
+
+dates = load(0, dtype="datetime64[D]")
+stores = load(1, dtype=str)
+visitors = load(2)
+revenue = load(5)
+n = revenue.size
+
+picks = rng.choice(n, size=5, replace=False)      # five different row positions
+print(picks)
+print(dates[picks])
+print(stores[picks])
+print(revenue[picks])</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[1845 1242  952 2068 2800]
+['2025-04-09' '2024-11-07' '2024-08-26' '2025-06-04' '2025-12-05']
+['Boise' 'Bend' 'Flagstaff' 'Bend' 'Bend']
+[8691.6  6285.66 4364.59 6640.19     nan]</code></pre>
+            </div>
+
+                <p>The last pick happens to be one of the six store-days with no revenue recorded. A random sample shows you your data as it is, gaps included.</p>
+
+                <p>A random <strong>split</strong> works the same way: shuffle all the positions, then cut the shuffled list in two. Here 80% of the rows go to one group and 20% to the other, a pattern you will meet again whenever a model is tested on data it has not seen.</p>
+            <pre><code class="language-python">order = rng.permutation(n)
+cut = int(n * 0.8)
+group_a, group_b = order[:cut], order[cut:]
+
+print(group_a.size, group_b.size)
+print(np.nanmean(revenue[group_a]).round(2), np.nanmean(revenue[group_b]).round(2))</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>2322 581
+7448.95 7379.26</code></pre>
+            </div>
+
+                <p>The two groups have similar averages, as random groups should, and again not identical ones.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="distributions" class="lesson-section">
+                <h2>📊 Distributions: Shaped Randomness</h2>
+
+                <p>A die gives every face the same chance. Most real quantities are not like that: daily revenue clusters around a typical value, with very high and very low days being rare. A <strong>distribution</strong> describes which values are likely and which are not. The generator can draw from dozens of them. Three cover a great deal of everyday work, and Module 4 studies them properly. Here the aim is to meet them and see their shapes.</p>
+
+                <h3>Normal: Measurements Around a Typical Value</h3>
+
+                <p>The bell curve. You give it a center (<code>loc</code>, the mean) and a spread (<code>scale</code>, the standard deviation). About 95% of draws land within two standard deviations of the mean.</p>
+            <pre><code class="language-python">baskets = rng.normal(loc=88, scale=15, size=100_000)     # purchase amounts, roughly
+
+print(baskets[:6].round(2))
+print(baskets.mean().round(2), baskets.std().round(2))
+print(((baskets &gt; 58) &amp; (baskets &lt; 118)).mean())      # share within 2 standard deviations</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[ 94.93  82.35 112.71 118.26 101.11 111.12]
+87.95 15.05
+0.95331</code></pre>
+            </div>
+
+                <h3>Poisson: Counts of Things That Happen at Some Average Rate</h3>
+
+                <p>How many customers reach the register in a minute, how many returns arrive in a day. You give it the average count (<code>lam</code>), and it returns whole numbers that are never negative.</p>
+            <pre><code class="language-python">arrivals = rng.poisson(lam=4, size=100_000)       # customers per minute at the register
+
+print(arrivals[:15])
+print(arrivals.mean().round(3), arrivals.min(), arrivals.max())</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[5 3 1 1 4 3 1 2 2 5 6 7 5 2 7]
+3.997 0 16</code></pre>
+            </div>
+
+                <h3>Binomial: Successes Out of a Number of Tries</h3>
+
+                <p>Of <code>n</code> visitors, each of whom buys with probability <code>p</code>, how many buy? Boise averages about 485 visitors a day and, as you found in the Lesson 1.2 scorecard, about 23.6% of visitors make a purchase.</p>
+            <pre><code class="language-python">buyers = rng.binomial(n=485, p=0.236, size=100_000)     # purchases on a 485-visitor day
+
+print(buyers[:10])
+print(buyers.mean().round(2), 485 * 0.236)</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[112 112 121 113 116 132 124 113 115  92]
+114.45 114.46</code></pre>
+            </div>
+
+                <p>In all three cases the average of 100,000 draws sits very close to the value the distribution was told to have. Now look at the shapes. (Plotting has its own module. For now, type the chart code as given.)</p>
+            <pre><code class="language-python">import matplotlib.pyplot as plt
+
+fig, axes = plt.subplots(3, 1, figsize=(7, 7.5), layout="constrained")
+
+axes[0].hist(baskets, bins=60, color="#667eea")
+axes[0].set_title("Normal(mean 88, sd 15): purchase amounts")
+
+axes[1].hist(arrivals, bins=np.arange(-0.5, 17.5, 1), color="#667eea", edgecolor="white")
+axes[1].set_title("Poisson(mean 4): customers per minute")
+
+axes[2].hist(buyers, bins=np.arange(79.5, 150.5, 1), color="#667eea")
+axes[2].set_title("Binomial(485 visitors, 23.6% buy): purchases per day")
+
+for ax in axes:
+    ax.set_ylabel("draws")
+plt.show()</code></pre>
+                <figure>
+                    <img src="images/numpy_random_generation_distributions.png" alt="Three histograms of 100,000 random draws each. The normal distribution is a symmetric bell centered on 88. The Poisson distribution with mean 4 has bars at whole numbers from 0 to about 12, peaking at 3 and 4 with a longer tail to the right. The binomial distribution is a bell of whole numbers centered near 114, running from about 85 to 145." width="770" height="825" loading="lazy">
+                    <figcaption>Three kinds of shaped randomness. The normal is smooth and symmetric, the Poisson is made of whole numbers and leans to the right, and the binomial with many tries looks like a bell built from whole numbers.</figcaption>
+                </figure>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Method</th><th>Draws</th><th>Typical use</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>rng.random(size)</code></td><td>Floats from 0 up to 1, evenly</td><td>Building blocks, random yes/no with <code>rng.random(n) &lt; p</code></td></tr>
+                            <tr><td><code>rng.uniform(low, high, size)</code></td><td>Floats evenly over a range</td><td>"Anywhere between" quantities</td></tr>
+                            <tr><td><code>rng.integers(low, high, size)</code></td><td>Whole numbers, upper end excluded</td><td>Dice, random positions, ids</td></tr>
+                            <tr><td><code>rng.normal(loc, scale, size)</code></td><td>Bell curve</td><td>Measurements, errors, noise</td></tr>
+                            <tr><td><code>rng.poisson(lam, size)</code></td><td>Counts, zero or more</td><td>Arrivals, events per period</td></tr>
+                            <tr><td><code>rng.binomial(n, p, size)</code></td><td>Successes in n tries</td><td>Conversions, defects, survey answers</td></tr>
+                            <tr><td><code>rng.choice(values, size)</code></td><td>Your own values</td><td>Samples of real data, resampling</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="simulation" class="lesson-section">
+                <h2>🔮 Simulation: Asking "What If?"</h2>
+
+                <p>Here is a small, real kind of question. Boise plans to hand a free gift bag to every customer who buys something on Saturday, and has 130 bags. <strong>What is the chance the bags run out?</strong></p>
+
+                <p>You could look for a formula. Or you can do what the question literally describes: live through a great many Saturdays and count how often more than 130 people buy. This approach is called <strong>Monte Carlo simulation</strong>, and it has three steps.</p>
+
+                <div class="mermaid">
+            graph TD
+                A["1. Model: describe one day with random draws"] --> B["2. Repeat: simulate many days at once"]
+                B --> C["3. Count: what share had the outcome?"]
+                C --> D{"Do I trust the model?"}
+                D -->|not yet| A
+                </div>
+
+                <p><strong>Model.</strong> Use the binomial from the last section: 485 visitors, each buying with probability 0.236. <strong>Repeat.</strong> Ask for 100,000 days. <strong>Count.</strong> A mask and its mean, exactly as in Lesson 1.2.</p>
+            <pre><code class="language-python">days = rng.binomial(n=485, p=0.236, size=100_000)
+
+print(days[:10])
+ran_out = days &gt; 130
+print(ran_out.sum(), "of", days.size, "simulated days")
+print(f"estimated chance of running out: {ran_out.mean():.1%}")</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[114 102 108 110 107 114 127 106 135 123]
+4516 of 100000 simulated days
+estimated chance of running out: 4.5%</code></pre>
+            </div>
+
+                <h3>How Many Simulations Are Enough?</h3>
+
+                <p>An estimate from a simulation is itself a little random. Run the same estimate with different numbers of simulated days and watch what happens.</p>
+            <pre><code class="language-python">for n_days in [100, 1_000, 10_000, 100_000, 1_000_000]:
+    sim = rng.binomial(n=485, p=0.236, size=n_days)
+    print(f"{n_days:&gt;9,} days: {(sim &gt; 130).mean():.4f}")</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>      100 days: 0.0500
+    1,000 days: 0.0460
+   10,000 days: 0.0472
+  100,000 days: 0.0454
+1,000,000 days: 0.0445</code></pre>
+            </div>
+
+                <p>With 100 days the estimate can only move in steps of 0.01, and a rerun could easily give 0.02 or 0.08. As the number of simulations grows, the estimate settles down toward one value. This is the <strong>law of large numbers</strong>: the average of more and more random draws gets closer and closer to the true underlying value. The chart below follows a single run of 100,000 days and shows the estimate after each one.</p>
+            <pre><code class="language-python">running = ran_out.cumsum() / np.arange(1, ran_out.size + 1)    # estimate after 1, 2, 3, ... days
+
+fig, ax = plt.subplots(figsize=(8, 3.8), layout="constrained")
+ax.plot(np.arange(1, ran_out.size + 1), running, color="#667eea")
+ax.axhline(ran_out.mean(), color="gray", linestyle="--", linewidth=1)
+ax.set_xscale("log")
+ax.set_xlabel("number of simulated days (log scale)")
+ax.set_ylabel("estimated chance of running out")
+ax.set_title("The estimate settles as simulations accumulate")
+plt.show()</code></pre>
+                <figure>
+                    <img src="images/numpy_random_generation_convergence.png" alt="Line chart of the estimated probability of running out of gift bags against the number of simulated days on a log scale. The line jumps between 0 and about 0.18 during the first hundred days, then narrows steadily and settles onto a dashed horizontal line near 0.045 from a few thousand days on." width="880" height="418" loading="lazy">
+                    <figcaption>The first few hundred simulated days give a jumpy estimate. By ten thousand it has settled. More simulations buy more decimal places, slowly.</figcaption>
+                </figure>
+
+                <h3>The Part No Amount of Simulation Fixes</h3>
+
+                <p>That estimate is precise. Is it <em>right</em>? The model assumed every day has exactly 485 visitors. Real days do not: Boise's door counter ranges from 177 to 1,164. You have the real visitor counts, so improve the model: draw each simulated day's visitor count from the real ones with <code>rng.choice</code>, then draw the buyers for that many visitors. <code>rng.binomial</code> accepts an array for <code>n</code> and handles each element in turn.</p>
+            <pre><code class="language-python">boise_visitors = visitors[stores == "Boise"].astype(int)
+print(boise_visitors.min(), boise_visitors.max(), boise_visitors.mean().round(1))
+
+sim_visitors = rng.choice(boise_visitors, size=100_000)      # a random real day's visitor count
+sim_buyers = rng.binomial(n=sim_visitors, p=0.236)           # buyers among that many visitors
+
+print(f"estimated chance of running out: {(sim_buyers &gt; 130).mean():.1%}")</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>177 1164 485.2
+estimated chance of running out: 27.9%</code></pre>
+            </div>
+
+                <div class="card card-warning">
+                    <h4>⚠️ A Precise Answer to the Wrong Question</h4>
+                    <p>The first model said bags run out on about 1 day in 22. The better model says more than 1 day in 4. Both estimates were computed from 100,000 simulations and both are stable to the first decimal place. The difference comes entirely from the <strong>assumption</strong> about visitors. More simulations make an estimate more precise. Only a better model makes it more true. (And the plan was for a Saturday, the busiest day of the week, so even this model is too kind. Exercise 3 picks that up.)</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="mistakes" class="lesson-section">
+                <h2>⚠️ Common Mistakes</h2>
+
+                <p>Random code has a special hazard: wrong output looks just as random as right output. These are the mistakes worth learning to recognize on sight.</p>
+
+                <h3>1. Forgetting That the Upper End Is Left Out</h3>
+            <pre><code class="language-python">check = np.random.default_rng(0)
+rolls = check.integers(1, 6, size=10_000)       # meant to be a six-sided die
+print(rolls.min(), rolls.max())</code></pre>
+
+            <div class="card card-output">
+                <h4>Output (no six in 10,000 rolls)</h4>
+                <pre><code>1 5</code></pre>
+            </div>
+                <p><strong>What happened:</strong> <code>integers(1, 6)</code> draws from 1 to 5, in the same way that <code>range(1, 6)</code> stops at 5. No error, just a die with five faces. <strong>Fix:</strong> <code>integers(1, 7)</code> or <code>integers(1, 6, endpoint=True)</code>. Checking the minimum and maximum of a big batch, as here, catches it at once.</p>
+
+                <h3>2. Asking for More Distinct Items Than Exist</h3>
+            <pre data-raises="ValueError"><code class="language-python">winners = rng.choice(store_names, size=6, replace=False)</code></pre>
+
+            <div class="card card-output">
+                <h4>Error</h4>
+                <pre><code>ValueError: Cannot take a larger sample than population when replace is False</code></pre>
+            </div>
+                <p><strong>What it means:</strong> there are four store names, and you cannot draw six different ones. <strong>Fix:</strong> ask for at most as many as there are, or allow repeats by leaving <code>replace</code> at its default.</p>
+
+                <h3>3. Probabilities That Do Not Add Up to 1</h3>
+            <pre data-raises="ValueError"><code class="language-python">visits = rng.choice(store_names, size=10, p=[0.2, 0.2, 0.3, 0.2])</code></pre>
+
+            <div class="card card-output">
+                <h4>Error</h4>
+                <pre><code>ValueError: Probabilities do not sum to 1. See Notes section of docstring for more information.</code></pre>
+            </div>
+                <p><strong>What it means:</strong> these add up to 0.9, so NumPy cannot tell what happens the other 10% of the time. <strong>Fix:</strong> correct the numbers, or if you are starting from counts or weights, divide by their total: <code>weights / weights.sum()</code>.</p>
+
+                <h3>4. Assigning the Result of <code>shuffle</code></h3>
+            <pre><code class="language-python">cards = np.arange(5)
+cards = rng.shuffle(cards)
+print(cards)</code></pre>
+
+            <div class="card card-output">
+                <h4>Output (the array is gone)</h4>
+                <pre><code>None</code></pre>
+            </div>
+                <p><strong>What happened:</strong> <code>shuffle</code> rearranges the array in place and returns <code>None</code>. Assigning that result back replaced your array with <code>None</code>. <strong>Fix:</strong> call <code>rng.shuffle(cards)</code> on a line of its own, or use <code>cards = rng.permutation(cards)</code>, which does return the shuffled array.</p>
+
+                <h3>5. Re-creating the Generator Inside a Loop</h3>
+            <pre><code class="language-python">for day in range(3):
+    loop_rng = np.random.default_rng(42)          # same seed, every time around
+    print(loop_rng.integers(100, 200, size=4))</code></pre>
+
+            <div class="card card-output">
+                <h4>Output (three identical "random" days)</h4>
+                <pre><code>[108 177 165 143]
+[108 177 165 143]
+[108 177 165 143]</code></pre>
+            </div>
+                <p><strong>What happened:</strong> each pass opened the book at page 42 again, so every "day" is the same day. In a simulation this silently turns 10,000 runs into one run repeated 10,000 times. <strong>Fix:</strong> create the generator once, before the loop.</p>
+            <pre><code class="language-python">loop_rng = np.random.default_rng(42)
+for day in range(3):
+    print(loop_rng.integers(100, 200, size=4))</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[108 177 165 143]
+[143 185 108 169]
+[120 109 152 197]</code></pre>
+            </div>
+
+                <h3>6. Seeding the Old Way and Drawing the New Way</h3>
+            <pre><code class="language-python">np.random.seed(42)
+first = np.random.default_rng().random()
+np.random.seed(42)
+second = np.random.default_rng().random()
+print(first == second)</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>False</code></pre>
+            </div>
+                <p><strong>What happened:</strong> <code>np.random.seed</code> seeds only the old, global generator. A generator made by <code>default_rng()</code> with no argument ignores it and starts somewhere unpredictable, so the "seeded" code is not reproducible. <strong>Fix:</strong> give the seed to the generator you actually draw from: <code>np.random.default_rng(42)</code>.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="project" class="lesson-section">
+                <h2>🛠️ Project: How Much Could a Month Vary?</h2>
+
+                <p>Boise's manager is setting a monthly revenue target and asks: "If next month is made of ordinary days like the ones we have had, what range of totals should I expect?" You will answer by building 10,000 possible months out of real Boise days, drawn at random. Then you will do what a careful analyst does next and check the simulation against what really happened. Work in a new notebook called <code>lesson_1_4_project</code> or a script called <code>month_simulation.py</code>. Allow about 35 minutes.</p>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 1: Collect Boise's real days <span class="step-time">(5 min)</span></h3>
+                    <p>Load the columns, keep the Boise rows, and drop the one day with no revenue recorded. Create your generator here, once, with a seed.</p>
+            <pre><code class="language-python">import numpy as np
+import matplotlib.pyplot as plt
+
+def load(col, dtype=float):
+    return np.genfromtxt("data/daily_sales.csv", delimiter=",",
+                         skip_header=1, usecols=col, dtype=dtype)
+
+dates = load(0, dtype="datetime64[D]")
+stores = load(1, dtype=str)
+revenue = load(5)
+
+rng = np.random.default_rng(42)
+
+is_boise = (stores == "Boise") &amp; ~np.isnan(revenue)
+boise = revenue[is_boise]
+
+print(boise.size, "days")
+print(f"mean ${boise.mean():,.2f}   smallest ${boise.min():,.2f}   largest ${boise.max():,.2f}")</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>726 days
+mean $10,144.21   smallest $3,015.46   largest $27,677.10</code></pre>
+            </div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 2: Simulate one month <span class="step-time">(5 min)</span></h3>
+                    <p>A simulated month is 30 days drawn at random from the real ones, <em>with</em> replacement (the same real day may be drawn twice, since each draw stands for "a day like that one"). Its total is one possible month. Draw two months to see that they differ.</p>
+            <pre><code class="language-python">month_1 = rng.choice(boise, size=30)
+month_2 = rng.choice(boise, size=30)
+
+print(month_1[:5])
+print(f"month 1 total: ${month_1.sum():,.2f}")
+print(f"month 2 total: ${month_2.sum():,.2f}")</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[ 6203.18 10170.04  6327.65  7382.28 10452.25]
+month 1 total: $324,963.33
+month 2 total: $303,054.24</code></pre>
+            </div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 3: Simulate 10,000 months at once <span class="step-time">(7 min)</span></h3>
+                    <p>Ask for a table of 10,000 rows and 30 columns, one row per month, and sum along <code>axis=1</code> to collapse the days. Then describe the totals. <code>np.percentile</code> with 5 and 95 gives the range that holds the middle 90% of simulated months.</p>
+            <pre><code class="language-python">sims = rng.choice(boise, size=(10_000, 30))
+months = sims.sum(axis=1)
+print(sims.shape, months.shape)
+
+low, mid, high = np.percentile(months, [5, 50, 95])
+print(f"average month : ${months.mean():&gt;11,.2f}")
+print(f"typical spread: ${months.std():&gt;11,.2f}  (standard deviation)")
+print(f"middle 90%    : ${low:,.0f} to ${high:,.0f}")</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>(10000, 30) (10000,)
+average month : $ 304,044.31
+typical spread: $  20,480.91  (standard deviation)
+middle 90%    : $271,698 to $339,193</code></pre>
+            </div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 4: Answer the manager's questions <span class="step-time">(5 min)</span></h3>
+                    <p>Any "what is the chance that..." question is now the mean of a mask.</p>
+            <pre><code class="language-python">print(f"chance of a month below $280,000: {(months &lt; 280_000).mean():.1%}")
+print(f"chance of a month above $330,000: {(months &gt; 330_000).mean():.1%}")
+print(f"a target that 80% of months would beat: ${np.percentile(months, 20):,.0f}")</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>chance of a month below $280,000: 11.8%
+chance of a month above $330,000: 10.5%
+a target that 80% of months would beat: $286,476</code></pre>
+            </div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 5: Draw the 10,000 months <span class="step-time">(5 min)</span></h3>
+            <pre><code class="language-python">fig, ax = plt.subplots(figsize=(8, 4), layout="constrained")
+ax.hist(months / 1000, bins=50, color="#667eea")
+ax.axvline(low / 1000, color="black", linestyle="--", linewidth=1)
+ax.axvline(high / 1000, color="black", linestyle="--", linewidth=1)
+ax.set_xlabel("simulated 30-day revenue (thousands of dollars)")
+ax.set_ylabel("number of simulated months")
+ax.set_title("10,000 simulated Boise months (dashed lines: middle 90%)")
+plt.show()</code></pre>
+                    <figure>
+                        <img src="images/numpy_random_generation_months.png" alt="Histogram of 10,000 simulated 30-day revenue totals for the Boise store. The shape is a bell centered near 304 thousand dollars, with dashed lines marking the middle 90 percent from about 272 thousand to 339 thousand dollars." width="880" height="440" loading="lazy">
+                        <figcaption>Each bar counts simulated months. Individual days are far from bell-shaped, yet the totals of 30 of them form a tidy bell. Module 4 explains why that happens so reliably.</figcaption>
+                    </figure>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 6: Check that it is reproducible, and how much it wobbles <span class="step-time">(4 min)</span></h3>
+                    <p>Wrap the simulation in a function that takes a seed. The same seed must give the same answer. Different seeds show how much the estimate itself moves.</p>
+            <pre><code class="language-python">def simulate_months(seed, n_months=10_000, n_days=30):
+    rng = np.random.default_rng(seed)
+    return rng.choice(boise, size=(n_months, n_days)).sum(axis=1)
+
+print(np.array_equal(simulate_months(7), simulate_months(7)))
+for seed in [1, 2, 3]:
+    print(seed, f"{(simulate_months(seed) &lt; 280_000).mean():.3f}")</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>True
+1 0.114
+2 0.114
+3 0.112</code></pre>
+            </div>
+                    <p>These three estimates and the 11.8% from Step 4 agree to within about half a percentage point. That is the precision 10,000 simulations buys, so report "about 11 or 12%", not "11.79%".</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 7: Check the model against reality <span class="step-time">(5 min)</span></h3>
+                    <p>You have 24 real calendar months of Boise revenue. Total each one and compare their range with the simulation's. Converting dates to <code>datetime64[M]</code> keeps only the year and month, which makes a ready-made month label for a mask.</p>
+            <pre><code class="language-python">month_label = dates.astype("datetime64[M]")
+real = np.array([np.nansum(revenue[(stores == "Boise") &amp; (month_label == m)])
+                 for m in np.unique(month_label)])
+
+print(real.size, "real months")
+print(f"real months     : ${real.min():,.0f} to ${real.max():,.0f}")
+print(f"simulated (90%) : ${low:,.0f} to ${high:,.0f}")
+print(f"real months inside the simulated 90% range: {((real &gt; low) &amp; (real &lt; high)).sum()} of {real.size}")</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>24 real months
+real months     : $196,327 to $397,246
+simulated (90%) : $271,698 to $339,193
+real months inside the simulated 90% range: 10 of 24</code></pre>
+            </div>
+                    <p>If the simulation described reality, about 22 of the 24 real months would fall inside its 90% range. Far fewer do. The real months spread much more widely, and the reason is in the model: drawing days <em>independently</em> assumes any day can follow any other. Real days come in seasons. A December is made almost entirely of busy days, and a February of quiet ones, so real totals swing further than a random mixture ever could.</p>
+                    <p>The simulation was not wasted. It answers the question it was given ("a month of days drawn from the whole two years") and its failure against the real months is itself a finding: <strong>season matters more than day-to-day luck</strong>. A better model would draw days from the same time of year. Catching this is the most valuable step of the project.</p>
+                </div>
+
+                <div class="card card-success">
+                    <h3>✅ Project Completion Checklist</h3>
+                    <ul class="checklist">
+                        <li>One seeded generator is created at the top and used for every draw</li>
+                        <li><code>boise</code> holds 726 real days with no missing values</li>
+                        <li><code>sims</code> has shape <code>(10000, 30)</code> and <code>months</code> has shape <code>(10000,)</code>, with no loop</li>
+                        <li>You can state the middle 90% range of simulated months and the chance of a month below $280,000</li>
+                        <li><code>simulate_months(7)</code> returns identical results when called twice</li>
+                        <li>You compared the simulation with the 24 real months and can explain in a sentence why they disagree</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="exercises" class="lesson-section">
+                <h2>🏋️ Hands-on Exercises</h2>
+
+                <p>Each solution creates its own seeded generator, so your output will match if you use the same seed. Try a different seed afterward and see what changes and what does not.</p>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 1: Two Dice</h3>
+                    <p>Roll two six-sided dice 100,000 times (use <code>np.random.default_rng(1)</code> and one call with <code>size=(100_000, 2)</code>). Add each pair. (a) What fraction of rolls total 7? Compare with the exact answer, 1/6. (b) Which total is most common, and which are least common?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Sum along <code>axis=1</code> to add each pair. <code>np.unique(..., return_counts=True)</code> tallies the totals, and <code>argmax</code> on the counts finds the most common.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+            <pre><code class="language-python">rng = np.random.default_rng(1)
+dice = rng.integers(1, 7, size=(100_000, 2))
+totals = dice.sum(axis=1)
+
+print((totals == 7).mean(), 1 / 6)
+
+values, counts = np.unique(totals, return_counts=True)
+print(values)
+print(counts)
+print("most common:", values[counts.argmax()], " least common:", values[counts.argmin()])</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>0.16619 0.16666666666666666
+[ 2  3  4  5  6  7  8  9 10 11 12]
+[ 2747  5634  8577 10999 13718 16619 13974 11198  8165  5622  2747]
+most common: 7  least common: 2</code></pre>
+            </div>
+                        <p>Seven is the most common total, because more pairs add up to it than to any other number. The rarest totals are 2 and 12, with one pair each. (In this run they happen to tie exactly, and <code>argmin</code> reports the first of a tie.)</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 2: An Audit Sample</h3>
+                    <p>Using <code>dates</code>, <code>stores</code> and <code>revenue</code> from the project and <code>np.random.default_rng(2)</code>: (a) choose 200 <em>different</em> store-days at random for an audit. (b) How many of the 200 come from each store? (c) Is the sample's mean revenue close to the mean of all store-days? Use the <code>nan</code>-aware mean.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Sample row positions with <code>rng.choice(revenue.size, size=200, replace=False)</code>, then use those positions on each array.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+            <pre><code class="language-python">rng = np.random.default_rng(2)
+audit = rng.choice(revenue.size, size=200, replace=False)
+
+print(np.unique(audit).size)                               # 200 distinct positions
+names, counts = np.unique(stores[audit], return_counts=True)
+print(names, counts)
+print(np.nanmean(revenue[audit]).round(2), np.nanmean(revenue).round(2))</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>200
+['Asheville' 'Bend' 'Boise' 'Flagstaff'] [55 57 41 47]
+6987.45 7435.04</code></pre>
+            </div>
+                        <p>Each store has about a quarter of the rows, so each gets roughly 50 of the 200, and the sample mean is within a few hundred dollars of the overall mean without matching it. Both are sampling variation in action.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 3: Gift Bags, on a Saturday</h3>
+                    <p>The gift-bag plan was for a <em>Saturday</em>. Improve the model once more: draw simulated visitor counts only from Boise's real Saturdays. (January 1, 2024, the first row of the file, was a Monday, so <code>(dates - dates[0]).astype(int) % 7</code> gives 5 for Saturday.) With <code>np.random.default_rng(3)</code> and 100,000 simulated Saturdays, estimate the chance that 130 bags run out. Then find how many bags would be needed to cover 95% of Saturdays.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Build a mask for "Boise and Saturday" and apply it to <code>visitors</code>. For the second part, the 95th percentile of the simulated buyer counts is the number of bags that is enough 95% of the time.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+            <pre><code class="language-python">rng = np.random.default_rng(3)
+visitors = load(2)
+weekday = (dates - dates[0]).astype(int) % 7
+
+sat_visitors = visitors[(stores == "Boise") &amp; (weekday == 5)].astype(int)
+print(sat_visitors.size, "Saturdays, mean visitors", sat_visitors.mean().round(1))
+
+sim_buyers = rng.binomial(n=rng.choice(sat_visitors, size=100_000), p=0.236)
+print(f"chance 130 bags run out: {(sim_buyers &gt; 130).mean():.1%}")
+print("bags to cover 95% of Saturdays:", int(np.percentile(sim_buyers, 95)))</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>104 Saturdays, mean visitors 718.1
+chance 130 bags run out: 82.3%
+bags to cover 95% of Saturdays: 245</code></pre>
+            </div>
+                        <p>On Saturdays, 130 bags run out more than four times in five. Three models, three very different answers, and each improvement came from using more of what the data already knew.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 4: Could Shuffling Explain It? (Stretch)</h3>
+                    <p>Bend's mean daily revenue is a little higher than Flagstaff's. Is that a real difference between the stores, or the kind of gap that appears by chance? Test it by shuffling. Put both stores' revenues (missing values removed) in one array, shuffle it, call the first 721 values "Bend" and the rest "Flagstaff", and record the difference in means. Repeat 5,000 times with <code>np.random.default_rng(4)</code>. In what fraction of shuffles is the difference at least as large as the real one, in either direction?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>A loop over 5,000 shuffles is fine here: each pass does vectorized work on about 1,400 values. Collect the differences in a list, convert to an array, and compare <code>np.abs(diffs)</code> with the absolute real difference.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+            <pre><code class="language-python">rng = np.random.default_rng(4)
+bend = revenue[(stores == "Bend") &amp; ~np.isnan(revenue)]
+flagstaff = revenue[(stores == "Flagstaff") &amp; ~np.isnan(revenue)]
+real_diff = bend.mean() - flagstaff.mean()
+print(bend.size, flagstaff.size, round(real_diff, 2))
+
+pooled = np.concatenate([bend, flagstaff])
+diffs = []
+for _ in range(5_000):
+    mixed = rng.permutation(pooled)
+    diffs.append(mixed[:bend.size].mean() - mixed[bend.size:].mean())
+diffs = np.array(diffs)
+
+print(f"shuffled differences: typical size ${np.abs(diffs).mean():.2f}")
+print(f"share at least as large as the real one: {(np.abs(diffs) &gt;= abs(real_diff)).mean():.3f}")</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>721 724 108.13
+shuffled differences: typical size $108.40
+share at least as large as the real one: 0.423</code></pre>
+            </div>
+                        <p>Purely random relabeling produces a gap as big as the real one in a large share of shuffles. So the data gives no good reason to believe Bend truly outsells Flagstaff per day. You have just run a <strong>permutation test</strong>, and that final fraction is a p-value. Lesson 4.5 builds the full idea, and you already know its engine.</p>
+                    </details>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="quiz" class="lesson-section">
+                <h2>🎯 Quick Quiz</h2>
+                <div class="card quiz-container">
+                    <h3>🎯 Check Your Understanding</h3>
+            <div class="quiz-question">
+                <p><strong>Question 1:</strong> What does this print?</p>
+            <pre><code class="language-python">r1 = np.random.default_rng(7)
+r2 = np.random.default_rng(7)
+print(np.array_equal(r1.integers(0, 100, size=3), r2.integers(0, 100, size=3)))</code></pre>
+                <div class="quiz-options">
+                    <button class="quiz-option" data-correct="false" data-hint="They would differ if no seed were given. Both generators here were created with the same seed. What does a seed fix?">
+                        A) <code>False</code>, because random numbers are different every time
+                    </button>
+                    <button class="quiz-option" data-correct="false" data-hint="The clock plays no part once a seed is given. The seed alone decides where the sequence starts.">
+                        B) It depends on the computer and the time of day
+                    </button>
+                    <button class="quiz-option" data-correct="true" data-explanation="Two generators created with the same seed start at the same point of the same sequence, so the same request returns the same numbers. That is what makes random results reproducible.">
+                        C) <code>True</code>
+                    </button>
+                </div>
+                <div class="quiz-feedback"></div>
+            </div>
+
+            <div class="quiz-question">
+                <p><strong>Question 2:</strong> Which values can <code>rng.integers(1, 7, size=5)</code> produce?</p>
+                <div class="quiz-options">
+                    <button class="quiz-option" data-correct="false" data-hint="Like range and slicing, integers leaves out the upper end unless you pass endpoint=True.">
+                        A) 1, 2, 3, 4, 5, 6 or 7
+                    </button>
+                    <button class="quiz-option" data-correct="true" data-explanation="The lower end is included and the upper end is left out, the same convention as range(1, 7). This is the correct way to roll a six-sided die.">
+                        B) 1, 2, 3, 4, 5 or 6
+                    </button>
+                    <button class="quiz-option" data-correct="false" data-hint="The first argument is the lowest value that can be drawn, so nothing below 1 can appear.">
+                        C) 0, 1, 2, 3, 4, 5 or 6
+                    </button>
+                </div>
+                <div class="quiz-feedback"></div>
+            </div>
+
+            <div class="quiz-question">
+                <p><strong>Question 3:</strong> <code>skus</code> is an array of 242 product codes. Which line picks 5 <strong>different</strong> products at random?</p>
+                <div class="quiz-options">
+                    <button class="quiz-option" data-correct="true" data-explanation="replace=False means a drawn item is not put back, so the five results are guaranteed to be distinct.">
+                        A) <code>rng.choice(skus, size=5, replace=False)</code>
+                    </button>
+                    <button class="quiz-option" data-correct="false" data-hint="By default choice samples with replacement, so the same product could be drawn twice. Which argument prevents that?">
+                        B) <code>rng.choice(skus, size=5)</code>
+                    </button>
+                    <button class="quiz-option" data-correct="false" data-hint="shuffle rearranges the array in place and returns None, so there is nothing to slice. permutation would return a shuffled copy.">
+                        C) <code>rng.shuffle(skus)[:5]</code>
+                    </button>
+                </div>
+                <div class="quiz-feedback"></div>
+            </div>
+
+            <div class="quiz-question">
+                <p><strong>Question 4:</strong> You create <code>rng = np.random.default_rng(42)</code> in one notebook cell. In the next cell you run <code>print(rng.random())</code> three times and see three different numbers. Why?</p>
+                <div class="quiz-options">
+                    <button class="quiz-option" data-correct="false" data-hint="The seed was used: restart and run both cells again and the same three numbers appear in the same order. What changes between draws?">
+                        A) The seed was ignored, so the generator is not reproducible
+                    </button>
+                    <button class="quiz-option" data-correct="true" data-explanation="Each draw advances the generator, so the next request returns the next numbers. Re-creating the generator with the same seed starts the sequence again.">
+                        B) The generator moves forward through its sequence with every draw; the seed only fixes where it starts
+                    </button>
+                    <button class="quiz-option" data-correct="false" data-hint="A seeded generator never looks at the clock. Its output depends only on the seed and on how many numbers have been drawn so far.">
+                        C) <code>rng.random()</code> mixes in the current time on each call
+                    </button>
+                </div>
+                <div class="quiz-feedback"></div>
+            </div>
+
+            <div class="quiz-question">
+                <p><strong>Question 5:</strong> A simulation of 100 days estimates a probability as 0.07. The same simulation with 1,000,000 days gives 0.0449. What is the best reading?</p>
+                <div class="quiz-options">
+                    <button class="quiz-option" data-correct="true" data-explanation="This is the law of large numbers. With 100 days each single day moves the estimate by a whole percentage point, while a million days pin it down to about three decimal places.">
+                        A) Trust 0.0449 more: estimates from more simulations vary less
+                    </button>
+                    <button class="quiz-option" data-correct="false" data-hint="A generator does not wear out, and its later numbers are as good as its earlier ones. Which estimate is built on more evidence?">
+                        B) Trust 0.07 more: it was computed first, before the generator was used up
+                    </button>
+                    <button class="quiz-option" data-correct="false" data-hint="Two runs of the same model differing a little is expected, and it says nothing about whether the model is right. How much would 100 simulated days be expected to wobble?">
+                        C) The model must be wrong, because the two answers disagree
+                    </button>
+                </div>
+                <div class="quiz-feedback"></div>
+            </div>
+
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="faq" class="lesson-section">
+                <h2>❓ Common Questions at This Stage</h2>
+
+                <details>
+                    <summary>If the numbers come from a recipe, are they really random?</summary>
+                    <p>They are pseudo-random: completely determined by the seed, yet statistically indistinguishable from random for the purposes of sampling and simulation. That is exactly what analysis needs. It is <em>not</em> what security needs. Never use NumPy's generator (or Python's <code>random</code> module) for passwords, tokens or anything an attacker might try to predict. Python's <code>secrets</code> module exists for that.</p>
+                </details>
+                <details>
+                    <summary>Which seed should I use? Is 42 special?</summary>
+                    <p>No seed is better than another. 42 is a running joke among programmers and nothing more. Pick any whole number and keep it in the code. One thing to avoid: trying several seeds and keeping the one whose result you like best. That is choosing your answer, and it defeats the purpose of drawing at random.</p>
+                </details>
+                <details>
+                    <summary>Should I always set a seed?</summary>
+                    <p>Set one whenever someone (including you, next month) may need to reproduce the output: reports, published charts, tests, teaching material. While exploring, it can be healthy to rerun with a few different seeds, or none, to see how much your result depends on the luck of the draw. If the conclusion changes with the seed, you do not have a conclusion yet.</p>
+                </details>
+                <details>
+                    <summary>Will the same seed give the same numbers on another computer, or next year?</summary>
+                    <p>On another computer with the same version of NumPy, yes. Across NumPy versions, usually but not by promise: the project allows itself to improve the algorithms behind a generator's methods, which can change the numbers a seed produces. For work that must be reproduced exactly much later, record the NumPy version alongside the seed. The <code>requirements.txt</code> file from Lesson 0.1 does that job.</p>
+                </details>
+                <details>
+                    <summary>What is the difference between <code>rng.normal</code> and <code>rng.standard_normal</code>?</summary>
+                    <p><code>rng.standard_normal(size)</code> draws from the bell curve with mean 0 and standard deviation 1. <code>rng.normal(loc, scale, size)</code> lets you choose both. They are related by one line of broadcasting: <code>loc + scale * rng.standard_normal(size)</code>.</p>
+                </details>
+
+                <div class="card card-accent">
+                    <h3>🌟 Going Further: Bonus Challenge</h3>
+                    <p>Fix the flaw the project found. Build a simulation of <em>next December</em> at Boise by drawing 31 days only from the real December days (use <code>dates.astype("datetime64[M]")</code> and a mask for the two Decembers in the data, or compare the month number). Simulate 10,000 Decembers and report the middle 90% range. Do the two real Decembers fall inside it? Then think about what this model still ignores (hint: Boise's revenue grew from 2024 to 2025) and write a sentence in your journal about how you might handle that.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="journal" class="lesson-section">
+                <h2>📓 Learning Journal</h2>
+                <div class="card card-accent">
+                    <p>Take five minutes to write in your learning journal (the <code>journal.md</code> file you started in Lesson 0.1, or a paper notebook). Jot down:</p>
+                    <ul>
+                        <li><strong>Key concepts</strong> you learned today</li>
+                        <li><strong>Techniques that clicked</strong> (and the ones that have not, yet)</li>
+                        <li><strong>Questions or confusion</strong> to come back to</li>
+                        <li><strong>Ideas to try</strong> on your own</li>
+                        <li><strong>Progress and feelings</strong>: how did this lesson go for you?</li>
+                    </ul>
+                    <p><strong>✍️ This lesson's prompt:</strong> The gift-bag question got three different answers from three models. In your own words, what is the difference between an estimate being <em>precise</em> and being <em>right</em>? Then think of a "what are the chances?" question from your own work or life, and sketch the three steps (model, repeat, count) you would use to simulate it. What assumption in your model worries you most?</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="summary" class="lesson-section">
+                <h2>📝 Lesson Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎓 Key Takeaways</h3>
+                    <ul>
+                        <li>Create a generator with <code>rng = np.random.default_rng(seed)</code> and draw everything from it; the older <code>np.random.seed</code> style is for reading, not writing</li>
+                        <li>A <strong>seed</strong> fixes where the sequence starts; the generator then <strong>moves forward</strong> with every draw</li>
+                        <li>Reproducible means: same code, run from the top, same result. Create the generator once, never inside a loop</li>
+                        <li><code>rng.integers</code> leaves out the upper end; <code>size</code> can be a shape</li>
+                        <li><code>rng.choice</code> samples your own values, with replacement by default; <code>replace=False</code> gives distinct items; <code>p</code> sets probabilities</li>
+                        <li><code>rng.permutation</code> returns a shuffled copy; <code>rng.shuffle</code> works in place and returns <code>None</code></li>
+                        <li><strong>Normal</strong> for measurements, <strong>Poisson</strong> for counts of events, <strong>binomial</strong> for successes out of n tries</li>
+                        <li><strong>Monte Carlo simulation</strong>: model one case with random draws, repeat many times, count</li>
+                        <li>More simulations make an estimate more precise; only a better model makes it more true</li>
+                    </ul>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🏆 What You've Accomplished</h3>
+                    <ul>
+                        <li>You produced random numbers that match this page digit for digit, and can explain why</li>
+                        <li>You drew a random audit sample and a random 80/20 split of real rows, keeping parallel arrays matched</li>
+                        <li>You drew 100,000 values from three distributions and saw their shapes</li>
+                        <li>You estimated a probability by simulation and watched the law of large numbers settle it</li>
+                        <li>You simulated 10,000 months in one line, then tested your model against 24 real months and found its blind spot</li>
+                    </ul>
+                </div>
+
+                <h3>🔭 Looking Ahead</h3>
+                <p>One piece of NumPy remains before pandas. In <a href="numpy_linear_algebra.html"><strong>Lesson 1.5: Linear Algebra Essentials</strong></a> you will meet the <code>@</code> operator that Lesson 1.2 promised: dot products, multiplying a table by a set of weights, solving for unknowns, measuring how far apart two rows of numbers are, and fitting a straight line through data, which is the first step toward regression. No proofs, only the parts an analyst uses.</p>
+
+                <h3>📋 Before the Next Lesson</h3>
                 <ul>
-                    <li>Computer randomness is <em>pseudorandom</em> — deterministic given a seed — which is exactly what makes results reproducible.</li>
-                    <li>Different problems call for different distributions; choosing the right one (uniform, normal, Poisson, etc.) is part of modeling correctly.</li>
-                    <li>Monte Carlo simulation turns randomness into a problem-solving tool, from estimating π to pricing options and measuring risk.</li>
-                    <li>Bootstrapping and permutation tests use resampling to estimate uncertainty without strong assumptions.</li>
+                    <li>Keep your project notebook. The idea of resampling real data returns in Module 4 under the name "bootstrap".</li>
+                    <li>Rerun your project with a different seed. Which printed numbers change, and by how much? Which conclusions change?</li>
+                    <li>A warm-up for Lesson 1.5: an order has 2 tents at $299.95, 1 stove at $82.95 and 3 mugs at $24.50. Compute the total with two arrays and <code>(quantities * prices).sum()</code>. That sum of products has a name, and it is where the next lesson starts.</li>
                 </ul>
-            </div>
-            <h3>🎉 What You've Accomplished</h3>
-            <p>You can now generate controlled randomness, sample from the right distributions, and use simulation and resampling to answer questions that have no clean formula — core skills for statistics, simulation, and machine learning.</p>
-            <h3>❓ Common Questions at This Stage</h3>
-            <details>
-                <summary>Should I use <code>np.random.seed()</code>, <code>RandomState</code>, or <code>default_rng()</code>?</summary>
-                <p>For new code, prefer <code>rng = np.random.default_rng(42)</code> (NumPy 1.17+) and call methods on that generator. It avoids the shared global state that <code>np.random.seed()</code> relies on, so independent parts of your code don't accidentally interfere with each other's randomness.</p>
-            </details>
-            <details>
-                <summary>How many samples does a Monte Carlo simulation need?</summary>
-                <p>Enough for the estimate to stabilize. Error typically shrinks with the square root of the sample count, so to halve the error you need roughly four times the samples. Check convergence by plotting or printing the estimate as the sample size grows.</p>
-            </details>
-            <details>
-                <summary>What exactly is bootstrapping?</summary>
-                <p>Bootstrapping repeatedly resamples your existing data <em>with replacement</em> to build many "parallel" datasets. Computing a statistic on each one shows how much that statistic would vary, giving you a confidence interval without assuming a particular distribution.</p>
-            </details>
-            <h3>🔭 Looking Ahead</h3>
-            <p>Random data and simulations often feed straight into linear-algebra routines — sampling correlated variables, initializing models, and more. That mathematical machinery is a natural next stop.</p>
-            <h3>✅ Before the Next Lesson</h3>
-            <ul>
-                <li>Set a seed, generate a sample, reset the same seed, and confirm you get an identical sequence.</li>
-                <li>Sample from a normal distribution and check the 68–95–99.7 rule holds on your data.</li>
-                <li>Write your Learning Journal entry for this lesson</li>
-            </ul>
-            <div class="card card-accent" style="text-align: center; padding: 2rem;">
-                <h3>🌟 Encouragement for the Journey</h3>
-                <p>Randomness is one of the most powerful tools in your kit — it lets you simulate the future, quantify uncertainty, and test ideas cheaply. Master it, and hard problems become experiments you can simply run.</p>
-            </div>
-        </section>
 
-        <div class="navigation-links">
-            <a class="nav-prev" href="numpy_broadcasting.html">← Previous: Broadcasting</a>
-            <a class="nav-home" href="index.html">🏠 Course Home</a>
-            <a class="nav-next" href="numpy_linear_algebra.html">Next: Linear Algebra Basics →</a>
+                <div class="card card-accent">
+                    <h3>🌱 Encouragement for the Journey</h3>
+                    <p>Today you did something that takes many people a long time to become comfortable with: you built a model, got a confident answer from it, and then went looking for evidence that it was wrong. And when you found some, you learned more from the miss than from the estimate. That instinct, to check a tidy result against reality, matters more than any function in this lesson. If distributions still feel like a blur of names, do not worry. You will meet each of them again, slowly, in Module 4, and you will already know how to make them appear on demand.</p>
+                </div>
+            </section>
+
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="numpy_broadcasting.html" class="prev-lesson">← Previous: Broadcasting</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="numpy_linear_algebra.html" class="next-lesson">Next: Linear Algebra Essentials →</a>
+            </nav>
         </div>
-    </footer>
+    </main>
 
-    <!-- Footer -->
     <footer class="site-footer">
         <p>&copy; 2026 Ray de la Paz. Python Data Science. All rights reserved.</p>
         <div class="footer-links">
@@ -1389,6 +1093,10 @@ print("🎲 Master randomness to master data science!")</code></pre>    </main>
             <a href="https://rays-home.netlify.app/contact">Contact</a>
             <a href="#" id="print-button">Print Page</a>
         </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
     </footer>
+
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
 </body>
 </html>

@@ -3,1430 +3,1120 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Master API authentication in Python. Learn OAuth, JWT, API keys, and secure authentication practices for data science projects.">
-    <title>API Authentication - Python Data Science Path</title>
+    <meta name="description" content="Use APIs that need to know who you are: API keys in headers, bearer tokens that expire and are renewed, secrets kept in environment variables, pagination into a DataFrame, errors handled by status code, and a small client class. Python Data Science Lesson 6.4.">
+    <meta name="author" content="Ray de la Paz">
+    <title>API Authentication - Python Data Science</title>
     <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/enhanced.css">
-    <link rel="icon" href="/favicon.png" type="image/png">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid: rendered (and re-rendered on theme change) by js/course-enhancements.js -->
     <script type="module">
-      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-      mermaid.initialize({ startOnLoad: true });
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        window.__mermaid = mermaid;
+        mermaid.initialize({ startOnLoad: false });
+        document.dispatchEvent(new Event('mermaid-ready'));
     </script>
-    <script src="js/course-enhancements.js" defer></script>
-    <link rel="stylesheet" href="styles/standard.css">
 </head>
 <body>
-    <!-- Skip to main content for accessibility -->
     <a href="#main-content" class="skip-to-main">Skip to main content</a>
-    
-    <!-- Progress indicator -->
+
     <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
         <div class="progress-bar"></div>
     </div>
-    
-    <main id="main-content">
-    <header role="banner">
-        <h1>API Authentication</h1>
-        <div class="reading-time" aria-label="Estimated reading time"></div>
-    </header>
 
-    <!-- What You'll Learn (learning objectives) -->
-    <div class="card card-info">
-        <h2>📚 What You'll Learn</h2>
-        <p>By the end of this lesson, you will be able to:</p>
-        <ul>
-            <li>Store credentials securely with environment variables, keyrings, and encryption instead of hardcoding them</li>
-            <li>Authenticate with API keys placed in headers, query strings, or request bodies</li>
-            <li>Use HTTP Basic and Digest authentication with the <code>requests</code> library</li>
-            <li>Implement OAuth 2.0 flows (authorization code and client credentials) and JWT-based auth</li>
-            <li>Sign requests with HMAC and manage token storage, expiration, and automatic refresh</li>
-            <li>Apply security best practices: HTTPS, SSL verification, key rotation, and MFA</li>
-        </ul>
-        <p><strong>⏱️ Estimated Time:</strong> 45–60 minutes</p>
-        <p><strong>🎯 Project:</strong> Build a reusable API client that loads credentials from a <code>.env</code> file, authenticates against a real API, and refreshes its token automatically when it expires.</p>
-    </div>
-    
-    <!-- Breadcrumb Navigation -->
-    <nav class="breadcrumb" aria-label="Breadcrumb">
-        <a href="index.html">Home</a>
-        <span class="separator">›</span>
-        <a href="#">Intermediate Module</a>
-        <span class="separator">›</span>
-        <a href="#">Web Scraping & APIs</a>
-        <span class="separator">›</span>
-        <span class="current">API Authentication</span>
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">📊 Python Data Science</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">☰</button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
     </nav>
 
-    <h2>Secure Your API Connections! 🔐</h2>
-    
-    <blockquote>
-        <p>API authentication is the gateway to accessing protected resources and services. From simple API keys to complex OAuth flows, understanding authentication mechanisms is crucial for working with modern APIs. Master these patterns to securely integrate with any service, protect your credentials, and build robust data pipelines.</p>
-    </blockquote>
+    <main id="main-content">
+        <div class="container">
+            <header>
+                <h1>🔑 Lesson 6.4: API Authentication</h1>
+                <p class="lead">Go through the front door: prove who you are to an API, keep your credentials out of your code, and turn thousands of protected records into a DataFrame with a client you wrote yourself.</p>
 
-    <h2>Authentication Methods Overview</h2>
-    
-    <div class="mermaid">
-    graph TD
-        A[API Authentication] --> B[API Keys]
-        A --> C[Basic Auth]
-        A --> D[Bearer Tokens]
-        A --> E[OAuth 2.0]
-        A --> F[JWT]
-        A --> G[HMAC]
-        
-        B --> H[Header/Query/Body]
-        C --> I[Username/Password]
-        D --> J[Access Tokens]
-        E --> K[Authorization Code]
-        E --> L[Client Credentials]
-        E --> M[Implicit]
-        F --> N[Self-contained Tokens]
-        G --> O[Signature-based]
-    </div>
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Send an API key in a request header and tell a <code>401</code> from a <code>403</code></li>
+                        <li>Keep keys and passwords out of your code with environment variables</li>
+                        <li>Log in for a bearer token, use it, and recover when it expires</li>
+                        <li>Turn an API's error responses into clear Python exceptions, and decide by status code what to do next</li>
+                        <li>Follow pagination to the last page and build a DataFrame, using a small reusable client class</li>
+                    </ul>
+                </div>
 
-    <h2>Environment Setup and Security</h2>
-    
-    <h3>Secure Credential Management</h3>
-    <pre class="language-python"><code># NEVER hardcode credentials in your code!
+                <ul class="lesson-meta">
+                    <li><span class="meta-label">⏱️ Time</span> 90 minutes</li>
+                    <li><span class="meta-label">📋 Prerequisites</span> <a href="webscraping_requests.html">Lesson 6.1: HTTP with Requests</a> (headers, status codes, JSON, timeouts, the practice API); basic classes from the Intermediate Python course</li>
+                    <li><span class="meta-label">🛠️ You will build</span> A December returns brief pulled from the protected orders endpoint with your own API client</li>
+                    <li><span class="meta-label">📂 Data</span> <code>data/mock_api.py</code> (the practice API), <code>data/orders.csv</code> as the answer key</li>
+                </ul>
+            </header>
 
-import os
-from dotenv import load_dotenv
-import json
-import keyring
-from cryptography.fernet import Fernet
-import base64
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#why" class="toc-link">Who Is Asking?</a></li>
+                        <li><a href="#secrets" class="toc-link">Secrets Stay Out of Code</a></li>
+                        <li><a href="#apikey" class="toc-link">An API Key in a Header</a></li>
+                        <li><a href="#errors" class="toc-link">Errors by Status Code</a></li>
+                        <li><a href="#bearer" class="toc-link">Logging In for a Token</a></li>
+                        <li><a href="#expiry" class="toc-link">When the Token Expires</a></li>
+                        <li><a href="#pagination" class="toc-link">Pagination to a DataFrame</a></li>
+                        <li><a href="#client" class="toc-link">A Small Client Class</a></li>
+                        <li><a href="#mistakes" class="toc-link">Common Mistakes</a></li>
+                        <li><a href="#project" class="toc-link">Project: December Returns Brief</a></li>
+                        <li><a href="#exercises" class="toc-link">Hands-on Exercises</a></li>
+                        <li><a href="#quiz" class="toc-link">Quick Quiz</a></li>
+                        <li><a href="#faq" class="toc-link">Common Questions</a></li>
+                        <li><a href="#journal" class="toc-link">Learning Journal</a></li>
+                        <li><a href="#summary" class="toc-link">Lesson Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
 
-# Method 1: Environment Variables (.env file)
-"""
-Create a .env file:
-API_KEY=your-secret-api-key
-CLIENT_ID=your-client-id
-CLIENT_SECRET=your-client-secret
+            <!-- ============================================================ -->
+            <section id="why" class="lesson-section">
+                <h2>🪪 Who Is Asking?</h2>
 
-Add .env to .gitignore!
-"""
+                <p>The practice shop's product pages are for everyone. Its <em>orders</em> are not: they are business records, and an API that serves them needs to know who is asking before it answers. Nearly every API worth using works this way, including the free ones, because the owner wants to know who its users are, how much each one uses, and whom to contact or cut off when something goes wrong.</p>
 
-# Load environment variables
-load_dotenv()
+                <p>Two words get mixed up constantly, and the difference will matter in ten minutes:</p>
+                <ul>
+                    <li><strong>Authentication</strong> answers "who are you?" You present a credential, and the server recognizes you or does not.</li>
+                    <li><strong>Authorization</strong> answers "are you allowed to do this?" The server knows who you are and decides whether you may.</li>
+                </ul>
 
-# Access credentials
-api_key = os.getenv('API_KEY')
-client_id = os.getenv('CLIENT_ID')
-client_secret = os.getenv('CLIENT_SECRET')
+                <div class="card card-info">
+                    <h4>💡 Mental Model: The Library Card and the Wristband</h4>
+                    <p>An <strong>API key</strong> is a library card. It was issued to you once, it is good until it is cancelled, and you show it every time you borrow something. Anyone holding your card <em>is</em> you as far as the library can tell, so you do not leave it lying around.</p>
+                    <p>A <strong>token</strong> is the wristband you get at a festival gate. You show your ticket and ID once (you log in), and for the rest of the day you just hold up your wrist. The wristband is quick to check and it expires on its own, so a lost one is a small problem for a short time.</p>
+                </div>
 
-# Method 2: Configuration Files
-def load_config(config_file='config.json'):
-    """Load configuration from JSON file"""
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Method</th><th>What you send</th><th>Where you will meet it</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>None</td><td>Nothing</td><td>Open data: the practice API's <code>/products</code></td></tr>
+                            <tr><td>API key</td><td>A long fixed string in a header</td><td>Most data APIs: the practice API's <code>/orders</code></td></tr>
+                            <tr><td>Bearer token</td><td>A temporary string in the <code>Authorization</code> header, obtained by logging in</td><td>APIs with user accounts: the practice API's <code>/me</code></td></tr>
+                            <tr><td>OAuth 2.0</td><td>Also a bearer token; the difference is the ceremony for getting one ("Sign in with ...", approve access)</td><td>Acting on behalf of a user on a large platform</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>This lesson covers the two you will use most as an analyst: a key and a token. OAuth 2.0 ends with the same header you will write today, and each platform's documentation walks you through its sign-in steps.</p>
+
+                <h3>Start the Practice API</h3>
+
+                <p>You met the practice API in Lesson 6.1. Start it again in a <strong>second terminal</strong>, from your project folder with the environment active, this time with one option:</p>
+
+                <pre><code class="language-bash">python data/mock_api.py --token-ttl 5</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>Pinecrest mock API on http://127.0.0.1:8000  (limit: 30 requests per 10 s; Ctrl+C to stop)</code></pre>
+                </div>
+
+                <p><code>--token-ttl 5</code> makes login tokens expire after five seconds instead of sixty ("TTL" is "time to live"). Real tokens usually last minutes or hours. Five seconds lets you watch one expire without waiting around.</p>
+
+                <div class="card card-success">
+                    <h4>✅ Real Mechanics, Pretend Stakes</h4>
+                    <p>The practice API runs on your computer, serves fictional data, and uses credentials that are printed in this lesson. Nothing here is secret. You will handle those credentials <em>as if</em> they were, because the habits are the lesson: the day you are handed a real key, you will already know what to do with it.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="secrets" class="lesson-section">
+                <h2>🤫 Secrets Stay Out of Code</h2>
+
+                <p>Before you send a single credential, decide where it will live. The tempting place is a line in your notebook: <code>API_KEY = "..."</code>. That is how keys leak. Notebooks get emailed, pasted into chat, shared on screen and pushed to GitHub, and a key in a file goes wherever the file goes. Programs scan public repositories for keys around the clock; a leaked cloud key can be running up someone's bill within minutes.</p>
+
+                <div class="card card-danger">
+                    <h4>🛑 The Rule</h4>
+                    <p><strong>A secret never appears in your code, your notebook, your version control or your screenshots.</strong> Code says <em>where to find</em> the secret. The secret itself lives somewhere that does not travel with the code.</p>
+                </div>
+
+                <p>The simplest such place is an <strong>environment variable</strong>: a named value that belongs to your terminal session, which every program started from that terminal can read. Set three of them for this lesson. If Jupyter is running, stop it first, set the variables in that same terminal, then start it again, because a program only sees the variables that existed when it started.</p>
+
+                <h4>Windows (PowerShell)</h4>
+                <pre><code class="language-powershell">$env:PINECREST_API_KEY = "pinecrest-demo-key"
+$env:PINECREST_USER = "analyst"
+$env:PINECREST_PASSWORD = "trailmix"</code></pre>
+                <h4>macOS and Linux</h4>
+                <pre><code class="language-bash">export PINECREST_API_KEY="pinecrest-demo-key"
+export PINECREST_USER="analyst"
+export PINECREST_PASSWORD="trailmix"</code></pre>
+
+                <p>These last until you close that terminal. Now read them from Python. A small helper turns a missing variable into an error message that says exactly what to do.</p>
+
+                <pre><code class="language-python">import os
+import time
+
+import pandas as pd
+import requests
+
+pd.set_option("display.width", 150)
+pd.set_option("display.max_columns", 20)
+
+API = "http://127.0.0.1:8000"
+USER_AGENT = "pinecrest-course-bot/1.0 (learning project; contact: you@example.com)"
+HEADERS = {"User-Agent": USER_AGENT}
+
+
+def require_env(name):
+    """Read a required setting from the environment, or stop with a clear message."""
+    value = os.environ.get(name)
+    if not value:
+        raise RuntimeError(f"Set the environment variable {name} before running this code.")
+    return value
+
+
+API_KEY = require_env("PINECREST_API_KEY")
+USERNAME = require_env("PINECREST_USER")
+PASSWORD = require_env("PINECREST_PASSWORD")
+
+print("key loaded:", API_KEY[:4] + "...", f"({len(API_KEY)} characters)")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>key loaded: pine... (18 characters)</code></pre>
+                </div>
+
+                <p>The notebook now contains the <em>name</em> <code>PINECREST_API_KEY</code> and nothing more. You could publish it. Notice the last line, too: when you need to confirm that a secret loaded, print a hint of it, never the whole value. Output cells are saved with the notebook.</p>
+
+                <pre data-raises="RuntimeError"><code class="language-python">require_env("PINECREST_ADMIN_KEY")</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>RuntimeError: Set the environment variable PINECREST_ADMIN_KEY before running this code.</code></pre>
+                </div>
+
+                <div class="card card-info">
+                    <h4>💡 Two Other Places for Secrets</h4>
+                    <ul>
+                        <li><strong>Typed in when needed.</strong> In a notebook, <code>API_KEY = getpass.getpass("API key: ")</code> (from the standard library's <code>getpass</code> module) asks for the value in a box that hides what you type and does not save it in the notebook.</li>
+                        <li><strong>A <code>.env</code> file.</strong> Many projects keep <code>NAME=value</code> lines in a file named <code>.env</code> and load it at startup, often with the <code>python-dotenv</code> package. This is convenient, and safe <em>only</em> if <code>.env</code> is listed in <code>.gitignore</code> before your first commit, so that it is never pushed.</li>
+                    </ul>
+                    <p>Whichever you use, the test is the same: could you hand your code to a stranger without handing over the secret?</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="apikey" class="lesson-section">
+                <h2>🗝️ An API Key in a Header</h2>
+
+                <p>Ask the orders endpoint for data the way you asked for products in Lesson 6.1, with no credential at all.</p>
+
+                <pre><code class="language-python">r = requests.get(f"{API}/orders", headers=HEADERS, timeout=10)
+
+print(r.status_code, r.reason)
+print(r.json())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>401 Unauthorized
+{'error': {'code': 'missing_api_key', 'message': 'Send your key in the X-API-Key header.'}}</code></pre>
+                </div>
+
+                <p><code>401 Unauthorized</code>: the server does not know who you are. The message even says how to fix it. API documentation always states where the key goes; here it is a header named <code>X-API-Key</code>. Try a made-up key first.</p>
+
+                <pre><code class="language-python">r = requests.get(f"{API}/orders", headers={**HEADERS, "X-API-Key": "not-the-key"}, timeout=10)
+
+print(r.status_code, r.reason)
+print(r.json()["error"]["code"])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>403 Forbidden
+invalid_api_key</code></pre>
+                </div>
+
+                <p><code>403 Forbidden</code>, a different answer. You presented a credential and it was rejected. The two codes point at different repairs:</p>
+                <ul>
+                    <li><strong>401</strong> means "I cannot tell who you are": the credential is missing, malformed or expired. Check that you are sending it, and how.</li>
+                    <li><strong>403</strong> means "I understood, and the answer is no": the key is wrong or revoked, or it is valid but not allowed to do this. Sending the same request again will never help.</li>
+                </ul>
+
+                <p>Now the real key, from the environment. <code>{**HEADERS, ...}</code> builds a new dictionary with everything in <code>HEADERS</code> plus one more entry.</p>
+
+                <pre><code class="language-python">KEY_HEADERS = {**HEADERS, "X-API-Key": API_KEY}
+
+r = requests.get(f"{API}/orders", headers=KEY_HEADERS, params={"per_page": 2}, timeout=10)
+data = r.json()
+
+print(r.status_code)
+print({k: v for k, v in data.items() if k != "items"})
+print(data["items"][0])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>200
+{'page': 1, 'per_page': 2, 'total': 20302, 'total_pages': 10151, 'next': '/orders?page=2&amp;per_page=2'}
+{'order_id': 100001, 'customer_id': 12673, 'order_date': '2024-01-01', 'channel': 'store', 'store': 'Flagstaff', 'status': 'completed', 'payment_method': 'cash', 'promo_code': None, 'discount_pct': 0, 'shipping_cost': 0.0, 'order_total': 434.9}</code></pre>
+                </div>
+
+                <p>The door opens: 20,302 orders, two per page as requested. An order looks exactly like a row of <code>data/orders.csv</code>, with <code>None</code> where the CSV has an empty cell.</p>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Headers, Not URLs</h4>
+                    <p>Some APIs also accept the key as a query parameter, as in <code>?api_key=...</code>. Prefer the header whenever both are offered. URLs are written to server logs, saved in browser history, shown in error messages and pasted into bug reports. Headers mostly are not. For the same reason, never send a credential over plain <code>http://</code> to anything but your own computer: on the open internet, only <code>https://</code> keeps it private.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="errors" class="lesson-section">
+                <h2>🚦 Errors by Status Code</h2>
+
+                <p>You have now seen 401 and 403, and in Lesson 6.1 you met 404 and the family of 5xx codes. With authentication in the picture, the status code becomes a decision: each one tells your program what kind of move comes next.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Status</th><th>It means</th><th>Your program should</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>400</code> Bad Request</td><td>The request itself is malformed (a bad date, a missing field)</td><td>Stop. Fix the code. Never retry unchanged.</td></tr>
+                            <tr><td><code>401</code> Unauthorized</td><td>No valid credential</td><td>If a token expired, get a new one and retry <strong>once</strong>. Otherwise stop.</td></tr>
+                            <tr><td><code>403</code> Forbidden</td><td>Recognized, not allowed</td><td>Stop. A person needs to fix the key or the permissions.</td></tr>
+                            <tr><td><code>404</code> Not Found</td><td>No such thing at this URL</td><td>Stop, or record "does not exist" if that is a valid answer.</td></tr>
+                            <tr><td><code>429</code> Too Many Requests</td><td>You are going too fast</td><td>Wait, then retry (Lesson 6.5).</td></tr>
+                            <tr><td><code>5xx</code></td><td>The server failed</td><td>Wait, then retry a few times (Lesson 6.5).</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p><code>raise_for_status()</code> would turn all of these into the same <code>HTTPError</code> and throw away the API's own explanation. A slightly smarter check keeps it. The practice API, like most, describes every error in a JSON body with a short machine-readable <code>code</code> and a human-readable <code>message</code>.</p>
+
+                <pre><code class="language-python">class ApiError(Exception):
+    """An error response from the API, with its status, code and message."""
+
+    def __init__(self, status, code, message):
+        super().__init__(f"{status} {code}: {message}")
+        self.status = status
+        self.code = code
+        self.message = message
+
+
+def check(resp):
+    """Return the response if it succeeded. Otherwise raise ApiError."""
+    if resp.ok:
+        return resp
     try:
-        with open(config_file, 'r') as f:
-            config = json.load(f)
-        return config
-    except FileNotFoundError:
-        print(f"Config file {config_file} not found")
-        return {}
+        error = resp.json()["error"]
+        code, message = error["code"], error["message"]
+    except (requests.exceptions.JSONDecodeError, KeyError, TypeError):
+        code, message = "http_error", resp.reason
+    raise ApiError(resp.status_code, code, message)</code></pre>
 
-# Method 3: System Keyring
-def store_credential(service, username, password):
-    """Store credential in system keyring"""
-    keyring.set_password(service, username, password)
+                <p>A custom exception is an ordinary class that inherits from <code>Exception</code>. This one carries three attributes, so the code that catches it can branch on <code>err.status</code> or <code>err.code</code> instead of picking a string apart. The <code>try</code> inside <code>check()</code> covers servers that answer an error with something other than the expected JSON.</p>
 
-def get_credential(service, username):
-    """Retrieve credential from system keyring"""
-    return keyring.get_password(service, username)
+                <pre data-raises="ApiError"><code class="language-python">check(requests.get(f"{API}/orders", headers=KEY_HEADERS, params={"since": "12/01/2025"}, timeout=10))</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>ApiError: 400 bad_request: 'since' must look like 2025-01-31, got '12/01/2025'.</code></pre>
+                </div>
 
-# Example usage
-# store_credential('my_api', 'api_key', 'secret123')
-# api_key = get_credential('my_api', 'api_key')
+                <p>That is a message you can act on in five seconds. From here on, every request in this lesson goes through <code>check()</code>.</p>
 
-# Method 4: Encrypted Configuration
-class EncryptedConfig:
-    """Encrypted configuration manager"""
-    
-    def __init__(self, key=None):
-        if key:
-            self.cipher = Fernet(key)
-        else:
-            self.cipher = Fernet(Fernet.generate_key())
-    
-    def encrypt_config(self, config_dict):
-        """Encrypt configuration dictionary"""
-        json_string = json.dumps(config_dict)
-        encrypted = self.cipher.encrypt(json_string.encode())
-        return base64.b64encode(encrypted).decode()
-    
-    def decrypt_config(self, encrypted_string):
-        """Decrypt configuration string"""
-        encrypted = base64.b64decode(encrypted_string.encode())
-        decrypted = self.cipher.decrypt(encrypted)
-        return json.loads(decrypted.decode())
+                <pre><code class="language-python">for path in ["/orders", "/products/TNT-9999", "/products/TNT-1001"]:
+    try:
+        resp = check(requests.get(f"{API}{path}", headers=HEADERS, timeout=10))
+        print(path, "OK:", resp.json()["name"])
+    except ApiError as err:
+        print(path, "failed:", err.status, err.code)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>/orders failed: 401 missing_api_key
+/products/TNT-9999 failed: 404 not_found
+/products/TNT-1001 OK: Granite Fork Drift 1-Person Tent</code></pre>
+                </div>
+            </section>
 
-# Best practice: Configuration hierarchy
-class ConfigManager:
-    """Hierarchical configuration management"""
-    
-    def __init__(self):
-        self.config = {}
-        self._load_defaults()
-        self._load_environment()
-        self._load_config_file()
-    
-    def _load_defaults(self):
-        """Load default configuration"""
-        self.config = {
-            'api_base_url': 'https://api.example.com',
-            'timeout': 30,
-            'retry_count': 3
-        }
-    
-    def _load_environment(self):
-        """Override with environment variables"""
-        for key in ['API_KEY', 'CLIENT_ID', 'CLIENT_SECRET']:
-            value = os.getenv(key)
-            if value:
-                self.config[key.lower()] = value
-    
-    def _load_config_file(self):
-        """Override with config file if exists"""
-        if os.path.exists('config.json'):
-            with open('config.json', 'r') as f:
-                file_config = json.load(f)
-                self.config.update(file_config)
-    
-    def get(self, key, default=None):
-        """Get configuration value"""
-        return self.config.get(key, default)</code></pre>
+            <!-- ============================================================ -->
+            <section id="bearer" class="lesson-section">
+                <h2>🎟️ Logging In for a Token</h2>
 
-    <h2>API Key Authentication</h2>
-    
-    <h3>Different API Key Patterns</h3>
-    <pre class="language-python"><code>import requests
-from urllib.parse import urlencode
+                <p>The second kind of authentication starts with a login. You send a username and password <strong>once</strong>, in the body of a <code>POST</code> request, and the server answers with a token. This is your first <code>POST</code>: where <code>GET</code> reads, <code>POST</code> sends data. Passing <code>json=</code> tells <code>requests</code> to encode a dictionary as JSON in the request body and label it correctly.</p>
 
-class APIKeyAuth:
-    """Handle different API key authentication patterns"""
-    
-    def __init__(self, api_key, key_name='api_key'):
-        self.api_key = api_key
-        self.key_name = key_name
-    
-    def auth_via_header(self, session=None):
-        """API key in header"""
-        headers = {self.key_name: self.api_key}
-        
-        if session:
-            session.headers.update(headers)
-            return session
-        else:
-            return headers
-    
-    def auth_via_query(self, url, params=None):
-        """API key in query parameters"""
-        if params is None:
-            params = {}
-        
-        params[self.key_name] = self.api_key
-        
-        # Build complete URL
-        if '?' in url:
-            return f"{url}&{urlencode({self.key_name: self.api_key})}"
-        else:
-            return f"{url}?{urlencode(params)}"
-    
-    def auth_via_body(self, data=None):
-        """API key in request body"""
-        if data is None:
-            data = {}
-        
-        data[self.key_name] = self.api_key
-        return data
+                <pre><code class="language-python">resp = check(requests.post(f"{API}/login",
+                           json={"username": USERNAME, "password": PASSWORD},
+                           headers=HEADERS, timeout=10))
+body = resp.json()
 
-# Example implementations for popular APIs
-class OpenAIClient:
-    """OpenAI API authentication example"""
-    
-    def __init__(self, api_key):
-        self.api_key = api_key
-        self.base_url = 'https://api.openai.com/v1'
-        self.session = requests.Session()
-        self.session.headers.update({
-            'Authorization': f'Bearer {api_key}',
-            'Content-Type': 'application/json'
-        })
-    
-    def complete(self, prompt, model='gpt-3.5-turbo'):
-        """Make completion request"""
-        response = self.session.post(
-            f'{self.base_url}/chat/completions',
-            json={
-                'model': model,
-                'messages': [{'role': 'user', 'content': prompt}]
-            }
-        )
-        response.raise_for_status()
-        return response.json()
+print(list(body))
+print(body["token_type"], "token, valid for", body["expires_in"], "seconds")
+print(body["access_token"][:6] + "...")</code></pre>
+                <div class="card card-output">
+                    <h4>Output (your token will differ)</h4>
+                    <pre><code>['access_token', 'token_type', 'expires_in']
+Bearer token, valid for 5 seconds
+XPCh49...</code></pre>
+                </div>
 
-class GoogleMapsClient:
-    """Google Maps API authentication example"""
-    
-    def __init__(self, api_key):
-        self.api_key = api_key
-        self.base_url = 'https://maps.googleapis.com/maps/api'
-    
-    def geocode(self, address):
-        """Geocode an address"""
-        response = requests.get(
-            f'{self.base_url}/geocode/json',
-            params={
-                'address': address,
-                'key': self.api_key  # API key in query parameter
-            }
-        )
-        response.raise_for_status()
-        return response.json()
+                <p>Three things came back: the token itself (a long random string), its type, and how many seconds it will last. To use it, send it in the <code>Authorization</code> header after the word <code>Bearer</code> and a space. The name is literal: whoever <em>bears</em> this token gets in, no other questions asked.</p>
 
-class RapidAPIClient:
-    """RapidAPI authentication example"""
-    
-    def __init__(self, api_key, api_host):
-        self.api_key = api_key
-        self.api_host = api_host
-        self.session = requests.Session()
-        self.session.headers.update({
-            'X-RapidAPI-Key': api_key,
-            'X-RapidAPI-Host': api_host
-        })
-    
-    def request(self, endpoint, method='GET', **kwargs):
-        """Make authenticated request"""
-        url = f"https://{self.api_host}/{endpoint}"
-        response = self.session.request(method, url, **kwargs)
-        response.raise_for_status()
-        return response.json()</code></pre>
+                <pre><code class="language-python">token = body["access_token"]
+auth_headers = {**HEADERS, "Authorization": f"Bearer {token}"}
 
-    <h2>Basic Authentication</h2>
-    
-    <pre class="language-python"><code>import requests
-from requests.auth import HTTPBasicAuth
-import base64
+me = check(requests.get(f"{API}/me", headers=auth_headers, timeout=10)).json()
+print(me["username"], "|", me["name"], "|", me["role"])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>analyst | Demo Analyst | analyst</code></pre>
+                </div>
 
-class BasicAuthClient:
-    """HTTP Basic Authentication implementation"""
-    
-    def __init__(self, username, password):
+                <p>The server looked up the token, found whose it was, and answered for that user. Your password crossed the network exactly once, and the thing you carry around afterward is worth far less to a thief: it stops working on its own.</p>
+
+                <p>A wrong password is rejected at the gate, with a 401:</p>
+
+                <pre><code class="language-python">try:
+    check(requests.post(f"{API}/login", json={"username": USERNAME, "password": "guess"},
+                        headers=HEADERS, timeout=10))
+except ApiError as err:
+    print(err)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>401 invalid_credentials: Wrong username or password.</code></pre>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="expiry" class="lesson-section">
+                <h2>⌛ When the Token Expires</h2>
+
+                <p>You started the API with five-second tokens. Wait six, and use the same token again.</p>
+
+                <pre><code class="language-python">time.sleep(6)
+
+try:
+    check(requests.get(f"{API}/me", headers=auth_headers, timeout=10))
+except ApiError as err:
+    print(err.status, err.code)
+    print(err.message)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>401 token_expired
+The token has expired. Log in again with POST /login.</code></pre>
+                </div>
+
+                <p>The request that worked a moment ago now fails with <code>401</code> and the code <code>token_expired</code>. Nothing is wrong with your account or your code. The wristband ran out. This is the normal life of a token, and every program that uses one must expect it in the middle of its work.</p>
+
+                <div class="mermaid">
+            graph TD
+                A["POST /login with credentials"] --> B["Receive token and lifetime"]
+                B --> C["Send token with each request"]
+                C --> D{"401 token_expired?"}
+                D -->|no| E["Use the data"]
+                D -->|yes| F["Log in again, retry once"]
+                F --> C
+                </div>
+
+                <p>There are two sensible ways to cope, and good clients use both:</p>
+                <ul>
+                    <li><strong>Look ahead.</strong> You were told the lifetime at login. Remember when the token will expire, and get a new one shortly <em>before</em> that.</li>
+                    <li><strong>Recover.</strong> Clocks drift and tokens get revoked early, so also handle the 401: get a new token and repeat the request <strong>once</strong>. If it fails a second time, the problem is something else, and retrying forever would only hammer the server.</li>
+                </ul>
+
+                <pre><code class="language-python">def login():
+    """Log in and return (token, the time.monotonic() value at which it expires)."""
+    resp = check(requests.post(f"{API}/login",
+                               json={"username": USERNAME, "password": PASSWORD},
+                               headers=HEADERS, timeout=10))
+    body = resp.json()
+    return body["access_token"], time.monotonic() + body["expires_in"]
+
+
+token, expires_at = login()
+
+for attempt in range(3):
+    if time.monotonic() &gt;= expires_at - 1:          # within a second of expiry: renew first
+        token, expires_at = login()
+        print("  (logged in again)")
+    me = check(requests.get(f"{API}/me", timeout=10,
+                            headers={**HEADERS, "Authorization": f"Bearer {token}"})).json()
+    print("request", attempt + 1, "answered for", me["username"])
+    time.sleep(3)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>request 1 answered for analyst
+request 2 answered for analyst
+  (logged in again)
+request 3 answered for analyst</code></pre>
+                </div>
+
+                <p>Three requests three seconds apart, with a token that lasts five: the loop renewed it when it was needed and never once saw a 401. (<code>time.monotonic()</code> is a clock that only moves forward, which makes it the right tool for measuring "how long since".)</p>
+
+                <div class="card card-info">
+                    <h4>💡 Refresh Tokens</h4>
+                    <p>Logging in again means keeping the password available to your program. Many real APIs avoid that with a second, longer-lived <strong>refresh token</strong> handed out at login: when the access token expires you trade the refresh token for a new one, and the password is never needed again. The practice API keeps things simple and has you log in again, but the shape of the code (notice the expiry, renew, retry once) is identical.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="pagination" class="lesson-section">
+                <h2>📚 Pagination to a DataFrame</h2>
+
+                <p>An API will not hand you 20,302 orders in one response. Like the shop's catalog, it serves a page at a time, and like the catalog it tells you where the next page is. Look at the paging fields again:</p>
+
+                <pre><code class="language-python">params = {"status": "returned", "since": "2025-12-01", "per_page": 25}
+data = check(requests.get(f"{API}/orders", headers=KEY_HEADERS, params=params, timeout=10)).json()
+
+print({k: v for k, v in data.items() if k != "items"})</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>{'page': 1, 'per_page': 25, 'total': 66, 'total_pages': 3, 'next': '/orders?page=2&amp;per_page=25&amp;since=2025-12-01&amp;status=returned'}</code></pre>
+                </div>
+
+                <p>Sixty-six returned orders since December 1, three pages of up to 25, and <code>next</code> holds the address of page 2 with all your filters already in it. On the last page <code>next</code> is <code>None</code>. That is the same "follow the next link until there is none" loop you wrote in Lesson 6.2, with JSON in place of HTML.</p>
+
+                <pre><code class="language-python">def get_all(path, params=None):
+    """Collect every item from a paginated endpoint by following 'next'."""
+    items = []
+    url = f"{API}{path}"
+    while url:
+        data = check(requests.get(url, headers=KEY_HEADERS, params=params, timeout=10)).json()
+        items.extend(data["items"])
+        url = f"{API}{data['next']}" if data["next"] else None
+        params = None              # 'next' already carries the filters
+    return items
+
+
+returned = pd.DataFrame(get_all("/orders", params))
+returned["order_date"] = pd.to_datetime(returned["order_date"])
+
+print(returned.shape)
+print(returned[["order_id", "order_date", "channel", "store", "order_total"]].head(4))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>(66, 11)
+   order_id order_date channel   store  order_total
+0    119176 2025-12-01  online  Online        80.87
+1    119179 2025-12-01  online  Online       119.92
+2    119180 2025-12-01  online  Online        42.51
+3    119190 2025-12-01  online  Online       196.75</code></pre>
+                </div>
+
+                <p>One detail in that loop is easy to get wrong. The filters go in <code>params</code> for the first request only. The <code>next</code> address already includes them, so sending <code>params</code> again would attach every filter twice. Setting <code>params = None</code> after the first request avoids that.</p>
+
+                <p>As always with collected data, check it. Here you have the source file to compare with.</p>
+
+                <pre><code class="language-python">orders_csv = pd.read_csv("data/orders.csv", parse_dates=["order_date"])
+expected = orders_csv[(orders_csv["status"] == "returned") &amp; (orders_csv["order_date"] &gt;= "2025-12-01")]
+
+print(len(expected), "rows expected")
+print("same order ids:", returned["order_id"].tolist() == expected["order_id"].tolist())
+print("same totals:", returned["order_total"].tolist() == expected["order_total"].tolist())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>66 rows expected
+same order ids: True
+same totals: True</code></pre>
+                </div>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Ask for What You Need</h4>
+                    <p>This API allows 30 requests every 10 seconds for each client. All 20,302 orders at 100 per page would be 204 requests, and you would be told to slow down long before the end. Filter on the server (<code>status</code>, <code>since</code>) and use the largest page size the API allows. Handling the "slow down" answer properly is the whole of <a href="webscraping_rate_limiting.html">Lesson 6.5</a>.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="client" class="lesson-section">
+                <h2>🧰 A Small Client Class</h2>
+
+                <p>Look at what you are now carrying from cell to cell: a base URL, two sets of headers, a token, its expiry time, and four functions that all need them. That is the signal to make a class. A <strong>client</strong> is an object that holds the connection details and credentials for one API and offers a method for each thing you want from it. The rest of your analysis then reads like plain English.</p>
+
+                <pre><code class="language-python">class PinecrestClient:
+    """A small client for the Pinecrest practice API."""
+
+    def __init__(self, base_url, api_key, username, password, user_agent):
+        self.base_url = base_url
         self.username = username
         self.password = password
         self.session = requests.Session()
-        self.session.auth = (username, password)
-    
-    def manual_header(self):
-        """Create Authorization header manually"""
-        credentials = f"{self.username}:{self.password}"
-        encoded = base64.b64encode(credentials.encode()).decode()
-        return {'Authorization': f'Basic {encoded}'}
-    
-    def test_auth(self, url):
-        """Test authentication"""
-        response = self.session.get(url)
-        return response.status_code == 200
-
-# Example: JIRA API with Basic Auth
-class JIRAClient:
-    """JIRA API client with Basic Authentication"""
-    
-    def __init__(self, domain, email, api_token):
-        self.domain = domain
-        self.base_url = f'https://{domain}.atlassian.net/rest/api/3'
-        self.session = requests.Session()
-        # JIRA uses email and API token for basic auth
-        self.session.auth = (email, api_token)
-        self.session.headers.update({
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-        })
-    
-    def get_issue(self, issue_key):
-        """Get JIRA issue details"""
-        response = self.session.get(f'{self.base_url}/issue/{issue_key}')
-        response.raise_for_status()
-        return response.json()
-    
-    def create_issue(self, project_key, summary, description, issue_type='Task'):
-        """Create new JIRA issue"""
-        data = {
-            'fields': {
-                'project': {'key': project_key},
-                'summary': summary,
-                'description': description,
-                'issuetype': {'name': issue_type}
-            }
-        }
-        response = self.session.post(f'{self.base_url}/issue', json=data)
-        response.raise_for_status()
-        return response.json()
-
-# Digest Authentication (less common)
-from requests.auth import HTTPDigestAuth
-
-class DigestAuthClient:
-    """HTTP Digest Authentication"""
-    
-    def __init__(self, username, password):
-        self.auth = HTTPDigestAuth(username, password)
-    
-    def request(self, url):
-        response = requests.get(url, auth=self.auth)
-        return response</code></pre>
-
-    <h2>OAuth 2.0 Authentication</h2>
-    
-    <h3>OAuth 2.0 Flows</h3>
-    <pre class="language-python"><code>import requests
-from requests_oauthlib import OAuth2Session
-import webbrowser
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from urllib.parse import urlparse, parse_qs
-import threading
-
-class OAuth2Client:
-    """Generic OAuth 2.0 client implementation"""
-    
-    def __init__(self, client_id, client_secret, redirect_uri):
-        self.client_id = client_id
-        self.client_secret = client_secret
-        self.redirect_uri = redirect_uri
+        self.session.headers.update({"User-Agent": user_agent, "X-API-Key": api_key})
         self.token = None
-    
-    def get_authorization_url(self, auth_base_url, scope=None, state=None):
-        """Generate authorization URL"""
-        oauth = OAuth2Session(
-            self.client_id,
-            redirect_uri=self.redirect_uri,
-            scope=scope,
-            state=state
-        )
-        authorization_url, state = oauth.authorization_url(auth_base_url)
-        return authorization_url, state
-    
-    def fetch_token(self, token_url, authorization_response):
-        """Exchange authorization code for access token"""
-        oauth = OAuth2Session(
-            self.client_id,
-            redirect_uri=self.redirect_uri
-        )
-        
-        token = oauth.fetch_token(
-            token_url,
-            authorization_response=authorization_response,
-            client_secret=self.client_secret
-        )
-        
-        self.token = token
-        return token
-    
-    def refresh_token(self, token_url, refresh_token):
-        """Refresh expired access token"""
-        data = {
-            'grant_type': 'refresh_token',
-            'refresh_token': refresh_token,
-            'client_id': self.client_id,
-            'client_secret': self.client_secret
-        }
-        
-        response = requests.post(token_url, data=data)
-        response.raise_for_status()
-        
-        self.token = response.json()
-        return self.token
+        self.token_expires = 0.0
+        self.logins = 0
 
-# Authorization Code Flow (most secure for web apps)
-class GitHubOAuth:
-    """GitHub OAuth implementation"""
-    
-    def __init__(self, client_id, client_secret):
-        self.client_id = client_id
-        self.client_secret = client_secret
-        self.authorization_base_url = 'https://github.com/login/oauth/authorize'
-        self.token_url = 'https://github.com/login/oauth/access_token'
-        self.redirect_uri = 'http://localhost:8080/callback'
-        self.token = None
-    
-    def authorize(self):
-        """Complete OAuth flow"""
-        # Step 1: Get authorization URL
-        oauth = OAuth2Session(self.client_id, redirect_uri=self.redirect_uri)
-        authorization_url, state = oauth.authorization_url(
-            self.authorization_base_url,
-            scope=['repo', 'user']
-        )
-        
-        print(f'Please visit this URL to authorize: {authorization_url}')
-        webbrowser.open(authorization_url)
-        
-        # Step 2: Get authorization code from callback
-        authorization_code = self._get_authorization_code()
-        
-        # Step 3: Exchange code for token
-        self._fetch_token(authorization_code)
-    
-    def _get_authorization_code(self):
-        """Start local server to receive callback"""
-        code = {'value': None}
-        
-        class CallbackHandler(BaseHTTPRequestHandler):
-            def do_GET(self):
-                query = urlparse(self.path).query
-                params = parse_qs(query)
-                code['value'] = params.get('code', [None])[0]
-                
-                self.send_response(200)
-                self.send_header('Content-type', 'text/html')
-                self.end_headers()
-                self.wfile.write(b'<html><body><h1>Authorization successful!</h1></body></html>')
-            
-            def log_message(self, format, *args):
-                pass  # Suppress log messages
-        
-        server = HTTPServer(('localhost', 8080), CallbackHandler)
-        server.handle_request()
-        
-        return code['value']
-    
-    def _fetch_token(self, code):
-        """Exchange authorization code for access token"""
-        data = {
-            'client_id': self.client_id,
-            'client_secret': self.client_secret,
-            'code': code
-        }
-        
-        headers = {'Accept': 'application/json'}
-        response = requests.post(self.token_url, data=data, headers=headers)
-        response.raise_for_status()
-        
-        self.token = response.json()['access_token']
-        return self.token
-    
-    def get_user(self):
-        """Get authenticated user information"""
-        headers = {'Authorization': f'token {self.token}'}
-        response = requests.get('https://api.github.com/user', headers=headers)
-        response.raise_for_status()
-        return response.json()
+    def login(self):
+        """Get a fresh bearer token and remember when it expires."""
+        resp = self.session.post(f"{self.base_url}/login", timeout=10,
+                                 json={"username": self.username, "password": self.password})
+        body = check(resp).json()
+        self.token = body["access_token"]
+        self.token_expires = time.monotonic() + body["expires_in"] - 1
+        self.logins += 1
 
-# Client Credentials Flow (for server-to-server)
-class SpotifyClient:
-    """Spotify API client credentials flow"""
-    
-    def __init__(self, client_id, client_secret):
-        self.client_id = client_id
-        self.client_secret = client_secret
-        self.token_url = 'https://accounts.spotify.com/api/token'
-        self.base_url = 'https://api.spotify.com/v1'
-        self.token = None
-    
-    def authenticate(self):
-        """Get access token using client credentials"""
-        auth = (self.client_id, self.client_secret)
-        data = {'grant_type': 'client_credentials'}
-        
-        response = requests.post(self.token_url, auth=auth, data=data)
-        response.raise_for_status()
-        
-        self.token = response.json()['access_token']
-        return self.token
-    
-    def search(self, query, type='track', limit=10):
-        """Search Spotify catalog"""
-        if not self.token:
-            self.authenticate()
-        
-        headers = {'Authorization': f'Bearer {self.token}'}
-        params = {
-            'q': query,
-            'type': type,
-            'limit': limit
-        }
-        
-        response = requests.get(
-            f'{self.base_url}/search',
-            headers=headers,
-            params=params
-        )
-        
-        # Handle token expiration
-        if response.status_code == 401:
-            self.authenticate()
-            headers = {'Authorization': f'Bearer {self.token}'}
-            response = requests.get(
-                f'{self.base_url}/search',
-                headers=headers,
-                params=params
-            )
-        
-        response.raise_for_status()
-        return response.json()</code></pre>
-
-    <h2>JWT (JSON Web Tokens)</h2>
-    
-    <pre class="language-python"><code>import jwt
-import time
-from datetime import datetime, timedelta
-import requests
-
-class JWTAuth:
-    """JWT authentication handler"""
-    
-    def __init__(self, secret_key, algorithm='HS256'):
-        self.secret_key = secret_key
-        self.algorithm = algorithm
-    
-    def create_token(self, payload, expires_in=3600):
-        """Create JWT token"""
-        # Add standard claims
-        payload['iat'] = datetime.utcnow()
-        payload['exp'] = datetime.utcnow() + timedelta(seconds=expires_in)
-        
-        # Generate token
-        token = jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
-        return token
-    
-    def decode_token(self, token):
-        """Decode and verify JWT token"""
+    def get(self, path, params=None, auth=False):
+        """GET a path and return the parsed JSON. auth=True sends a bearer token."""
+        headers = {}
+        if auth:
+            if self.token is None or time.monotonic() &gt;= self.token_expires:
+                self.login()
+            headers["Authorization"] = f"Bearer {self.token}"
+        resp = self.session.get(self.base_url + path, params=params, headers=headers, timeout=10)
         try:
-            payload = jwt.decode(
-                token,
-                self.secret_key,
-                algorithms=[self.algorithm]
-            )
-            return payload
-        except jwt.ExpiredSignatureError:
-            raise Exception("Token has expired")
-        except jwt.InvalidTokenError as e:
-            raise Exception(f"Invalid token: {e}")
-    
-    def is_token_valid(self, token):
-        """Check if token is valid"""
-        try:
-            self.decode_token(token)
-            return True
-        except:
-            return False
+            return check(resp).json()
+        except ApiError as err:
+            if not (auth and err.code == "token_expired"):
+                raise
+        self.login()                                   # expired early: renew and retry once
+        headers["Authorization"] = f"Bearer {self.token}"
+        resp = self.session.get(self.base_url + path, params=params, headers=headers, timeout=10)
+        return check(resp).json()
 
-# Example: Auth0 JWT authentication
-class Auth0Client:
-    """Auth0 JWT authentication client"""
-    
-    def __init__(self, domain, client_id, client_secret, audience):
-        self.domain = domain
-        self.client_id = client_id
-        self.client_secret = client_secret
-        self.audience = audience
-        self.token = None
-        self.token_expires_at = 0
-    
-    def get_token(self):
-        """Get access token from Auth0"""
-        # Check if current token is still valid
-        if self.token and time.time() < self.token_expires_at:
-            return self.token
-        
-        # Request new token
-        url = f'https://{self.domain}/oauth/token'
-        data = {
-            'client_id': self.client_id,
-            'client_secret': self.client_secret,
-            'audience': self.audience,
-            'grant_type': 'client_credentials'
-        }
-        
-        response = requests.post(url, json=data)
-        response.raise_for_status()
-        
-        token_data = response.json()
-        self.token = token_data['access_token']
-        self.token_expires_at = time.time() + token_data['expires_in'] - 60
-        
-        return self.token
-    
-    def make_authenticated_request(self, url, method='GET', **kwargs):
-        """Make authenticated API request"""
-        token = self.get_token()
-        
-        headers = kwargs.get('headers', {})
-        headers['Authorization'] = f'Bearer {token}'
-        kwargs['headers'] = headers
-        
-        response = requests.request(method, url, **kwargs)
-        
-        # Retry with new token if unauthorized
-        if response.status_code == 401:
-            self.token = None
-            token = self.get_token()
-            headers['Authorization'] = f'Bearer {token}'
-            response = requests.request(method, url, **kwargs)
-        
-        return response
+    def get_all(self, path, params=None):
+        """Collect every item from a paginated endpoint."""
+        data = self.get(path, params)
+        items = data["items"]
+        while data["next"]:
+            data = self.get(data["next"])
+            items.extend(data["items"])
+        return items
 
-# Example: Firebase JWT authentication
-class FirebaseAuth:
-    """Firebase authentication using JWT"""
-    
-    def __init__(self, service_account_key):
-        self.service_account = service_account_key
-        self.token = None
-        self.token_expires_at = 0
-    
-    def _create_custom_token(self):
-        """Create custom Firebase token"""
-        import google.auth
-        from google.oauth2 import service_account
-        
-        credentials = service_account.Credentials.from_service_account_info(
-            self.service_account,
-            scopes=['https://www.googleapis.com/auth/firebase']
-        )
-        
-        # Create JWT claims
-        now = time.time()
-        payload = {
-            'iss': self.service_account['client_email'],
-            'sub': self.service_account['client_email'],
-            'aud': 'https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit',
-            'iat': now,
-            'exp': now + 3600,
-            'uid': 'service-account'
-        }
-        
-        # Sign token
-        token = jwt.encode(
-            payload,
-            self.service_account['private_key'],
-            algorithm='RS256'
-        )
-        
-        return token</code></pre>
+    def orders(self, **filters):
+        """Orders as a DataFrame. Filters: status=..., since='YYYY-MM-DD'."""
+        frame = pd.DataFrame(self.get_all("/orders", {"per_page": 100, **filters}))
+        if not frame.empty:
+            frame["order_date"] = pd.to_datetime(frame["order_date"])
+        return frame
 
-    <h2>HMAC Authentication</h2>
-    
-    <pre class="language-python"><code>import hmac
-import hashlib
-import time
-import requests
-from urllib.parse import urlencode
+    def me(self):
+        """The account the bearer token belongs to."""
+        return self.get("/me", auth=True)
 
-class HMACAuth:
-    """HMAC-based authentication"""
-    
-    def __init__(self, api_key, api_secret):
-        self.api_key = api_key
-        self.api_secret = api_secret
-    
-    def generate_signature(self, method, url, params=None, body=None):
-        """Generate HMAC signature"""
-        # Create string to sign
-        timestamp = str(int(time.time()))
-        
-        if params:
-            query_string = urlencode(sorted(params.items()))
-        else:
-            query_string = ''
-        
-        if body:
-            body_string = json.dumps(body, separators=(',', ':'))
-        else:
-            body_string = ''
-        
-        # Construct message
-        message = f"{method}\n{url}\n{query_string}\n{body_string}\n{timestamp}"
-        
-        # Generate signature
-        signature = hmac.new(
-            self.api_secret.encode(),
-            message.encode(),
-            hashlib.sha256
-        ).hexdigest()
-        
-        return signature, timestamp
-    
-    def make_request(self, method, url, params=None, json_data=None):
-        """Make authenticated request with HMAC"""
-        signature, timestamp = self.generate_signature(
-            method, url, params, json_data
-        )
-        
-        headers = {
-            'X-API-Key': self.api_key,
-            'X-Signature': signature,
-            'X-Timestamp': timestamp
-        }
-        
-        response = requests.request(
-            method, url,
-            params=params,
-            json=json_data,
-            headers=headers
-        )
-        
-        return response
+    def close(self):
+        self.session.close()</code></pre>
 
-# Example: AWS Signature Version 4
-class AWSSignatureV4:
-    """AWS Signature Version 4 authentication"""
-    
-    def __init__(self, access_key, secret_key, region, service):
-        self.access_key = access_key
-        self.secret_key = secret_key
-        self.region = region
-        self.service = service
-    
-    def sign_request(self, request):
-        """Sign AWS API request"""
-        from botocore.auth import SigV4Auth
-        from botocore.awsrequest import AWSRequest
-        import boto3
-        
-        # Create credentials
-        credentials = boto3.Session(
-            aws_access_key_id=self.access_key,
-            aws_secret_access_key=self.secret_key
-        ).get_credentials()
-        
-        # Create AWS request
-        aws_request = AWSRequest(
-            method=request.method,
-            url=request.url,
-            data=request.body,
-            headers=request.headers
-        )
-        
-        # Sign request
-        SigV4Auth(credentials, self.service, self.region).add_auth(aws_request)
-        
-        # Update original request headers
-        request.headers.update(dict(aws_request.headers))
-        
-        return request
+                <p>Nothing in there is new. It is this lesson, arranged:</p>
+                <ul>
+                    <li><code>__init__</code> stores the credentials and creates a <code>Session</code> whose headers carry the User-Agent and the API key on every request.</li>
+                    <li><code>login()</code> is the function you wrote, storing the token on the object. It renews one second early.</li>
+                    <li><code>get()</code> is the one place that talks to the network: it adds a valid token when asked, sets the timeout, runs <code>check()</code>, and performs the "renew and retry once" recovery. A bare <code>raise</code> passes every other error on unchanged.</li>
+                    <li><code>get_all()</code>, <code>orders()</code> and <code>me()</code> are short because <code>get()</code> did the hard part.</li>
+                </ul>
 
-# Example: Binance API HMAC authentication
-class BinanceClient:
-    """Binance API client with HMAC authentication"""
-    
-    def __init__(self, api_key, api_secret):
-        self.api_key = api_key
-        self.api_secret = api_secret
-        self.base_url = 'https://api.binance.com'
-    
-    def _generate_signature(self, params):
-        """Generate Binance API signature"""
-        query_string = urlencode(params)
-        signature = hmac.new(
-            self.api_secret.encode(),
-            query_string.encode(),
-            hashlib.sha256
-        ).hexdigest()
-        return signature
-    
-    def get_account(self):
-        """Get account information"""
-        endpoint = '/api/v3/account'
-        
-        params = {
-            'timestamp': int(time.time() * 1000),
-            'recvWindow': 5000
-        }
-        
-        # Add signature
-        params['signature'] = self._generate_signature(params)
-        
-        headers = {'X-MBX-APIKEY': self.api_key}
-        
-        response = requests.get(
-            f'{self.base_url}{endpoint}',
-            params=params,
-            headers=headers
-        )
-        response.raise_for_status()
-        
-        return response.json()</code></pre>
+                <pre><code class="language-python">client = PinecrestClient(API, API_KEY, USERNAME, PASSWORD, USER_AGENT)
 
-    <h2>Multi-Factor Authentication</h2>
-    
-    <pre class="language-python"><code>import pyotp
-import qrcode
-from io import BytesIO
-import base64
+print(client.me()["name"], "| logins so far:", client.logins)
+time.sleep(6)
+print(client.me()["name"], "| logins so far:", client.logins)
 
-class MFAManager:
-    """Multi-factor authentication manager"""
-    
-    def __init__(self, issuer_name='MyApp'):
-        self.issuer_name = issuer_name
-    
-    def generate_secret(self):
-        """Generate new TOTP secret"""
-        return pyotp.random_base32()
-    
-    def generate_qr_code(self, email, secret):
-        """Generate QR code for authenticator app"""
-        totp_uri = pyotp.totp.TOTP(secret).provisioning_uri(
-            name=email,
-            issuer_name=self.issuer_name
-        )
-        
-        # Generate QR code
-        qr = qrcode.QRCode(version=1, box_size=10, border=5)
-        qr.add_data(totp_uri)
-        qr.make(fit=True)
-        
-        img = qr.make_image(fill_color="black", back_color="white")
-        
-        # Convert to base64 for embedding
-        buffer = BytesIO()
-        img.save(buffer, format='PNG')
-        img_str = base64.b64encode(buffer.getvalue()).decode()
-        
-        return f"data:image/png;base64,{img_str}"
-    
-    def verify_token(self, secret, token, window=1):
-        """Verify TOTP token"""
-        totp = pyotp.TOTP(secret)
-        return totp.verify(token, valid_window=window)
-    
-    def generate_backup_codes(self, count=10):
-        """Generate backup codes"""
-        import secrets
-        codes = []
-        for _ in range(count):
-            code = secrets.token_hex(4).upper()
-            codes.append(f"{code[:4]}-{code[4:]}")
-        return codes
+cancelled = client.orders(status="cancelled", since="2025-12-01")
+print(cancelled.shape)
+client.close()</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>Demo Analyst | logins so far: 1
+Demo Analyst | logins so far: 2
+(30, 11)</code></pre>
+                </div>
 
-# SMS-based 2FA
-class SMS2FA:
-    """SMS two-factor authentication"""
-    
-    def __init__(self, twilio_sid, twilio_token, from_number):
-        from twilio.rest import Client
-        self.client = Client(twilio_sid, twilio_token)
-        self.from_number = from_number
-        self.verification_codes = {}
-    
-    def send_verification(self, phone_number):
-        """Send verification code via SMS"""
-        import random
-        
-        # Generate 6-digit code
-        code = str(random.randint(100000, 999999))
-        
-        # Store code (in production, use Redis or database)
-        self.verification_codes[phone_number] = {
-            'code': code,
-            'timestamp': time.time()
-        }
-        
-        # Send SMS
-        message = self.client.messages.create(
-            body=f"Your verification code is: {code}",
-            from_=self.from_number,
-            to=phone_number
-        )
-        
-        return message.sid
-    
-    def verify_code(self, phone_number, code, expiry_seconds=300):
-        """Verify SMS code"""
-        if phone_number not in self.verification_codes:
-            return False
-        
-        stored = self.verification_codes[phone_number]
-        
-        # Check expiry
-        if time.time() - stored['timestamp'] > expiry_seconds:
-            del self.verification_codes[phone_number]
-            return False
-        
-        # Check code
-        if stored['code'] == code:
-            del self.verification_codes[phone_number]
-            return True
-        
-        return False</code></pre>
+                <p>The token expired between the two calls to <code>me()</code>, and the code that <em>uses</em> the client never noticed. That is what a good client buys you: the fiddly parts are written once, tested once, and then stay out of your way. Most API providers publish a client library like this for their own service. Now you know what is inside one.</p>
+            </section>
 
-    <h2>Token Management</h2>
-    
-    <pre class="language-python"><code>import pickle
-import json
-from datetime import datetime, timedelta
-import sqlite3
+            <!-- ============================================================ -->
+            <section id="mistakes" class="lesson-section">
+                <h2>⚠️ Common Mistakes</h2>
 
-class TokenManager:
-    """Manage and persist authentication tokens"""
-    
-    def __init__(self, storage_path='tokens.db'):
-        self.storage_path = storage_path
-        self._init_db()
-    
-    def _init_db(self):
-        """Initialize token database"""
-        conn = sqlite3.connect(self.storage_path)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS tokens (
-                service TEXT PRIMARY KEY,
-                token TEXT NOT NULL,
-                refresh_token TEXT,
-                expires_at TIMESTAMP,
-                metadata TEXT
-            )
-        ''')
-        
-        conn.commit()
-        conn.close()
-    
-    def save_token(self, service, token, refresh_token=None, expires_in=None, metadata=None):
-        """Save token to database"""
-        conn = sqlite3.connect(self.storage_path)
-        cursor = conn.cursor()
-        
-        expires_at = None
-        if expires_in:
-            expires_at = datetime.now() + timedelta(seconds=expires_in)
-        
-        metadata_json = json.dumps(metadata) if metadata else None
-        
-        cursor.execute('''
-            INSERT OR REPLACE INTO tokens 
-            (service, token, refresh_token, expires_at, metadata)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (service, token, refresh_token, expires_at, metadata_json))
-        
-        conn.commit()
-        conn.close()
-    
-    def get_token(self, service):
-        """Get token from database"""
-        conn = sqlite3.connect(self.storage_path)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            SELECT token, refresh_token, expires_at, metadata
-            FROM tokens
-            WHERE service = ?
-        ''', (service,))
-        
-        row = cursor.fetchone()
-        conn.close()
-        
-        if not row:
-            return None
-        
-        token, refresh_token, expires_at, metadata_json = row
-        
-        # Check expiry
-        if expires_at:
-            expires = datetime.fromisoformat(expires_at)
-            if expires < datetime.now():
-                return None  # Token expired
-        
-        metadata = json.loads(metadata_json) if metadata_json else None
-        
-        return {
-            'token': token,
-            'refresh_token': refresh_token,
-            'expires_at': expires_at,
-            'metadata': metadata
-        }
-    
-    def delete_token(self, service):
-        """Delete token from database"""
-        conn = sqlite3.connect(self.storage_path)
-        cursor = conn.cursor()
-        
-        cursor.execute('DELETE FROM tokens WHERE service = ?', (service,))
-        
-        conn.commit()
-        conn.close()
+                <h3>1. Leaving Out the Word "Bearer"</h3>
 
-# Automatic token refresh
-class AutoRefreshClient:
-    """Client with automatic token refresh"""
-    
-    def __init__(self, client_id, client_secret, token_manager):
-        self.client_id = client_id
-        self.client_secret = client_secret
-        self.token_manager = token_manager
-        self.service_name = 'my_service'
-    
-    def _get_valid_token(self):
-        """Get valid token, refreshing if necessary"""
-        token_data = self.token_manager.get_token(self.service_name)
-        
-        if not token_data:
-            # No token, need to authenticate
-            return self._authenticate()
-        
-        # Check if token needs refresh
-        if token_data['expires_at']:
-            expires = datetime.fromisoformat(token_data['expires_at'])
-            if expires - datetime.now() < timedelta(minutes=5):
-                # Token expires soon, refresh it
-                return self._refresh_token(token_data['refresh_token'])
-        
-        return token_data['token']
-    
-    def _authenticate(self):
-        """Perform initial authentication"""
-        # Implementation depends on auth method
-        pass
-    
-    def _refresh_token(self, refresh_token):
-        """Refresh access token"""
-        response = requests.post(
-            'https://api.example.com/token',
-            data={
-                'grant_type': 'refresh_token',
-                'refresh_token': refresh_token,
-                'client_id': self.client_id,
-                'client_secret': self.client_secret
-            }
-        )
-        response.raise_for_status()
-        
-        token_data = response.json()
-        
-        # Save new token
-        self.token_manager.save_token(
-            self.service_name,
-            token_data['access_token'],
-            token_data.get('refresh_token'),
-            token_data.get('expires_in')
-        )
-        
-        return token_data['access_token']
-    
-    def make_request(self, url, **kwargs):
-        """Make authenticated request with automatic refresh"""
-        token = self._get_valid_token()
-        
-        headers = kwargs.get('headers', {})
-        headers['Authorization'] = f'Bearer {token}'
-        kwargs['headers'] = headers
-        
-        response = requests.get(url, **kwargs)
-        
-        # Retry with new token if unauthorized
-        if response.status_code == 401:
-            token = self._refresh_token(
-                self.token_manager.get_token(self.service_name)['refresh_token']
-            )
-            headers['Authorization'] = f'Bearer {token}'
-            response = requests.get(url, **kwargs)
-        
-        return response</code></pre>
+                <pre><code class="language-python">token, expires_at = login()
+r = requests.get(f"{API}/me", headers={**HEADERS, "Authorization": token}, timeout=10)
+print(r.status_code, r.json()["error"]["code"])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>401 missing_token</code></pre>
+                </div>
+                <p><strong>What it means:</strong> the header's value must be the scheme, a space, then the token: <code>Bearer abc123</code>. Without the scheme the server does not recognize a token at all, so it reports one as missing. <strong>Fix:</strong> <code>f"Bearer {token}"</code>. Check the API's documentation for the exact header name and format; they vary.</p>
 
-    <h2>Security Best Practices</h2>
-    
-    <pre class="language-python"><code># Security best practices for API authentication
+                <h3>2. Sending a Form When the API Wants JSON</h3>
 
-import hashlib
-import secrets
-from cryptography.fernet import Fernet
+                <pre><code class="language-python">r = requests.post(f"{API}/login", data={"username": USERNAME, "password": PASSWORD},
+                  headers=HEADERS, timeout=10)
+print(r.status_code, r.json()["error"]["message"])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>400 The request body must be JSON.</code></pre>
+                </div>
+                <p><strong>What it means:</strong> <code>data=</code> encodes the dictionary the way an HTML form does (<code>username=...&amp;password=...</code>). This API expects a JSON body. <strong>Fix:</strong> <code>json=</code>. Some APIs do want form encoding for their login; the documentation says which.</p>
 
-class SecureAPIClient:
-    """API client with security best practices"""
-    
-    def __init__(self):
-        self.session = requests.Session()
-        self._configure_security()
-    
-    def _configure_security(self):
-        """Configure security settings"""
-        # 1. Use HTTPS only
-        self.session.mount('http://', HTTPAdapter(max_retries=0))
-        
-        # 2. Verify SSL certificates
-        self.session.verify = True
-        
-        # 3. Set secure headers
-        self.session.headers.update({
-            'User-Agent': 'SecureAPIClient/1.0',
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
-        })
-        
-        # 4. Enable certificate pinning (optional)
-        # self.session.mount('https://', PinnedHTTPAdapter())
-    
-    def validate_response(self, response):
-        """Validate API response"""
-        # Check content type
-        content_type = response.headers.get('Content-Type', '')
-        if 'application/json' not in content_type:
-            raise ValueError(f"Unexpected content type: {content_type}")
-        
-        # Check for security headers
-        security_headers = [
-            'X-Content-Type-Options',
-            'X-Frame-Options',
-            'Strict-Transport-Security'
-        ]
-        
-        for header in security_headers:
-            if header not in response.headers:
-                print(f"Warning: Missing security header {header}")
-        
+                <h3>3. Assuming the Login Worked</h3>
+
+                <pre data-raises="KeyError"><code class="language-python">resp = requests.post(f"{API}/login", json={"username": USERNAME, "password": "guess"},
+                     headers=HEADERS, timeout=10)
+token = resp.json()["access_token"]</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>KeyError: 'access_token'</code></pre>
+                </div>
+                <p><strong>What it means:</strong> the login failed with a 401, so the JSON that came back was an error object with no <code>access_token</code> in it. The <code>KeyError</code> is a symptom; the cause was one line earlier. <strong>Fix:</strong> check the response before using it, with <code>check()</code> or <code>raise_for_status()</code>.</p>
+
+                <h3>4. A Secret in the Code</h3>
+                <p>There is no error message for <code>API_KEY = "the-real-key"</code> in a notebook. It works perfectly, right up to the day the file is shared. <strong>Fix:</strong> environment variables or a prompt, from the first line of the first draft. If a real key ever does end up in a file you shared or committed, treat it as stolen: <strong>revoke it and issue a new one</strong> at the provider. Deleting the line afterward does not un-leak it, because version history and other people's copies remember.</p>
+
+                <h3>5. Retrying a 401 or 403 in a Loop</h3>
+                <p>A loop that says "if it failed, log in and try again" with no limit will, on a wrong password or a revoked key, send login attempts as fast as your computer can. From the server's side that looks like an attack, and accounts get locked for it. <strong>Fix:</strong> renew and retry <strong>once</strong>, as <code>PinecrestClient.get()</code> does, then let the error surface.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="project" class="lesson-section">
+                <h2>🛠️ Project: December Returns Brief</h2>
+
+                <p>It is the first week of January. Pinecrest's operations manager wants to know how December's returns compared between the website and the stores. The orders live behind the API. You will pull December's orders with your client, validate them, and produce a short brief that states who prepared it. Continue in your lesson notebook, where <code>PinecrestClient</code>, <code>check()</code> and the credentials are defined, and keep the practice API running. Allow about 30 minutes.</p>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 1: Connect and confirm who you are <span class="step-time">(5 min)</span></h3>
+                    <p>Create a client and ask the API whose token it holds. A report should say who ran it, and this also proves that both kinds of credential work before you start the real job.</p>
+                    <pre><code class="language-python">client = PinecrestClient(API, API_KEY, USERNAME, PASSWORD, USER_AGENT)
+
+analyst = client.me()
+print(analyst["name"], "-", analyst["role"])</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>Demo Analyst - analyst</code></pre>
+                    </div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 2: Ask how big the job is <span class="step-time">(5 min)</span></h3>
+                    <p>Before downloading, request a single order with the same filter and read the <code>total</code>. You learn the size of the job, and the number of requests it will take, for the price of one small request.</p>
+                    <pre><code class="language-python">since = "2025-12-01"
+probe = client.get("/orders", {"since": since, "per_page": 1})
+
+total = probe["total"]
+print(total, "orders since", since)
+print("requests needed at 100 per page:", -(-total // 100))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>1145 orders since 2025-12-01
+requests needed at 100 per page: 12</code></pre>
+                    </div>
+                    <p><code>-(-total // 100)</code> is a compact way to divide and round <em>up</em>. Twelve requests is comfortably inside the limit of 30 per 10 seconds.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 3: Download and validate <span class="step-time">(8 min)</span></h3>
+                    <p>Pull the orders, then check them three ways: against the total the API promised, for duplicate ids (a classic pagination bug), and for the date range you asked for.</p>
+                    <pre><code class="language-python">december = client.orders(since=since)
+
+print(december.shape)
+print("matches the promised total:", len(december) == total)
+print("unique order ids:", december["order_id"].is_unique)
+print("dates:", december["order_date"].min().date(), "to", december["order_date"].max().date())
+print(december["status"].value_counts().to_dict())</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>(1145, 11)
+matches the promised total: True
+unique order ids: True
+dates: 2025-12-01 to 2025-12-31
+{'completed': 1049, 'returned': 66, 'cancelled': 30}</code></pre>
+                    </div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 4: Answer the question <span class="step-time">(7 min)</span></h3>
+                    <p>Compute the share of orders returned for each channel, then for each store. A return rate is the mean of a True/False column, as you saw in Lesson 2.4.</p>
+                    <pre><code class="language-python">december["returned"] = december["status"] == "returned"
+
+by_channel = (december.groupby("channel")
+              .agg(orders=("order_id", "count"), returned=("returned", "sum"),
+                   return_rate=("returned", "mean")))
+by_channel["return_rate"] = (by_channel["return_rate"] * 100).round(1)
+print(by_channel)
+print()
+
+by_store = (december.groupby("store")["returned"].mean() * 100).round(1).sort_values(ascending=False)
+print(by_store.to_string())</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>         orders  returned  return_rate
+channel                               
+online      769        51          6.6
+store       376        15          4.0
+
+store
+Online       6.6
+Asheville    6.2
+Boise        5.0
+Flagstaff    3.3
+Bend         2.0</code></pre>
+                    </div>
+                    <p>Online orders came back at a noticeably higher rate than store orders in December, the same pattern you have seen in the two-year data. With only 15 store returns spread across four stores, the store-by-store differences are small numbers and should be read with caution, as Module 4 taught you.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 5: Write the brief and tidy up <span class="step-time">(5 min)</span></h3>
+                    <pre><code class="language-python">online = by_channel.loc["online"]
+store = by_channel.loc["store"]
+
+brief = f"""December 2025 returns brief
+Prepared by: {analyst['name']} ({analyst['role']})
+Source: Pinecrest orders API, orders since {since}
+
+Orders: {len(december):,}   Returned: {int(december['returned'].sum())}
+Online return rate: {online['return_rate']}% ({int(online['returned'])} of {int(online['orders'])})
+Store return rate:  {store['return_rate']}% ({int(store['returned'])} of {int(store['orders'])})"""
+print(brief)
+
+december.to_csv("december_orders.csv", index=False)
+client.close()</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>December 2025 returns brief
+Prepared by: Demo Analyst (analyst)
+Source: Pinecrest orders API, orders since 2025-12-01
+
+Orders: 1,145   Returned: 66
+Online return rate: 6.6% (51 of 769)
+Store return rate:  4.0% (15 of 376)</code></pre>
+                    </div>
+                </div>
+
+                <div class="card card-success">
+                    <h3>✅ Project Completion Checklist</h3>
+                    <ul class="checklist">
+                        <li>No key, username or password appears anywhere in your notebook</li>
+                        <li>The brief names the analyst returned by <code>/me</code>, obtained with a bearer token</li>
+                        <li>You checked the size of the job with one small request before downloading</li>
+                        <li>You downloaded 1,145 December orders in 12 requests, with unique ids</li>
+                        <li>The row count matches the API's <code>total</code>, and the dates start on 2025-12-01</li>
+                        <li>Your brief reports the online and store return rates with their counts</li>
+                        <li><code>december_orders.csv</code> is saved and the client is closed</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="exercises" class="lesson-section">
+                <h2>🏋️ Hands-on Exercises</h2>
+
+                <p>Work in your lesson notebook with the practice API running. Leave a few seconds between exercises and you will stay well inside the rate limit.</p>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 1: Count Without Downloading</h3>
+                    <p>How many orders were cancelled on or after 2025-11-01? Answer with a single request that returns a single order, using <code>KEY_HEADERS</code> and <code>check()</code>.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Combine the filters <code>status</code> and <code>since</code> with <code>per_page=1</code>, and read <code>total</code> from the response.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">resp = check(requests.get(f"{API}/orders", headers=KEY_HEADERS, timeout=10,
+                          params={"status": "cancelled", "since": "2025-11-01", "per_page": 1}))
+print(resp.json()["total"], "cancelled orders since 2025-11-01")</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>45 cancelled orders since 2025-11-01</code></pre>
+                        </div>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 2: A Login That Explains Itself</h3>
+                    <p>Write <code>try_login(username, password)</code> that returns <code>True</code> if the credentials are accepted and <code>False</code> if they are rejected, printing the API's message in the second case. Any <em>other</em> kind of error (a 400, a 500) should not be hidden: let it raise. Test it with the right password and with a wrong one.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Catch <code>ApiError</code>, test <code>err.code == "invalid_credentials"</code>, and use a bare <code>raise</code> for everything else.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">def try_login(username, password):
+    try:
+        check(requests.post(f"{API}/login", json={"username": username, "password": password},
+                            headers=HEADERS, timeout=10))
         return True
+    except ApiError as err:
+        if err.code != "invalid_credentials":
+            raise
+        print("rejected:", err.message)
+        return False
 
-# Secure credential storage
-class CredentialVault:
-    """Secure credential storage"""
-    
-    def __init__(self, master_password):
-        # Derive encryption key from master password
-        salt = b'stable_salt'  # In production, use random salt
-        kdf = hashlib.pbkdf2_hmac('sha256', master_password.encode(), salt, 100000)
-        self.cipher = Fernet(base64.urlsafe_b64encode(kdf[:32]))
-        self.credentials = {}
-    
-    def store_credential(self, service, credential):
-        """Store encrypted credential"""
-        encrypted = self.cipher.encrypt(credential.encode())
-        self.credentials[service] = encrypted
-    
-    def get_credential(self, service):
-        """Retrieve and decrypt credential"""
-        if service not in self.credentials:
-            return None
-        
-        encrypted = self.credentials[service]
-        decrypted = self.cipher.decrypt(encrypted)
-        return decrypted.decode()
+print(try_login(USERNAME, PASSWORD))
+print(try_login(USERNAME, "campfire"))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>True
+rejected: Wrong username or password.
+False</code></pre>
+                        </div>
+                        <p>Catching only the error you understand, and letting the rest through, keeps real problems visible.</p>
+                    </details>
+                </div>
 
-# API key rotation
-class APIKeyRotation:
-    """Manage API key rotation"""
-    
-    def __init__(self, api_service):
-        self.api_service = api_service
-        self.current_key = None
-        self.previous_key = None
-        self.rotation_interval = timedelta(days=30)
-        self.last_rotation = None
-    
-    def should_rotate(self):
-        """Check if key should be rotated"""
-        if not self.last_rotation:
-            return True
-        
-        return datetime.now() - self.last_rotation > self.rotation_interval
-    
-    def rotate_key(self):
-        """Rotate API key"""
-        # Generate new key
-        new_key = secrets.token_urlsafe(32)
-        
-        # Keep previous key for grace period
-        self.previous_key = self.current_key
-        self.current_key = new_key
-        self.last_rotation = datetime.now()
-        
-        # Update key with API service
-        self.api_service.update_api_key(new_key)
-        
-        return new_key
-    
-    def get_active_keys(self):
-        """Get list of active keys"""
-        keys = [self.current_key]
-        if self.previous_key:
-            keys.append(self.previous_key)
-        return keys
+                <div class="card">
+                    <h3>🏋️ Exercise 3: Watch a Token Run Out</h3>
+                    <p>Log in with <code>login()</code>, then call <code>/me</code> every two seconds, printing the <code>token_expires_in</code> value from each answer, until the API refuses the token. Print the error code that ends the loop.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>A <code>while True</code> loop with a <code>try</code> / <code>except ApiError</code> around the request; <code>break</code> in the <code>except</code> branch.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">token, expires_at = login()
+bearer = {**HEADERS, "Authorization": f"Bearer {token}"}
 
-# Rate limiting and retry with authentication
-class AuthenticatedRateLimiter:
-    """Rate limiter with authentication awareness"""
-    
-    def __init__(self, calls_per_second=1):
-        self.calls_per_second = calls_per_second
-        self.last_call = {}
-        self.retry_after = {}
-    
-    def wait_if_needed(self, endpoint, auth_level='standard'):
-        """Wait if rate limit requires"""
-        # Different limits for different auth levels
-        limits = {
-            'anonymous': 0.1,  # 1 call per 10 seconds
-            'standard': 1,      # 1 call per second
-            'premium': 10       # 10 calls per second
-        }
-        
-        limit = limits.get(auth_level, 1)
-        delay = 1.0 / limit
-        
-        now = time.time()
-        
-        # Check retry-after header
-        if endpoint in self.retry_after:
-            retry_time = self.retry_after[endpoint]
-            if now < retry_time:
-                time.sleep(retry_time - now)
-                del self.retry_after[endpoint]
-                return
-        
-        # Check normal rate limit
-        if endpoint in self.last_call:
-            elapsed = now - self.last_call[endpoint]
-            if elapsed < delay:
-                time.sleep(delay - elapsed)
-        
-        self.last_call[endpoint] = time.time()
-    
-    def handle_rate_limit_response(self, response, endpoint):
-        """Handle rate limit response"""
-        if response.status_code == 429:
-            # Check Retry-After header
-            retry_after = response.headers.get('Retry-After')
-            if retry_after:
-                if retry_after.isdigit():
-                    self.retry_after[endpoint] = time.time() + int(retry_after)
-                else:
-                    # Parse HTTP date
-                    retry_time = datetime.strptime(retry_after, '%a, %d %b %Y %H:%M:%S GMT')
-                    self.retry_after[endpoint] = retry_time.timestamp()
-            else:
-                # Default backoff
-                self.retry_after[endpoint] = time.time() + 60</code></pre>
+while True:
+    try:
+        me = check(requests.get(f"{API}/me", headers=bearer, timeout=10)).json()
+        print("seconds left:", me["token_expires_in"])
+    except ApiError as err:
+        print("stopped by:", err.status, err.code)
+        break
+    time.sleep(2)</code></pre>
+                        <div class="card card-output">
+                            <h4>Output (your decimals may differ)</h4>
+                            <pre><code>seconds left: 5.0
+seconds left: 3.0
+seconds left: 1.0
+stopped by: 401 token_expired</code></pre>
+                        </div>
+                    </details>
+                </div>
 
-    <h2>Practice Exercises</h2>
-    
-    <h3>Exercise 1: Multi-Service API Client</h3>
-    <p>Build a unified API client that:</p>
-    <ol>
-        <li>Supports multiple authentication methods</li>
-        <li>Automatically detects auth type from configuration</li>
-        <li>Handles token refresh automatically</li>
-        <li>Implements retry logic with backoff</li>
-        <li>Securely stores credentials</li>
-    </ol>
+                <div class="card">
+                    <h3>🏋️ Exercise 4: Extend the Client (Stretch)</h3>
+                    <p>Add a <code>products()</code> method to the client that returns the catalog as a DataFrame, with an optional <code>category</code> filter. Do it by writing a subclass, <code>CatalogClient(PinecrestClient)</code>, so that you do not have to retype the original. Use it to print the shape of the whole catalog and the three most expensive tents.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>/products</code> is paginated the same way as <code>/orders</code>, so <code>self.get_all("/products", {...})</code> does the work. Only add <code>category</code> to the parameters when one was given.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">class CatalogClient(PinecrestClient):
+    def products(self, category=None):
+        """The product catalog as a DataFrame, optionally for one category."""
+        params = {"per_page": 100}
+        if category:
+            params["category"] = category
+        return pd.DataFrame(self.get_all("/products", params))
 
-    <h3>Exercise 2: OAuth 2.0 Flow Implementation</h3>
-    <p>Implement a complete OAuth 2.0 flow:</p>
-    <ol>
-        <li>Authorization code flow with PKCE</li>
-        <li>Token refresh handling</li>
-        <li>Secure token storage</li>
-        <li>Session management</li>
-        <li>Logout functionality</li>
-    </ol>
 
-    <h3>Exercise 3: API Security Auditor</h3>
-    <p>Create a security audit tool that:</p>
-    <ol>
-        <li>Tests authentication endpoints</li>
-        <li>Checks for security headers</li>
-        <li>Validates SSL certificates</li>
-        <li>Tests rate limiting</li>
-        <li>Generates security report</li>
-    </ol>
+shop = CatalogClient(API, API_KEY, USERNAME, PASSWORD, USER_AGENT)
+print(shop.products().shape)
+tents = shop.products(category="Tents")
+print(tents.nlargest(3, "price")[["sku", "name", "price"]])
+shop.close()</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>(242, 13)
+         sku                                       name   price
+19  TNT-1020            Quillback Cascade 4-Person Tent  616.95
+12  TNT-1013  Tallgrass Timberline 6-Person Family Tent  585.95
+20  TNT-1021   Juniper Vane Meadow 6-Person Family Tent  574.95</code></pre>
+                        </div>
+                        <p>One new method, six lines, and it inherited the session, the headers, the timeout, the error handling and the pagination. That is the payoff of putting the hard parts in <code>get()</code>.</p>
+                    </details>
+                </div>
+            </section>
 
-    <h2>Key Takeaways</h2>
-    <ul>
-        <li>🔐 Never hardcode credentials - use environment variables or secure storage</li>
-        <li>🔑 Choose the right authentication method for your use case</li>
-        <li>🔄 Implement automatic token refresh for better UX</li>
-        <li>🛡️ Always verify SSL certificates and use HTTPS</li>
-        <li>💾 Securely store tokens with encryption</li>
-        <li>⏱️ Handle rate limiting and implement retry logic</li>
-        <li>🔒 Use MFA when available for enhanced security</li>
-    </ul>
+            <!-- ============================================================ -->
+            <section id="quiz" class="lesson-section">
+                <h2>🎯 Quick Quiz</h2>
+                <div class="card quiz-container">
+                    <h3>🎯 Check Your Understanding</h3>
 
-    <h2>Further Resources</h2>
-    <ul>
-        <li><a href="https://oauth.net/2/">OAuth 2.0 Documentation</a></li>
-        <li><a href="https://jwt.io/">JWT.io - JSON Web Tokens</a></li>
-        <li><a href="https://owasp.org/www-project-api-security/">OWASP API Security Project</a></li>
-        <li><a href="https://auth0.com/docs">Auth0 Documentation</a></li>
-        <li><a href="https://developers.google.com/identity/protocols/oauth2">Google OAuth 2.0 Guide</a></li>
-        <li><a href="https://www.rfc-editor.org/rfc/rfc6749">RFC 6749 - OAuth 2.0 Framework</a></li>
-    </ul>
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> Your request to a protected endpoint comes back <code>403 Forbidden</code> with the code <code>invalid_api_key</code>. What is the right reaction?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Waiting helps when a server is busy or you are going too fast. Has anything about a rejected key changed after a few seconds?">
+                                A) Wait a few seconds and send the same request again
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="A new token helps when a token has expired, which is reported as 401. This response says the key itself was recognized as not valid.">
+                                B) Log in again to get a fresh token
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="403 means the server knows what you sent and the answer is no. Repeating the request cannot change that. Check that the right key is loaded, or ask whoever issues keys.">
+                                C) Stop and fix the credential: the server understood the request and refused it
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
 
-    <!-- Learning Journal (REQUIRED per the Courseware Authoring Standard) -->
-    <section id="journal" class="lesson-section">
-        <h2>📓 Learning Journal</h2>
-        <div class="card card-info">
-            <p>Keep a learning journal — digital or physical. After this lesson, take a few minutes to write down:</p>
-            <ul>
-                <li><strong>Key concepts</strong> you learned</li>
-                <li><strong>Techniques that clicked</strong> for you</li>
-                <li><strong>Questions or confusion points</strong> to revisit</li>
-                <li><strong>Ideas you want to try</strong></li>
-                <li><strong>Your progress and feelings</strong> about learning this</li>
-            </ul>
-            <p><strong>✍️ This lesson's prompt:</strong> This lesson repeats one rule: never hardcode credentials. Think back
-            through code you have written or seen — where might a secret have leaked into source control, and what habit will you
-            adopt now to keep keys out of your repositories?</p>
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> Where should the API key for a real service live while you work on a notebook you plan to share?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="A comment does not stop a key from working for whoever reads the file, and files travel further than you expect. Where can the key live so that it does not travel with the notebook?">
+                                A) In a variable in the first cell, with a comment asking readers not to use it
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="The notebook then contains only the name of the setting. The secret stays on your machine, outside the file and outside version control.">
+                                B) In an environment variable (or typed in at a prompt), read by the code at run time
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="URLs are logged, cached and pasted into bug reports, so this is the most exposed place of all. And the key would still be written in the notebook.">
+                                C) In the URL as a query parameter, so that it is not in a header
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> What does this print?</p>
+                        <pre><code class="language-python">pages = [{"items": [1, 2], "next": "/x?page=2"}, {"items": [3], "next": None}]
+collected, i = [], 0
+while True:
+    page = pages[i]
+    collected.extend(page["items"])
+    if not page["next"]:
+        break
+    i += 1
+print(collected, i)</code></pre>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="The loop takes the items from the first page, sees a next address and moves on, takes the items from the second page, sees that next is None and stops. Both pages were read, and i ends at the index of the last page.">
+                                A) <code>[1, 2, 3] 1</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="The check for next comes after the items are collected, and the first page does have a next address. What happens on the following pass?">
+                                B) <code>[1, 2] 0</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="The items are right. Look at where the break sits: on the last page the loop stops before i is increased again.">
+                                C) <code>[1, 2, 3] 2</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 4:</strong> In the middle of a long job, a request that has been working returns <code>401</code> with the code <code>token_expired</code>. What should a well-written client do?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="A wrong password is reported at login with a different code. Read this code again: what does it say happened to the token?">
+                                A) Raise an error and stop the job, since 401 means the password is wrong
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Expiry is the normal life of a token, not a fault. Renew it and retry a single time. If the retry also fails, something else is wrong and the error should surface.">
+                                B) Log in again for a new token and repeat that request once
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="The same expired token will be refused every time, and an unlimited loop of failing requests looks like an attack. What has to change before a retry can work?">
+                                C) Keep repeating the request until it succeeds
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 5:</strong> Why is a short-lived bearer token considered safer to send with every request than the username and password themselves?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="The password crosses the network once, at login. The token that travels with every later request has a limited life and limited value, so a leak does much less damage.">
+                                A) If it is intercepted or leaked, it stops working soon and can be revoked without changing the password
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Neither is safe on its own; both rely on HTTPS for privacy in transit. The difference is in what a thief could do with each, and for how long.">
+                                B) A token is encrypted, while a password is not
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Speed is a side benefit at most. Think about the festival wristband: what happens to a lost one at the end of the day?">
+                                C) Servers can check tokens faster than passwords
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="faq" class="lesson-section">
+                <h2>❓ Common Questions at This Stage</h2>
+
+                <details>
+                    <summary>How do I get an API key for a real service?</summary>
+                    <p>Usually by creating an account on the provider's developer site and generating a key on a settings page. Read what the key is allowed to do (many providers let you create read-only keys: use the narrowest one that does the job), what the usage limits are, and what the terms say about storing and sharing the data. Copy the key straight into an environment variable or a password manager, never into a file in your project.</p>
+                </details>
+                <details>
+                    <summary>What about HTTP Basic authentication?</summary>
+                    <p>Basic authentication sends a username and password with every request, encoded (not encrypted) in the <code>Authorization</code> header. <code>requests</code> supports it with <code>auth=("user", "password")</code>. It is simple and still found on internal tools, and it is only acceptable over HTTPS. The same rule applies: both values come from the environment, not the code.</p>
+                </details>
+                <details>
+                    <summary>My environment variable is set, but Python says it is not. Why?</summary>
+                    <p>Almost always because the program was started before the variable was set, or from a different terminal. Variables set with <code>export</code> or <code>$env:</code> exist only in that terminal session and the programs launched from it afterward. Close Jupyter, set the variables, and start Jupyter from the same terminal. To make a variable permanent, add it to your shell's startup file or your operating system's environment settings.</p>
+                </details>
+                <details>
+                    <summary>What is a JWT? I see that term in API documentation.</summary>
+                    <p>A JSON Web Token is a common <em>format</em> for bearer tokens: three chunks of text separated by dots that contain a few facts (who, expiry time) and a signature the server can verify. You use one exactly like the token in this lesson, by sending it after <code>Bearer</code>. Treat it as opaque, and as secret as a password while it is valid.</p>
+                </details>
+
+                <div class="card card-accent">
+                    <h3>🌟 Going Further: Bonus Challenge</h3>
+                    <p>Make <code>PinecrestClient</code> work in a <code>with</code> statement, like a file or a <code>Session</code>: add <code>__enter__</code> (return <code>self</code>) and <code>__exit__</code> (call <code>self.close()</code>). Then add a <code>__repr__</code> that shows the base URL and whether a token is currently held, <em>without</em> revealing the key, the password or the token. Print your client and confirm that nothing secret appears. Objects get printed in logs and error reports all the time, so a safe <code>__repr__</code> is a real protection.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="journal" class="lesson-section">
+                <h2>📓 Learning Journal</h2>
+                <div class="card card-accent">
+                    <p>Take five minutes to write in your learning journal (the <code>journal.md</code> file you started in Lesson 0.1, or a paper notebook). Jot down:</p>
+                    <ul>
+                        <li><strong>Key concepts</strong> you learned today</li>
+                        <li><strong>Techniques that clicked</strong> (and the ones that have not, yet)</li>
+                        <li><strong>Questions or confusion</strong> to come back to</li>
+                        <li><strong>Ideas to try</strong> on your own</li>
+                        <li><strong>Progress and feelings</strong>: how did this lesson go for you?</li>
+                    </ul>
+                    <p><strong>✍️ This lesson's prompt:</strong> In your own words, what is the difference between the library card and the wristband, and between a 401 and a 403? Then take an honest inventory: is there a password, key or token sitting in any file, notebook or chat message of yours right now? Write down where secrets will live in your projects from today.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="summary" class="lesson-section">
+                <h2>📝 Lesson Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎓 Key Takeaways</h3>
+                    <ul>
+                        <li><strong>Authentication</strong> is who you are; <strong>authorization</strong> is what you may do. <code>401</code> signals the first failing, <code>403</code> the second</li>
+                        <li>An <strong>API key</strong> is a long-lived credential sent in a header on every request</li>
+                        <li>A <strong>bearer token</strong> comes from a login, goes in <code>Authorization: Bearer ...</code>, and expires</li>
+                        <li><strong>Secrets never go in code</strong>: read them from environment variables, and print at most a hint</li>
+                        <li>Expect expiry: renew shortly before it, and on <code>token_expired</code> renew and retry once</li>
+                        <li>Let the status code decide the next move: fix (400), re-authenticate once (401), stop (403), wait (429, 5xx)</li>
+                        <li>Paginate by following <code>next</code> until it is <code>None</code>, and filter on the server</li>
+                        <li>A small <strong>client class</strong> keeps credentials, session, error handling and pagination in one tested place</li>
+                    </ul>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🏆 What You've Accomplished</h3>
+                    <ul>
+                        <li>You opened a protected endpoint with an API key that never appeared in your notebook</li>
+                        <li>You logged in with a <code>POST</code>, used a bearer token, watched it expire and recovered automatically</li>
+                        <li>You wrote your own exception class and a check that preserves the API's explanation of each error</li>
+                        <li>You paged through filtered orders into a DataFrame and verified it against the source</li>
+                        <li>You built <code>PinecrestClient</code> and used it to deliver a returns brief from 1,145 protected records</li>
+                    </ul>
+                </div>
+
+                <h3>🔭 Looking Ahead</h3>
+                <p>In <a href="webscraping_rate_limiting.html"><strong>Lesson 6.5: Rate Limiting and Retries</strong></a> you will take on the jobs that are too big to finish inside an API's limits in one burst. You will meet the <code>429</code> response and its <code>Retry-After</code> header, back off sensibly when a server struggles, cache what you have already fetched, and write a download job that can be interrupted and resumed. It completes the module.</p>
+
+                <h3>📋 Before the Next Lesson</h3>
+                <ul>
+                    <li>Keep your notebook: Lesson 6.5 reuses <code>ApiError</code>, <code>check()</code> and the ideas in <code>PinecrestClient</code>.</li>
+                    <li>Stop the practice API with <kbd>Ctrl</kbd>+<kbd>C</kbd>. The next lesson starts it with different options.</li>
+                    <li>Work out how long it would take to download all 20,302 orders at 100 per page if you may send 30 requests every 10 seconds. Keep your answer; you will test it.</li>
+                </ul>
+
+                <div class="card card-accent">
+                    <h3>🌱 Encouragement for the Journey</h3>
+                    <p>Authentication is where many people's first API project stalls, usually on a 401 at eleven at night. You now know how to read that 401, where the credential should have come from, and what the server was trying to tell you. You also wrote a class that hides all of it behind <code>client.orders()</code>. That is not a toy: it is the same design as the client libraries professionals install every day, at a size you can hold in your head.</p>
+                </div>
+            </section>
+
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="webscraping_selenium.html" class="prev-lesson">← Previous: Dynamic Pages with Selenium</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="webscraping_rate_limiting.html" class="next-lesson">Next: Rate Limiting and Retries →</a>
+            </nav>
         </div>
-    </section>
-
-    <!-- Lesson Summary (full standard block) -->
-    <section id="summary" class="lesson-section">
-        <h2>📝 Lesson Summary</h2>
-        <div class="card card-success">
-            <h3>🎓 Key Takeaways</h3>
-            <ul>
-                <li>Credentials belong in environment variables, a keyring, or an encrypted vault — never in your source code, and <code>.env</code> always goes in <code>.gitignore</code>.</li>
-                <li>Different APIs expect different schemes: API keys (header/query/body), Basic auth, Bearer tokens, OAuth 2.0, JWT, and HMAC signatures.</li>
-                <li>OAuth 2.0 has distinct flows — authorization code for user-facing apps, client credentials for server-to-server — and access tokens expire, so plan for refresh.</li>
-                <li>Robust clients store tokens safely, refresh them before they expire, verify SSL, and retry on <code>401</code>/<code>429</code> responses.</li>
-            </ul>
-        </div>
-        <h3>🎉 What You've Accomplished</h3>
-        <p>You can now authenticate against virtually any modern API — recognizing which scheme it uses, wiring up the credentials
-        securely, and handling token lifecycles so your data pipelines keep running without manual intervention.</p>
-        <h3>❓ Common Questions at This Stage</h3>
-        <details>
-            <summary>What's the difference between an API key and an OAuth token?</summary>
-            <p>An API key is a static, long-lived secret that identifies an application. An OAuth access token is short-lived and
-            typically granted after an authorization flow; it can represent a specific user and set of scopes, and it must be
-            refreshed when it expires.</p>
-        </details>
-        <details>
-            <summary>Where should I actually store secrets in a real project?</summary>
-            <p>For local development, a <code>.env</code> file loaded with <code>python-dotenv</code> (and excluded from git) is fine.
-            In production, use your platform's secret manager or the system keyring, and encrypt anything you must persist yourself.</p>
-        </details>
-        <details>
-            <summary>How do I handle a token that expires mid-run?</summary>
-            <p>Track the token's expiry time, refresh it proactively a few minutes before it lapses, and also catch a <code>401</code>
-            response as a fallback — refresh the token and retry the request once, as the auto-refresh client in this lesson shows.</p>
-        </details>
-        <h3>🔭 Looking Ahead</h3>
-        <p>Next you'll look at rate limiting and the ethics of accessing APIs and websites responsibly — the discipline that keeps
-        your authenticated requests welcome rather than blocked.</p>
-        <h3>✅ Before the Next Lesson</h3>
-        <ul>
-            <li>Move any hardcoded keys in your own scripts into a <code>.env</code> file and load them with <code>python-dotenv</code>.</li>
-            <li>Pick a public API you like, identify its authentication scheme, and write a small client that makes one authenticated request.</li>
-            <li>Write your Learning Journal entry for this lesson.</li>
-        </ul>
-        <div class="card card-accent" style="text-align: center; padding: 2rem;">
-            <h3>🌟 Encouragement for the Journey</h3>
-            <p>Authentication is the door to nearly every useful dataset on the internet. You now hold the keys — and, just as
-            importantly, you know how to keep them safe. That combination is what separates a hobby script from professional work.</p>
-        </div>
-    </section>
-
-    <!-- Navigation at the bottom -->
-    <nav class="lesson-nav" aria-label="Lesson navigation">
-        <a href="webscraping_requests.html" class="prev-lesson" aria-label="Previous lesson">Previous: Requests Library</a>
-        <a href="index.html" class="home-link" aria-label="Course home">Course Home</a>
-        <a href="webscraping_rate_limiting.html" class="next-lesson" aria-label="Next lesson">Next: Rate Limiting and Ethics</a>
-    </nav>
-    
     </main>
 
-    <!-- Footer -->
     <footer class="site-footer">
         <p>&copy; 2026 Ray de la Paz. Python Data Science. All rights reserved.</p>
         <div class="footer-links">
@@ -1434,6 +1124,10 @@ class AuthenticatedRateLimiter:
             <a href="https://rays-home.netlify.app/contact">Contact</a>
             <a href="#" id="print-button">Print Page</a>
         </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
     </footer>
+
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
 </body>
 </html>

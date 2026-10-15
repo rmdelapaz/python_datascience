@@ -1,464 +1,1110 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>Descriptive Statistics - Python Data Science</title>
-    <link href="styles/main.css" rel="stylesheet"/>
-    <link href="/styles/enhanced.css" rel="stylesheet"/>
-    <link href="/favicon.png" rel="icon" type="image/png"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Mean, median and mode, range, variance, standard deviation and IQR on real order data, including when the mean misleads and the n versus n-1 question. Python Data Science Lesson 4.1.">
+    <meta name="author" content="Ray de la Paz">
+    <title>Descriptive Statistics I: Center and Spread - Python Data Science</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid: rendered (and re-rendered on theme change) by js/course-enhancements.js -->
     <script type="module">
         import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({ startOnLoad: true });
+        window.__mermaid = mermaid;
+        mermaid.initialize({ startOnLoad: false });
+        document.dispatchEvent(new Event('mermaid-ready'));
     </script>
-    <style>
-        .breadcrumb {
-            background: #f8f9fa;
-            padding: 1rem;
-            border-radius: 5px;
-            margin-bottom: 2rem;
-            font-size: 0.9rem;
-        }
-        
-        .breadcrumb a {
-            color: #667eea;
-            text-decoration: none;
-        }
-        
-        .breadcrumb a:hover {
-            text-decoration: underline;
-        }
-        
-        .navigation-links {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 2rem 0;
-            margin-top: 3rem;
-            border-top: 2px solid #e0e0e0;
-        }
-        
-        .navigation-links a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 500;
-            padding: 0.5rem 1rem;
-            border-radius: 5px;
-            transition: all 0.3s ease;
-        }
-        
-        .navigation-links a:hover {
-            background: #f0f0f0;
-        }
-        
-        .nav-prev, .nav-next {
-            flex: 1;
-        }
-        
-        .nav-next {
-            text-align: right;
-        }
-        
-        .nav-home {
-            text-align: center;
-        }
-        
-        canvas {
-            display: block;
-            margin: 20px auto;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background: white;
-        }
-        
-        .statistics-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin: 20px 0;
-        }
-        
-        .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease;
-        }
-        
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 12px rgba(0,0,0,0.15);
-        }
-        
-        .stat-card h4 {
-            margin: 0 0 10px 0;
-            background: none;
-            color: white;
-            padding: 0;
-        }
-        
-        .stat-value {
-            font-size: 2em;
-            font-weight: bold;
-            margin: 10px 0;
-        }
-        
-        .formula-box {
-            background: #f0f9ff;
-            border: 2px solid #0284c7;
-            padding: 20px;
-            border-radius: 10px;
-            margin: 20px 0;
-            font-family: 'Courier New', monospace;
-        }
-        
-        .visual-explanation {
-            background: #fef3c7;
-            border-left: 4px solid #f59e0b;
-            padding: 20px;
-            margin: 20px 0;
-            border-radius: 0 10px 10px 0;
-        }
-        
-        .distribution-visual {
-            display: flex;
-            align-items: center;
-            justify-content: space-around;
-            margin: 20px 0;
-            flex-wrap: wrap;
-        }
-        
-        .dist-property {
-            text-align: center;
-            padding: 15px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin: 10px;
-        }
-        
-        .outlier-box {
-            background: #fee2e2;
-            border-left: 4px solid #ef4444;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 0 8px 8px 0;
-        }
-        
-        .comparison-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-        }
-        
-        .comparison-table th {
-            background: #667eea;
-            color: white;
-            padding: 12px;
-            text-align: left;
-        }
-        
-        .comparison-table td {
-            padding: 10px;
-            border-bottom: 1px solid #e5e7eb;
-        }
-        
-        .comparison-table tr:hover {
-            background: #f9fafb;
-        }
-        
-        .code-example {
-            background: #f8f9fa;
-            border-left: 3px solid #667eea;
-            padding: 20px;
-            margin: 20px 0;
-            border-radius: 0 8px 8px 0;
-            position: relative;
-        }
-        
-        .interactive-demo {
-            background: white;
-            border: 2px solid #4ecdc4;
-            padding: 20px;
-            border-radius: 10px;
-            margin: 20px 0;
-        }
-    </style>
-    <script src="/js/course-enhancements.js" defer></script>
-    <script src="/js/clipboard.js" defer></script>
-    <link rel="stylesheet" href="styles/standard.css">
 </head>
 <body>
-    <!-- Skip to main content for accessibility -->
     <a href="#main-content" class="skip-to-main">Skip to main content</a>
-    
-    <!-- Progress indicator -->
+
     <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
         <div class="progress-bar"></div>
     </div>
-    <nav class="breadcrumb">
-        <a href="index.html">Home</a> &gt; 
-        <a href="index.html#statistics">Statistical Analysis</a> &gt; 
-        <span>Descriptive Statistics</span>
+
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">📊 Python Data Science</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">☰</button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
     </nav>
 
-
     <main id="main-content">
-    <h1>📊 Descriptive Statistics: Understanding Your Data's Story</h1>
+        <div class="container">
+            <header>
+                <h1>📏 Lesson 4.1: Descriptive Statistics I: Center and Spread</h1>
+                <p class="lead">Boil 20,302 orders down to two honest numbers, one for what is typical and one for how much orders vary, and learn to tell when a familiar summary is quietly misleading you.</p>
 
-    <!-- What You'll Learn (learning objectives) -->
-    <div class="card card-info">
-        <h2>📚 What You'll Learn</h2>
-        <p>By the end of this lesson, you will be able to:</p>
-        <ul>
-            <li>Explain what descriptive statistics summarize and why they are the first step in any analysis</li>
-            <li>Distinguish the four families of summary: central tendency, variability/spread, distribution shape, and relationships</li>
-            <li>Interpret a distribution visually — reading a histogram alongside the mean, median, and standard deviation</li>
-            <li>Recognize how skew pulls the mean away from the median and what that implies for reporting</li>
-            <li>Connect summary statistics to the story your data is telling before you model it</li>
-        </ul>
-        <p><strong>⏱️ Estimated Time:</strong> 45–60 minutes</p>
-        <p><strong>🎯 Project:</strong> Explore a dataset's distribution, mark the mean and median on a histogram, and describe in plain language whether the data is symmetric or skewed and why it matters.</p>
-    </div>
 
-    <p>Imagine you're a detective 🕵️ investigating a crime scene. Before making any conclusions, you need to gather evidence, examine patterns, and understand what happened. That's exactly what descriptive statistics does for data! It's your first tool in the data science toolkit - helping you summarize, visualize, and understand the fundamental characteristics of your dataset before diving into complex analyses.</p>
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Compute the mean, median and mode of a column with pandas and say what each one measures</li>
+                        <li>Recognize when the mean misleads, and choose the median instead, using Pinecrest's skewed order totals</li>
+                        <li>Compute range, variance, standard deviation and interquartile range (IQR), and explain each in the units of the data</li>
+                        <li>Explain the difference between dividing by <code>n</code> and by <code>n - 1</code>, and predict which one NumPy and pandas use by default</li>
+                        <li>Pair the right measure of center with the right measure of spread for a given column</li>
+                    </ul>
+                </div>
 
-    <h2>The Big Picture: What Are Descriptive Statistics? 🎯</h2>
-    
-    <p>Descriptive statistics are like a data's passport - they tell you the essential information about your dataset at a glance. Instead of looking at thousands of individual data points, you get a concise summary that captures the essence of your data's behavior.</p>
+                <ul class="lesson-meta">
+                    <li><span class="meta-label">⏱️ Time</span> 85 minutes</li>
+                    <li><span class="meta-label">📋 Prerequisites</span> <a href="pandas_dataframes_series.html">Lesson 2.1: DataFrames and Series</a> (selecting columns, boolean filters), <a href="matplotlib_line_scatter_bar.html">Lesson 3.1: Line, Scatter and Bar Charts</a> (<code>fig, ax = plt.subplots()</code>)</li>
+                    <li><span class="meta-label">🛠️ You will build</span> A "typical order" memo: a summary table for three very different columns, a chart, and a recommendation on which numbers to report</li>
+                    <li><span class="meta-label">📂 Data</span> <code>data/orders.csv</code>, <code>data/order_items.csv</code>, <code>data/products.csv</code>, <code>data/daily_sales.csv</code>, <code>data/store_weather.csv</code></li>
+                </ul>
+            </header>
 
-    <div class="mermaid">
-    graph TB
-        A[Raw Data] --> B[Descriptive Statistics]
-        B --> C[Central Tendency]
-        B --> D[Variability/Spread]
-        B --> E[Distribution Shape]
-        B --> F[Relationships]
-        
-        C --> G[Mean]
-        C --> H[Median]
-        C --> I[Mode]
-        
-        D --> J[Range]
-        D --> K[Variance]
-        D --> L[Standard Deviation]
-        D --> M[IQR]
-        
-        E --> N[Skewness]
-        E --> O[Kurtosis]
-        
-        F --> P[Correlation]
-        F --> Q[Covariance]
-        
-        style B fill:#667eea
-        style C fill:#4ecdc4
-        style D fill:#fbbf24
-        style E fill:#10b981
-        style F fill:#f472b6
-    </div>
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#why" class="toc-link">Two Questions About Any Column</a></li>
+                        <li><a href="#mean" class="toc-link">The Mean: A Balance Point</a></li>
+                        <li><a href="#median" class="toc-link">The Median: The Middle Order</a></li>
+                        <li><a href="#misleads" class="toc-link">When the Mean Misleads</a></li>
+                        <li><a href="#mode" class="toc-link">The Mode: The Most Common Value</a></li>
+                        <li><a href="#spread" class="toc-link">Spread: Range, Variance, Standard Deviation</a></li>
+                        <li><a href="#ddof" class="toc-link">Sample or Population? The n - 1 Question</a></li>
+                        <li><a href="#iqr" class="toc-link">The IQR: Spread That Shrugs Off Extremes</a></li>
+                        <li><a href="#missing" class="toc-link">Missing Values in Summaries</a></li>
+                        <li><a href="#mistakes" class="toc-link">Common Mistakes</a></li>
+                        <li><a href="#project" class="toc-link">Project: The Typical Order Memo</a></li>
+                        <li><a href="#exercises" class="toc-link">Hands-on Exercises</a></li>
+                        <li><a href="#quiz" class="toc-link">Quick Quiz</a></li>
+                        <li><a href="#faq" class="toc-link">Common Questions</a></li>
+                        <li><a href="#journal" class="toc-link">Learning Journal</a></li>
+                        <li><a href="#summary" class="toc-link">Lesson Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
 
-    <h3>The Restaurant Review Analogy 🍕</h3>
-    
-    <p>Think of descriptive statistics like restaurant reviews. Instead of reading 1,000 individual reviews, you want to know: What's the average rating (mean)? What rating appears most often (mode)? What's the typical rating if we ignore extremes (median)? How consistent are the ratings (standard deviation)? Are there many terrible or amazing outliers (skewness)? This summary gives you the restaurant's "statistical story" instantly!</p>
+            <section id="why" class="lesson-section">
+                <h2>🧭 Two Questions About Any Column</h2>
 
-    <canvas id="distributionCanvas" width="800" height="400"></canvas>
-    <script>
-        const canvas = document.getElementById('distributionCanvas');
-        const ctx = canvas.getContext('2d');
-        
-        // Generate sample data for visualization
-        function generateNormalData(mean, std, count) {
-            const data = [];
-            for(let i = 0; i < count; i++) {
-                // Box-Muller transform for normal distribution
-                const u1 = Math.random();
-                const u2 = Math.random();
-                const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-                data.push(mean + z * std);
-            }
-            return data;
-        }
-        
-        // Animation variables
-        let animationFrame = 0;
-        let dataPoints = generateNormalData(400, 60, 200);
-        
-        function drawVisualization() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Title
-            ctx.fillStyle = '#333';
-            ctx.font = 'bold 16px Arial';
-            ctx.fillText('Interactive Distribution Visualization', 250, 30);
-            
-            // Draw histogram
-            const bins = 20;
-            const minVal = Math.min(...dataPoints);
-            const maxVal = Math.max(...dataPoints);
-            const binWidth = (maxVal - minVal) / bins;
-            const histogram = new Array(bins).fill(0);
-            
-            // Calculate histogram
-            dataPoints.forEach(val => {
-                const binIndex = Math.min(Math.floor((val - minVal) / binWidth), bins - 1);
-                histogram[binIndex]++;
-            });
-            
-            // Find max count for scaling
-            const maxCount = Math.max(...histogram);
-            
-            // Draw bins
-            const chartWidth = 600;
-            const chartHeight = 200;
-            const chartX = 100;
-            const chartY = 80;
-            const barWidth = chartWidth / bins;
-            
-            histogram.forEach((count, i) => {
-                const barHeight = (count / maxCount) * chartHeight;
-                const x = chartX + i * barWidth;
-                const y = chartY + chartHeight - barHeight;
-                
-                // Gradient fill
-                const gradient = ctx.createLinearGradient(0, y, 0, y + barHeight);
-                gradient.addColorStop(0, '#667eea');
-                gradient.addColorStop(1, '#764ba2');
-                ctx.fillStyle = gradient;
-                ctx.fillRect(x, y, barWidth - 2, barHeight);
-            });
-            
-            // Draw axes
-            ctx.strokeStyle = '#333';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(chartX, chartY);
-            ctx.lineTo(chartX, chartY + chartHeight);
-            ctx.lineTo(chartX + chartWidth, chartY + chartHeight);
-            ctx.stroke();
-            
-            // Calculate and display statistics
-            const mean = dataPoints.reduce((a, b) => a + b, 0) / dataPoints.length;
-            const sortedData = [...dataPoints].sort((a, b) => a - b);
-            const median = sortedData[Math.floor(dataPoints.length / 2)];
-            const variance = dataPoints.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) / dataPoints.length;
-            const stdDev = Math.sqrt(variance);
-            
-            // Draw mean line
-            const meanX = chartX + ((mean - minVal) / (maxVal - minVal)) * chartWidth;
-            ctx.strokeStyle = '#ef4444';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([5, 5]);
-            ctx.beginPath();
-            ctx.moveTo(meanX, chartY);
-            ctx.lineTo(meanX, chartY + chartHeight);
-            ctx.stroke();
-            ctx.setLineDash([]);
-            
-            // Draw median line
-            const medianX = chartX + ((median - minVal) / (maxVal - minVal)) * chartWidth;
-            ctx.strokeStyle = '#10b981';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([5, 5]);
-            ctx.beginPath();
-            ctx.moveTo(medianX, chartY);
-            ctx.lineTo(medianX, chartY + chartHeight);
-            ctx.stroke();
-            ctx.setLineDash([]);
-            
-            // Legend
-            ctx.font = '12px Arial';
-            ctx.fillStyle = '#ef4444';
-            ctx.fillText('Mean: ' + mean.toFixed(1), chartX + 20, chartY + chartHeight + 40);
-            ctx.fillStyle = '#10b981';
-            ctx.fillText('Median: ' + median.toFixed(1), chartX + 120, chartY + chartHeight + 40);
-            ctx.fillStyle = '#667eea';
-            ctx.fillText('Std Dev: ' + stdDev.toFixed(1), chartX + 230, chartY + chartHeight + 40);
-            
-            // Add new data point periodically
-            if(animationFrame % 60 === 0) {
-                dataPoints.shift();
-                dataPoints.push(generateNormalData(400, 60, 1)[0]);
-            }
-            
-            // Draw insight box
-            ctx.fillStyle = '#fef3c7';
-            ctx.fillRect(50, 320, 700, 60);
-            ctx.fillStyle = '#92400e';
-            ctx.font = '14px Arial';
-            ctx.fillText('💡 Insight: The red line (mean) and green line (median) are close together,', 70, 345);
-            ctx.fillText('   indicating a symmetric distribution with no significant skew.', 70, 365);
-            
-            animationFrame++;
-        }
-        
-        function animate() {
-            drawVisualization();
-            requestAnimationFrame(animate);
-        }
-        
-        animate();
-    </script>
+                <p>You can load data, clean it, reshape it and draw it. This module adds the part that turns tables and charts into claims you can defend: statistics. It starts with the simplest and most used tools of all, the ones that <em>describe</em> a column of numbers.</p>
 
-    <!-- Learning Journal (REQUIRED per the Courseware Authoring Standard) -->
-    <section id="journal" class="lesson-section">
-        <h2>📓 Learning Journal</h2>
-        <div class="card card-info">
-            <p>Keep a learning journal — digital or physical. After this lesson, take a few minutes to write down:</p>
-            <ul>
-                <li><strong>Key concepts</strong> you learned</li>
-                <li><strong>Techniques that clicked</strong> for you</li>
-                <li><strong>Questions or confusion points</strong> to revisit</li>
-                <li><strong>Ideas you want to try</strong></li>
-                <li><strong>Your progress and feelings</strong> about learning this</li>
-            </ul>
-            <p><strong>✍️ This lesson's prompt:</strong> Looking at the interactive histogram, the mean and median sat close together in a symmetric distribution. Sketch (or imagine) a distribution where they would be far apart — what real-world data behaves that way, and which measure would you trust?</p>
+                <div class="card card-info">
+                    <h4>💡 Mental Model: The Restaurant Review</h4>
+                    <p>Nobody reads 1,000 reviews before choosing a restaurant. You look at the average rating, and then, if you are careful, at how much the reviews disagree. A place with a 4.2 where everyone gave a 4 is a different restaurant from a 4.2 made of fives and ones. Two numbers, <strong>what is typical</strong> and <strong>how much it varies</strong>, are the least you need to describe anything honestly.</p>
+                </div>
+
+                <p>Those are the two questions of this lesson. Statisticians call the first one <strong>center</strong> (or central tendency) and the second one <strong>spread</strong> (or variability). The next lesson adds two more: shape and position.</p>
+
+                <div class="mermaid">
+graph TD
+    A["One column of numbers"] --> B["Center: what is typical?"]
+    A --> C["Spread: how much does it vary?"]
+    B --> E["mean, median, mode"]
+    C --> F["range, variance, SD, IQR"]
+                </div>
+
+                <h3>🤔 Why This Matters</h3>
+                <p>"Our average order is $195" is the kind of sentence that ends up on a slide and then in a budget. By the end of this lesson you will know that for Pinecrest Outfitters that sentence is true, and that most orders are nowhere near $195. Knowing which summary to trust is what stops a correct calculation from becoming a wrong decision.</p>
+
+                <p>Start a new notebook in your project folder and load the orders.</p>
+
+<pre><code class="language-python">import numpy as np
+import pandas as pd
+
+orders = pd.read_csv("data/orders.csv", parse_dates=["order_date"])
+totals = orders["order_total"]
+
+print(orders.shape)
+print(totals.head())</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>(20302, 11)
+0    434.90
+1    278.90
+2     75.90
+3    399.80
+4     26.71
+Name: order_total, dtype: float64</code></pre>
+</div>
+            </section>
+
+            <section id="mean" class="lesson-section">
+                <h2>⚖️ The Mean: A Balance Point</h2>
+
+                <p>The <strong>mean</strong> is the one everybody calls "the average": add the values up and divide by how many there are.</p>
+
+<pre><code class="language-python">print(totals.sum())
+print(len(totals))
+print(totals.sum() / len(totals))
+print(totals.mean())</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>3950701.45
+20302
+194.59666289035565
+194.59666289035565</code></pre>
+</div>
+
+                <p>All the orders together come to about $3.95 million, there are 20,302 of them, so the mean order is <strong>$194.60</strong>. <code>.mean()</code> does the same division for you.</p>
+
+                <p>A good way to picture the mean is as the <strong>balance point</strong> of the data. Imagine every order as a weight placed on a ruler at its dollar value. The mean is where you would put your finger to make the ruler balance. One way to see that in numbers: the distances above the mean and the distances below it cancel exactly.</p>
+
+<pre><code class="language-python">deviations = totals - totals.mean()
+print(abs(round(deviations.sum(), 6)))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>0.0</code></pre>
+</div>
+
+                <p>(Without the rounding you would see something like <code>-1.5e-11</code>: zero, apart from floating-point dust.)</p>
+
+                <p>The balance picture also shows the mean's weakness. A weight far out on the ruler has a lot of leverage. Here are five ordinary orders, and then the same five plus one of Pinecrest's real bulk orders.</p>
+
+<pre><code class="language-python">five = np.array([42.50, 88.00, 150.00, 163.25, 271.00])
+six = np.append(five, 4893.00)
+
+print("five orders:", five.mean())
+print("six orders :", six.mean())</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>five orders: 142.95
+six orders : 934.625</code></pre>
+</div>
+
+                <p>One order moved the "typical" value from about $143 to about $935, a number that describes none of the six orders. Keep that in mind for the next few minutes.</p>
+            </section>
+
+            <section id="median" class="lesson-section">
+                <h2>🎯 The Median: The Middle Order</h2>
+
+                <p>The <strong>median</strong> answers "what is typical?" in a different way. Line the values up from smallest to largest and take the one in the middle. Half of the values are below it and half are above. With an even number of values there is no single middle, so the median is the mean of the two middle ones.</p>
+
+<pre><code class="language-python">print(np.sort(five))
+print("five orders:", np.median(five))   # the middle value
+print("six orders :", np.median(six))    # halfway between 150.00 and 163.25</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>[ 42.5   88.   150.   163.25 271.  ]
+five orders: 150.0
+six orders : 156.625</code></pre>
+</div>
+
+                <p>The bulk order moved the median from $150.00 to $156.63. It could have been $4,893 or $4,893,000 and the median would be the same, because the median only cares that the new value is <em>somewhere above the middle</em>. A statistic that barely reacts to extreme values is called <strong>robust</strong>. The median is robust. The mean is not.</p>
+
+                <p>Now the real column:</p>
+
+<pre><code class="language-python">print("mean  :", round(totals.mean(), 2))
+print("median:", totals.median())
+print("share of orders below the mean:", round((totals &lt; totals.mean()).mean(), 3))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>mean  : 194.6
+median: 146.85
+share of orders below the mean: 0.626</code></pre>
+</div>
+
+                <p>The median order is <strong>$146.85</strong>, almost $48 less than the mean. And 63% of orders are smaller than the "average" order. That is not a mistake in either number. They are answering slightly different questions, and the gap between them is information.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Reading the Last Line</h4>
+                    <p><code>totals &lt; totals.mean()</code> is a column of <code>True</code>/<code>False</code>. Python counts <code>True</code> as 1 and <code>False</code> as 0, so the mean of that column is the share of rows where the condition holds. You will use "the mean of a boolean is a proportion" constantly in this module.</p>
+                </div>
+            </section>
+
+            <section id="misleads" class="lesson-section">
+                <h2>🪤 When the Mean Misleads</h2>
+
+                <p>A picture explains the $48 gap faster than any formula. Draw a histogram of the order totals and mark both centers on it. (The chart stops at $1,000 so the main body of the data is visible; the code prints how many orders are beyond the right edge.)</p>
+
+<pre><code class="language-python">import matplotlib.pyplot as plt
+
+fig, ax = plt.subplots(figsize=(9, 4), layout="constrained")
+ax.hist(totals[totals &lt;= 1000], bins=50, color="#667eea", edgecolor="white")
+ax.axvline(totals.median(), color="#15803d", linewidth=2.5,
+           label=f"median ${totals.median():,.2f}")
+ax.axvline(totals.mean(), color="#b91c1c", linewidth=2.5, linestyle="--",
+           label=f"mean ${totals.mean():,.2f}")
+ax.set_xlabel("Order total ($)")
+ax.set_ylabel("Number of orders")
+ax.set_title("Pinecrest order totals: a long tail to the right")
+ax.legend()
+plt.show()
+
+print("orders above $1,000 (not drawn):", (totals &gt; 1000).sum())</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>orders above $1,000 (not drawn): 37</code></pre>
+</div>
+<figure>
+    <img src="images/statistics_descriptive_part1_mean_median.png" alt="Histogram of Pinecrest order totals up to 1,000 dollars. Most orders are between 30 and 300 dollars, with a long thin tail to the right. A solid line marks the median at 146.85 dollars and a dashed line marks the mean at 194.60 dollars, to the right of the median." width="990" height="440" loading="lazy">
+    <figcaption>The bars pile up on the left and trail off to the right. The tail drags the mean (dashed) to the right of the median (solid).</figcaption>
+</figure>
+
+                <p>Most orders are modest. A long, thin tail of large orders stretches to the right. Data shaped like this is called <strong>right-skewed</strong>, and it is the normal shape of anything about money: order totals, salaries, house prices, donations. The tail has leverage on the balance point, so the mean sits to the right of the median.</p>
+
+                <h3>Is It Just the Bulk Orders?</h3>
+
+                <p>In Lesson 0.1 you met Pinecrest's largest order, $4,893, and learned it was a bulk purchase of one product (the data README says who buys this way: outfitters). There are twelve such orders, all above $2,000. It is tempting to blame them for the whole gap. Check before you believe it.</p>
+
+<pre><code class="language-python">is_bulk = totals &gt; 2000
+print("bulk orders:", is_bulk.sum())
+print("mean without them  :", round(totals[~is_bulk].mean(), 2))
+print("median without them:", totals[~is_bulk].median())</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>bulk orders: 12
+mean without them  : 192.63
+median without them: 146.85</code></pre>
+</div>
+
+                <p>Removing the twelve bulk orders lowers the mean by about $2 and leaves the median exactly where it was. The gap is still there. It does not come from a dozen dramatic orders. It comes from the <em>whole tail</em>: the 1,131 orders above $500 that are perfectly ordinary purchases of a tent and a sleeping bag.</p>
+
+<pre><code class="language-python">big = totals &gt; 500
+print("orders above $500:", big.sum(), f"({big.mean():.1%} of all orders)")
+print("mean of the rest :", round(totals[~big].mean(), 2))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>orders above $500: 1131 (5.6% of all orders)
+mean of the rest : 166.69</code></pre>
+</div>
+
+                <div class="card card-success">
+                    <h4>✅ The Honest Conclusion</h4>
+                    <p>Neither number is wrong. The mean ($194.60) is the right number if the question is about <strong>totals</strong>: multiply it by the number of orders and you get revenue. The median ($146.85) is the right number if the question is about a <strong>typical order</strong>: what a customer usually spends. When they differ this much, report both and say which is which.</p>
+                </div>
+
+                <h3>A Stress Test</h3>
+
+                <p>Real files contain typing errors. Suppose one order was entered as $1,000,000. How badly does each summary break?</p>
+
+<pre><code class="language-python">with_typo = pd.concat([totals, pd.Series([1_000_000.0])], ignore_index=True)
+
+print("mean  :", round(totals.mean(), 2), "-&gt;", round(with_typo.mean(), 2))
+print("median:", totals.median(), "-&gt;", with_typo.median())</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>mean  : 194.6 -&gt; 243.84
+median: 146.85 -&gt; 146.85</code></pre>
+</div>
+
+                <p>One bad row out of 20,303 raised the mean by $49. The median did not move at all. You will use <code>with_typo</code> again when you reach spread.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Your column looks like</th><th>Report</th><th>Why</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Roughly symmetric, no extreme values (temperatures, ratings)</td><td>Mean</td><td>Uses every value; mean and median nearly agree anyway</td></tr>
+                            <tr><td>Skewed, or with a few extreme values (money, counts, durations)</td><td>Median, often with the mean beside it</td><td>The median describes the typical case; the mean describes the total</td></tr>
+                            <tr><td>Possibly containing errors you have not cleaned yet</td><td>Median</td><td>A bad row cannot move it far</td></tr>
+                            <tr><td>Needed for a total or a forecast (revenue = mean × count)</td><td>Mean</td><td>Only the mean multiplies back to the total</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section id="mode" class="lesson-section">
+                <h2>🏆 The Mode: The Most Common Value</h2>
+
+                <p>The <strong>mode</strong> is the value that appears most often. It is the only measure of center that works for categories, where adding and sorting make no sense.</p>
+
+<pre><code class="language-python">print(orders["payment_method"].value_counts())
+print()
+print(orders["payment_method"].mode())</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>payment_method
+card              12392
+digital_wallet     4794
+cash               1614
+gift_card          1502
+Name: count, dtype: int64
+
+0    card
+Name: payment_method, dtype: str</code></pre>
+</div>
+
+                <p>Card is the modal payment method. Notice that <code>.mode()</code> returned a Series, not a single value. That is because there can be a tie, and pandas gives you every winner:</p>
+
+<pre><code class="language-python">print(pd.Series([1, 1, 2, 2, 3]).mode().tolist())
+print(orders["payment_method"].mode()[0])     # take the first when you need one value</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>[1, 2]
+card</code></pre>
+</div>
+
+                <p>The mode is also useful for whole-number counts with few distinct values. How many units does a line of an order usually contain?</p>
+
+<pre><code class="language-python">items = pd.read_csv("data/order_items.csv")
+quantity = items["quantity"]
+
+print("mode  :", quantity.mode()[0])
+print("median:", quantity.median())
+print("mean  :", round(quantity.mean(), 2))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>mode  : 1
+median: 1.0
+mean  : 1.43</code></pre>
+</div>
+
+                <p>The most common quantity is 1 and so is the median. A mean of 1.43 units is true and describes no actual order line. For a count like this, "most lines are for a single item" (the mode) is the clearest summary you can give.</p>
+
+                <div class="card card-warning">
+                    <h4>⚠️ The Mode of a Measured Quantity Means Little</h4>
+                    <p>For a column with thousands of different values, the "most common value" is mostly an accident.</p>
+                </div>
+
+<pre><code class="language-python">print(totals.mode()[0], "appears", (totals == totals.mode()[0]).sum(), "times")
+print("distinct totals:", totals.nunique())</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>53.9 appears 114 times
+distinct totals: 6310</code></pre>
+</div>
+
+                <p>$53.90 "wins" with 114 of 20,302 orders (half of one percent), mostly because one popular $46.95 item plus $6.95 shipping comes to exactly that. For continuous data, ask where the histogram peaks instead. In the chart above, the tallest bars sit below $100.</p>
+            </section>
+
+            <section id="spread" class="lesson-section">
+                <h2>↔️ Spread: Range, Variance, Standard Deviation</h2>
+
+                <p>Center is half the story. Compare the daily high temperatures in two Pinecrest store cities over the same two years.</p>
+
+<pre><code class="language-python">weather = pd.read_csv("data/store_weather.csv", parse_dates=["date"])
+boise = weather.loc[weather["city"] == "Boise", "high_f"]
+asheville = weather.loc[weather["city"] == "Asheville", "high_f"]
+
+print("Boise     mean:", round(boise.mean(), 1), " median:", boise.median())
+print("Asheville mean:", round(asheville.mean(), 1), " median:", asheville.median())</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>Boise     mean: 62.4  median: 63.0
+Asheville mean: 66.5  median: 66.0</code></pre>
+</div>
+
+                <p>Four degrees apart on average, and in each city the mean and median agree, so there is no skew to worry about. If you stopped here you would stock the two stores almost identically. Yet anyone who has lived in both places knows the climates are nothing alike. The difference is in the <em>spread</em>.</p>
+
+                <h3>Range: The Simplest Measure</h3>
+
+<pre><code class="language-python">print("Boise    :", boise.min(), "to", boise.max(), " range", boise.max() - boise.min())
+print("Asheville:", asheville.min(), "to", asheville.max(), " range", asheville.max() - asheville.min())</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>Boise    : 10 to 112  range 102
+Asheville: 27 to 106  range 79</code></pre>
+</div>
+
+                <p>The <strong>range</strong> is the largest value minus the smallest. Boise's highs span 102 degrees and Asheville's 79. The range is easy to explain, but it is built from just two values, the two most unusual days in the whole record. One freak day changes it, and it tells you nothing about the other 729 days.</p>
+
+                <h3>Variance: The Average Squared Distance from the Mean</h3>
+
+                <p>A better measure uses every value. The idea: find how far each value is from the mean, and average those distances. Work it by hand once on five numbers, the tents one store sold on five days.</p>
+
+<pre><code class="language-python">tents = np.array([4, 7, 5, 10, 4])
+
+mean = tents.mean()
+deviations = tents - mean
+print("mean              :", mean)
+print("deviations        :", deviations)
+print("their sum         :", deviations.sum())
+print("squared deviations:", deviations ** 2)
+print("sum of squares    :", (deviations ** 2).sum())</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>mean              : 6.0
+deviations        : [-2.  1. -1.  4. -2.]
+their sum         : 0.0
+squared deviations: [ 4.  1.  1. 16.  4.]
+sum of squares    : 26.0</code></pre>
+</div>
+
+                <p>The plain deviations add up to zero (that is the balance point again), so averaging them is useless. Squaring makes every distance positive and counts big misses more heavily than small ones. The <strong>variance</strong> is the sum of squared deviations divided by the number of values, or by one less than that. The next section explains the "one less". For now, here are both:</p>
+
+<pre><code class="language-python">n = len(tents)
+print("divide by n    :", (deviations ** 2).sum() / n)
+print("divide by n - 1:", (deviations ** 2).sum() / (n - 1))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>divide by n    : 5.2
+divide by n - 1: 6.5</code></pre>
+</div>
+
+                <h3>Standard Deviation: Back to Real Units</h3>
+
+                <p>The variance has an awkward unit: tents squared, or for the weather, degrees squared. Take the square root and you are back in the units of the data. That square root is the <strong>standard deviation</strong>, almost always shortened to SD.</p>
+
+<pre><code class="language-python">print(np.sqrt(6.5))
+print(pd.Series(tents).std())</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>2.5495097567963922
+2.5495097567963922</code></pre>
+</div>
+
+                <p>Read it as "a typical distance from the mean". This store sells 6 tents a day, give or take about 2.5. Now the two cities:</p>
+
+<pre><code class="language-python">print("Boise     SD:", round(boise.std(), 1), "degrees")
+print("Asheville SD:", round(asheville.std(), 1), "degrees")</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>Boise     SD: 22.5 degrees
+Asheville SD: 15.5 degrees</code></pre>
+</div>
+
+                <p>Boise's highs are typically about 22.5 degrees away from its mean, Asheville's about 15.5. That is the difference between a high-desert city with hot summers and cold winters and a milder mountain town, and it matters for a retailer: Boise needs both the snow gear and the sun hats.</p>
+
+                <div class="card card-info">
+                    <h4>💡 "Typical Distance" Is a Reading Aid, Not the Definition</h4>
+                    <p>The SD is the square root of the average <em>squared</em> distance, which is a little larger than the plain average distance because squaring gives big deviations extra weight. For the tents, the average absolute deviation is 2.0 and the SD is 2.5. "A typical distance from the mean" is still the right way to say it in a sentence.</p>
+                </div>
+            </section>
+
+            <section id="ddof" class="lesson-section">
+                <h2>➗ Sample or Population? The n - 1 Question</h2>
+
+                <p>You just saw two variances for the same five numbers: 5.2 and 6.5. Both are in every statistics library, and the two libraries you use most have <em>different defaults</em>.</p>
+
+<pre><code class="language-python">print("NumPy  np.std(tents)          :", np.std(tents))
+print("pandas pd.Series(tents).std() :", pd.Series(tents).std())
+print("NumPy  np.std(tents, ddof=1)  :", np.std(tents, ddof=1))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>NumPy  np.std(tents)          : 2.280350850198276
+pandas pd.Series(tents).std() : 2.5495097567963922
+NumPy  np.std(tents, ddof=1)  : 2.5495097567963922</code></pre>
+</div>
+
+                <p>NumPy divides by <code>n</code>. pandas divides by <code>n - 1</code>. (When you standardized columns with <code>.std()</code> on NumPy arrays in Lesson 1.3, you were using the divide-by-<code>n</code> version without being told there was a choice.) The argument <code>ddof</code> ("delta degrees of freedom") is the number subtracted from <code>n</code>: NumPy's default is <code>ddof=0</code>, pandas's is <code>ddof=1</code>. Which is right depends on what your data <em>is</em>.</p>
+
+                <ul>
+                    <li><strong>Population</strong> (<code>ddof=0</code>, divide by <code>n</code>): your data is the entire group you care about, and you only want to describe it. Every order Pinecrest took in 2024 and 2025, if those two years are all you are talking about.</li>
+                    <li><strong>Sample</strong> (<code>ddof=1</code>, divide by <code>n - 1</code>): your data is a part of something bigger, and you want to estimate the spread of the bigger thing. Five days of tent sales, standing in for how this store sells in general.</li>
+                </ul>
+
+                <h3>Why Subtract One?</h3>
+
+                <p>Because a sample is measured against <em>its own</em> mean, and its own mean is, by construction, the point the sample's values are closest to. The true mean of the bigger population is almost always somewhere else, a little farther from the sample's values. So deviations from the sample mean come out too small, and dividing by <code>n</code> gives a variance that is too small on average. Dividing by the slightly smaller <code>n - 1</code> corrects for it.</p>
+
+                <p>You do not have to take that on faith. Treat all 20,302 order totals as a population whose variance you know exactly. Then draw 100,000 small samples of 5 orders, compute each sample's variance both ways, and see which method is right <em>on average</em>.</p>
+
+<pre><code class="language-python">rng = np.random.default_rng(42)
+population = totals.to_numpy()
+samples = rng.choice(population, size=(100_000, 5))    # 100,000 rows of 5 orders
+
+true_var = population.var()                            # ddof=0: it IS the population
+print("true population variance :", round(true_var))
+print("average of n     versions:", round(samples.var(axis=1).mean()))
+print("average of n - 1 versions:", round(samples.var(axis=1, ddof=1).mean()))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>true population variance : 31954
+average of n     versions: 25560
+average of n - 1 versions: 31950</code></pre>
+</div>
+
+                <p>Dividing by <code>n</code> underestimates the true variance by about a fifth (with samples of 5 it comes out at 4/5 of the truth on average). Dividing by <code>n - 1</code> lands within a tenth of a percent. That is the whole reason the sample formula exists.</p>
+
+                <div class="card card-success">
+                    <h4>✅ A Rule You Can Use</h4>
+                    <p>If you are unsure, use <code>ddof=1</code>, the pandas default. Data in practice is nearly always a sample of something larger. And with more than a few hundred values the choice hardly matters:</p>
+                </div>
+
+<pre><code class="language-python">print("order totals, ddof=1:", round(totals.std(), 3))
+print("order totals, ddof=0:", round(totals.std(ddof=0), 3))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>order totals, ddof=1: 178.761
+order totals, ddof=0: 178.757</code></pre>
+</div>
+
+                <p>Less than half a cent of difference on an SD of $178.76. The <code>n - 1</code> question matters for small samples and for getting the same answer as a colleague or a textbook. It is not something to lose sleep over with 20,302 rows.</p>
+            </section>
+
+            <section id="iqr" class="lesson-section">
+                <h2>📦 The IQR: Spread That Shrugs Off Extremes</h2>
+
+                <p>The order totals have an SD of $178.76 around a mean of $194.60. Read naively, "give or take $179" suggests typical orders run from about $16 to about $373, and that some orders are below zero. For a skewed column the SD is inflated by the same tail that inflates the mean, because it is built on squared distances from that mean.</p>
+
+                <p>The robust partner of the median is the <strong>interquartile range</strong>. Sort the values and cut them into four equal groups. The cut points are the <strong>quartiles</strong>: Q1 has a quarter of the values below it, Q2 is the median, Q3 has three quarters below it. The IQR is <code>Q3 - Q1</code>, the width of the middle half of the data.</p>
+
+<pre><code class="language-python">q1 = totals.quantile(0.25)
+q3 = totals.quantile(0.75)
+iqr = q3 - q1
+
+print("Q1 :", q1)
+print("Q3 :", q3)
+print("IQR:", round(iqr, 2))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>Q1 : 78.85
+Q3 : 264.95
+IQR: 186.1</code></pre>
+</div>
+
+                <p>That reads as a plain sentence: <strong>the middle half of Pinecrest's orders are between $78.85 and $264.95</strong>, a span of $186.10. No negative dollars, no assumption about shape, and nothing a single huge order can distort. Bring back the $1,000,000 typo to see how each measure of spread copes.</p>
+
+<pre><code class="language-python">typo_iqr = with_typo.quantile(0.75) - with_typo.quantile(0.25)
+
+print("range:", round(totals.max() - totals.min(), 2), "-&gt;", round(with_typo.max() - with_typo.min(), 2))
+print("SD   :", round(totals.std(), 2), "-&gt;", round(with_typo.std(), 2))
+print("IQR  :", round(iqr, 2), "-&gt;", round(typo_iqr, 2))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>range: 4886.62 -&gt; 999993.62
+SD   : 178.76 -&gt; 7019.02
+IQR  : 186.1 -&gt; 186.13</code></pre>
+</div>
+
+                <p>One bad row multiplied the SD by 39 and moved the IQR by about two cents. (<code>.quantile()</code> has more to offer, including percentiles and what happens when a cut point falls between two values. That is the start of the next lesson.)</p>
+
+                <h3>Pairing Center with Spread</h3>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Measure of spread</th><th>What it is</th><th>Uses</th><th>Robust to extremes?</th><th>Pairs with</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Range</td><td>max minus min</td><td>2 values</td><td>No, it <em>is</em> the extremes</td><td>A quick sanity check</td></tr>
+                            <tr><td>Variance</td><td>average squared deviation from the mean</td><td>every value</td><td>No</td><td>Formulas and later methods</td></tr>
+                            <tr><td>Standard deviation</td><td>square root of the variance</td><td>every value</td><td>No</td><td>The mean</td></tr>
+                            <tr><td>IQR</td><td>Q3 minus Q1</td><td>the middle half</td><td>Yes</td><td>The median</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>So there are two standard pairs. For roughly symmetric data, report <strong>mean and SD</strong>: "Boise's daily high averages 62°F with an SD of 23°F". For skewed data or data with extreme values, report <strong>median and IQR</strong>: "the median order is $147, and the middle half of orders fall between $79 and $265".</p>
+            </section>
+
+            <section id="missing" class="lesson-section">
+                <h2>🕳️ Missing Values in Summaries</h2>
+
+                <p>One practical matter before the project. Six store-days in <code>daily_sales.csv</code> have no revenue recorded. pandas and NumPy treat them differently: NumPy's <code>mean</code> returned <code>nan</code> in Lesson 1.1, while pandas quietly skips missing values, as you saw in Lesson 2.1.</p>
+
+<pre><code class="language-python">daily = pd.read_csv("data/daily_sales.csv", parse_dates=["date"])
+revenue = daily["revenue"]
+
+print("rows:", len(revenue), " values present:", revenue.count())
+print("pandas mean  :", round(revenue.mean(), 2))
+print("NumPy mean   :", np.mean(revenue.to_numpy()))
+print("np.nanmean   :", round(np.nanmean(revenue.to_numpy()), 2))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>rows: 2903  values present: 2897
+pandas mean  : 7435.04
+NumPy mean   : nan
+np.nanmean   : 7435.04</code></pre>
+</div>
+
+                <p>pandas summaries skip missing values by default (<code>skipna=True</code>), so <code>.mean()</code>, <code>.median()</code>, <code>.std()</code> and <code>.quantile()</code> all describe the 2,897 values that exist. That is usually what you want, but it is a decision made for you. Two habits keep it honest: print <code>.count()</code> next to <code>len()</code> so you know how many values a summary is based on, and ask whether the missing rows could be different from the rest. Six scattered days out of 2,903 will not change any conclusion. In Lesson 4.2 you will meet survey questions where most of one group skipped the question, and there it changes everything.</p>
+            </section>
+
+            <section id="mistakes" class="lesson-section">
+                <h2>⚠️ Common Mistakes</h2>
+
+                <p>None of these make you a bad analyst. Each one is a place where a tool does something reasonable that you did not ask for. Learn the symptom and you will catch it in seconds.</p>
+
+                <h3>1. Two Libraries, Two Standard Deviations</h3>
+
+<pre><code class="language-python">first_week = revenue.head(7)
+print(np.std(first_week.to_numpy()))
+print(first_week.std())</code></pre>
+<div class="card card-output">
+<h4>Output (two answers for the same numbers)</h4>
+<pre><code>1218.0600796817396
+1315.6552552498952</code></pre>
+</div>
+                <p><strong>What happened:</strong> NumPy divided by <code>n</code> and pandas by <code>n - 1</code>. With 7 values the two differ by 8%. <strong>Fix:</strong> decide which you mean and say it in the code: <code>np.std(x, ddof=1)</code> or <code>series.std(ddof=0)</code>. When your number does not match someone else's, check <code>ddof</code> first.</p>
+
+                <h3>2. Asking for the Mean of Text</h3>
+
+<pre data-raises="TypeError"><code class="language-python">orders["payment_method"].mean()</code></pre>
+<div class="card card-output">
+<h4>Error</h4>
+<pre><code>TypeError: Cannot perform reduction 'mean' with string dtype</code></pre>
+</div>
+                <p><strong>What it means:</strong> "card" plus "cash" divided by two is not a thing. The column holds categories. <strong>Fix:</strong> the summary for categories is counts and the mode: <code>.value_counts()</code> and <code>.mode()</code>. The same message appears when a numeric column was read as text because of a stray <code>$</code> or <code>N/A</code>; clean it first (Lesson 2.3).</p>
+
+                <h3>3. Averaging Averages</h3>
+
+                <p>You have the mean order total for each of the five values of <code>store</code> (the four stores and Online) and want the overall mean, so you average the five numbers.</p>
+
+<pre><code class="language-python">store_means = orders.groupby("store")["order_total"].mean()
+print(round(store_means.mean(), 2))
+print(round(totals.mean(), 2))</code></pre>
+<div class="card card-output">
+<h4>Output (the first number is wrong)</h4>
+<pre><code>182.66
+194.6</code></pre>
+</div>
+                <p><strong>What happened:</strong> averaging the five means treats Asheville's 1,413 orders as if they counted as much as Online's 12,854. <strong>Fix:</strong> compute the mean from the original rows. If you only have the group means, weight each one by its group's size:</p>
+
+<pre><code class="language-python">store_counts = orders.groupby("store")["order_total"].count()
+print(round(np.average(store_means, weights=store_counts), 2))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>194.6</code></pre>
+</div>
+
+                <h3>4. A nan Where a Number Should Be</h3>
+                <p>You saw it above: <code>np.mean()</code> on an array containing a missing value returns <code>nan</code>, without an error. <strong>Fix:</strong> use the pandas method, or NumPy's <code>np.nanmean</code>, <code>np.nanmedian</code>, <code>np.nanstd</code>, and always know how many values were skipped.</p>
+
+                <h3>5. Reporting Mean and SD for Skewed Data out of Habit</h3>
+                <p>There is no error message for this one, which is why it is the most common. "Orders average $195 ± $179" is arithmetically right and paints a picture, a symmetric hump centered on $195, that does not exist. <strong>Fix:</strong> look at a histogram before you choose your summary. If the mean and median disagree noticeably, lead with the median and IQR.</p>
+            </section>
+
+            <section id="project" class="lesson-section">
+                <h2>🛠️ Project: The Typical Order Memo</h2>
+
+                <p>Pinecrest's marketing lead has asked for "the average order value" for a slide. You are going to give a better answer than the one she asked for: a small table that shows center and spread for three very different columns, a chart, and a two-sentence recommendation. Work in a new notebook called <code>lesson_4_1_project</code>. Allow about 35 minutes.</p>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 1: Write a summary function <span class="step-time">(10 min)</span></h3>
+                    <p>You will summarize several columns the same way, so write the recipe once. The function returns a dictionary, which pandas can turn into a table row later. The last entry measures how far the mean sits above the median, as a percentage of the median: a quick skew alarm.</p>
+<pre><code class="language-python">import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+def center_and_spread(values):
+    """Summarize one numeric column: count, center and spread."""
+    values = pd.Series(values).dropna()
+    q1, q3 = values.quantile(0.25), values.quantile(0.75)
+    return {
+        "n": len(values),
+        "mean": values.mean(),
+        "median": values.median(),
+        "sd": values.std(),            # sample SD (ddof=1)
+        "iqr": q3 - q1,
+        "mean_vs_median_pct": (values.mean() - values.median()) / values.median() * 100,
+    }
+
+orders = pd.read_csv("data/orders.csv", parse_dates=["order_date"])
+for name, value in center_and_spread(orders["order_total"]).items():
+    print(f"{name:&lt;20} {value:&gt;10,.2f}")</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>n                     20,302.00
+mean                     194.60
+median                   146.85
+sd                       178.76
+iqr                      186.10
+mean_vs_median_pct        32.51</code></pre>
+</div>
+                    <p>The mean is about 33% above the median. Anything beyond about 10% deserves a histogram before you report a mean.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 2: Summarize three different columns <span class="step-time">(5 min)</span></h3>
+                    <p>Apply the function to order totals, to the list prices in the product catalog, and to Boise's daily high temperature. Building a DataFrame from a dictionary of dictionaries gives one column per data source; <code>.T</code> flips it so each source is a row.</p>
+<pre><code class="language-python">products = pd.read_csv("data/products.csv")
+weather = pd.read_csv("data/store_weather.csv", parse_dates=["date"])
+boise_highs = weather.loc[weather["city"] == "Boise", "high_f"]
+
+report = pd.DataFrame({
+    "order total ($)": center_and_spread(orders["order_total"]),
+    "list price ($)": center_and_spread(products["price"]),
+    "Boise high (F)": center_and_spread(boise_highs),
+}).T
+
+print(report.round(2))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>                       n    mean  median      sd    iqr  mean_vs_median_pct
+order total ($)  20302.0  194.60  146.85  178.76  186.1               32.51
+list price ($)     242.0  121.80   82.95  117.14  116.0               46.84
+Boise high (F)     731.0   62.43   63.00   22.52   40.0               -0.91</code></pre>
+</div>
+                    <p>Order totals and list prices are both skewed (mean far above the median). Boise's temperatures are not: mean and median agree within 1%.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 3: Check how much the bulk orders matter <span class="step-time">(5 min)</span></h3>
+                    <p>Someone will ask whether the twelve outfitter orders distort the numbers. Have the answer ready.</p>
+<pre><code class="language-python">without_bulk = orders.loc[orders["order_total"] &lt;= 2000, "order_total"]
+
+comparison = pd.DataFrame({
+    "all orders": center_and_spread(orders["order_total"]),
+    "without bulk": center_and_spread(without_bulk),
+}).T
+print(comparison[["n", "mean", "median", "sd", "iqr"]].round(2))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>                    n    mean  median      sd    iqr
+all orders    20302.0  194.60  146.85  178.76  186.1
+without bulk  20290.0  192.63  146.85  158.43  186.0</code></pre>
+</div>
+                    <p>Twelve orders out of 20,302 change the SD by $20 and the IQR by 10 cents. The median and IQR are safe to report without a footnote.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 4: Draw the evidence <span class="step-time">(10 min)</span></h3>
+                    <p>Put the skewed column and the symmetric one side by side, each with its mean and median marked. The helper function keeps the two panels consistent.</p>
+<pre><code class="language-python">def hist_with_centers(ax, values, title, xlabel, bins=40):
+    ax.hist(values, bins=bins, color="#667eea", edgecolor="white")
+    ax.axvline(values.median(), color="#15803d", linewidth=2.5, label=f"median {values.median():,.0f}")
+    ax.axvline(values.mean(), color="#b91c1c", linewidth=2.5, linestyle="--", label=f"mean {values.mean():,.0f}")
+    ax.set_title(title)
+    ax.set_xlabel(xlabel)
+    ax.legend()
+
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4), layout="constrained")
+shown = orders.loc[orders["order_total"] &lt;= 1000, "order_total"]
+hist_with_centers(ax1, shown, "Order totals up to $1,000: skewed", "Order total ($)")
+hist_with_centers(ax2, boise_highs, "Boise daily highs: no long tail", "High temperature (F)")
+ax1.set_ylabel("Count")
+fig.savefig("typical_order.png", dpi=110)
+plt.show()</code></pre>
+<figure>
+    <img src="images/statistics_descriptive_part1_project_panels.png" alt="Two histograms side by side. Left: order totals up to 1,000 dollars, skewed to the right, with the mean line to the right of the median line. Right: Boise daily high temperatures, spread widely from about 10 to 110 degrees with no long tail, with the mean and median lines almost on top of each other." width="1100" height="440" loading="lazy">
+    <figcaption>Left: a tail pulls the mean away from the median. Right: no tail, and the two centers coincide. (The left panel's lines are computed from the orders shown, so they are a little lower than the all-orders figures.) Notice the two humps on the right, winter and summer: symmetric does not have to mean bell-shaped, and a mean of 62 lands in the valley between them.</figcaption>
+</figure>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 5: Write the memo <span class="step-time">(5 min)</span></h3>
+                    <p>Numbers do not explain themselves. Pull yours into a few plain sentences, generated from the table so nothing is typed by hand.</p>
+<pre><code class="language-python">r = report.loc["order total ($)"]
+q1 = orders["order_total"].quantile(0.25)
+q3 = orders["order_total"].quantile(0.75)
+
+memo = f"""TYPICAL ORDER MEMO
+Based on {r['n']:,.0f} orders, 2024-2025.
+A typical order is ${r['median']:,.2f} (the median). The middle half of orders
+fall between ${q1:,.2f} and ${q3:,.2f}.
+The mean order is ${r['mean']:,.2f}, {r['mean_vs_median_pct']:.0f}% above the median, because a
+long tail of large orders pulls it up. Use the mean for revenue math
+(mean x number of orders) and the median to describe what customers spend."""
+print(memo)</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>TYPICAL ORDER MEMO
+Based on 20,302 orders, 2024-2025.
+A typical order is $146.85 (the median). The middle half of orders
+fall between $78.85 and $264.95.
+The mean order is $194.60, 33% above the median, because a
+long tail of large orders pulls it up. Use the mean for revenue math
+(mean x number of orders) and the median to describe what customers spend.</code></pre>
+</div>
+                </div>
+
+                <div class="card card-success">
+                    <h3>✅ Project Completion Checklist</h3>
+                    <ul class="checklist">
+                        <li><code>center_and_spread()</code> returns six values and drops missing values before computing</li>
+                        <li>Your table has three rows, and you can say which columns are skewed from the last column alone</li>
+                        <li>You compared the summaries with and without the twelve bulk orders</li>
+                        <li>Your figure shows mean and median lines on both panels and is saved as <code>typical_order.png</code></li>
+                        <li>The memo reports the median with the quartiles and says what the mean is for</li>
+                        <li>Every number in the memo comes from a variable, none typed by hand</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="exercises" class="lesson-section">
+                <h2>🏋️ Hands-on Exercises</h2>
+
+                <p>Try each one before opening the solution. If your number differs from the solution's, that is a clue worth following, not a failure.</p>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 1: Three Centers for One Column</h3>
+                    <p><code>daily_sales.csv</code> has a <code>staff_on_duty</code> column. Compute its mean, median and mode. Which would you use to answer "how many people usually work a shift?" and why are the three so close or so far apart?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>.mode()</code> returns a Series; take element <code>[0]</code>. A whole-number count with a modest range is a case where all three are meaningful.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+<pre><code class="language-python">daily = pd.read_csv("data/daily_sales.csv", parse_dates=["date"])
+staff = daily["staff_on_duty"]
+
+print("mean  :", round(staff.mean(), 2))
+print("median:", staff.median())
+print("mode  :", staff.mode()[0])
+print("range :", staff.min(), "to", staff.max())</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>mean  : 6.49
+median: 6.0
+mode  : 5
+range : 2 to 20</code></pre>
+</div>
+                        <p>The mode (5) and median (6) are real staffing levels and the natural answers to "usually". The mean (6.49) is a bit higher because a few very busy days need up to 20 people: a mild right skew.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 2: Which City Has the More Variable Nights?</h3>
+                    <p>Using <code>low_f</code> in <code>store_weather.csv</code>, compare Flagstaff and Asheville: mean, range, standard deviation and IQR of the nightly low. Write one sentence for each city in the form "lows average … with an SD of …".</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Filter with <code>weather.loc[weather["city"] == "Flagstaff", "low_f"]</code>. A short loop over the two city names avoids repeating yourself.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+<pre><code class="language-python">for city in ["Flagstaff", "Asheville"]:
+    lows = weather.loc[weather["city"] == city, "low_f"]
+    iqr_lows = lows.quantile(0.75) - lows.quantile(0.25)
+    print(f"{city:&lt;10} mean {lows.mean():5.1f}  range {lows.max() - lows.min():3d}  "
+          f"SD {lows.std():5.1f}  IQR {iqr_lows:5.1f}")</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>Flagstaff  mean  39.6  range  71  SD  14.0  IQR  21.0
+Asheville  mean  51.7  range  67  SD  13.3  IQR  19.5</code></pre>
+</div>
+                        <p>Flagstaff's nights are colder on average and vary more by every measure. Because temperatures are roughly symmetric, mean with SD is a fair summary here.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 3: Find the ddof</h3>
+                    <p>A colleague says the standard deviation of Bend's visitor counts for the first ten days in the file is 68.2. You get a different number with pandas. Compute it both ways, work out which <code>ddof</code> your colleague used, and say which you would report if those ten days are meant to represent Bend in general.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>daily.loc[daily["store"] == "Bend", "visitors"].head(10)</code>. Then <code>.std()</code> and <code>.std(ddof=0)</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+<pre><code class="language-python">bend10 = daily.loc[daily["store"] == "Bend", "visitors"].head(10)
+
+print("ddof=1 (pandas default):", round(bend10.std(), 1))
+print("ddof=0 (NumPy default) :", round(bend10.std(ddof=0), 1))
+print("np.std                 :", round(np.std(bend10.to_numpy()), 1))</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>ddof=1 (pandas default): 71.9
+ddof=0 (NumPy default) : 68.2
+np.std                 : 68.2</code></pre>
+</div>
+                        <p>The colleague used <code>ddof=0</code>, probably by calling <code>np.std</code>. Ten days standing in for Bend in general is a sample, so <code>ddof=1</code> is the one to report. With only ten values the two differ by 5%.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 4: Break the Catalog (Stretch)</h3>
+                    <p>The most expensive product costs $616.95. Make a copy of the <code>price</code> column in which that one price has lost its decimal point (61695.0). Compare mean, median, SD and IQR before and after. Then add a fifth summary: the <strong>5% trimmed mean</strong>, <code>scipy.stats.trim_mean(values, 0.05)</code>, which drops the lowest 5% and highest 5% of values before averaging. Where does it sit between the mean and the median, and how well does it survive the typo?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>prices.idxmax()</code> gives the row label of the largest value. Copy first (<code>prices.copy()</code>), then assign with <code>.loc</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+<pre><code class="language-python">from scipy import stats
+
+prices = products["price"]
+broken = prices.copy()
+broken.loc[prices.idxmax()] = 61695.0
+
+for label, col in [("clean ", prices), ("broken", broken)]:
+    col_iqr = col.quantile(0.75) - col.quantile(0.25)
+    print(f"{label}  mean {col.mean():7.2f}  trimmed {stats.trim_mean(col, 0.05):7.2f}  "
+          f"median {col.median():6.2f}  SD {col.std():8.2f}  IQR {col_iqr:6.2f}")</code></pre>
+<div class="card card-output">
+<h4>Output</h4>
+<pre><code>clean   mean  121.80  trimmed  108.37  median  82.95  SD   117.14  IQR 116.00
+broken  mean  374.19  trimmed  108.37  median  82.95  SD  3959.81  IQR 116.00</code></pre>
+</div>
+                        <p>One bad price triples the mean and multiplies the SD by 34. The median and IQR do not move at all, and the trimmed mean does not either, because the bad value is among the 5% it discards. The trimmed mean is a compromise: it uses most of the data, like the mean, and ignores the extremes, like the median.</p>
+                    </details>
+                </div>
+            </section>
+
+            <section id="quiz" class="lesson-section">
+                <h2>🎯 Quick Quiz</h2>
+                <div class="card quiz-container">
+                    <h3>🎯 Check Your Understanding</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> Pinecrest's order totals have a mean of $194.60 and a median of $146.85. What is the best explanation?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Both numbers were computed correctly from the same 20,302 rows. Think about what each one measures and what a few large values do to a balance point.">
+                                A) One of the two was calculated incorrectly, since both measure the center
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="The distribution is right-skewed. Large orders have leverage on the mean, the balance point, but each of them counts as just one value above the middle for the median.">
+                                B) A long tail of large orders pulls the mean up, while the median stays with the bulk of the orders
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Small orders would pull the mean down, below the median. Here the mean is the larger of the two. Which side is the tail on?">
+                                C) Many very small orders pull the median down below the mean
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> What does this print?</p>
+<pre><code class="language-python">ratings = np.array([2, 4, 4, 4, 5, 5, 7, 9])
+print(np.std(ratings))</code></pre>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="The mean is 5 and the squared deviations add up to 32. NumPy divides by n, which is 8, giving a variance of 4 and a standard deviation of 2.0. pandas would divide by 7 and print about 2.14.">
+                                A) <code>2.0</code>, because NumPy divides the sum of squared deviations by <code>n</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="That is the answer pandas gives, dividing by n - 1. Which default does np.std use?">
+                                B) About <code>2.14</code>, because NumPy divides by <code>n - 1</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="4.0 is the variance, in squared units. The standard deviation is one more step away from it.">
+                                C) <code>4.0</code>, the average squared deviation
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> A column of delivery times is strongly right-skewed and may contain a few data-entry errors. Which pair of summaries describes it most faithfully?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Both of these are pulled around by extreme values, and the standard deviation is built on the mean. What are the robust partners?">
+                                A) Mean and standard deviation
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="The range is made of the two most extreme values, so a single error defines it. Is there a measure of spread that ignores the extremes?">
+                                B) Mean and range
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="The median and the IQR depend only on the order of the values near the middle, so a long tail or a few bad rows barely move them.">
+                                C) Median and interquartile range
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 4:</strong> What does this print?</p>
+<pre><code class="language-python">pay = pd.Series(["card", "cash", "card", "gift_card", "cash"])
+print(pay.mode().tolist())</code></pre>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="card and cash both appear twice, so there is a tie, and mode() returns a Series containing every winner, sorted.">
+                                A) <code>['card', 'cash']</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Count the values again. Is there a single most common one? What does pandas do when there is a tie?">
+                                B) <code>['card']</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="The mode is defined by counting, so it works for text. It is the mean and median that fail on categories.">
+                                C) It raises a <code>TypeError</code>, because text has no mode
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 5:</strong> Store A took 10 orders with a mean of $100. Store B took 90 orders with a mean of $200. What is the mean of all 100 orders?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="That treats the two stores as equally important. Store B has nine times as many orders. What are the total dollars and the total orders?">
+                                A) $150
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="The overall mean has to land between the two store means. It cannot equal the larger one while store A has any orders at all.">
+                                B) $200
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Total dollars are 10 x 100 + 90 x 200 = 19,000 over 100 orders, so the mean is 190. Group means must be weighted by group size, never averaged directly.">
+                                C) $190
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="faq" class="lesson-section">
+                <h2>❓ Common Questions at This Stage</h2>
+
+                <details>
+                    <summary>Should I just always use the median for money?</summary>
+                    <p>For describing a typical amount, usually yes. But the median cannot be multiplied back into a total: 20,302 orders times the median of $146.85 is about $2.98 million, well short of the real $3.95 million. Budgets, forecasts and anything that adds up need the mean. The safest habit is to report both and label them.</p>
+                </details>
+                <details>
+                    <summary>Is a standard deviation of 179 big or small?</summary>
+                    <p>By itself, neither. An SD only means something next to the mean and the units. $179 against a mean of $195 is large: orders vary by about as much as their average size. 22.5 degrees against Boise's mean of 62 is moderate. If you need to compare variability between columns in different units, divide the SD by the mean (the "coefficient of variation"): 0.92 for order totals, 0.36 for Boise's highs. It only makes sense for quantities that cannot go below zero in a meaningful way, so be careful with temperatures.</p>
+                </details>
+                <details>
+                    <summary>Why square the deviations? Why not just average the absolute distances?</summary>
+                    <p>You can. That is the mean absolute deviation, and it is a perfectly good, more robust measure. The squared version won historically because it has convenient mathematical properties: variances of independent quantities add, and the standard deviation fits hand in glove with the normal distribution you will meet in Lesson 4.3. Almost every later method (standard errors, confidence intervals, regression) is built on variance, so it is the one to know.</p>
+                </details>
+                <details>
+                    <summary>My data is every order we have. Is that a population or a sample?</summary>
+                    <p>It depends on the sentence you want to write. "In 2024 and 2025 the SD of order totals was…" is about those orders only: a population, <code>ddof=0</code>. "Our orders vary by about…" is a claim about how the business behaves, including next month: the two years are then a sample of an ongoing process, <code>ddof=1</code>. With 20,302 rows the two answers are identical to four significant figures, so nobody will be misled either way.</p>
+                </details>
+
+                <div class="card card-accent">
+                    <h3>🌟 Going Further: Bonus Challenge</h3>
+                    <p>Rerun the <code>n - 1</code> simulation for sample sizes of 2, 5, 10, 30 and 100. For each size, print the average <code>ddof=0</code> variance divided by the true variance. You should find it is very close to <code>(n - 1) / n</code> every time. Then do the same for the standard deviation with <code>ddof=1</code>. Is the sample SD right on average? (It is not quite: the square root of an unbiased estimate is itself a little low, most visibly for tiny samples from skewed data. Write down what you observe.)</p>
+                </div>
+            </section>
+
+            <section id="journal" class="lesson-section">
+                <h2>📓 Learning Journal</h2>
+                <div class="card card-accent">
+                    <p>Take five minutes to write in your learning journal (the <code>journal.md</code> file you started in Lesson 0.1, or a paper notebook). Jot down:</p>
+                    <ul>
+                        <li><strong>Key concepts</strong> you learned today</li>
+                        <li><strong>Techniques that clicked</strong> (and the ones that have not, yet)</li>
+                        <li><strong>Questions or confusion</strong> to come back to</li>
+                        <li><strong>Ideas to try</strong> on your own</li>
+                        <li><strong>Progress and feelings</strong>: how did this lesson go for you?</li>
+                    </ul>
+                    <p><strong>✍️ This lesson's prompt:</strong> Think of an "average" you have seen quoted recently: a salary, a house price, a commute, a test score. Would the median have been higher or lower than the mean, and why? Who benefits from quoting one rather than the other?</p>
+                </div>
+            </section>
+
+            <section id="summary" class="lesson-section">
+                <h2>📝 Lesson Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎓 Key Takeaways</h3>
+                    <ul>
+                        <li>Describing a column starts with two questions: what is typical (<strong>center</strong>) and how much it varies (<strong>spread</strong>)</li>
+                        <li>The <strong>mean</strong> is the balance point: it uses every value, multiplies back to the total, and is pulled by extremes</li>
+                        <li>The <strong>median</strong> is the middle value: robust, and the better description of a typical case when data is skewed</li>
+                        <li>The <strong>mode</strong> is for categories and small whole-number counts; <code>.mode()</code> returns a Series because ties happen</li>
+                        <li><strong>Variance</strong> is the average squared deviation from the mean; the <strong>standard deviation</strong> is its square root, in the data's own units</li>
+                        <li>NumPy divides by <code>n</code> (<code>ddof=0</code>), pandas by <code>n - 1</code> (<code>ddof=1</code>). Use <code>ddof=1</code> when the data is a sample of something larger</li>
+                        <li>The <strong>IQR</strong> is the width of the middle half of the data and ignores the extremes</li>
+                        <li>Pair <strong>mean with SD</strong> for symmetric data and <strong>median with IQR</strong> for skewed data. A histogram tells you which you have</li>
+                    </ul>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🏆 What You've Accomplished</h3>
+                    <ul>
+                        <li>You found that Pinecrest's typical order ($147) and its mean order ($195) are different things, and you can explain why to a non-statistician</li>
+                        <li>You checked a tempting explanation (the bulk orders) against the data and found the real one (the whole tail)</li>
+                        <li>You computed a variance by hand and proved the <code>n - 1</code> correction to yourself with 100,000 simulated samples</li>
+                        <li>You wrote a reusable summary function and a memo generated entirely from data</li>
+                    </ul>
+                </div>
+
+                <h3>🔭 Looking Ahead</h3>
+                <p>In <a href="statistics_descriptive.html"><strong>Lesson 4.2: Descriptive Statistics II: Shape, Position and Outliers</strong></a> you will put a number on skew, locate any value within its column using percentiles and z-scores, apply the standard outlier rules (and decide what to do with what they flag), read <code>describe()</code>, histograms and box plots properly, and summarize by group. It ends with survey data, where the numbers 1 to 5 are not really numbers at all.</p>
+
+                <h3>📋 Before the Next Lesson</h3>
+                <ul>
+                    <li>Keep your <code>center_and_spread()</code> function. You will extend it.</li>
+                    <li>Run <code>orders["order_total"].describe()</code> and identify every line of the output except one. (The one you cannot name yet is fine: it is next lesson's.)</li>
+                    <li>Guess, then check: is <code>visitors</code> in <code>daily_sales.csv</code> skewed? Compare its mean and median.</li>
+                </ul>
+
+                <div class="card card-accent">
+                    <h3>🌱 Encouragement for the Journey</h3>
+                    <p>Mean, median, standard deviation: you have probably heard these words for years. Today you did something most people who use them never do. You watched each one succeed and fail on real data, and you can now say <em>when</em> to trust it. If the <code>n - 1</code> argument still feels slippery, that is normal; it took statisticians a while too. Rerun the simulation next week. The numbers will make the case again, and it will feel more obvious each time.</p>
+                </div>
+            </section>
+
+
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="matplotlib_saving_figures.html" class="prev-lesson">← Previous: Saving Figures</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="statistics_descriptive.html" class="next-lesson">Next: Descriptive Statistics II: Shape, Position and Outliers →</a>
+            </nav>
         </div>
-    </section>
+    </main>
 
-    <!-- Lesson Summary (full standard block) -->
-    <section id="summary" class="lesson-section">
-        <h2>📝 Lesson Summary</h2>
-        <div class="card card-success">
-            <h3>🎓 Key Takeaways</h3>
-            <ul>
-                <li>Descriptive statistics turn thousands of data points into a few numbers that capture center, spread, shape, and relationships.</li>
-                <li>A histogram plus the mean, median, and standard deviation together tell you far more than any single statistic alone.</li>
-                <li>When the mean and median diverge, the distribution is skewed — a signal to favor robust measures like the median and IQR.</li>
-                <li>Summarizing your data well is the foundation every later technique, from probability to modeling, is built on.</li>
-            </ul>
-        </div>
-        <h3>🎉 What You've Accomplished</h3>
-        <p>You can now read a distribution the way an analyst does — seeing not just the average but the shape and spread — and explain what those features mean for the decisions that follow.</p>
-        <h3>❓ Common Questions at This Stage</h3>
-        <details>
-            <summary>Why isn't the average enough to describe my data?</summary>
-            <p>Two datasets can share the same mean but look completely different — one tight and one wildly spread out. You need spread (standard deviation, IQR) and shape (skew) to describe data honestly.</p>
-        </details>
-        <details>
-            <summary>What does it mean when the mean is higher than the median?</summary>
-            <p>It usually indicates a right-skewed distribution: a tail of large values pulls the mean upward while the median stays near the bulk of the data.</p>
-        </details>
-        <details>
-            <summary>Do I always need to visualize, or are the numbers enough?</summary>
-            <p>Always visualize. Summary numbers can be identical for very different distributions (the famous Anscombe's quartet); a quick histogram or box plot catches what the numbers miss.</p>
-        </details>
-        <h3>🔭 Looking Ahead</h3>
-        <p>Having described what your data looks like, you'll next put those summaries to work in a full exploratory data analysis workflow — a systematic, repeatable way to investigate any new dataset.</p>
-        <h3>✅ Before the Next Lesson</h3>
-        <ul>
-            <li>Plot a histogram of a column you care about and mark its mean and median; note whether it's symmetric or skewed.</li>
-            <li>Compute the standard deviation and IQR for that column and describe its spread in one sentence.</li>
-            <li>Write your Learning Journal entry for this lesson</li>
-        </ul>
-        <div class="card card-accent" style="text-align: center; padding: 2rem;">
-            <h3>🌟 Encouragement for the Journey</h3>
-            <p>Reading a distribution at a glance is a skill that compounds — it will make every future lesson easier. You're building the instincts of a real data scientist. Keep exploring!</p>
-        </div>
-    </section>
-
-    <!-- Footer -->
     <footer class="site-footer">
         <p>&copy; 2026 Ray de la Paz. Python Data Science. All rights reserved.</p>
         <div class="footer-links">
@@ -466,7 +1112,10 @@
             <a href="https://rays-home.netlify.app/contact">Contact</a>
             <a href="#" id="print-button">Print Page</a>
         </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
     </footer>
-    </main>
+
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
 </body>
 </html>

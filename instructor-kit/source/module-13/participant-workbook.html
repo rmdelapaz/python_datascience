@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Participant Workbook: Session 13</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Student workbook —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">write in it · bring it to every session</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Participant Workbook</div>
+    <h1>Session 13: A/B Testing and the EDA Workflow</h1>
+    <p class="sub">Your notes, worked examples, labs and self-check for the session that finishes Module 4, plus the task sheet for Checkpoint 1.</p>
+    <div class="meta-row">
+      <span class="chip">Lessons <b>4.6–4.7</b></span>
+      <span class="chip">Session <b>13</b> · 3 hours</span>
+      <span class="chip">Checkpoint <b>1</b></span>
+      <span class="chip">Name: ____________________</span>
+    </div>
+  </header>
+
+  <div class="sec"><h2>Session Goals</h2><span class="rule"></span></div>
+<p>Today closes Module 4. By the end of the session you will have:</p><ul class="tick">
+  <li>followed one real experiment, Pinecrest's new checkout page, from the plan written before launch to the decision to ship;</li>
+  <li>sized a test, checked that its randomization worked, and reported a difference with its confidence interval;</li>
+  <li>seen why looking early and slicing by segment both need care, and learned the word that keeps you honest: <b>exploratory</b>;</li>
+  <li>run a seven-step routine on a dataset from first question to written findings, and used it to work a business rule out of raw orders;</li>
+  <li>done <b>Checkpoint 1</b>: thirty minutes on your own with a small question. It is open notebook, it is not graded, and it is the best practice for the capstone you will get.</li>
+</ul>  <div class="note"><div class="t">How today is different</div>
+    <p>Two lessons and a checkpoint fit in three hours only because the room does the core of each lesson and you finish the projects at home. That is normal for this session. The homework checklist at the end tells you what to do first.</p>
+  </div>
+
+  <div class="sec"><h2>Lessons</h2><span class="rule"></span></div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">4.6</span><h3>A/B Testing</h3></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Key ideas</div>
+<ul class="tick">
+  <li><b>Why experiment?</b> In observational data the groups you compare differ in more ways than the one you care about. Random assignment makes the groups alike in everything except the treatment, including things nobody measured. That is what lets you use the word "caused".</li>
+  <li><b>Plan before data.</b> Six lines, written first: the <b>unit</b> (what is randomized and counted), the <b>primary metric</b> (the one number that decides), the <b>guardrail</b> (what must not get worse), the <b>hypotheses</b> (two-sided, alpha 0.05), the <b>sample size and duration</b>, and the <b>decision rule</b>.</li>
+  <li><b>Sample size comes from four ingredients:</b> the baseline rate, the smallest lift worth catching, alpha and power. <code class="inline">proportion_effectsize(target, baseline)</code> turns the two rates into Cohen's h; <code class="inline">NormalIndPower().solve_power(...)</code> finds whichever one of effect size, sample size, alpha and power you leave out. Small lifts on low rates need many visitors: 8.9% to 10.0% needs 11,092 per arm.</li>
+  <li><b>Check the experiment before the result:</b> one row per unit; a split consistent with the design (<code class="inline">stats.binomtest</code> against 50/50); arms balanced on things fixed in advance. A failed check means stop and find the bug, not adjust.</li>
+  <li><b>Report four things:</b> the difference in <b>percentage points</b>, its 95% <b>confidence interval</b>, the <b>relative lift</b> (and say which is which), and the p-value. Then lay the interval next to what is worth having.</li>
+  <li><b>Peeking</b> (stopping the first time p dips below 0.05) is multiple testing in disguise: false alarms rise from 5% to about 12% with weekly looks and past 25% with daily looks. Fix the sample size and decide once.</li>
+  <li><b>Segments are exploratory.</b> "Significant here, not there" does not show that here and there differ. Test the difference between the two lifts, correct for the slices, and label unplanned results.</li>
+  <li><b>Judge on every randomized visitor.</b> Buyers are not a randomized group, because the page helps decide who buys. Revenue per visitor (a non-buyer counts as $0) keeps the protection of the coin flip.</li>
+</ul>
+      </div>
+      <div class="blk"><div class="h">The plan in six lines (fill in for the checkout test as you watch the demo)</div>
+<table class="rubric"><thead><tr><th>Line</th><th>For the checkout test</th></tr></thead><tbody>
+<tr><td class="crit">Unit</td><td><div class="write"></div></td></tr>
+<tr><td class="crit">Primary metric</td><td><div class="write"></div></td></tr>
+<tr><td class="crit">Guardrail</td><td><div class="write"></div></td></tr>
+<tr><td class="crit">Hypotheses and alpha</td><td><div class="write"></div></td></tr>
+<tr><td class="crit">Sample size and duration</td><td><div class="write"></div></td></tr>
+<tr><td class="crit">Decision rule</td><td><div class="write"></div></td></tr>
+</tbody></table>
+      </div>
+      <div class="blk"><div class="h">Worked example: does the new page work better on weekends?</div>
+<p>A colleague says weekend shoppers are in less of a hurry, so the new page "must matter more on weekends". Check it the way the lesson checks devices: compare each slice, then test the difference between the lifts. (<code class="inline">ab</code> and <code class="inline">compare_rates</code> are the lesson's.)</p><pre class="code">ab[<span class="s">"weekend"</span>] = ab[<span class="s">"date"</span>].dt.dayofweek &gt;= <span class="s">5</span>
+weekday = compare_rates(ab[~ab[<span class="s">"weekend"</span>]])
+weekend = compare_rates(ab[ab[<span class="s">"weekend"</span>]])
+<span class="k">for</span> label, r <span class="k">in</span> [(<span class="s">"Mon-Fri"</span>, weekday), (<span class="s">"Sat-Sun"</span>, weekend)]:
+    print(<span class="s">f"{label}: {r['visitors']:&gt;6,} visitors  "</span>
+          <span class="s">f"{r['control']:.2%} -&gt; {r['treatment']:.2%}  {r['diff'] * 100:+.2f} pts "</span>
+          <span class="s">f"(95% CI {r['ci_low'] * 100:+.2f} to {r['ci_high'] * 100:+.2f})  "</span>
+          <span class="s">f"p = {r['p']:.3f}"</span>)
+
+gap = weekend[<span class="s">"diff"</span>] - weekday[<span class="s">"diff"</span>]
+gap_se = np.sqrt(weekend[<span class="s">"se"</span>] ** <span class="s">2</span> + weekday[<span class="s">"se"</span>] ** <span class="s">2</span>)
+p_gap = <span class="s">2</span> * stats.norm.sf(abs(gap / gap_se))
+print(<span class="s">f"Weekend lift minus weekday lift: {gap * 100:+.2f} points, p = {p_gap:.2f}"</span>)</pre><pre class="out">Mon-Fri: 20,082 visitors  8.88% -&gt; 9.91%  +1.03 pts (95% CI +0.22 to +1.84)  p = 0.012
+Sat-Sun:  7,918 visitors  8.80% -&gt; 10.33%  +1.53 pts (95% CI +0.23 to +2.83)  p = 0.021
+Weekend lift minus weekday lift: +0.50 points, p = 0.52</pre><p><b>Reading it.</b> Both slices show a lift, and both are significant by themselves. The weekend lift looks larger (+1.53 against +1.03 points), but the difference between them is half a point with p = 0.52: no evidence that the page works differently on weekends. Notice the weekend interval is wider. There are fewer weekend visitors, so the estimate is rougher. Nobody planned this comparison, so the sentence for a memo is: "The lift is similar on weekdays and weekends (exploratory)."</p>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab</div>
+<p>Open <code class="inline">labs/module-13/l4_6-ab-testing/novelty_check_starter.py</code> and work through TODO 1 to 4. A product manager fears the new page won big in week 1 and has been fading since. You will look at each week by itself, compare the first half of the test with the second half, and write the sentence you would say to that manager. The file runs as it is and tells you which TODOs are still open.</p><p>If you finish early (or at home): <code class="inline">labs/module-13/l4_6-ab-testing/followup_test_plan_starter.py</code> sizes the mobile-only follow-up test the memo asked for. Stretch: <code class="inline">labs/module-13/l4_6-ab-testing/aa_test_starter.py</code> splits the control arm at random 2,000 times to see how often a test with no real difference looks "significant".</p>
+      </div>
+      <div class="blk"><div class="h">Predict, then run</div>
+<p>Write your prediction first. Then run the line and write what you saw. The imports are the ones from the demo.</p><div class="q"><div class="qn">P1</div><div class="qt">Ten of 100 visitors convert in one arm and twenty of 100 in the other: twice the rate. Is the p-value below 0.05? Write yes or no and a guess for the number.</div><pre class="code">print(round(proportions_ztest([<span class="s">20</span>, <span class="s">10</span>], [<span class="s">100</span>, <span class="s">100</span>])[<span class="s">1</span>], <span class="s">3</span>))</pre><div class="write"></div></div>
+<div class="q"><div class="qn">P2</div><div class="qt">The lesson needed 11,092 visitors per arm for 80% power. This asks for 90% power. Will the number be about 12,000, about 15,000 or about 22,000?</div><pre class="code">h = proportion_effectsize(<span class="s">0.100</span>, <span class="s">0.089</span>)
+n90 = NormalIndPower().solve_power(effect_size=h, alpha=<span class="s">0.05</span>, power=<span class="s">0.90</span>)
+print(round(n90))</pre><div class="write"></div></div>
+<div class="q"><div class="qn">P3</div><div class="qt">Two splits out of 10,000 visitors: 5,100 / 4,900 and 5,080 / 4,920. Which of them, if either, fails the 50/50 check at 0.05?</div><pre class="code">print(round(stats.binomtest(<span class="s">5100</span>, <span class="s">10_000</span>, p=<span class="s">0.5</span>).pvalue, <span class="s">3</span>))
+print(round(stats.binomtest(<span class="s">5080</span>, <span class="s">10_000</span>, p=<span class="s">0.5</span>).pvalue, <span class="s">3</span>))</pre><div class="write"></div></div>
+      </div>
+      <div class="blk"><div class="h">Notes</div>
+<div class="notes-lines"></div>
+      </div>
+      <div class="blk"><div class="h">Self-check (do these at home, without notes first)</div>
+<div class="q" data-sc="1"><div class="qn">Q1</div><div class="qt">Pinecrest showed the old and the new checkout page during the same four weeks and let a coin flip decide who saw which. What does the coin flip buy?</div><div class="opts"><div class="opt">A) Two groups of exactly the same size, which the z-test requires</div><div class="opt">B) A smaller sample size than a before/after comparison would need</div><div class="opt">C) Groups that are alike in everything except the page, including things nobody measured</div><div class="opt">D) A guarantee that the difference between the pages is not due to chance</div></div></div>
+<div class="q" data-sc="2"><div class="qn">Q2</div><div class="qt">A colleague sizes a test for a rise from 8.9% to 10.0% like this and gets 129,733 visitors per arm. What went wrong?</div><pre class="code">n = NormalIndPower().solve_power(effect_size=<span class="s">0.011</span>, alpha=<span class="s">0.05</span>, power=<span class="s">0.80</span>)</pre><div class="opts"><div class="opt">A) <code class="inline">effect_size</code> expects Cohen's h from <code class="inline">proportion_effectsize(0.100, 0.089)</code>, not the raw difference in rates</div><div class="opt">B) <code class="inline">power</code> should be 0.20, the chance of missing the effect</div><div class="opt">C) <code class="inline">solve_power</code> needs <code class="inline">nobs1</code> as well, or it has nothing to solve</div><div class="opt">D) Nothing: a one-point lift really needs about 130,000 visitors per arm</div></div></div>
+<div class="q" data-sc="3" data-kind="short"><div class="qn">Q3</div><div class="qt">Conversion went from 8.86% to 10.03%. What does this print? (First number: percentage points. Second: relative lift.)</div><pre class="code">print(round((<span class="s">0.1003</span> - <span class="s">0.0886</span>) * <span class="s">100</span>, <span class="s">2</span>), round(<span class="s">0.1003</span> / <span class="s">0.0886</span> - <span class="s">1</span>, <span class="s">3</span>))</pre><div class="write"></div></div>
+<div class="q" data-sc="4"><div class="qn">Q4</div><div class="qt">An experiment planned as 50/50 reports 14,400 visitors in treatment and 13,600 in control. <code class="inline">stats.binomtest(14400, 28000, p=0.5).pvalue</code> is <code class="inline">1.8e-06</code>. What do you do?</div><div class="opts"><div class="opt">A) Carry on: 51.4% is close enough to half</div><div class="opt">B) Drop 800 treatment visitors at random so the arms match, then analyze</div><div class="opt">C) Report the conversion result with a note that the split was uneven</div><div class="opt">D) Stop and find where the control visitors went: the experiment did not run as planned, so its results cannot be read</div></div></div>
+<div class="q" data-sc="5"><div class="qn">Q5</div><div class="qt">A team looks at its four-week test every Monday and stops the first time p is below 0.05. In the lesson's simulation of experiments with <b>no</b> real effect, how often did that rule declare a winner?</div><div class="opts"><div class="opt">A) About 5%, because alpha is 0.05 at each look</div><div class="opt">B) About 12%, because each look is another chance to cross the line by luck</div><div class="opt">C) About 1.25%, because the four looks share the 5%</div><div class="opt">D) About 50%, because the p-value wanders at random</div></div></div>
+<div class="q" data-sc="6"><div class="qn">Q6</div><div class="qt">By device: mobile +1.76 points (p = 0.00004), desktop +0.27 points (p = 0.67). The test of the difference between the two lifts gives p = 0.049, and nobody planned this comparison. Which sentence belongs in the memo?</div><div class="opts"><div class="opt">A) The new page works on mobile and does nothing on desktop</div><div class="opt">B) The new page should be shipped to mobile visitors only</div><div class="opt">C) The gain appears concentrated on mobile; the evidence that devices differ is borderline and exploratory, and worth a follow-up test</div><div class="opt">D) The desktop result proves the page has no effect on desktop</div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">4.7</span><h3>An EDA Workflow</h3></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Key ideas</div>
+<ul class="tick">
+  <li><b>EDA is a routine,</b> not "make charts until something looks interesting": <b>1 Questions · 2 Structure · 3 Quality · 4 One variable · 5 Two variables · 6 Segments · 7 Findings and caveats</b>, and then around again with the new questions.</li>
+  <li><b>Questions come first.</b> They decide which columns matter, which comparisons are planned and which are fishing, and when you are done. Changing a question openly is fine; inventing one afterward to fit a pretty chart is not.</li>
+  <li><b>Know the grain:</b> what one row is, and which column identifies it. Every count and every average depends on it. Make merges prove the relationship you expect with <code class="inline">validate=</code>.</li>
+  <li><b>For missing data ask "missing for whom?"</b> Values that are not missing at random change who a column describes. Decide per question; <code class="inline">dropna(subset=[...])</code>, never a blanket <code class="inline">dropna()</code>.</li>
+  <li><b>Ask who is in the data</b> compared with who you want to talk about. The survey speaks for active, fairly loyal customers.</li>
+  <li><b>Look before you summarize:</b> every distribution before its mean, the grouped values behind every correlation.</li>
+  <li><b>Scanning segments is multiple testing.</b> Two disciplines: (1) count every comparison and correct (Holm); (2) for what survives, look at the size of the gap and check the obvious competing explanation.</li>
+  <li><b>An analysis ends in writing:</b> findings (one sentence with a number each), caveats (who and what the data cannot speak for), next questions.</li>
+</ul>
+      </div>
+      <div class="blk"><div class="h">The seven steps (write one line each on what you would actually do)</div>
+<table class="rubric"><thead><tr><th>Step</th><th>What I do</th></tr></thead><tbody>
+<tr><td class="crit">1 Questions</td><td><div class="write"></div></td></tr>
+<tr><td class="crit">2 Structure</td><td><div class="write"></div></td></tr>
+<tr><td class="crit">3 Quality</td><td><div class="write"></div></td></tr>
+<tr><td class="crit">4 One variable</td><td><div class="write"></div></td></tr>
+<tr><td class="crit">5 Two variables</td><td><div class="write"></div></td></tr>
+<tr><td class="crit">6 Segments</td><td><div class="write"></div></td></tr>
+<tr><td class="crit">7 Findings and caveats</td><td><div class="write"></div></td></tr>
+</tbody></table>
+      </div>
+      <div class="blk"><div class="h">Worked example: do frequent buyers recommend Pinecrest more?</div>
+<p>A new question for the survey, and a merge that would go wrong if you were careless. <code class="inline">orders</code> has one row per order, the survey one row per customer. Merging them directly would repeat each response once per order (1,800 rows become 9,230). So summarize the orders to one row per customer first, then merge, and let <code class="inline">validate</code> prove it. (<code class="inline">survey</code> is the lesson's.)</p><pre class="code">orders = pd.read_csv(<span class="s">"data/orders.csv"</span>)
+per_customer = (orders.groupby(<span class="s">"customer_id"</span>)
+                      .agg(n_orders=(<span class="s">"order_id"</span>, <span class="s">"count"</span>))
+                      .reset_index())
+print(<span class="s">"orders:"</span>, len(orders), <span class="s">"rows -&gt; one row per customer:"</span>, len(per_customer))
+
+joined = survey.merge(per_customer, on=<span class="s">"customer_id"</span>, how=<span class="s">"left"</span>,
+                      validate=<span class="s">"one_to_one"</span>)
+print(<span class="s">"survey rows before:"</span>, len(survey), <span class="s">"after:"</span>, len(joined),
+      <span class="s">"| no orders found:"</span>, joined[<span class="s">"n_orders"</span>].isna().sum())
+
+rho = joined[<span class="s">"n_orders"</span>].corr(joined[<span class="s">"recommend"</span>], method=<span class="s">"spearman"</span>)
+print(<span class="s">f"Spearman correlation, number of orders and recommend score: {rho:.2f}"</span>)
+joined[<span class="s">"buyer"</span>] = pd.cut(joined[<span class="s">"n_orders"</span>], [<span class="s">0</span>, <span class="s">2</span>, <span class="s">5</span>, <span class="s">10</span>, <span class="s">100</span>],
+                         labels=[<span class="s">"1-2"</span>, <span class="s">"3-5"</span>, <span class="s">"6-10"</span>, <span class="s">"11+"</span>])
+by_buyer = joined.groupby(<span class="s">"buyer"</span>, observed=<span class="k">True</span>)[<span class="s">"recommend"</span>]
+print(by_buyer.agg([<span class="s">"count"</span>, <span class="s">"median"</span>, <span class="s">"mean"</span>]).round(<span class="s">2</span>))</pre><pre class="out">orders: 20302 rows -&gt; one row per customer: 3942
+survey rows before: 1800 after: 1800 | no orders found: 0
+Spearman correlation, number of orders and recommend score: -0.02
+       count  median  mean
+buyer                     
+1-2      559     8.0  7.32
+3-5      572     8.0  7.48
+6-10     414     7.0  7.30
+11+      201     7.0  7.23</pre><p><b>Reading it.</b> The merge kept 1,800 rows and every respondent has orders (step 3 of the routine already said so). The correlation is -0.02: no relationship. The grouped values agree: the mean recommend score is between 7.2 and 7.5 whether someone has ordered twice or a dozen times. An honest finding: "Among survey respondents, how often a customer orders is unrelated to how likely they are to recommend Pinecrest (Spearman -0.02)." A caveat: respondents are all active customers, so this says nothing about people who stopped buying. A null result, checked and written down, is a result.</p>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab</div>
+<p>Open <code class="inline">labs/module-13/l4_7-eda-workflow/shipping_rules_starter.py</code>. Nobody at Pinecrest can find the document that says how shipping is charged; the data dictionary only says the charge is 0.00, 6.95 or 14.95. Run the routine on that one column and work the rule out of the data. TODO 1 to 6 follow steps 3 to 7. Finish with a note: findings with numbers, at least one caveat, one next question.</p><p>At home: <code class="inline">labs/module-13/l4_7-eda-workflow/order_size_scan_starter.py</code> asks when online orders are bigger. You will scan 22 groups, correct for them, and then challenge the one result that survives. Stretch: <code class="inline">labs/module-13/l4_7-eda-workflow/customer_overview_starter.py</code> runs steps 2 and 3 on the customer table and finds 739 orders that belong to nobody in it.</p>
+      </div>
+      <div class="blk"><div class="h">Predict, then run</div>
+<p>Write your prediction first, then run it.</p><div class="q"><div class="qn">P1</div><div class="qt">Three rows on the left, three on the right. How many rows come out?</div><pre class="code">left = pd.DataFrame({<span class="s">"k"</span>: [<span class="s">1</span>, <span class="s">1</span>, <span class="s">2</span>]})
+right = pd.DataFrame({<span class="s">"k"</span>: [<span class="s">1</span>, <span class="s">1</span>, <span class="s">2</span>], <span class="s">"v"</span>: [<span class="s">10</span>, <span class="s">20</span>, <span class="s">30</span>]})
+print(len(left.merge(right, on=<span class="s">"k"</span>)))</pre><div class="write"></div></div>
+<div class="q"><div class="qn">P2</div><div class="qt">Two numbers print. Which is the honest mean?</div><pre class="code">s = pd.Series([<span class="s">4</span>, <span class="k">None</span>, <span class="s">2</span>])
+print(s.mean(), s.fillna(<span class="s">0</span>).mean())</pre><div class="write"></div></div>
+<div class="q"><div class="qn">P3</div><div class="qt">Three p-values, all below 0.05. How many are still below 0.05 after Holm?</div><pre class="code">print(multipletests([<span class="s">0.01</span>, <span class="s">0.04</span>, <span class="s">0.03</span>], method=<span class="s">"holm"</span>)[<span class="s">1</span>].round(<span class="s">2</span>).tolist())</pre><div class="write"></div></div>
+      </div>
+      <div class="blk"><div class="h">Notes</div>
+<div class="notes-lines"></div>
+      </div>
+      <div class="blk"><div class="h">Self-check (do these at home, without notes first)</div>
+<div class="q" data-sc="7"><div class="qn">Q7</div><div class="qt">Someone hands you a table you have never seen. After writing your questions, what is the first fact to establish about it?</div><div class="opts"><div class="opt">A) Which columns correlate most strongly</div><div class="opt">B) Its grain: what one row represents, and which column identifies a row</div><div class="opt">C) Whether the numeric columns are normally distributed</div><div class="opt">D) Which rows are outliers, so they can be removed</div></div></div>
+<div class="q" data-sc="8" data-kind="short"><div class="qn">Q8</div><div class="qt">What does this print?</div><pre class="code">df = pd.DataFrame({<span class="s">"a"</span>: [<span class="s">1.0</span>, <span class="k">None</span>, <span class="s">3.0</span>],
+                   <span class="s">"b"</span>: [<span class="k">None</span>, <span class="s">5.0</span>, <span class="s">6.0</span>],
+                   <span class="s">"c"</span>: [<span class="s">"x"</span>, <span class="s">"y"</span>, <span class="k">None</span>]})
+print(len(df.dropna()), len(df.dropna(subset=[<span class="s">"a"</span>])))</pre><div class="write"></div></div>
+<div class="q" data-sc="9"><div class="qn">Q9</div><div class="qt">In the survey, <code class="inline">sat_website</code> is missing for 46% of store shoppers and 3% of online shoppers. Its mean is 3.54. What is the most accurate description?</div><div class="opts"><div class="opt">A) Pinecrest customers rate the website 3.54</div><div class="opt">B) The mean is unusable until the gaps are filled with 3.54</div><div class="opt">C) Store shoppers rate the website 3.54</div><div class="opt">D) Customers who answered, mostly online shoppers, rate the website 3.54</div></div></div>
+<div class="q" data-sc="10" data-kind="short"><div class="qn">Q10</div><div class="qt">What does this print?</div><pre class="code">left = pd.DataFrame({<span class="s">"id"</span>: [<span class="s">1</span>, <span class="s">2</span>, <span class="s">3</span>]})
+right = pd.DataFrame({<span class="s">"id"</span>: [<span class="s">1</span>, <span class="s">1</span>, <span class="s">1</span>, <span class="s">2</span>], <span class="s">"x"</span>: [<span class="s">5</span>, <span class="s">6</span>, <span class="s">7</span>, <span class="s">8</span>]})
+print(len(left.merge(right, on=<span class="s">"id"</span>)),
+      len(left.merge(right, on=<span class="s">"id"</span>, how=<span class="s">"left"</span>)))</pre><div class="write"></div></div>
+<div class="q" data-sc="11"><div class="qn">Q11</div><div class="qt">You compare online order totals across 22 groups (weekdays, payment methods, months). Three groups have p below 0.05; after a Holm correction one remains. What goes in the findings?</div><div class="opts"><div class="opt">A) The one that survived, with the size of its gap, the number of comparisons, and the result of checking an obvious competing explanation; the other two are leads</div><div class="opt">B) All three, with their original p-values</div><div class="opt">C) None: results found by scanning are never reportable</div><div class="opt">D) Only the group with the largest gap in dollars, whatever its p-value</div></div></div>
+<div class="q" data-sc="12"><div class="qn">Q12</div><div class="qt">Which sentence from the survey note is a <b>caveat</b>, not a finding?</div><div class="opts"><div class="opt">A) Only 42% of customers are satisfied with prices</div><div class="opt">B) Every respondent has placed an order, so customers who never ordered are not heard</div><div class="opt">C) Asheville's staff rating is 3.62 against about 4.1 at the other stores</div><div class="opt">D) Asheville is the only store whose revenue fell in 2025</div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="sec"><h2>Checkpoint 1: Task Sheet</h2><span class="rule"></span></div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">2:15</span><h3>Checkpoint 1: analysis task on Modules 1 to 4</h3><span class="dur">30 min</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">The rules</div>
+<ul class="tick">
+  <li><b>30 minutes, on your own.</b> This checkpoint is practice for the capstone. It is not graded. You get your rubric back with one sentence of advice.</li>
+  <li><b>Open notebook:</b> your notes, your earlier notebooks, your helper functions, the lesson pages and the library documentation are all allowed. Your neighbor and AI assistants are not.</li>
+  <li><b>A finished small answer beats an unfinished big one.</b> If you run out of time, write what you would do next. That counts.</li>
+  <li>Work in a new notebook, or start from <code class="inline">labs/module-13/checkpoint-1/checkpoint1_starter.py</code> (it has the question, the load line and six empty headings).</li>
+</ul>
+      </div>
+      <div class="blk"><div class="h">The question</div>
+<p>Pinecrest's store buyers believe that <b>December shoppers buy more expensive things</b>. Finance wants a number before it plans next December's stock. Using <code class="inline">data/daily_sales.csv</code>: is the average price per unit sold (revenue ÷ units) higher in December than in the rest of the year? By how much, how sure are you, and is it the same in all four stores?</p><p><code class="inline">daily_sales.csv</code> has one row per store per day: <code class="inline">date</code>, <code class="inline">store</code>, <code class="inline">visitors</code>, <code class="inline">transactions</code>, <code class="inline">units</code>, <code class="inline">revenue</code>, <code class="inline">staff_on_duty</code>, <code class="inline">promo_day</code>.</p>
+      </div>
+      <div class="blk"><div class="h">What to hand in (one notebook or .py file)</div>
+<ol class="steps">
+  <li><b>A plan, written before any code</b> (three lines): what you will compute for each row, which rows you will compare with which, and what you will check before trusting the numbers. <i>About 3 minutes.</i></li>
+  <li><b>Your checks:</b> what one row is, what is missing, what you did about it. <i>About 5 minutes.</i></li>
+  <li><b>The comparison:</b> the difference in dollars, a 95% confidence interval, a suitable test and an effect size. Then: is it the same in all four stores? <i>About 10 minutes.</i></li>
+  <li><b>One figure</b> with a title that states your finding, and labeled axes. <i>About 5 minutes.</i></li>
+  <li><b>A note:</b> two findings with numbers, two caveats that are specific to this data, one next question. <i>About 7 minutes. Start it by minute 25 whatever happens.</i></li>
+</ol>
+      </div>
+      <div class="blk"><div class="h">How it is read</div>
+<p>Five rows, four levels each (Beginning, Developing, Proficient, Exemplary): the same levels as the capstone rubric in Lesson 8.1.</p><table class="rubric"><thead><tr><th>Row</th><th>What a Proficient answer shows</th></tr></thead><tbody>
+<tr><td class="crit">Question and plan</td><td>Measure (revenue ÷ units per store-day), comparison (December against other days) and checks are written before the analysis, and the work stays on them.</td></tr>
+<tr><td class="crit">Data handling</td><td>States the grain (one row per store per day), finds the 6 missing revenue values and says what was done with them; the new column is checked (range or describe).</td></tr>
+<tr><td class="crit">Analysis</td><td>Difference in dollars with a 95% confidence interval, a suitable test (Welch or Mann-Whitney) and an effect size (Cohen's d or percent). Stores are compared.</td></tr>
+<tr><td class="crit">Figure</td><td>One figure with a title that states the finding, labeled axes with units, and the comparison easy to see.</td></tr>
+<tr><td class="crit">Communication</td><td>Leads with the answer and its size; two specific caveats; one next question; plain language.</td></tr>
+</tbody></table>
+      </div>
+      <div class="blk"><div class="h">If you finish early</div>
+<p>Is it the mix? <code class="inline">daily_sales.csv</code> cannot say whether December shoppers choose pricier products or whether the same products cost more. Which other files could? Write two lines on how you would check (you do not have to do it).</p>
+      </div>
+      <div class="blk"><div class="h">Your plan (write here first if you like paper)</div>
+<div class="write tall"></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="sec"><h2>Homework Checklist</h2><span class="rule"></span></div>
+<p>About three and a half hours this week, the most of any week in the course. Do the two projects first.</p><ul class="tick">
+  <li>☐ <b>Lesson 4.6 project:</b> The Decision Memo, Steps 2 to 5. Write your own memo before reading the lesson's.</li>
+  <li>☐ <b>Lesson 4.7 project:</b> Why Do Orders Come Back? All seven steps (about 45 minutes).</li>
+  <li>☐ Lesson 4.6: read "The Peeking Problem" and "Common Mistakes"; Exercises 1 to 4 (5 is a stretch); quiz; journal.</li>
+  <li>☐ Lesson 4.7: read Step 7 and "Common Mistakes"; Exercises 1 to 3 (4 is a stretch); quiz; journal.</li>
+  <li>☐ Kit labs: <code class="inline">labs/module-13/l4_6-ab-testing/followup_test_plan_starter.py</code> and <code class="inline">labs/module-13/l4_7-eda-workflow/order_size_scan_starter.py</code>. Stretch: <code class="inline">aa_test</code>, <code class="inline">customer_overview</code>.</li>
+  <li>☐ Self-check Q1 to Q12 in this workbook.</li>
+  <li>☐ Save <code class="inline">compare_rates</code>, <code class="inline">overview</code> and <code class="inline">rate_by</code> in a file of your own helpers.</li>
+  <li>☐ <b>For Session 14:</b> check that <code class="inline">data/pinecrest.db</code> is in your data folder and that <code class="inline">import sqlalchemy</code> works; sketch on paper how <code class="inline">customers</code>, <code class="inline">orders</code>, <code class="inline">order_items</code> and <code class="inline">products</code> connect. No SQL is assumed.</li>
+</ul>
+  <div class="sec"><h2>Glossary</h2><span class="rule"></span></div>
+<p><b>A/B test:</b> an experiment that shows two versions to randomly assigned groups at the same time and compares one planned metric. <b>Arm:</b> one of the groups in an experiment (control, treatment). <b>Unit:</b> what is randomized and counted: here, one visitor. <b>Primary metric:</b> the single number, chosen in advance, that decides the test. <b>Guardrail metric:</b> a number that must not get worse while the primary metric improves. <b>Minimum detectable effect:</b> the smallest improvement the test is sized to have a good chance of catching. <b>Power:</b> the chance of detecting an effect of a given size if it is real (0.80 by convention). <b>Cohen's h:</b> the effect size for a difference between two proportions; what statsmodels power functions expect. <b>Sample ratio mismatch:</b> a split between arms that differs from the design by more than chance allows; a sign of a bug. <b>Percentage points:</b> the absolute difference between two rates (10.03% - 8.86% = 1.17 points). <b>Relative lift:</b> the difference as a share of the baseline (1.17 / 8.86 = 13.2%). <b>Peeking:</b> checking a running test and stopping when it first looks significant; inflates false alarms. <b>Exploratory:</b> found by looking, not planned in advance; a lead to confirm, not a confirmed result. <b>EDA:</b> exploratory data analysis: getting to know a dataset before relying on it. <b>Grain:</b> what one row of a table represents. <b>Key:</b> the column (or columns) whose values identify a row. <b>Missing not at random:</b> gaps that are more common for some kinds of rows, so the column describes only those who answered. <b>Holm correction:</b> an adjustment to p-values that accounts for having run several tests. <b>Caveat:</b> a specific statement of who or what the data cannot speak for.</p>
+
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 13 · Participant Workbook · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,1545 +1,1343 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="The logic of a hypothesis test, what a p-value is and is not, t-tests, chi-square and rank tests with effect sizes and confidence intervals, power, and multiple comparisons. Python Data Science Lesson 4.5.">
+    <meta name="author" content="Ray de la Paz">
     <title>Hypothesis Testing - Python Data Science</title>
-    <link href="styles/main.css" rel="stylesheet"/>
-    <link href="/styles/enhanced.css" rel="stylesheet"/>
-    <link href="/favicon.png" rel="icon" type="image/png"/>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid: rendered (and re-rendered on theme change) by js/course-enhancements.js -->
     <script type="module">
         import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({ startOnLoad: true });
+        window.__mermaid = mermaid;
+        mermaid.initialize({ startOnLoad: false });
+        document.dispatchEvent(new Event('mermaid-ready'));
     </script>
-    <style>
-        .breadcrumb {
-            background: #f8f9fa;
-            padding: 1rem;
-            border-radius: 5px;
-            margin-bottom: 2rem;
-            font-size: 0.9rem;
-        }
-        
-        .breadcrumb a {
-            color: #667eea;
-            text-decoration: none;
-        }
-        
-        .breadcrumb a:hover {
-            text-decoration: underline;
-        }
-        
-        .navigation-links {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 2rem 0;
-            margin-top: 3rem;
-            border-top: 2px solid #e0e0e0;
-        }
-        
-        .navigation-links a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 500;
-            padding: 0.5rem 1rem;
-            border-radius: 5px;
-            transition: all 0.3s ease;
-        }
-        
-        .navigation-links a:hover {
-            background: #f0f0f0;
-        }
-        
-        .nav-prev, .nav-next {
-            flex: 1;
-        }
-        
-        .nav-next {
-            text-align: right;
-        }
-        
-        .nav-home {
-            text-align: center;
-        }
-        
-        canvas {
-            display: block;
-            margin: 20px auto;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background: white;
-        }
-        
-        .hypothesis-card {
-            background: white;
-            border: 2px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 20px;
-            margin: 20px 0;
-            position: relative;
-            transition: all 0.3s ease;
-        }
-        
-        .hypothesis-card:hover {
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            transform: translateY(-2px);
-        }
-        
-        .null-hypothesis {
-            border-left: 4px solid #ef4444;
-            background: linear-gradient(to right, #fee2e2, white);
-        }
-        
-        .alternative-hypothesis {
-            border-left: 4px solid #10b981;
-            background: linear-gradient(to right, #d1fae5, white);
-        }
-        
-        .error-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
-            margin: 20px 0;
-        }
-        
-        .error-card {
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-        
-        .type-i-error {
-            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-            border: 2px solid #ef4444;
-        }
-        
-        .type-ii-error {
-            background: linear-gradient(135deg, #fed7aa 0%, #fb923c 20%, #fed7aa 100%);
-            border: 2px solid #f97316;
-        }
-        
-        .error-card:hover {
-            transform: scale(1.05);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-        }
-        
-        .test-selector {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 25px;
-            border-radius: 10px;
-            margin: 20px 0;
-        }
-        
-        .test-options {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
-        }
-        
-        .test-option {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 15px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
-        }
-        
-        .test-option:hover {
-            background: rgba(255, 255, 255, 0.2);
-            border-color: white;
-            transform: translateY(-2px);
-        }
-        
-        .test-option.selected {
-            background: rgba(255, 255, 255, 0.3);
-            border-color: white;
-        }
-        
-        .p-value-scale {
-            position: relative;
-            height: 60px;
-            background: linear-gradient(to right, 
-                #10b981 0%, 
-                #10b981 1%, 
-                #fbbf24 1%,
-                #fbbf24 5%,
-                #ef4444 5%,
-                #ef4444 100%);
-            border-radius: 30px;
-            margin: 20px 0;
-        }
-        
-        .p-value-marker {
-            position: absolute;
-            top: -10px;
-            width: 4px;
-            height: 80px;
-            background: #1f2937;
-            transform: translateX(-50%);
-        }
-        
-        .p-value-label {
-            position: absolute;
-            top: 70px;
-            transform: translateX(-50%);
-            font-weight: bold;
-            color: #1f2937;
-        }
-        
-        .significance-levels {
-            display: flex;
-            justify-content: space-between;
-            margin: 10px 0;
-            font-size: 12px;
-            color: #6b7280;
-        }
-        
-        .code-example {
-            background: #f8f9fa;
-            border-left: 3px solid #667eea;
-            padding: 20px;
-            margin: 20px 0;
-            border-radius: 0 8px 8px 0;
-            position: relative;
-        }
-        
-        .decision-box {
-            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-            border: 2px solid #f59e0b;
-            padding: 20px;
-            border-radius: 10px;
-            margin: 20px 0;
-            text-align: center;
-        }
-        
-        .decision-box h3 {
-            color: #92400e;
-            margin: 0 0 10px 0;
-        }
-        
-        .power-analysis {
-            background: #f0f9ff;
-            border: 2px solid #0284c7;
-            padding: 20px;
-            border-radius: 10px;
-            margin: 20px 0;
-        }
-        
-        .confidence-interval {
-            background: #f0fdf4;
-            border: 2px solid #10b981;
-            padding: 20px;
-            border-radius: 10px;
-            margin: 20px 0;
-        }
-        
-        .test-comparison-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-        }
-        
-        .test-comparison-table th {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 12px;
-            text-align: left;
-        }
-        
-        .test-comparison-table td {
-            padding: 10px;
-            border-bottom: 1px solid #e5e7eb;
-            background: white;
-        }
-        
-        .test-comparison-table tr:hover td {
-            background: #f9fafb;
-        }
-        
-        .interactive-demo {
-            background: white;
-            border: 2px solid #4ecdc4;
-            padding: 20px;
-            border-radius: 10px;
-            margin: 20px 0;
-        }
-        
-        .control-panel {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            margin: 20px 0;
-        }
-        
-        .control-group {
-            flex: 1;
-            min-width: 200px;
-        }
-        
-        .control-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-            color: #374151;
-        }
-        
-        .control-group input,
-        .control-group select {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #d1d5db;
-            border-radius: 4px;
-        }
-        
-        .result-display {
-            background: #f9fafb;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 20px;
-            border: 1px solid #e5e7eb;
-        }
-        
-        .analogy-box {
-            background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
-            border: 2px solid #6366f1;
-            padding: 20px;
-            border-radius: 10px;
-            margin: 20px 0;
-            font-style: italic;
-        }
-    </style>
-    <script src="/js/course-enhancements.js" defer></script>
-    <link rel="stylesheet" href="styles/standard.css">
 </head>
 <body>
-    <!-- Skip to main content for accessibility -->
     <a href="#main-content" class="skip-to-main">Skip to main content</a>
-    
-    <!-- Progress indicator -->
+
     <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
         <div class="progress-bar"></div>
     </div>
-    <nav class="breadcrumb">
-        <a href="index.html">Home</a> &gt; 
-        <a href="index.html#statistics">Statistical Analysis</a> &gt; 
-        <span>Hypothesis Testing</span>
+
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">📊 Python Data Science</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">☰</button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
     </nav>
 
-
     <main id="main-content">
-    <h1>🔬 Hypothesis Testing: Making Data-Driven Decisions</h1>
+        <div class="container">
+            <header>
+                <h1>🔬 Lesson 4.5: Hypothesis Testing</h1>
+                <p class="lead">Learn to ask "could this difference be nothing but chance?" and to answer it honestly, with a test, an effect size and a confidence interval.</p>
 
-    <!-- What You'll Learn (learning objectives) -->
-    <div class="card card-info">
-        <h2>📚 What You'll Learn</h2>
-        <p>By the end of this lesson, you will be able to:</p>
-        <ul>
-            <li>State null and alternative hypotheses and choose a one- or two-tailed test</li>
-            <li>Interpret a p-value correctly and avoid the common misconceptions about what it means</li>
-            <li>Distinguish Type I and Type II errors and relate β to statistical power (1 − β)</li>
-            <li>Select and run the right test — one-sample, two-sample, and paired t-tests, chi-square, ANOVA, and non-parametric alternatives</li>
-            <li>Report effect size (Cohen's d, Cramér's V) and confidence intervals alongside significance</li>
-            <li>Plan sample size with power analysis and apply multiple-testing corrections (Bonferroni, Holm, FDR)</li>
-        </ul>
-        <p><strong>⏱️ Estimated Time:</strong> 45–60 minutes</p>
-        <p><strong>🎯 Project:</strong> Take a real question (e.g. "does the new method beat the old?"), choose and run the appropriate test in Python, and report the p-value, effect size, and confidence interval with a clear conclusion.</p>
-    </div>
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Explain the logic of a hypothesis test in plain words, and say what a p-value is and what it is not</li>
+                        <li>Build a permutation test by simulation and match it to SciPy's ready-made tests</li>
+                        <li>Choose and run a one-sample, Welch two-sample or paired t-test, a chi-square test, or a rank-based test for the data in front of you</li>
+                        <li>Report every test with an effect size and a confidence interval, and check its assumptions on the data</li>
+                        <li>Describe Type I and Type II errors and power, and correct for multiple comparisons</li>
+                    </ul>
+                </div>
 
-    <p>Imagine you're a judge in a courtroom ⚖️. The defendant is "innocent until proven guilty" - that's your null hypothesis. You need strong evidence to convict (reject the null). This is hypothesis testing! It's the scientific method for data, helping us make decisions when we can't be 100% certain. From medicine to marketing, hypothesis testing separates gut feelings from statistical facts.</p>
+                <ul class="lesson-meta">
+                    <li><span class="meta-label">⏱️ Time</span> 110 minutes</li>
+                    <li><span class="meta-label">📋 Prerequisites</span> <a href="statistics_probability_distributions.html">Lesson 4.3: Probability Distributions</a> (standard error, a first confidence interval) and <a href="statistics_correlation_analysis.html">Lesson 4.4: Correlation Analysis</a></li>
+                    <li><span class="meta-label">🛠️ You will build</span> A tested, caveated answer to "does rain keep shoppers out of Pinecrest stores?"</li>
+                    <li><span class="meta-label">📂 Data</span> <code>data/survey.csv</code>, <code>data/daily_sales.csv</code>, <code>data/store_weather.csv</code>, <code>data/orders.csv</code>, <code>data/customers.csv</code></li>
+                </ul>
+            </header>
 
-    <h2>The Foundation: Understanding Hypotheses 🎯</h2>
-    
-    <div class="analogy-box">
-        <strong>The Cookie Factory Analogy 🍪</strong><br>
-        A cookie factory claims their cookies weigh 50g on average. You're the quality inspector. Your <em>null hypothesis (H₀)</em> is "the cookies DO weigh 50g." Your <em>alternative hypothesis (H₁)</em> is "the cookies DON'T weigh 50g." You take a sample of cookies and weigh them. If they're way off 50g, you reject the factory's claim. But how far is "way off"? That's what hypothesis testing tells us!
-    </div>
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#logic" class="toc-link">The Logic of a Test</a></li>
+                        <li><a href="#permutation" class="toc-link">A Test You Can Build Yourself</a></li>
+                        <li><a href="#pvalue" class="toc-link">Null, Alternative and the p-value</a></li>
+                        <li><a href="#ttests" class="toc-link">t-Tests: Welch by Default</a></li>
+                        <li><a href="#categories" class="toc-link">Chi-Square for Categories</a></li>
+                        <li><a href="#ranks" class="toc-link">Ratings and Ranks: Mann-Whitney</a></li>
+                        <li><a href="#errors" class="toc-link">Two Ways to Be Wrong, and Power</a></li>
+                        <li><a href="#multiple" class="toc-link">Multiple Comparisons</a></li>
+                        <li><a href="#choosing" class="toc-link">Choosing a Test and Checking It</a></li>
+                        <li><a href="#mistakes" class="toc-link">Common Mistakes</a></li>
+                        <li><a href="#project" class="toc-link">Project: Does Rain Keep Shoppers Away?</a></li>
+                        <li><a href="#exercises" class="toc-link">Hands-on Exercises</a></li>
+                        <li><a href="#quiz" class="toc-link">Quick Quiz</a></li>
+                        <li><a href="#faq" class="toc-link">Common Questions</a></li>
+                        <li><a href="#journal" class="toc-link">Learning Journal</a></li>
+                        <li><a href="#summary" class="toc-link">Lesson Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
 
-    <div class="mermaid">
-    graph TB
-        A[Research Question] --> B[Formulate Hypotheses]
-        B --> C[Null Hypothesis H₀]
-        B --> D[Alternative Hypothesis H₁]
-        
-        C --> E[Collect Data]
-        D --> E
-        
-        E --> F[Calculate Test Statistic]
-        F --> G[Find P-value]
-        
-        G --> H{P-value < α?}
-        H -->|Yes| I[Reject H₀]
-        H -->|No| J[Fail to Reject H₀]
-        
-        I --> K[Evidence supports H₁]
-        J --> L[Insufficient evidence]
-        
-        style A fill:#667eea
-        style I fill:#10b981
-        style J fill:#fbbf24
-    </div>
+            <!-- ============================================================ -->
+            <section id="logic" class="lesson-section">
+                <h2>⚖️ The Logic of a Test</h2>
 
-    <div class="hypothesis-card null-hypothesis">
-        <h3>H₀: Null Hypothesis</h3>
-        <p>The "status quo" or "no effect" assumption. Examples:</p>
-        <ul>
-            <li>The new drug has <strong>no effect</strong></li>
-            <li>There is <strong>no difference</strong> between groups</li>
-            <li>The correlation is <strong>zero</strong></li>
-            <li>The mean <strong>equals</strong> a specific value</li>
-        </ul>
-    </div>
+                <p>Every summary you have computed in this module came from a sample: the customers who happened to answer the survey, the days that happened to be in the file. Draw a different sample and the numbers shift a little. So whenever two groups differ, there is a question underneath: <strong>is this a real difference, or the ordinary wobble of sampling?</strong> A hypothesis test is a disciplined way to answer that one question.</p>
 
-    <div class="hypothesis-card alternative-hypothesis">
-        <h3>H₁: Alternative Hypothesis</h3>
-        <p>What you're trying to prove. Can be:</p>
-        <ul>
-            <li><strong>Two-tailed:</strong> μ ≠ μ₀ (different from)</li>
-            <li><strong>Left-tailed:</strong> μ < μ₀ (less than)</li>
-            <li><strong>Right-tailed:</strong> μ > μ₀ (greater than)</li>
-        </ul>
-    </div>
+                <div class="card card-info">
+                    <h4>💡 Mental Model: The Courtroom</h4>
+                    <p>A court starts from "innocent until proven guilty". It does not ask the defendant to prove innocence. It asks whether the evidence would be <em>surprising</em> if the defendant were innocent. If it would be very surprising, the court rejects innocence. If not, the verdict is "not guilty", which is not the same as "proven innocent".</p>
+                    <p>A hypothesis test works the same way. The starting assumption, called the <strong>null hypothesis</strong>, is "nothing is going on: any difference is chance". You then ask how surprising your data would be if that were true.</p>
+                </div>
 
-    <canvas id="hypothesisVisual" width="800" height="400"></canvas>
-    <script>
-        const canvas = document.getElementById('hypothesisVisual');
-        const ctx = canvas.getContext('2d');
-        
-        let animationFrame = 0;
-        let currentTest = 0; // 0: two-tailed, 1: left-tailed, 2: right-tailed
-        
-        function normalPDF(x, mean, std) {
-            const coefficient = 1 / (std * Math.sqrt(2 * Math.PI));
-            const exponent = -0.5 * Math.pow((x - mean) / std, 2);
-            return coefficient * Math.exp(exponent);
-        }
-        
-        function drawHypothesisVisualization() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Title
-            ctx.fillStyle = '#333';
-            ctx.font = 'bold 16px Arial';
-            const titles = ['Two-Tailed Test', 'Left-Tailed Test', 'Right-Tailed Test'];
-            ctx.fillText(titles[currentTest] + ' Visualization', 280, 30);
-            
-            // Draw normal distribution
-            const mean = 0;
-            const std = 1;
-            const xMin = -4;
-            const xMax = 4;
-            const steps = 200;
-            
-            // Draw axes
-            ctx.strokeStyle = '#666';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(100, 320);
-            ctx.lineTo(700, 320);
-            ctx.stroke();
-            
-            // Draw distribution curve
-            ctx.strokeStyle = '#667eea';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            
-            let maxY = 0.4;
-            
-            for(let i = 0; i <= steps; i++) {
-                const x = xMin + (xMax - xMin) * i / steps;
-                const y = normalPDF(x, mean, std);
-                const screenX = 100 + (i / steps) * 600;
-                const screenY = 320 - (y / maxY) * 250;
-                
-                if(i === 0) {
-                    ctx.moveTo(screenX, screenY);
-                } else {
-                    ctx.lineTo(screenX, screenY);
-                }
-            }
-            ctx.stroke();
-            
-            // Draw critical regions
-            const alpha = 0.05;
-            const zCritical = 1.96; // for two-tailed at 0.05
-            
-            ctx.fillStyle = 'rgba(239, 68, 68, 0.3)';
-            
-            if(currentTest === 0) { // Two-tailed
-                // Left tail
-                ctx.beginPath();
-                ctx.moveTo(100, 320);
-                for(let i = 0; i <= steps; i++) {
-                    const x = xMin + (xMax - xMin) * i / steps;
-                    if(x > -zCritical) break;
-                    const y = normalPDF(x, mean, std);
-                    const screenX = 100 + (i / steps) * 600;
-                    const screenY = 320 - (y / maxY) * 250;
-                    ctx.lineTo(screenX, screenY);
-                }
-                ctx.lineTo(100 + ((-zCritical - xMin) / (xMax - xMin)) * 600, 320);
-                ctx.closePath();
-                ctx.fill();
-                
-                // Right tail
-                ctx.beginPath();
-                const rightStartX = 100 + ((zCritical - xMin) / (xMax - xMin)) * 600;
-                ctx.moveTo(rightStartX, 320);
-                for(let i = 0; i <= steps; i++) {
-                    const x = xMin + (xMax - xMin) * i / steps;
-                    if(x < zCritical) continue;
-                    const y = normalPDF(x, mean, std);
-                    const screenX = 100 + (i / steps) * 600;
-                    const screenY = 320 - (y / maxY) * 250;
-                    ctx.lineTo(screenX, screenY);
-                }
-                ctx.lineTo(700, 320);
-                ctx.closePath();
-                ctx.fill();
-                
-                // Labels
-                ctx.fillStyle = '#ef4444';
-                ctx.font = '12px Arial';
-                ctx.fillText('α/2 = 0.025', 120, 340);
-                ctx.fillText('α/2 = 0.025', 620, 340);
-                
-            } else if(currentTest === 1) { // Left-tailed
-                ctx.beginPath();
-                ctx.moveTo(100, 320);
-                for(let i = 0; i <= steps; i++) {
-                    const x = xMin + (xMax - xMin) * i / steps;
-                    if(x > -1.645) break;
-                    const y = normalPDF(x, mean, std);
-                    const screenX = 100 + (i / steps) * 600;
-                    const screenY = 320 - (y / maxY) * 250;
-                    ctx.lineTo(screenX, screenY);
-                }
-                ctx.lineTo(100 + ((-1.645 - xMin) / (xMax - xMin)) * 600, 320);
-                ctx.closePath();
-                ctx.fill();
-                
-                ctx.fillStyle = '#ef4444';
-                ctx.font = '12px Arial';
-                ctx.fillText('α = 0.05', 150, 340);
-                
-            } else { // Right-tailed
-                ctx.beginPath();
-                const rightStartX = 100 + ((1.645 - xMin) / (xMax - xMin)) * 600;
-                ctx.moveTo(rightStartX, 320);
-                for(let i = 0; i <= steps; i++) {
-                    const x = xMin + (xMax - xMin) * i / steps;
-                    if(x < 1.645) continue;
-                    const y = normalPDF(x, mean, std);
-                    const screenX = 100 + (i / steps) * 600;
-                    const screenY = 320 - (y / maxY) * 250;
-                    ctx.lineTo(screenX, screenY);
-                }
-                ctx.lineTo(700, 320);
-                ctx.closePath();
-                ctx.fill();
-                
-                ctx.fillStyle = '#ef4444';
-                ctx.font = '12px Arial';
-                ctx.fillText('α = 0.05', 600, 340);
-            }
-            
-            // Draw critical values
-            ctx.strokeStyle = '#ef4444';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([5, 5]);
-            
-            if(currentTest === 0) {
-                // Left critical
-                const leftX = 100 + ((-zCritical - xMin) / (xMax - xMin)) * 600;
-                ctx.beginPath();
-                ctx.moveTo(leftX, 70);
-                ctx.lineTo(leftX, 320);
-                ctx.stroke();
-                
-                // Right critical
-                const rightX = 100 + ((zCritical - xMin) / (xMax - xMin)) * 600;
-                ctx.beginPath();
-                ctx.moveTo(rightX, 70);
-                ctx.lineTo(rightX, 320);
-                ctx.stroke();
-                
-                ctx.fillStyle = '#ef4444';
-                ctx.font = '11px Arial';
-                ctx.fillText('z = -1.96', leftX - 25, 60);
-                ctx.fillText('z = 1.96', rightX - 20, 60);
-                
-            } else if(currentTest === 1) {
-                const critX = 100 + ((-1.645 - xMin) / (xMax - xMin)) * 600;
-                ctx.beginPath();
-                ctx.moveTo(critX, 70);
-                ctx.lineTo(critX, 320);
-                ctx.stroke();
-                
-                ctx.fillStyle = '#ef4444';
-                ctx.font = '11px Arial';
-                ctx.fillText('z = -1.645', critX - 30, 60);
-                
-            } else {
-                const critX = 100 + ((1.645 - xMin) / (xMax - xMin)) * 600;
-                ctx.beginPath();
-                ctx.moveTo(critX, 70);
-                ctx.lineTo(critX, 320);
-                ctx.stroke();
-                
-                ctx.fillStyle = '#ef4444';
-                ctx.font = '11px Arial';
-                ctx.fillText('z = 1.645', critX - 25, 60);
-            }
-            
-            ctx.setLineDash([]);
-            
-            // Center line
-            ctx.strokeStyle = '#333';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(400, 70);
-            ctx.lineTo(400, 320);
-            ctx.stroke();
-            
-            // Hypothesis labels
-            ctx.fillStyle = '#333';
-            ctx.font = 'bold 14px Arial';
-            ctx.fillText('H₀: μ = μ₀', 370, 100);
-            
-            if(currentTest === 0) {
-                ctx.fillStyle = '#10b981';
-                ctx.fillText('H₁: μ ≠ μ₀', 370, 120);
-            } else if(currentTest === 1) {
-                ctx.fillStyle = '#10b981';
-                ctx.fillText('H₁: μ < μ₀', 370, 120);
-            } else {
-                ctx.fillStyle = '#10b981';
-                ctx.fillText('H₁: μ > μ₀', 370, 120);
-            }
-            
-            // Legend
-            ctx.fillStyle = '#666';
-            ctx.font = '12px Arial';
-            ctx.fillText('Rejection Region', 100, 380);
-            ctx.fillStyle = 'rgba(239, 68, 68, 0.3)';
-            ctx.fillRect(200, 372, 20, 12);
-            
-            ctx.fillStyle = '#666';
-            ctx.fillText('Fail to Reject Region', 250, 380);
-            ctx.fillStyle = 'rgba(102, 126, 234, 0.2)';
-            ctx.fillRect(380, 372, 20, 12);
-            
-            // Cycle through test types
-            if(animationFrame % 150 === 0) {
-                currentTest = (currentTest + 1) % 3;
-            }
-            
-            animationFrame++;
-        }
-        
-        function animate() {
-            drawHypothesisVisualization();
-            requestAnimationFrame(animate);
-        }
-        
-        animate();
-    </script>
+                <p>Here is the question for this lesson. Pinecrest's survey asked customers "How likely are you to recommend us?" on a scale from 0 to 10. Someone at head office noticed that shoppers at the Asheville store gave a lower average than shoppers at the other three stores. Before anyone schedules a meeting about Asheville, check whether that gap could be luck.</p>
 
-    <h2>Types of Errors: The Risk Trade-off ⚠️</h2>
-    
-    <p>In hypothesis testing, we can make two types of mistakes. Think of it like a smoke detector: it can fail by alarming when there's no fire (Type I) or by staying silent when there IS a fire (Type II).</p>
+                <pre><code class="language-python">import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from scipy import stats
 
-    <div class="error-grid">
-        <div class="error-card type-i-error">
-            <h3>Type I Error (α)</h3>
-            <p><strong>False Positive</strong></p>
-            <p>🚨 Rejecting H₀ when it's actually TRUE</p>
-            <p>Example: Convicting an innocent person</p>
-            <p>Probability: α (significance level)</p>
-            <p>Typically set at 0.05 (5%)</p>
-        </div>
-        
-        <div class="error-card type-ii-error">
-            <h3>Type II Error (β)</h3>
-            <p><strong>False Negative</strong></p>
-            <p>😴 Failing to reject H₀ when it's actually FALSE</p>
-            <p>Example: Acquitting a guilty person</p>
-            <p>Probability: β</p>
-            <p>Related to Power: 1 - β</p>
-        </div>
-    </div>
+survey = pd.read_csv("data/survey.csv")
+in_store = survey[survey["store"] != "Online"]
 
-    <div class="code-example">
-        <pre><code>import numpy as np
+asheville = in_store.loc[in_store["store"] == "Asheville", "recommend"].dropna()
+others = in_store.loc[in_store["store"] != "Asheville", "recommend"].dropna()
+
+print(f"Asheville     n = {len(asheville)}  mean = {asheville.mean():.2f}  sd = {asheville.std():.2f}")
+print(f"Other stores  n = {len(others)}  mean = {others.mean():.2f}  sd = {others.std():.2f}")
+
+observed = asheville.mean() - others.mean()
+print(f"Observed difference: {observed:.3f}")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>Asheville     n = 197  mean = 6.98  sd = 2.05
+Other stores  n = 752  mean = 7.34  sd = 2.04
+Observed difference: -0.357</code></pre>
+                </div>
+
+                <p>Asheville's 197 respondents average 6.98 and the 752 respondents from the other stores average 7.34: a gap of about 0.36 points on an eleven-point scale, with individual answers spread about 2 points either side of the mean. Is 0.36 a lot? Looking at it will not tell you. You need to know <strong>how big a gap chance alone tends to produce</strong> with groups of this size.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="permutation" class="lesson-section">
+                <h2>🔀 A Test You Can Build Yourself</h2>
+
+                <p>You can find out what chance alone produces with nothing more than the NumPy you already know. The idea: if the store a person shops at has <em>nothing</em> to do with their score, then the "Asheville" label is just a sticker that could have landed on anyone. So peel all 949 stickers off, shuffle them, stick them back on at random, and measure the gap between the fake "Asheville" group and the rest. Do that thousands of times and you have a picture of the gaps that pure chance creates. This is called a <strong>permutation test</strong>. If it feels familiar, it should: you built one by hand in an exercise of <a href="numpy_random_generation.html">Lesson 1.4</a>. This time the logic behind it gets a proper explanation.</p>
+
+                <pre><code class="language-python">rng = np.random.default_rng(42)
+
+pooled = np.concatenate([asheville, others])     # all 949 scores, labels removed
+n_ash = len(asheville)
+
+shuffled_diffs = np.empty(10_000)
+for i in range(10_000):
+    shuffled = rng.permutation(pooled)           # deal the scores out at random
+    shuffled_diffs[i] = shuffled[:n_ash].mean() - shuffled[n_ash:].mean()
+
+print(shuffled_diffs[:5].round(3))
+print(f"Typical chance gap (standard deviation): {shuffled_diffs.std():.3f}")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>[-0.03   0.034 -0.216  0.277  0.124]
+Typical chance gap (standard deviation): 0.165</code></pre>
+                </div>
+
+                <p>Each of those 10,000 numbers is a gap between two groups that <em>cannot</em> truly differ, because you made the groups at random. They scatter around zero with a standard deviation of about 0.165. That number should sound familiar: it is a <strong>standard error</strong>, the idea from Lesson 4.3, this time for a difference between two means and measured by simulation instead of by formula. The real gap of 0.357 is a little more than two of those standard errors from zero. A picture makes the comparison plain.</p>
+
+                <pre><code class="language-python">fig, ax = plt.subplots(figsize=(9, 4), layout="constrained")
+ax.hist(shuffled_diffs, bins=50, color="#667eea")
+ax.axvline(observed, color="crimson", linewidth=2, label=f"observed gap ({observed:.2f})")
+ax.axvline(-observed, color="crimson", linewidth=2, linestyle="--", label="same size, other direction")
+ax.set_title("Gaps produced by chance alone: 10,000 random relabelings")
+ax.set_xlabel("Mean of fake 'Asheville' group minus mean of the rest")
+ax.set_ylabel("Number of shuffles")
+ax.legend()
+plt.show()</code></pre>
+                <figure>
+                    <img src="images/statistics_hypothesis_testing_permutation.png" alt="Histogram of 10,000 differences in mean recommend score between randomly relabeled groups. The differences form a bell shape centered on zero, and the observed gap of minus 0.36 falls far in the left tail, with only a sliver of the histogram beyond it on either side." width="990" height="440" loading="lazy">
+                    <figcaption>The histogram is what "no real difference" looks like. The observed gap sits out in the tail: chance produces a gap this large only occasionally.</figcaption>
+                </figure>
+
+                <p>Now count. How often did shuffling produce a gap at least as large as the real one, in either direction?</p>
+
+                <pre><code class="language-python">as_extreme = np.abs(shuffled_diffs) &gt;= abs(observed)
+
+print(as_extreme.sum(), "of 10,000 shuffles gave a gap at least this large")
+print(f"p-value = {as_extreme.mean():.3f}")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>300 of 10,000 shuffles gave a gap at least this large
+p-value = 0.030</code></pre>
+                </div>
+
+                <p>That fraction, 0.030, is a <strong>p-value</strong>. You did not look it up in a table or trust a formula. You built a world in which the store makes no difference, ran it 10,000 times, and found that only 3% of the runs looked as lopsided as the real survey.</p>
+
+                <div class="card card-success">
+                    <h4>✅ You Just Did the Whole Idea</h4>
+                    <p>Every test in this lesson follows the four steps you just took: (1) state what "nothing going on" means, (2) work out what results that would produce, (3) see where the real result falls, (4) report how rare it is. The named tests below are shortcuts that replace the 10,000 shuffles with mathematics. If a formula ever feels like magic, come back to the shuffle.</p>
+                </div>
+
+                <p>SciPy has the shuffle built in. You give it the groups and a function that computes your statistic.</p>
+
+                <pre><code class="language-python">def mean_diff(x, y):
+    return np.mean(x) - np.mean(y)
+
+perm = stats.permutation_test((asheville, others), mean_diff,
+                              n_resamples=9_999, rng=np.random.default_rng(42))
+print(f"p-value = {perm.pvalue:.3f}")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>p-value = 0.031</code></pre>
+                </div>
+
+                <p>Practically the same answer. (SciPy's shuffles are not the same 10,000 as yours, and it counts the real arrangement as one of the possible outcomes, so the third decimal can differ.)</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="pvalue" class="lesson-section">
+                <h2>🧩 Null, Alternative and the p-value</h2>
+
+                <p>Now the vocabulary for what you just did.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Term</th><th>Meaning</th><th>In the Asheville question</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><strong>Null hypothesis</strong> (H<sub>0</sub>)</td><td>The "nothing going on" claim you assume in order to test it</td><td>Asheville shoppers and other store shoppers have the same mean score</td></tr>
+                            <tr><td><strong>Alternative hypothesis</strong> (H<sub>1</sub>)</td><td>What you conclude if the null does not hold up</td><td>The means differ (in either direction: a <em>two-sided</em> test)</td></tr>
+                            <tr><td><strong>Test statistic</strong></td><td>One number that measures how far the data are from the null</td><td>The difference in means, &minus;0.357</td></tr>
+                            <tr><td><strong>p-value</strong></td><td>The probability, <em>if the null were true</em>, of a test statistic at least as extreme as the one you got</td><td>0.030</td></tr>
+                            <tr><td><strong>Significance level</strong> (&alpha;)</td><td>The cutoff you choose <em>before</em> looking: reject the null when p is below it</td><td>0.05, the common convention</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>With p = 0.030 below &alpha; = 0.05, the result is called <strong>statistically significant</strong>, and you <strong>reject the null hypothesis</strong>. Had p come out above 0.05, the wording would be "<strong>fail to reject</strong> the null", the statistical version of "not guilty". It never becomes "accept the null": a small or noisy sample can easily miss a real difference.</p>
+
+                <h3>What a p-value Is Not</h3>
+
+                <p>The p-value is the most misread number in statistics, so it is worth being exact. It answers one narrow question: <em>how often would chance alone give data like these?</em> Everything in the table below is a different question.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Tempting reading of p = 0.03</th><th>Why it is wrong</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>"There is a 3% chance the null hypothesis is true."</td><td>The p-value is calculated <em>assuming</em> the null is true. It describes the data given the null, not the null given the data.</td></tr>
+                            <tr><td>"There is a 97% chance Asheville really is worse."</td><td>Same mistake, turned around. A test does not give the probability that any hypothesis is true.</td></tr>
+                            <tr><td>"The difference is large" or "important".</td><td>The p-value mixes the size of the effect with the size of the sample. A trivial gap gets a tiny p-value if the sample is big enough.</td></tr>
+                            <tr><td>"If p were 0.20, the stores would be the same."</td><td>A large p-value means the data are compatible with no difference. They may be just as compatible with a real one.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="card card-warning">
+                    <h4>⚠️ 0.05 Is a Convention, Not a Law of Nature</h4>
+                    <p>p = 0.049 and p = 0.051 are almost identical evidence. Treat the p-value as a measure of how surprising the data are under the null, report the actual number, and never let a result's fate hang on which side of a line it fell. In this lesson a p-value never travels alone: it comes with an <strong>effect size</strong> (how big?) and a <strong>confidence interval</strong> (how sure?).</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="ttests" class="lesson-section">
+                <h2>📏 t-Tests: Welch by Default</h2>
+
+                <p>Shuffling works, but for a difference in means there is a classic shortcut. The <strong>t-test</strong> divides the observed difference by its standard error to get a t statistic ("how many standard errors from zero?") and reads the p-value from the t distribution you met in Lesson 4.3.</p>
+
+                <h3>Two Independent Groups</h3>
+
+                <p>There are two versions of the two-sample t-test. The original (Student's) assumes both groups have the same variance. <strong>Welch's t-test</strong> does not. When the variances really are equal, Welch gives nearly the same answer; when they are not, Student's can be badly wrong, especially with unequal group sizes. So use Welch unless you have a specific reason not to. In SciPy that means writing <code>equal_var=False</code> every time, because the default is <code>True</code>.</p>
+
+                <pre><code class="language-python">res = stats.ttest_ind(asheville, others, equal_var=False)
+print(res)
+
+ci = res.confidence_interval(confidence_level=0.95)
+print(f"t = {res.statistic:.2f}, df = {res.df:.0f}, p = {res.pvalue:.3f}")
+print(f"95% CI for the difference: {ci.low:.2f} to {ci.high:.2f}")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>TtestResult(statistic=np.float64(-2.174641776852291), pvalue=np.float64(0.030425431046372332), df=np.float64(304.93011385641904))
+t = -2.17, df = 305, p = 0.030
+95% CI for the difference: -0.68 to -0.03</code></pre>
+                </div>
+
+                <p>The result object holds the statistic, the p-value and the degrees of freedom (its raw form shows NumPy's <code>np.float64(...)</code> wrappers, which is why the lesson formats numbers with f-strings). The p-value, 0.030, agrees with your shuffle. That is not a coincidence: both answer the same question, one by simulation and one by theory.</p>
+
+                <p>The <strong>confidence interval</strong> is the more useful half of the output. The data are consistent with Asheville being anywhere from 0.68 to 0.03 points lower. The interval does not include zero, which is the same fact as p &lt; 0.05 seen from another side, and it tells you something the p-value cannot: the true gap might be meaningful, or it might be almost nothing.</p>
+
+                <h3>Effect Size: How Big Is It?</h3>
+
+                <p>For two means, the standard effect size is <strong>Cohen's d</strong>: the difference divided by the pooled standard deviation. It expresses the gap in units of "how much do individuals vary anyway", so it does not grow just because the sample did. SciPy does not ship one, and it is four lines:</p>
+
+                <pre><code class="language-python">def cohens_d(x, y):
+    """Difference in means divided by the pooled standard deviation."""
+    nx, ny = len(x), len(y)
+    pooled_var = ((nx - 1) * np.var(x, ddof=1) + (ny - 1) * np.var(y, ddof=1)) / (nx + ny - 2)
+    return (np.mean(x) - np.mean(y)) / np.sqrt(pooled_var)
+
+print(f"Cohen's d = {cohens_d(asheville, others):.2f}")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>Cohen's d = -0.17</code></pre>
+                </div>
+
+                <p>A common rule of thumb calls |d| near 0.2 small, 0.5 medium and 0.8 large. At &minus;0.17, this is a small effect: the two groups' answers overlap almost completely. Put the three numbers together and you have an honest sentence: <em>"Asheville shoppers rated Pinecrest 0.36 points lower on average (95% CI 0.03 to 0.68 lower; Welch t-test p = 0.030; d = &minus;0.17, a small effect)."</em> That is evidence worth following up, and nowhere near proof of a crisis.</p>
+
+                <h3>One Sample Against a Target</h3>
+
+                <p>Sometimes there is only one group and a number to compare it with. Suppose Pinecrest's target for the average recommend score, across all customers, is 7.5. The <strong>one-sample t-test</strong> asks whether the sample mean is further from the target than chance would explain.</p>
+
+                <pre><code class="language-python">everyone = survey["recommend"].dropna()
+
+res1 = stats.ttest_1samp(everyone, popmean=7.5)
+ci1 = res1.confidence_interval()
+d1 = (everyone.mean() - 7.5) / everyone.std()
+
+print(f"n = {len(everyone)}, mean = {everyone.mean():.2f}, sd = {everyone.std():.2f}")
+print(f"t = {res1.statistic:.2f}, p = {res1.pvalue:.4f}")
+print(f"95% CI for the mean: {ci1.low:.2f} to {ci1.high:.2f}")
+print(f"Effect size d = {d1:.2f}")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>n = 1746, mean = 7.36, sd = 1.98
+t = -2.99, p = 0.0028
+95% CI for the mean: 7.27 to 7.45
+Effect size d = -0.07</code></pre>
+                </div>
+
+                <p>Read this one slowly, because it is the opposite of the Asheville result. The p-value is much smaller (0.003), so the evidence that the true mean is below 7.5 is stronger. Yet the shortfall is 0.14 points, and d is &minus;0.07: tiny. With 1,746 responses the interval is so narrow (7.27 to 7.45) that even a small miss is detectable.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Statistical Significance Is Not Practical Significance</h4>
+                    <p><strong>Statistically significant</strong> means "unlikely to be chance alone". <strong>Practically significant</strong> means "big enough to matter to someone". The first is a calculation; the second is a judgment that needs the effect size, the confidence interval and knowledge of the business. A manager would probably call 7.36 against a target of 7.5 "close", and they would be right.</p>
+                </div>
+
+                <h3>Paired Measurements</h3>
+
+                <p>The tests so far assume the two groups are <em>independent</em>: different people, unrelated to each other. Sometimes the data come in natural pairs instead: the same customers before and after, or two stores on the <em>same days</em>. Then a <strong>paired t-test</strong> is the right tool. It looks only at the difference within each pair.</p>
+
+                <p>Does the Bend store get more visitors than the Flagstaff store? Line the two up by date and try it both ways.</p>
+
+                <pre><code class="language-python">daily = pd.read_csv("data/daily_sales.csv", parse_dates=["date"])
+visitors = daily.pivot(index="date", columns="store", values="visitors")
+pair = visitors[["Bend", "Flagstaff"]].dropna()      # days when both stores reported
+
+print(len(pair), "days with both stores")
+print(pair.mean().round(1))
+
+wrong = stats.ttest_ind(pair["Bend"], pair["Flagstaff"], equal_var=False)
+right = stats.ttest_rel(pair["Bend"], pair["Flagstaff"])
+print(f"Treated as independent (Welch): p = {wrong.pvalue:.3f}")
+print(f"Treated as pairs (paired t):    p = {right.pvalue:.4f}")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>722 days with both stores
+store
+Bend         335.2
+Flagstaff    328.6
+dtype: float64
+Treated as independent (Welch): p = 0.274
+Treated as pairs (paired t):    p = 0.0024</code></pre>
+                </div>
+
+                <p>Same numbers, very different verdicts. Why? Store traffic swings enormously from a slow Tuesday in February to a Saturday in August, and it swings <em>the same way in both stores</em>. The independent test sees all of that swing as noise, and a 6.5-visitor gap drowns in it. Pairing by date subtracts the shared swing out.</p>
+
+                <pre><code class="language-python">diff = pair["Bend"] - pair["Flagstaff"]
+ci_p = right.confidence_interval()
+
+print(f"Correlation between the two stores' daily visitors: {pair['Bend'].corr(pair['Flagstaff']):.2f}")
+print(f"Mean daily difference: {diff.mean():.1f} visitors (sd of differences {diff.std():.1f})")
+print(f"95% CI: {ci_p.low:.1f} to {ci_p.high:.1f}")
+print(f"Effect size (mean difference / sd of differences): {diff.mean() / diff.std():.2f}")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>Correlation between the two stores' daily visitors: 0.87
+Mean daily difference: 6.5 visitors (sd of differences 57.6)
+95% CI: 2.3 to 10.7
+Effect size (mean difference / sd of differences): 0.11</code></pre>
+                </div>
+
+                <p>Bend averages about 6.5 more visitors a day than Flagstaff (95% CI 2.3 to 10.7), roughly 2% of a typical day. It is real, and it is small. A paired t-test is nothing more than a one-sample t-test on the differences against zero, and its effect size is the mean difference divided by the standard deviation of the differences.</p>
+
+                <div class="card card-warning">
+                    <h4>⚠️ An Honest Caveat About Days</h4>
+                    <p>t-tests assume the observations (here, the daily differences) are independent of each other. Consecutive days are not quite: a busy week is busy all week. That kind of dependence makes p-values look somewhat better than they deserve, so treat a daily-data p-value as approximate. The survey responses, one per customer, do not have this problem.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="categories" class="lesson-section">
+                <h2>🗂️ Chi-Square for Categories</h2>
+
+                <p>Means are for numbers. When both variables are categories, you compare <em>counts</em>. Are online orders returned more often than store orders? Start with the table of counts, which <code>pd.crosstab</code> builds.</p>
+
+                <pre><code class="language-python">orders = pd.read_csv("data/orders.csv")
+orders["returned"] = orders["status"] == "returned"
+
+table = pd.crosstab(orders["channel"], orders["returned"])
+print(table)
+print()
+print(pd.crosstab(orders["channel"], orders["returned"], normalize="index").round(3))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>returned  False  True
+channel
+online    11964    890
+store      7195    253
+
+returned  False  True
+channel
+online    0.931  0.069
+store     0.966  0.034</code></pre>
+                </div>
+
+                <p>6.9% of online orders came back, against 3.4% of store orders. The <strong>chi-square test of independence</strong> takes the null hypothesis "channel and returning are unrelated", works out the counts you would <em>expect</em> in each cell if that were true, and measures how far the real counts are from them.</p>
+
+                <pre><code class="language-python">chi = stats.chi2_contingency(table)
+
+print(f"chi-square = {chi.statistic:.1f}, df = {chi.dof}, p = {chi.pvalue:.1e}")
+print("Expected counts if channel made no difference:")
+print(chi.expected_freq.round(1))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>chi-square = 109.7, df = 1, p = 1.1e-25
+Expected counts if channel made no difference:
+[[12130.3   723.7]
+ [ 7028.7   419.3]]</code></pre>
+                </div>
+
+                <p>If channel did not matter, you would expect about 724 online returns. There were 890. A p-value of about 10<sup>&minus;25</sup> says chance is not a believable explanation. The expected counts also serve as the test's main assumption check: the chi-square approximation is trustworthy when every expected count is at least about 5, and the smallest here is 419.</p>
+
+                <p>The usual effect size for a table is <strong>Cramér's V</strong>, which runs from 0 (no association) to 1 (perfect association).</p>
+
+                <pre><code class="language-python">from scipy.stats.contingency import association
+
+rates = orders.groupby("channel")["returned"].mean()
+print(f"Cramer's V = {association(table, method='cramer'):.3f}")
+print(f"Return rates: online {rates['online']:.1%}, store {rates['store']:.1%}")
+print(f"Online orders are returned {rates['online'] / rates['store']:.1f} times as often")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>Cramer's V = 0.074
+Return rates: online 6.9%, store 3.4%
+Online orders are returned 2.0 times as often</code></pre>
+                </div>
+
+                <p>Here is a case where one effect size is not enough. V is only 0.07, which sounds negligible, because most orders in <em>both</em> channels are kept. Yet the return rate doubles, and returns cost money. For a two-by-two table, the two rates and their ratio usually communicate the effect better than V does. Report the one your reader can act on.</p>
+
+                <h3>A Test That Finds Nothing</h3>
+
+                <p>Tests do not always find something, and that is useful too. Is a customer's loyalty tier related to how they first found Pinecrest?</p>
+
+                <pre><code class="language-python">customers = pd.read_csv("data/customers.csv")
+tier_table = pd.crosstab(customers["acquisition_channel"], customers["loyalty_tier"])
+chi2 = stats.chi2_contingency(tier_table)
+
+print(tier_table)
+print(f"chi-square = {chi2.statistic:.2f}, df = {chi2.dof}, p = {chi2.pvalue:.3f}")
+print(f"Smallest expected count: {chi2.expected_freq.min():.1f}")
+print(f"Cramer's V = {association(tier_table, method='cramer'):.3f}")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>loyalty_tier         Basic  Gold  Silver
+acquisition_channel
+in_store               590   136     268
+organic                878   224     415
+paid_search            581   142     273
+referral               310   105     146
+social                 463   127     192
+chi-square = 10.55, df = 8, p = 0.228
+Smallest expected count: 84.9
+Cramer's V = 0.033</code></pre>
+                </div>
+
+                <p>p = 0.23: differences this size between channels turn up by chance about a quarter of the time. You fail to reject the null. With 4,850 customers and V = 0.03, you can add that any association is weak at most. What you cannot say is that the test proved there is none.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="ranks" class="lesson-section">
+                <h2>🪜 Ratings and Ranks: Mann-Whitney</h2>
+
+                <p>A t-test compares means, and a mean assumes the distance from 1 to 2 equals the distance from 4 to 5. For a 1-to-5 satisfaction rating that is doubtful: these are <em>ordered categories</em>, as Lesson 4.2 discussed. A <strong>nonparametric</strong> test avoids the issue by working with ranks instead of the values themselves. The <strong>Mann-Whitney U test</strong> is the rank-based counterpart of the two-sample t-test. Its null hypothesis is that both groups come from the same distribution, and it is sensitive to one group tending to give higher values than the other.</p>
+
+                <p>The survey asked store shoppers to rate the staff. Compare Asheville with the other stores.</p>
+
+                <pre><code class="language-python">staff_ash = in_store.loc[in_store["store"] == "Asheville", "sat_staff"].dropna()
+staff_oth = in_store.loc[in_store["store"] != "Asheville", "sat_staff"].dropna()
+
+is_ash = (in_store["store"] == "Asheville").rename("asheville")
+print(pd.crosstab(is_ash, in_store["sat_staff"], normalize="index").round(2))
+
+mw = stats.mannwhitneyu(staff_ash, staff_oth)
+print(f"\nn = {len(staff_ash)} and {len(staff_oth)}, U = {mw.statistic:.0f}, p = {mw.pvalue:.1e}")
+print(f"Probability a random Asheville rating beats a random other-store rating: "
+      f"{mw.statistic / (len(staff_ash) * len(staff_oth)):.2f}")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>sat_staff   1.0   2.0   3.0   4.0   5.0
+asheville
+False      0.00  0.03  0.20  0.40  0.37
+True       0.03  0.11  0.28  0.36  0.21
+
+n = 193 and 754, U = 53778, p = 3.0e-09
+Probability a random Asheville rating beats a random other-store rating: 0.37</code></pre>
+                </div>
+
+                <p>Look at the table before the test. At the other stores 37% of shoppers gave the staff a 5; in Asheville 21% did, and the share giving a 1 or 2 is four times higher (14% against 3%). The test agrees that this is no accident: p is about 3 in a billion.</p>
+
+                <p>The effect size comes straight from U. Dividing U by the number of possible pairs (193 &times; 754) gives the <strong>probability of superiority</strong>: pick one Asheville shopper and one shopper from another store at random, and the chance that the Asheville rating is the higher one (counting ties as half) is 0.37. With no difference it would be 0.50. That is a moderate, clearly visible shift, much stronger than the recommend-score gap you started with.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Which Nonparametric Test?</h4>
+                    <p>Two independent groups: <code>stats.mannwhitneyu</code>. Paired measurements: <code>stats.wilcoxon</code> (the Wilcoxon signed-rank test). Three or more groups: <code>stats.kruskal</code>. Reach for them with ordinal ratings, with small samples that are strongly skewed, or when a few extreme values would dominate a mean. The cost is that they answer a question about ranks, so "the mean went up by $4" is not something they can tell you.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="errors" class="lesson-section">
+                <h2>🎲 Two Ways to Be Wrong, and Power</h2>
+
+                <p>A test gives a verdict from a sample, so it can be wrong in two different ways, just as a court can.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th></th><th>In truth, no difference</th><th>In truth, a real difference</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><strong>Test says "significant"</strong></td><td><strong>Type I error</strong> (false alarm). Its rate is &alpha;, which you choose.</td><td>Correct. The chance of this is the test's <strong>power</strong>.</td></tr>
+                            <tr><td><strong>Test says "not significant"</strong></td><td>Correct.</td><td><strong>Type II error</strong> (a miss). Its rate is &beta; = 1 &minus; power.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>You can watch a Type I error rate happen. Draw two groups from the <em>same</em> pool of real scores, so the null hypothesis is true by construction, test them, and repeat.</p>
+
+                <pre><code class="language-python">rng = np.random.default_rng(42)
+pool = in_store["recommend"].dropna().to_numpy()
+
+p_null = np.array([
+    stats.ttest_ind(rng.choice(pool, 197), rng.choice(pool, 752), equal_var=False).pvalue
+    for _ in range(2_000)
+])
+print(f"{(p_null &lt; 0.05).sum()} of 2,000 tests were 'significant': {(p_null &lt; 0.05).mean():.1%}")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>107 of 2,000 tests were 'significant': 5.3%</code></pre>
+                </div>
+
+                <p>About 5%, exactly as &alpha; = 0.05 promises: <strong>when nothing is going on, one test in twenty still rings the alarm</strong>. This run is also an assumption check. Recommend scores are whole numbers from 0 to 10 and skewed toward the high end, nothing like a bell curve, and the t-test still holds its error rate, because with samples this large the <em>means</em> are close to normal (the Central Limit Theorem from Lesson 4.3).</p>
+
+                <h3>Power: The Chance of Catching a Real Effect</h3>
+
+                <p><strong>Power</strong> is the probability that a test detects an effect that truly exists. It rises with the sample size and with the size of the effect, and falls when the data are noisier. Simulate it: make the difference real (means of 7.0 and 7.4 with a standard deviation of 2, so d = 0.2) and see how often samples of different sizes notice.</p>
+
+                <pre><code class="language-python">from statsmodels.stats.power import TTestIndPower
+
+rng = np.random.default_rng(42)
+sizes = [50, 100, 200, 400, 800]
+sim_power = []
+for n in sizes:
+    p_alt = np.array([
+        stats.ttest_ind(rng.normal(7.0, 2, n), rng.normal(7.4, 2, n), equal_var=False).pvalue
+        for _ in range(2_000)
+    ])
+    sim_power.append((p_alt &lt; 0.05).mean())
+
+theory = [TTestIndPower().power(effect_size=0.2, nobs1=n, alpha=0.05) for n in sizes]
+for n, s, t in zip(sizes, sim_power, theory):
+    print(f"n = {n:&gt;3} per group   simulated power {s:.2f}   formula {t:.2f}")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>n =  50 per group   simulated power 0.17   formula 0.17
+n = 100 per group   simulated power 0.30   formula 0.29
+n = 200 per group   simulated power 0.53   formula 0.51
+n = 400 per group   simulated power 0.81   formula 0.81
+n = 800 per group   simulated power 0.97   formula 0.98</code></pre>
+                </div>
+
+                <pre><code class="language-python">fig, ax = plt.subplots(figsize=(9, 4), layout="constrained")
+grid = np.arange(20, 1001, 10)
+ax.plot(grid, [TTestIndPower().power(effect_size=0.2, nobs1=n, alpha=0.05) for n in grid],
+        color="#667eea", linewidth=2, label="formula (statsmodels)")
+ax.scatter(sizes, sim_power, color="crimson", zorder=3, label="simulation (2,000 runs each)")
+ax.axhline(0.8, color="gray", linestyle="--", linewidth=1)
+ax.text(985, 0.82, "80% power", ha="right", color="gray")
+ax.set_title("Power to detect a small effect (d = 0.2) at alpha = 0.05")
+ax.set_xlabel("Sample size per group")
+ax.set_ylabel("Power")
+ax.set_ylim(0, 1.02)
+ax.legend(loc="lower right")
+plt.show()</code></pre>
+                <figure>
+                    <img src="images/statistics_hypothesis_testing_power.png" alt="Line chart of statistical power against sample size per group for an effect of d equals 0.2. Power climbs from about 0.1 at 20 per group to 0.5 at 200, crosses the 80 percent line near 400, and approaches 1 by 1,000. Five simulated points sit on the curve." width="990" height="440" loading="lazy">
+                    <figcaption>With 50 people per group, a real small effect is missed five times out of six. The simulated points land on the formula's curve.</figcaption>
+                </figure>
+
+                <p>With 50 per group the test catches this real effect only about 17% of the time. A "not significant" result from a study that small says almost nothing. This is why sample size is planned <em>before</em> collecting data. By convention, studies aim for 80% power, and statsmodels can solve for the sample size that gets you there.</p>
+
+                <pre><code class="language-python">power_calc = TTestIndPower()
+print(f"Per group for d = 0.2: {power_calc.solve_power(effect_size=0.2, alpha=0.05, power=0.8):.0f}")
+print(f"Per group for d = 0.5: {power_calc.solve_power(effect_size=0.5, alpha=0.05, power=0.8):.0f}")
+print(f"Power of the survey (197 vs 752) for d = 0.2: "
+      f"{power_calc.power(effect_size=0.2, nobs1=197, ratio=752 / 197, alpha=0.05):.2f}")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>Per group for d = 0.2: 393
+Per group for d = 0.5: 64
+Power of the survey (197 vs 752) for d = 0.2: 0.70</code></pre>
+                </div>
+
+                <p>The required sample grows with one over the effect size squared: an effect 2.5 times smaller needs about six times as many people. And the Asheville comparison had about a 70% chance of detecting a small effect if one exists: decent, not generous. You will use these power functions again in the next lesson to size an experiment.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="multiple" class="lesson-section">
+                <h2>🎰 Multiple Comparisons</h2>
+
+                <p>One test at &alpha; = 0.05 has a 5% false-alarm rate. Twenty tests do not. If you test enough things, something will come up "significant" by luck, the same way that buying enough lottery tickets eventually wins something.</p>
+
+                <pre><code class="language-python">for k in [1, 5, 20, 30]:
+    print(f"{k:&gt;2} tests of true nulls: chance of at least one false alarm = {1 - 0.95 ** k:.0%}")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code> 1 tests of true nulls: chance of at least one false alarm = 5%
+ 5 tests of true nulls: chance of at least one false alarm = 23%
+20 tests of true nulls: chance of at least one false alarm = 64%
+30 tests of true nulls: chance of at least one false alarm = 79%</code></pre>
+                </div>
+
+                <p>Here is a realistic way to run thirty tests without meaning to. The survey has six age groups and five satisfaction items. "Let's see if any age group is unhappy about anything" means comparing each group with everyone else on each item: 6 &times; 5 = 30 Mann-Whitney tests.</p>
+
+                <pre><code class="language-python">from statsmodels.stats.multitest import multipletests
+
+items = ["sat_overall", "sat_selection", "sat_price", "sat_staff", "sat_website"]
+rows = []
+for group in sorted(survey["age_group"].unique()):
+    in_group = survey["age_group"] == group
+    for item in items:
+        x = survey.loc[in_group, item].dropna()
+        y = survey.loc[~in_group, item].dropna()
+        rows.append({"age_group": group, "item": item,
+                     "diff": x.mean() - y.mean(),
+                     "p": stats.mannwhitneyu(x, y).pvalue})
+
+scan = pd.DataFrame(rows)
+scan["p_holm"] = multipletests(scan["p"], alpha=0.05, method="holm")[1]
+
+print(f"Tests run: {len(scan)}")
+print(f"p below 0.05 before correction: {(scan['p'] &lt; 0.05).sum()}")
+print(f"p below 0.05 after Holm correction: {(scan['p_holm'] &lt; 0.05).sum()}")
+print(scan.sort_values("p").head(7).round(4).to_string(index=False))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>Tests run: 30
+p below 0.05 before correction: 6
+p below 0.05 after Holm correction: 3
+age_group        item    diff      p  p_holm
+      65+ sat_website -0.6352 0.0000  0.0000
+    18-24   sat_price -0.5678 0.0000  0.0000
+    55-64 sat_website  0.2119 0.0009  0.0257
+    55-64   sat_price  0.1594 0.0026  0.0691
+    35-44 sat_website  0.1563 0.0206  0.5349
+    45-54 sat_website  0.1473 0.0233  0.5823
+    25-34 sat_website  0.1513 0.0513  1.0000</code></pre>
+                </div>
+
+                <p>Six of the thirty tests are below 0.05. With thirty tests you would expect one or two false alarms even if age had no effect on anything, so some of those six deserve suspicion. A <strong>multiple-comparison correction</strong> raises the bar. The simplest, <strong>Bonferroni</strong>, multiplies every p-value by the number of tests. <strong>Holm</strong>'s method controls the same thing (the chance of even one false alarm across the whole family) and is never less powerful, so prefer it. <code>multipletests</code> returns the adjusted p-values as its second item.</p>
+
+                <p>Three results survive, and two are large and specific: customers of 65 and over rate the website 0.64 points lower than everyone else, and 18 to 24 year olds rate prices 0.57 points lower. Those are findings. The third is a caution about the design of the scan itself: 55 to 64 year olds appear to like the website <em>more</em>, but that is mostly because "everyone else" includes the unhappy 65+ group, which drags the comparison group down.</p>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Count Every Test You Ran, Not Only the Ones You Report</h4>
+                    <p>The Asheville recommend-score result, p = 0.030, was presented as a single planned question. If it had instead been the best of twenty store-by-item comparisons, it would not survive a correction, and reporting it alone would be misleading. Trying many tests and showing only the winners is called <strong>p-hacking</strong>. The honest habits are simple: decide your main question before you look, say how many comparisons you made, and label anything you found by scanning as <strong>exploratory</strong>, to be confirmed on new data.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="choosing" class="lesson-section">
+                <h2>🧭 Choosing a Test and Checking It</h2>
+
+                <p>The test follows from two facts about your data: what kind of outcome you measured, and how the groups relate to each other.</p>
+
+                <div class="mermaid">
+graph TD
+    A{"Category outcome?"} -->|"yes"| B["Chi-square test"]
+    A -->|"no"| C{"Rating or rank?"}
+    C -->|"yes"| D["Mann-Whitney U"]
+    C -->|"no"| E{"One group vs target?"}
+    E -->|"yes"| F["One-sample t-test"]
+    E -->|"no"| G{"Same units twice?"}
+    G -->|"yes"| H["Paired t-test"]
+    G -->|"no"| I["Welch t-test"]
+                </div>
+
+                <p>Every test rests on assumptions. Checking them is part of running the test, and it is done on the data, as you did above.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Test</th><th>SciPy call</th><th>Assumes</th><th>Effect size to report</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>One-sample t</td><td><code>stats.ttest_1samp(x, popmean=m)</code></td><td>Independent observations; sample mean roughly normal (fine for large n)</td><td>(mean &minus; target) / sd</td></tr>
+                            <tr><td>Welch t</td><td><code>stats.ttest_ind(x, y, equal_var=False)</code></td><td>Two independent groups; means roughly normal. Equal variances <em>not</em> required</td><td>Cohen's d and the difference with its CI</td></tr>
+                            <tr><td>Paired t</td><td><code>stats.ttest_rel(x, y)</code></td><td>Pairs line up one to one; the differences are independent of each other</td><td>Mean difference / sd of differences</td></tr>
+                            <tr><td>Chi-square</td><td><code>stats.chi2_contingency(table)</code></td><td>Each unit counted once; expected counts of about 5 or more</td><td>The rates themselves; Cramér's V</td></tr>
+                            <tr><td>Mann-Whitney U</td><td><code>stats.mannwhitneyu(x, y)</code></td><td>Two independent groups; values can be ordered</td><td>U / (n<sub>1</sub> &times; n<sub>2</sub>)</td></tr>
+                            <tr><td>Permutation</td><td><code>stats.permutation_test(...)</code></td><td>Labels are exchangeable if the null is true (independent units)</td><td>Whatever statistic you shuffled</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>Notice what appears in every row: <strong>independence</strong>. No test can repair data in which one customer was counted five times or one busy week was counted as seven separate proofs. Normality, by contrast, matters less than its reputation suggests once samples are in the hundreds. A quick look at shape and size is enough to decide.</p>
+
+                <pre><code class="language-python">print(f"Skewness of recommend: Asheville {asheville.skew():.2f}, others {others.skew():.2f}")
+print(f"Group sizes: {len(asheville)} and {len(others)}")
+print(f"Standard deviations: {asheville.std():.2f} and {others.std():.2f}")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>Skewness of recommend: Asheville -0.43, others -0.61
+Group sizes: 197 and 752
+Standard deviations: 2.05 and 2.04</code></pre>
+                </div>
+
+                <p>Mild left skew, large groups, nearly equal spread, one response per customer: the Welch test is on solid ground here, and the permutation test, which needs none of the normality reasoning, gave the same p-value. When two sound methods agree, you can stop worrying about which one to trust.</p>
+
+                <div class="card card-accent">
+                    <h4>📝 A Template for Reporting Any Test</h4>
+                    <p><strong>What was compared</strong> (groups and sizes) &middot; <strong>the estimate</strong> (difference, rate or ratio) &middot; <strong>its 95% confidence interval</strong> &middot; <strong>the test and p-value</strong> &middot; <strong>the effect size in plain words</strong> &middot; <strong>caveats</strong> (how the data were collected, how many tests were run).</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="mistakes" class="lesson-section">
+                <h2>⚠️ Common Mistakes</h2>
+
+                <p>Statistical mistakes are sneakier than coding mistakes, because most of them run without an error. Each one below is something working analysts do. Spotting them in your own work is a skill you are building, and "not yet" is a fine place to be.</p>
+
+                <h3>1. Missing Values Turn the Result into nan</h3>
+
+                <pre><code class="language-python">raw = in_store.loc[in_store["store"] == "Asheville", "recommend"]     # dropna() forgotten
+print(stats.ttest_ind(raw, others, equal_var=False).pvalue)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>nan</code></pre>
+                </div>
+                <p><strong>What it means:</strong> SciPy's tests do not skip missing values the way pandas' <code>.mean()</code> does. One <code>nan</code> in the input makes the answer <code>nan</code>. <strong>Fix:</strong> call <code>.dropna()</code> first, or pass <code>nan_policy="omit"</code>.</p>
+
+                <pre><code class="language-python">print(round(stats.ttest_ind(raw, others, equal_var=False, nan_policy="omit").pvalue, 3))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>0.03</code></pre>
+                </div>
+
+                <h3>2. A Paired Test on Groups That Do Not Line Up</h3>
+
+                <pre data-raises="ValueError"><code class="language-python">stats.ttest_rel(visitors["Bend"].dropna(), visitors["Flagstaff"].dropna())</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>ValueError: Array shapes are incompatible for broadcasting.</code></pre>
+                </div>
+                <p><strong>What it means:</strong> dropping missing days separately left 724 Bend values and 725 Flagstaff values, so there is no way to match them one to one. Worse, if the lengths had happened to be equal, SciPy would have paired the wrong days without complaint. <strong>Fix:</strong> put the pairs in one table and drop incomplete <em>rows</em>, as in <code>visitors[["Bend", "Flagstaff"]].dropna()</code>.</p>
+
+                <h3>3. Giving chi2_contingency the Raw Columns</h3>
+
+                <pre data-raises="TypeError"><code class="language-python">stats.chi2_contingency([orders["channel"], orders["returned"]])</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>TypeError: '&lt;' not supported between instances of 'str' and 'int'</code></pre>
+                </div>
+                <p><strong>What it means:</strong> the function expects a table of <em>counts</em> and tried to treat the text labels as numbers. <strong>Fix:</strong> build the table first with <code>pd.crosstab(orders["channel"], orders["returned"])</code>. Be especially careful with numeric columns: two columns of numbers can be accepted as if they were a table of counts and give a meaningless answer.</p>
+
+                <h3>4. Reading "Not Significant" as "No Difference"</h3>
+
+                <p>The staff-satisfaction gap in Asheville is real: the full data gave p near 3 in a billion. Watch what a small sample of the same data says.</p>
+
+                <pre><code class="language-python">small = in_store.dropna(subset=["sat_staff"]).sample(60, random_state=1)
+s_ash = small.loc[small["store"] == "Asheville", "sat_staff"]
+s_oth = small.loc[small["store"] != "Asheville", "sat_staff"]
+
+print(len(s_ash), "Asheville and", len(s_oth), "other responses")
+print(f"p = {stats.mannwhitneyu(s_ash, s_oth).pvalue:.2f}")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>10 Asheville and 50 other responses
+p = 0.82</code></pre>
+                </div>
+                <p><strong>What it means:</strong> with ten Asheville responses the test has very little power, so it missed a difference you know exists (a Type II error). <strong>Fix:</strong> never write "there is no difference" from a large p-value. Write "we could not detect one", and give the confidence interval so readers can see how much the data leave open.</p>
+
+                <h3>5. Forgetting equal_var=False</h3>
+                <p><code>stats.ttest_ind(x, y)</code> runs Student's test, which assumes equal variances. No error, no warning. When group sizes and spreads both differ, its p-value can be too small or too large. <strong>Fix:</strong> type <code>equal_var=False</code> as a habit.</p>
+
+                <h3>6. Choosing the Hypothesis After Seeing the Data</h3>
+                <p>SciPy's tests accept <code>alternative="less"</code> or <code>"greater"</code> for a one-sided test, which halves the p-value when the data lean the way you named. Picking the direction <em>after</em> looking at the means turns p = 0.08 into p = 0.04 by sleight of hand. <strong>Fix:</strong> use the default two-sided test unless a direction was fixed in advance for a reason you could defend to a skeptic.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="project" class="lesson-section">
+                <h2>🛠️ Project: Does Rain Keep Shoppers Away?</h2>
+
+                <p>Store managers at Pinecrest are sure that rainy days are slow days. You have door-counter data and weather for every store, so you can test the belief, measure the size of the effect, and say how far the conclusion can be trusted. Work in a new notebook called <code>lesson_4_5_project</code>. Allow about 40 minutes.</p>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 1: Join sales to weather and flag rainy days <span class="step-time">(5 min)</span></h3>
+                    <p>The two files share a date, but the store column is called <code>store</code> in one and <code>city</code> in the other (Lesson 2.5). Call a day rainy when at least 0.10 inches fell.</p>
+                    <pre><code class="language-python">import numpy as np
 import pandas as pd
 from scipy import stats
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-# Set style for visualizations
-sns.set_style("whitegrid")
-np.random.seed(42)
-
-class HypothesisTestingFramework:
-    """
-    Your complete guide to hypothesis testing!
-    Master the art of statistical inference 🔬
-    """
-    
-    def __init__(self):
-        self.alpha = 0.05  # Standard significance level
-        
-    def understand_p_values(self):
-        """
-        Demystifying p-values: What they really mean
-        """
-        print("🎯 UNDERSTANDING P-VALUES")
-        print("=" * 60)
-        
-        print("📊 What is a p-value?")
-        print("The probability of observing data at least as extreme as what we got,")
-        print("assuming the null hypothesis is TRUE.")
-        print("\n⚠️ Common Misconceptions:")
-        print("❌ P-value is NOT the probability that H₀ is true")
-        print("❌ P-value is NOT the probability of making an error")
-        print("❌ 1-p is NOT the probability that H₁ is true")
-        
-        print("\n📏 P-value Interpretation Scale:")
-        print("-" * 40)
-        
-        p_values = [0.001, 0.01, 0.05, 0.10, 0.50]
-        interpretations = [
-            "Very strong evidence against H₀",
-            "Strong evidence against H₀",
-            "Moderate evidence against H₀",
-            "Weak evidence against H₀",
-            "No evidence against H₀"
-        ]
-        
-        for p, interp in zip(p_values, interpretations):
-            symbol = "⭐⭐⭐" if p <= 0.001 else "⭐⭐" if p <= 0.01 else "⭐" if p <= 0.05 else "○"
-            print(f"p = {p:.3f}: {interp} {symbol}")
-        
-        # Simulation example
-        print("\n🔬 Simulation: Coin Fairness Test")
-        print("-" * 40)
-        
-        # Test if a coin is fair (H₀: p = 0.5)
-        n_flips = 100
-        observed_heads = 60  # We observed 60 heads
-        
-        # Exact test using binomial
-        p_value = stats.binom_test(observed_heads, n_flips, p=0.5, alternative='two-sided')
-        
-        print(f"Flips: {n_flips}, Heads: {observed_heads}")
-        print(f"H₀: Coin is fair (p = 0.5)")
-        print(f"H₁: Coin is not fair (p ≠ 0.5)")
-        print(f"P-value: {p_value:.4f}")
-        
-        if p_value < self.alpha:
-            print(f"✅ Reject H₀: Evidence suggests coin is unfair")
-        else:
-            print(f"❌ Fail to reject H₀: Insufficient evidence of unfairness")
-    
-    def one_sample_t_test(self):
-        """
-        One-sample t-test: Testing a population mean
-        """
-        print("\n📈 ONE-SAMPLE T-TEST")
-        print("=" * 60)
-        
-        # Scenario: Coffee shop claims average wait time is 3 minutes
-        claimed_mean = 3.0
-        
-        # Sample data (actual wait times in minutes)
-        wait_times = np.array([2.5, 3.2, 4.1, 2.8, 3.5, 3.9, 2.7, 3.3, 4.2, 3.6,
-                               2.9, 3.4, 3.8, 2.6, 3.7, 4.0, 3.1, 2.8, 3.5, 3.2])
-        
-        print("☕ Coffee Shop Wait Time Analysis")
-        print(f"Claimed average: {claimed_mean} minutes")
-        print(f"Sample size: {len(wait_times)}")
-        print(f"Sample mean: {wait_times.mean():.2f} minutes")
-        print(f"Sample std: {wait_times.std(ddof=1):.2f} minutes")
-        
-        # Perform t-test
-        t_stat, p_value = stats.ttest_1samp(wait_times, claimed_mean)
-        
-        print(f"\nTest Results:")
-        print(f"t-statistic: {t_stat:.4f}")
-        print(f"p-value: {p_value:.4f}")
-        
-        # Calculate confidence interval
-        confidence = 0.95
-        ci = stats.t.interval(confidence, len(wait_times)-1, 
-                             loc=wait_times.mean(), 
-                             scale=wait_times.std(ddof=1)/np.sqrt(len(wait_times)))
-        
-        print(f"\n{confidence*100:.0f}% Confidence Interval: [{ci[0]:.2f}, {ci[1]:.2f}]")
-        
-        # Decision
-        print(f"\n🎯 Decision (α = {self.alpha}):")
-        if p_value < self.alpha:
-            print(f"✅ Reject H₀: Wait time is significantly different from {claimed_mean} min")
-            print(f"   The coffee shop's claim appears to be false!")
-        else:
-            print(f"❌ Fail to reject H₀: No significant difference from {claimed_mean} min")
-            print(f"   The coffee shop's claim is supported by the data.")
-        
-        # Effect size (Cohen's d)
-        cohens_d = (wait_times.mean() - claimed_mean) / wait_times.std(ddof=1)
-        print(f"\n📊 Effect Size (Cohen's d): {cohens_d:.3f}")
-        if abs(cohens_d) < 0.2:
-            print("   Negligible effect")
-        elif abs(cohens_d) < 0.5:
-            print("   Small effect")
-        elif abs(cohens_d) < 0.8:
-            print("   Medium effect")
-        else:
-            print("   Large effect")
-    
-    def two_sample_t_test(self):
-        """
-        Two-sample t-test: Comparing two groups
-        """
-        print("\n📊 TWO-SAMPLE T-TEST")
-        print("=" * 60)
-        
-        # Scenario: Comparing effectiveness of two teaching methods
-        np.random.seed(42)
-        
-        # Test scores for two groups
-        method_a = np.random.normal(75, 10, 30)  # Traditional method
-        method_b = np.random.normal(80, 12, 35)  # New method
-        
-        print("🎓 Teaching Methods Comparison")
-        print(f"Method A (Traditional): n={len(method_a)}, mean={method_a.mean():.1f}, std={method_a.std():.1f}")
-        print(f"Method B (New):         n={len(method_b)}, mean={method_b.mean():.1f}, std={method_b.std():.1f}")
-        
-        # Test for equal variances (Levene's test)
-        levene_stat, levene_p = stats.levene(method_a, method_b)
-        print(f"\n📐 Levene's Test for Equal Variances:")
-        print(f"   p-value: {levene_p:.4f}")
-        
-        equal_var = levene_p > 0.05
-        print(f"   Variances are {'equal' if equal_var else 'unequal'} (use equal_var={equal_var})")
-        
-        # Perform t-test
-        t_stat, p_value = stats.ttest_ind(method_a, method_b, equal_var=equal_var)
-        
-        print(f"\n📊 Two-Sample T-Test Results:")
-        print(f"   t-statistic: {t_stat:.4f}")
-        print(f"   p-value: {p_value:.4f}")
-        
-        # Effect size (Cohen's d)
-        pooled_std = np.sqrt(((len(method_a)-1)*method_a.var() + (len(method_b)-1)*method_b.var()) / 
-                             (len(method_a) + len(method_b) - 2))
-        cohens_d = (method_b.mean() - method_a.mean()) / pooled_std
-        
-        print(f"   Cohen's d: {cohens_d:.3f}")
-        
-        # Decision
-        print(f"\n🎯 Decision (α = {self.alpha}):")
-        if p_value < self.alpha:
-            print("✅ Reject H₀: Significant difference between methods")
-            if method_b.mean() > method_a.mean():
-                print("   The new method appears to be better!")
-            else:
-                print("   The traditional method appears to be better!")
-        else:
-            print("❌ Fail to reject H₀: No significant difference between methods")
-    
-    def paired_t_test(self):
-        """
-        Paired t-test: Before and after comparisons
-        """
-        print("\n🔄 PAIRED T-TEST")
-        print("=" * 60)
-        
-        # Scenario: Weight loss program (before and after)
-        np.random.seed(42)
-        
-        n_participants = 20
-        before_weight = np.random.normal(180, 20, n_participants)
-        # After weight (most lose weight, but with variation)
-        weight_loss = np.random.normal(8, 5, n_participants)
-        after_weight = before_weight - weight_loss
-        
-        print("🏃 Weight Loss Program Analysis")
-        print(f"Participants: {n_participants}")
-        print(f"Before: mean={before_weight.mean():.1f} lbs, std={before_weight.std():.1f}")
-        print(f"After:  mean={after_weight.mean():.1f} lbs, std={after_weight.std():.1f}")
-        print(f"Average loss: {(before_weight - after_weight).mean():.1f} lbs")
-        
-        # Perform paired t-test
-        t_stat, p_value = stats.ttest_rel(before_weight, after_weight)
-        
-        print(f"\n📊 Paired T-Test Results:")
-        print(f"   t-statistic: {t_stat:.4f}")
-        print(f"   p-value: {p_value:.4f}")
-        
-        # Calculate confidence interval for the difference
-        differences = before_weight - after_weight
-        ci = stats.t.interval(0.95, len(differences)-1,
-                             loc=differences.mean(),
-                             scale=differences.std(ddof=1)/np.sqrt(len(differences)))
-        
-        print(f"\n95% CI for weight loss: [{ci[0]:.1f}, {ci[1]:.1f}] lbs")
-        
-        # Decision
-        print(f"\n🎯 Decision (α = {self.alpha}):")
-        if p_value < self.alpha:
-            print("✅ Reject H₀: Significant weight loss detected")
-            print(f"   The program is effective! Average loss: {differences.mean():.1f} lbs")
-        else:
-            print("❌ Fail to reject H₀: No significant weight loss")
-    
-    def chi_square_test(self):
-        """
-        Chi-square test: Testing categorical relationships
-        """
-        print("\n🎲 CHI-SQUARE TEST")
-        print("=" * 60)
-        
-        # Scenario: Is customer satisfaction related to age group?
-        # Creating contingency table
-        data = pd.DataFrame({
-            'Age_Group': ['18-30'] * 50 + ['31-50'] * 60 + ['51+'] * 40,
-            'Satisfaction': np.random.choice(['Low', 'Medium', 'High'], 150, 
-                                           p=[0.2, 0.5, 0.3])
-        })
-        
-        # Add some relationship (older = more satisfied)
-        data.loc[(data['Age_Group'] == '51+') & (data['Satisfaction'] == 'Low'), 'Satisfaction'] = 'High'
-        
-        # Create contingency table
-        cont_table = pd.crosstab(data['Age_Group'], data['Satisfaction'])
-        
-        print("📊 Customer Satisfaction by Age Group")
-        print(cont_table)
-        
-        # Perform chi-square test
-        chi2, p_value, dof, expected = stats.chi2_contingency(cont_table)
-        
-        print(f"\n📈 Chi-Square Test Results:")
-        print(f"   χ² statistic: {chi2:.4f}")
-        print(f"   p-value: {p_value:.4f}")
-        print(f"   Degrees of freedom: {dof}")
-        
-        # Calculate Cramér's V (effect size)
-        n = cont_table.sum().sum()
-        min_dim = min(cont_table.shape[0] - 1, cont_table.shape[1] - 1)
-        cramers_v = np.sqrt(chi2 / (n * min_dim))
-        
-        print(f"   Cramér's V: {cramers_v:.3f}")
-        
-        # Decision
-        print(f"\n🎯 Decision (α = {self.alpha}):")
-        if p_value < self.alpha:
-            print("✅ Reject H₀: Satisfaction and age are related")
-            print("   There's a significant association between age and satisfaction!")
-        else:
-            print("❌ Fail to reject H₀: No significant relationship")
-
-# Run demonstrations
-testing = HypothesisTestingFramework()
-testing.understand_p_values()
-testing.one_sample_t_test()
-testing.two_sample_t_test()
-testing.paired_t_test()
-testing.chi_square_test()</code></pre>
-    </div>
-
-    <h2>The P-Value Scale: Making Decisions 📊</h2>
-    
-    <div class="p-value-scale">
-        <div class="p-value-marker" id="pValueMarker" style="left: 10%;"></div>
-        <div class="p-value-label" id="pValueLabel" style="left: 10%;">p = 0.02</div>
-    </div>
-    <div class="significance-levels">
-        <span>p < 0.01<br>Very Strong</span>
-        <span>p < 0.05<br>Strong</span>
-        <span>p < 0.10<br>Moderate</span>
-        <span>p ≥ 0.10<br>Weak/None</span>
-    </div>
-
-    <script>
-        // Animate p-value marker
-        let pValuePosition = 0;
-        let pValueDirection = 1;
-        
-        function animatePValue() {
-            const marker = document.getElementById('pValueMarker');
-            const label = document.getElementById('pValueLabel');
-            
-            pValuePosition += pValueDirection * 0.5;
-            
-            if(pValuePosition >= 100 || pValuePosition <= 0) {
-                pValueDirection *= -1;
-            }
-            
-            marker.style.left = pValuePosition + '%';
-            label.style.left = pValuePosition + '%';
-            
-            // Calculate p-value from position
-            const pValue = pValuePosition / 100 * 0.15;
-            label.textContent = 'p = ' + pValue.toFixed(3);
-            
-            requestAnimationFrame(animatePValue);
-        }
-        
-        animatePValue();
-    </script>
-
-    <h2>Choosing the Right Test 🎯</h2>
-    
-    <table class="test-comparison-table">
-        <thead>
-            <tr>
-                <th>Test Type</th>
-                <th>Use Case</th>
-                <th>Data Type</th>
-                <th>Assumptions</th>
-                <th>Example</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td><strong>One-Sample t-test</strong></td>
-                <td>Compare sample mean to known value</td>
-                <td>Continuous</td>
-                <td>Normal distribution</td>
-                <td>Is average height 170cm?</td>
-            </tr>
-            <tr>
-                <td><strong>Two-Sample t-test</strong></td>
-                <td>Compare means of two groups</td>
-                <td>Continuous</td>
-                <td>Normal, equal variances</td>
-                <td>Drug A vs Drug B</td>
-            </tr>
-            <tr>
-                <td><strong>Paired t-test</strong></td>
-                <td>Before/after comparisons</td>
-                <td>Continuous</td>
-                <td>Normal differences</td>
-                <td>Weight before/after diet</td>
-            </tr>
-            <tr>
-                <td><strong>Chi-Square</strong></td>
-                <td>Test independence</td>
-                <td>Categorical</td>
-                <td>Expected freq ≥ 5</td>
-                <td>Gender vs Product preference</td>
-            </tr>
-            <tr>
-                <td><strong>ANOVA</strong></td>
-                <td>Compare 3+ groups</td>
-                <td>Continuous</td>
-                <td>Normal, equal variances</td>
-                <td>Compare 3 teaching methods</td>
-            </tr>
-            <tr>
-                <td><strong>Mann-Whitney U</strong></td>
-                <td>Non-parametric alternative</td>
-                <td>Ordinal/Continuous</td>
-                <td>No normality required</td>
-                <td>Compare ratings</td>
-            </tr>
-        </tbody>
-    </table>
-
-    <div class="code-example">
-        <pre><code>import numpy as np
-from scipy import stats
-import pandas as pd
-
-class TestSelection:
-    """
-    Smart test selection based on your data
-    """
-    
-    def select_test(self, data_type, n_groups, paired=False, normal=True):
-        """
-        Decision tree for test selection
-        """
-        if data_type == 'categorical':
-            if n_groups == 2:
-                return "Chi-square test or Fisher's exact test"
-            else:
-                return "Chi-square test"
-        
-        elif data_type == 'continuous':
-            if n_groups == 1:
-                if normal:
-                    return "One-sample t-test"
-                else:
-                    return "Wilcoxon signed-rank test"
-            
-            elif n_groups == 2:
-                if paired:
-                    if normal:
-                        return "Paired t-test"
-                    else:
-                        return "Wilcoxon signed-rank test"
-                else:
-                    if normal:
-                        return "Two-sample t-test"
-                    else:
-                        return "Mann-Whitney U test"
-            
-            else:  # n_groups > 2
-                if normal:
-                    return "One-way ANOVA"
-                else:
-                    return "Kruskal-Wallis test"
-        
-        return "Consult a statistician!"
-    
-    def normality_tests(self, data):
-        """
-        Test if data follows normal distribution
-        """
-        print("🔍 NORMALITY TESTS")
-        print("=" * 40)
-        
-        # Shapiro-Wilk test (best for small samples)
-        if len(data) <= 5000:
-            stat, p_value = stats.shapiro(data)
-            print(f"Shapiro-Wilk Test:")
-            print(f"  Statistic: {stat:.4f}")
-            print(f"  P-value: {p_value:.4f}")
-            
-            if p_value > 0.05:
-                print("  ✅ Data appears to be normal")
-            else:
-                print("  ❌ Data is not normally distributed")
-        
-        # Kolmogorov-Smirnov test
-        stat, p_value = stats.kstest(data, 'norm', 
-                                     args=(data.mean(), data.std()))
-        print(f"\nKolmogorov-Smirnov Test:")
-        print(f"  Statistic: {stat:.4f}")
-        print(f"  P-value: {p_value:.4f}")
-        
-        # Anderson-Darling test
-        result = stats.anderson(data)
-        print(f"\nAnderson-Darling Test:")
-        print(f"  Statistic: {result.statistic:.4f}")
-        print(f"  Critical values: {result.critical_values}")
-        
-        return p_value > 0.05
-
-# Example usage
-selector = TestSelection()
-
-# Test selection examples
-print("📋 TEST SELECTION GUIDE")
-print("=" * 40)
-
-scenarios = [
-    ("Continuous", 1, False, True),
-    ("Continuous", 2, False, True),
-    ("Continuous", 2, True, True),
-    ("Continuous", 3, False, True),
-    ("Continuous", 2, False, False),
-    ("Categorical", 2, False, None)
-]
-
-for data_type, n_groups, paired, normal in scenarios:
-    test = selector.select_test(data_type, n_groups, paired, normal)
-    print(f"\nData: {data_type}, Groups: {n_groups}, Paired: {paired}, Normal: {normal}")
-    print(f"→ Use: {test}")
-
-# Check normality of sample data
-print("\n" + "=" * 40)
-sample_data = np.random.normal(100, 15, 100)
-selector.normality_tests(sample_data)</code></pre>
-    </div>
-
-    <h2>Power Analysis: Planning Your Study 💪</h2>
-    
-    <div class="power-analysis">
-        <h3>Statistical Power = 1 - β</h3>
-        <p>The probability of correctly rejecting a false null hypothesis.</p>
-        
-        <div class="mermaid">
-        graph LR
-            A[Power Analysis] --> B[Sample Size]
-            A --> C[Effect Size]
-            A --> D[Significance Level α]
-            A --> E[Power 1-β]
-            
-            B --> F[How many subjects?]
-            C --> G[How big is the difference?]
-            D --> H[Type I error rate]
-            E --> I[Type II error rate]
-            
-            style A fill:#0284c7
-            style E fill:#10b981
-        </div>
-    </div>
-
-    <div class="code-example">
-        <pre><code>import numpy as np
-from statsmodels.stats.power import TTestPower
-import matplotlib.pyplot as plt
-
-class PowerAnalysis:
-    """
-    Plan your study with proper power analysis
-    """
-    
-    def sample_size_calculation(self):
-        """
-        Calculate required sample size
-        """
-        print("📊 SAMPLE SIZE CALCULATION")
-        print("=" * 40)
-        
-        # Parameters
-        effect_size = 0.5  # Medium effect
-        alpha = 0.05
-        power = 0.8
-        
-        # Calculate sample size
-        analysis = TTestPower()
-        
-        # For two-sample t-test
-        n = analysis.solve_power(effect_size=effect_size,
-                               alpha=alpha,
-                               power=power,
-                               ratio=1,  # Equal group sizes
-                               alternative='two-sided')
-        
-        print(f"Parameters:")
-        print(f"  Effect size (Cohen's d): {effect_size}")
-        print(f"  Significance level (α): {alpha}")
-        print(f"  Desired power (1-β): {power}")
-        
-        print(f"\n✅ Required sample size per group: {np.ceil(n):.0f}")
-        print(f"   Total sample size: {np.ceil(n*2):.0f}")
-        
-        # Show how power changes with sample size
-        print("\n📈 Power vs Sample Size:")
-        sample_sizes = [10, 20, 30, 50, 100, 200]
-        
-        for n in sample_sizes:
-            power = analysis.solve_power(effect_size=effect_size,
-                                       alpha=alpha,
-                                       nobs1=n,
-                                       ratio=1,
-                                       alternative='two-sided')
-            print(f"  n={n:3d}: Power = {power:.3f}")
-        
-        # Effect size guidelines
-        print("\n📏 Cohen's d Effect Size Guidelines:")
-        print("  Small:  d = 0.2")
-        print("  Medium: d = 0.5")
-        print("  Large:  d = 0.8")
-    
-    def minimum_detectable_effect(self):
-        """
-        What effect size can we detect with our sample?
-        """
-        print("\n🔍 MINIMUM DETECTABLE EFFECT")
-        print("=" * 40)
-        
-        # Given constraints
-        n_available = 50
-        alpha = 0.05
-        power = 0.8
-        
-        analysis = TTestPower()
-        effect_size = analysis.solve_power(nobs1=n_available,
-                                          alpha=alpha,
-                                          power=power,
-                                          ratio=1,
-                                          alternative='two-sided')
-        
-        print(f"Given:")
-        print(f"  Available sample size: {n_available} per group")
-        print(f"  Significance level: {alpha}")
-        print(f"  Desired power: {power}")
-        
-        print(f"\n✅ Minimum detectable effect size: {effect_size:.3f}")
-        
-        if effect_size < 0.2:
-            print("   Can detect even small effects!")
-        elif effect_size < 0.5:
-            print("   Can detect medium and large effects")
-        elif effect_size < 0.8:
-            print("   Can only detect large effects")
-        else:
-            print("   ⚠️ Sample too small for reasonable power")
-
-# Run power analysis
-power_analysis = PowerAnalysis()
-power_analysis.sample_size_calculation()
-power_analysis.minimum_detectable_effect()</code></pre>
-    </div>
-
-    <h2>Multiple Testing Correction 🔄</h2>
-    
-    <div class="decision-box">
-        <h3>The Multiple Comparisons Problem</h3>
-        <p>If you run 20 tests at α = 0.05, you expect 1 false positive by chance!</p>
-        <p>Solutions: Bonferroni, Holm, FDR corrections</p>
-    </div>
-
-    <div class="code-example">
-        <pre><code>import numpy as np
 from statsmodels.stats.multitest import multipletests
 
-class MultipleTestingCorrection:
-    """
-    Handle multiple comparisons properly
-    """
-    
-    def demonstrate_problem(self):
-        """
-        Show why we need correction
-        """
-        print("🔄 MULTIPLE TESTING PROBLEM")
-        print("=" * 40)
-        
-        # Simulate 20 tests with no real effect (all null true)
-        np.random.seed(42)
-        n_tests = 20
-        p_values = np.random.uniform(0, 1, n_tests)
-        
-        # Sort for display
-        p_values = np.sort(p_values)
-        
-        print(f"Running {n_tests} tests at α = 0.05")
-        print("\nUncorrected results:")
-        
-        significant = p_values < 0.05
-        print(f"  Significant tests: {significant.sum()}")
-        print(f"  False positive rate: {significant.sum()/n_tests*100:.1f}%")
-        
-        if significant.any():
-            print(f"  Smallest p-value: {p_values[0]:.4f}")
-        
-        # Apply corrections
-        print("\n📊 With Multiple Testing Corrections:")
-        
-        methods = ['bonferroni', 'holm', 'fdr_bh']
-        method_names = ['Bonferroni', 'Holm-Bonferroni', 'Benjamini-Hochberg FDR']
-        
-        for method, name in zip(methods, method_names):
-            reject, p_adj, _, _ = multipletests(p_values, alpha=0.05, method=method)
-            
-            print(f"\n{name}:")
-            print(f"  Significant after correction: {reject.sum()}")
-            print(f"  Adjusted α: {0.05/n_tests if method=='bonferroni' else 'varies'}")
-        
-        print("\n💡 Insights:")
-        print("  • Bonferroni: Most conservative (α/n)")
-        print("  • Holm: Slightly less conservative")
-        print("  • FDR: Controls false discovery rate")
-        print("  • Use FDR for exploratory analyses")
+daily = pd.read_csv("data/daily_sales.csv", parse_dates=["date"])
+weather = pd.read_csv("data/store_weather.csv", parse_dates=["date"])
 
-# Demonstrate
-mtc = MultipleTestingCorrection()
-mtc.demonstrate_problem()</code></pre>
-    </div>
+days = daily.merge(weather, left_on=["date", "store"], right_on=["date", "city"], how="left")
+days["rainy"] = days["precip_in"] &gt;= 0.10
 
-    <h2>Practical Decision Framework 🎯</h2>
-    
-    <div class="decision-box">
-        <h3>Your Hypothesis Testing Checklist</h3>
-        <ol>
-            <li>✅ Define H₀ and H₁ clearly</li>
-            <li>✅ Choose significance level α (usually 0.05)</li>
-            <li>✅ Check test assumptions (normality, independence)</li>
-            <li>✅ Select appropriate test</li>
-            <li>✅ Calculate test statistic and p-value</li>
-            <li>✅ Make decision (reject or fail to reject)</li>
-            <li>✅ Report effect size and confidence interval</li>
-            <li>✅ Consider practical significance</li>
-        </ol>
-    </div>
+print(days.shape, "rows with no weather match:", days["precip_in"].isna().sum())
+print(days.groupby("store")["rainy"].mean().round(2))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>(2903, 13) rows with no weather match: 0
+store
+Asheville    0.24
+Bend         0.07
+Boise        0.09
+Flagstaff    0.14
+Name: rainy, dtype: float64</code></pre>
+                    </div>
+                    <p>Every store-day found its weather. Asheville is rainy on about one day in four, Bend on one in fourteen.</p>
+                </div>
 
-    <h2>Common Pitfalls and Best Practices 🚧</h2>
-    
-    <div class="code-example">
-        <pre><code>print("⚠️ COMMON PITFALLS TO AVOID")
-print("=" * 40)
+                <div class="card card-info">
+                    <h3>🛠️ Step 2: Look before you test, and state the hypotheses <span class="step-time">(5 min)</span></h3>
+                    <p>Summarize visitors by store and rain. Then write the hypotheses down, in a comment, before running any test.</p>
+                    <pre><code class="language-python">print(days.groupby(["store", "rainy"])["visitors"].agg(["count", "mean", "std"]).round(1))
 
-# Pitfall 1: P-hacking
-print("\n❌ P-hacking (Data Dredging)")
-print("Testing multiple hypotheses until you find p < 0.05")
-print("✅ Solution: Pre-register hypotheses, use corrections")
+# H0: for a given store, mean visitors are the same on rainy and dry days.
+# H1: the means differ (two-sided).  alpha = 0.05, Welch t-test, one test per store.</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>                 count   mean    std
+store     rainy
+Asheville False    555  286.8   91.1
+          True     172  236.4   71.6
+Bend      False    674  339.5  109.3
+          True      50  272.7   86.1
+Boise     False    659  497.4  160.2
+          True      68  366.7  126.8
+Flagstaff False    626  338.3  118.8
+          True      99  266.3   85.5</code></pre>
+                    </div>
+                    <p>Rainy days are slower in all four stores, and the dry-day groups have the larger spread. Unequal sizes and unequal spreads: exactly the case Welch's test is for.</p>
+                </div>
 
-# Pitfall 2: Ignoring effect size
-print("\n❌ Focusing only on p-values")
-print("Statistical significance ≠ Practical significance")
-print("✅ Solution: Always report effect sizes and CIs")
+                <div class="card card-info">
+                    <h3>🛠️ Step 3: Test one store completely <span class="step-time">(5 min)</span></h3>
+                    <p>Do Asheville first: the test, the confidence interval and the effect size. Paste in <code>cohens_d</code> from the lesson.</p>
+                    <pre><code class="language-python">def cohens_d(x, y):
+    nx, ny = len(x), len(y)
+    pooled_var = ((nx - 1) * np.var(x, ddof=1) + (ny - 1) * np.var(y, ddof=1)) / (nx + ny - 2)
+    return (np.mean(x) - np.mean(y)) / np.sqrt(pooled_var)
 
-# Pitfall 3: Violating assumptions
-print("\n❌ Using parametric tests on non-normal data")
-print("✅ Solution: Check assumptions, use non-parametric alternatives")
+ash = days[days["store"] == "Asheville"]
+wet = ash.loc[ash["rainy"], "visitors"]
+dry = ash.loc[~ash["rainy"], "visitors"]
 
-# Pitfall 4: Misinterpreting p-values
-print("\n❌ 'p = 0.04 means 4% chance H₀ is true'")
-print("✅ Correct: 'If H₀ is true, 4% chance of this extreme data'")
+res = stats.ttest_ind(wet, dry, equal_var=False)
+ci = res.confidence_interval()
+print(f"Rainy {wet.mean():.1f} vs dry {dry.mean():.1f}: difference {wet.mean() - dry.mean():.1f}")
+print(f"95% CI {ci.low:.1f} to {ci.high:.1f}, t = {res.statistic:.2f}, p = {res.pvalue:.1e}")
+print(f"Cohen's d = {cohens_d(wet, dry):.2f}, relative change {wet.mean() / dry.mean() - 1:.1%}")</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>Rainy 236.4 vs dry 286.8: difference -50.4
+95% CI -63.6 to -37.3, t = -7.53, p = 4.1e-13
+Cohen's d = -0.58, relative change -17.6%</code></pre>
+                    </div>
+                </div>
 
-# Pitfall 5: Publication bias
-print("\n❌ Only publishing significant results")
-print("✅ Solution: Report all results, including non-significant")
+                <div class="card card-info">
+                    <h3>🛠️ Step 4: Confirm with a permutation test <span class="step-time">(5 min)</span></h3>
+                    <p>Check the t-test against the method that needs no distribution theory.</p>
+                    <pre><code class="language-python">def mean_diff(x, y):
+    return np.mean(x) - np.mean(y)
 
-# Best Practices
-print("\n✨ BEST PRACTICES")
-print("=" * 40)
-print("1. Plan sample size with power analysis")
-print("2. State hypotheses before collecting data")
-print("3. Report exact p-values (not just p < 0.05)")
-print("4. Include confidence intervals")
-print("5. Consider multiple testing corrections")
-print("6. Replicate important findings")
-print("7. Share data and code for transparency")</code></pre>
-    </div>
+perm = stats.permutation_test((wet, dry), mean_diff, n_resamples=9_999,
+                              rng=np.random.default_rng(42))
+print(f"Permutation p-value = {perm.pvalue:.4f}")</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>Permutation p-value = 0.0002</code></pre>
+                    </div>
+                    <p>0.0002 is the smallest value a two-sided test with 9,999 shuffles can report: not one random relabeling produced a gap as large as the real one. The two methods agree.</p>
+                </div>
 
-    <h2>Summary: Your Hypothesis Testing Toolkit ✅</h2>
-    
-    <div class="confidence-interval">
-        <h3>🎯 Key Takeaways:</h3>
-        <ul>
-            <li><strong>Null Hypothesis (H₀):</strong> The default assumption of no effect</li>
-            <li><strong>P-value:</strong> Probability of data given H₀ is true</li>
-            <li><strong>Type I Error:</strong> False positive (α)</li>
-            <li><strong>Type II Error:</strong> False negative (β)</li>
-            <li><strong>Power:</strong> Probability of detecting true effect (1-β)</li>
-            <li><strong>Effect Size:</strong> Magnitude of the difference</li>
-            <li><strong>Always report:</strong> Test used, p-value, effect size, CI</li>
-        </ul>
-    </div>
+                <div class="card card-info">
+                    <h3>🛠️ Step 5: All four stores, with a correction <span class="step-time">(5 min)</span></h3>
+                    <p>Four stores means four tests, so adjust the p-values with Holm's method.</p>
+                    <pre><code class="language-python">rows = []
+for store, g in days.groupby("store"):
+    wet = g.loc[g["rainy"], "visitors"]
+    dry = g.loc[~g["rainy"], "visitors"]
+    r = stats.ttest_ind(wet, dry, equal_var=False)
+    rows.append({"store": store, "rainy_days": len(wet),
+                 "change": wet.mean() / dry.mean() - 1,
+                 "d": cohens_d(wet, dry), "p": r.pvalue})
 
-    <div class="code-example">
-        <pre><code># Quick Reference Card - Hypothesis Testing
-from scipy import stats
-import numpy as np
+rain = pd.DataFrame(rows)
+rain["p_holm"] = multipletests(rain["p"], method="holm")[1]
+rain["change"] = (rain["change"] * 100).round(1)
+rain["d"] = rain["d"].round(2)
+for col in ["p", "p_holm"]:
+    rain[col] = rain[col].map("{:.1e}".format)
+print(rain.to_string(index=False))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>    store  rainy_days  change     d       p  p_holm
+Asheville         172   -17.6 -0.58 4.1e-13 1.6e-12
+     Bend          50   -19.7 -0.62 2.6e-06 2.6e-06
+    Boise          68   -26.3 -0.83 7.1e-12 2.1e-11
+Flagstaff          99   -21.3 -0.63 9.9e-12 2.1e-11</code></pre>
+                    </div>
+                    <p>Every store shows a drop of 18% to 26% on rainy days, with medium to large effect sizes, and all four survive the correction comfortably. (A detail in the code: <code>.map()</code> also accepts a function and applies it to each value; here <code>"{:.1e}".format</code> turns each p-value into short text.)</p>
+                </div>
 
-# ONE-SAMPLE T-TEST
-# Test if population mean equals a value
-data = np.array([...])
-null_mean = 100
-t_stat, p_value = stats.ttest_1samp(data, null_mean)
+                <div class="card card-info">
+                    <h3>🛠️ Step 6: Challenge your own result <span class="step-time">(10 min)</span></h3>
+                    <p>This is observational data: nobody assigned rain to days at random. Rain might simply fall in slow seasons. Check when it rains, then make a fairer comparison: measure each day against the average for the <em>same store, month, weekday and promotion status</em>, and test that relative deviation instead.</p>
+                    <pre><code class="language-python">days["month"] = days["date"].dt.month
+days["weekday"] = days["date"].dt.dayofweek
 
-# TWO-SAMPLE T-TEST
-# Compare means of two independent groups
-group1 = np.array([...])
-group2 = np.array([...])
-t_stat, p_value = stats.ttest_ind(group1, group2)
+flag = days[days["store"] == "Flagstaff"].groupby("month")["rainy"].mean()
+print("Flagstaff, share of rainy days by month:")
+print(flag.round(2).to_string())
 
-# PAIRED T-TEST
-# Compare paired observations (before/after)
-before = np.array([...])
-after = np.array([...])
-t_stat, p_value = stats.ttest_rel(before, after)
+typical = days.groupby(["store", "month", "weekday", "promo_day"])["visitors"].transform("mean")
+days["vs_typical"] = days["visitors"] / typical - 1
 
-# CHI-SQUARE TEST
-# Test independence of categorical variables
-contingency_table = [[10, 20], [30, 40]]
-chi2, p_value, dof, expected = stats.chi2_contingency(contingency_table)
+rows = []
+for store, g in days.groupby("store"):
+    wet = g.loc[g["rainy"], "vs_typical"]
+    dry = g.loc[~g["rainy"], "vs_typical"]
+    r = stats.ttest_ind(wet, dry, equal_var=False)
+    rows.append({"store": store, "rainy_vs_typical": round(wet.mean() * 100, 1),
+                 "dry_vs_typical": round(dry.mean() * 100, 1), "p": f"{r.pvalue:.1e}"})
+print()
+print(pd.DataFrame(rows).to_string(index=False))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>Flagstaff, share of rainy days by month:
+month
+1     0.18
+2     0.07
+3     0.15
+4     0.05
+5     0.05
+6     0.02
+7     0.27
+8     0.29
+9     0.27
+10    0.10
+11    0.07
+12    0.12
 
-# ANOVA
-# Compare means of 3+ groups
-group1, group2, group3 = [...], [...], [...]
-f_stat, p_value = stats.f_oneway(group1, group2, group3)
+    store  rainy_vs_typical  dry_vs_typical       p
+Asheville             -14.1             4.4 1.3e-80
+     Bend             -18.4             1.4 3.3e-24
+    Boise             -16.6             1.7 5.8e-31
+Flagstaff             -16.3             2.6 1.1e-30</code></pre>
+                    </div>
+                    <p>Flagstaff's rain is concentrated in the late-summer monsoon, which is also high season, so the raw comparison there was mixing weather with the calendar. After comparing like with like, rainy days still run 14% to 18% below a typical day in every store. The effect is real, and a little smaller than the raw gap suggested.</p>
+                </div>
 
-# NON-PARAMETRIC ALTERNATIVES
-# Mann-Whitney U (alternative to two-sample t)
-u_stat, p_value = stats.mannwhitneyu(group1, group2)
+                <div class="card card-info">
+                    <h3>🛠️ Step 7: Write the finding <span class="step-time">(5 min)</span></h3>
+                    <p>Use the reporting template: what was compared, the estimate, the interval, the test, the size, the caveats. Write it in your notebook in your own words. One version:</p>
+                    <div class="card">
+                        <h4>📄 Rain and store traffic, 2024 to 2025</h4>
+                        <p>2,903 store-days; a day counts as rainy with 0.10 inches of precipitation or more.</p>
+                        <ul>
+                            <li>Rainy days had fewer visitors in all four stores: 18% to 26% fewer in the raw comparison (Welch t-tests, all Holm-adjusted p below 0.001; Cohen's d from &minus;0.58 to &minus;0.83, medium to large).</li>
+                            <li>Asheville: 50 fewer visitors on a rainy day (95% CI 37 to 64 fewer).</li>
+                            <li>Compared with a typical day for the same store, month, weekday and promotion status, rainy days still run 14% to 18% low.</li>
+                            <li><strong>Caveats:</strong> this is observational data, so other things that go with rain are not ruled out. Daily counts are not fully independent, so the p-values are approximate. Bend has only 50 rainy days.</li>
+                        </ul>
+                    </div>
+                </div>
 
-# Wilcoxon signed-rank (alternative to paired t)
-w_stat, p_value = stats.wilcoxon(before, after)
+                <div class="card card-success">
+                    <h3>✅ Project Completion Checklist</h3>
+                    <ul class="checklist">
+                        <li>The merged table has 2,903 rows and no day is missing its weather</li>
+                        <li>Your hypotheses and &alpha; are written down before the first test</li>
+                        <li>Asheville's rainy-day difference comes with a 95% confidence interval and Cohen's d</li>
+                        <li>The permutation test agrees with the Welch test</li>
+                        <li>Four store tests are reported with Holm-adjusted p-values</li>
+                        <li>You checked a competing explanation (season and weekday) and the effect survived at 14% to 18%</li>
+                        <li>Your written finding states the caveats</li>
+                    </ul>
+                </div>
+            </section>
 
-# EFFECT SIZE CALCULATIONS
-# Cohen's d
-cohens_d = (mean1 - mean2) / pooled_std
+            <!-- ============================================================ -->
+            <section id="exercises" class="lesson-section">
+                <h2>🏋️ Hands-on Exercises</h2>
 
-# CONFIDENCE INTERVALS
-# 95% CI for mean
-from scipy import stats
-ci = stats.t.interval(0.95, len(data)-1, 
-                      loc=np.mean(data), 
-                      scale=stats.sem(data))
+                <p>For each exercise, write the null hypothesis in a comment before you run the test. The exercises continue from the lesson's variables (<code>survey</code>, <code>in_store</code>, <code>orders</code>).</p>
 
-print("🔬 Master hypothesis testing for confident decisions!")</code></pre>
-    </div>    </main>
+                <div class="card">
+                    <h3>🏋️ Exercise 1: Online Shoppers Against the Target</h3>
+                    <p>Pinecrest's target for the mean recommend score is 7.5. Test whether <strong>online</strong> shoppers (<code>store == "Online"</code>) differ from the target. Report the mean, the 95% confidence interval and the p-value, and state your conclusion in one careful sentence.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>stats.ttest_1samp(x, popmean=7.5)</code>, after <code>.dropna()</code>. Check whether 7.5 is inside the interval before you read the p-value: the two must agree.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python"># H0: the mean recommend score of online shoppers is 7.5
+online = survey.loc[survey["store"] == "Online", "recommend"].dropna()
+r_on = stats.ttest_1samp(online, popmean=7.5)
+ci_on = r_on.confidence_interval()
 
+print(f"n = {len(online)}, mean = {online.mean():.2f}")
+print(f"95% CI {ci_on.low:.2f} to {ci_on.high:.2f}, p = {r_on.pvalue:.2f}")</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>n = 797, mean = 7.47
+95% CI 7.34 to 7.60, p = 0.69</code></pre>
+                        </div>
+                        <p>The interval (7.34 to 7.60) contains 7.5 and p = 0.69, so you fail to reject the null. A careful sentence: "Online shoppers' mean score of 7.47 is consistent with the 7.5 target; the data put the true mean between 7.34 and 7.60." Notice it does not say the mean <em>is</em> 7.5.</p>
+                    </details>
+                </div>
 
-    <!-- Learning Journal (REQUIRED per the Courseware Authoring Standard) -->
-    <section id="journal" class="lesson-section">
-        <h2>📓 Learning Journal</h2>
-        <div class="card card-info">
-            <p>Keep a learning journal — digital or physical. After this lesson, take a few minutes to write down:</p>
-            <ul>
-                <li><strong>Key concepts</strong> you learned</li>
-                <li><strong>Techniques that clicked</strong> for you</li>
-                <li><strong>Questions or confusion points</strong> to revisit</li>
-                <li><strong>Ideas you want to try</strong></li>
-                <li><strong>Your progress and feelings</strong> about learning this</li>
-            </ul>
-            <p><strong>✍️ This lesson's prompt:</strong> The courtroom analogy frames the null hypothesis as "innocent until proven guilty." Where in your own life or work do you make decisions under uncertainty, and how would framing them as a null-vs-alternative hypothesis change how much evidence you'd demand?</p>
+                <div class="card">
+                    <h3>🏋️ Exercise 2: Do Younger Customers Mind the Prices?</h3>
+                    <p>Compare <code>sat_price</code> for the <code>18-24</code> age group with all other respondents. Choose a test suited to a 1-to-5 rating, and report an effect size along with the p-value.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Ratings are ordinal, so use <code>stats.mannwhitneyu</code>. The effect size is U divided by the product of the two group sizes.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python"># H0: price ratings of 18-24 year olds and of everyone else come from the same distribution
+young = survey.loc[survey["age_group"] == "18-24", "sat_price"].dropna()
+older = survey.loc[survey["age_group"] != "18-24", "sat_price"].dropna()
+mw_y = stats.mannwhitneyu(young, older)
+
+print(f"n = {len(young)} and {len(older)}, means {young.mean():.2f} and {older.mean():.2f}")
+print(f"U = {mw_y.statistic:.0f}, p = {mw_y.pvalue:.1e}")
+print(f"Probability of superiority = {mw_y.statistic / (len(young) * len(older)):.2f}")</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>n = 186 and 1567, means 2.80 and 3.37
+U = 95996, p = 7.0e-16
+Probability of superiority = 0.33</code></pre>
+                        </div>
+                        <p>A random 18 to 24 year old rates prices higher than a random older respondent only 33% of the time, where 50% would mean no difference. This was one of the two large findings in the thirty-test scan, and it stands on its own.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 3: Payment Method and Returns</h3>
+                    <p>Among <strong>online</strong> orders only, is the payment method related to whether an order is returned? Build the table, check the expected counts, run the test and report Cramér's V. What do you conclude?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Filter to <code>orders["channel"] == "online"</code> first (cash is used only in stores, so including stores would mix two questions). Then <code>pd.crosstab</code> and <code>stats.chi2_contingency</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python"># H0: among online orders, payment method and being returned are unrelated
+online_orders = orders[orders["channel"] == "online"]
+pay_table = pd.crosstab(online_orders["payment_method"], online_orders["returned"])
+chi_pay = stats.chi2_contingency(pay_table)
+
+print(pay_table)
+print(pd.crosstab(online_orders["payment_method"], online_orders["returned"], normalize="index")[True].round(3))
+print(f"chi-square = {chi_pay.statistic:.2f}, df = {chi_pay.dof}, p = {chi_pay.pvalue:.2f}")
+print(f"Smallest expected count {chi_pay.expected_freq.min():.0f}, "
+      f"Cramer's V = {association(pay_table, method='cramer'):.3f}")</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>returned        False  True
+payment_method
+card             7406    547
+digital_wallet   3601    275
+gift_card         957     68
+payment_method
+card              0.069
+digital_wallet    0.071
+gift_card         0.066
+Name: True, dtype: float64
+chi-square = 0.34, df = 2, p = 0.85
+Smallest expected count 71, Cramer's V = 0.005</code></pre>
+                        </div>
+                        <p>Return rates are within a fraction of a point of each other and p = 0.85. There is no evidence that payment method is related to returns, and with nearly 13,000 orders and V under 0.01, any relationship that exists must be very weak. That is a stronger statement than a non-significant result from a small sample could support.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 4: Selection or Price?</h3>
+                    <p>Each respondent rated both <code>sat_selection</code> and <code>sat_price</code>. Do customers rate one higher than the other? The two ratings come from the same person, so choose a paired test suited to ratings.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Keep only respondents who answered both (<code>dropna()</code> on the two columns together), then use <code>stats.wilcoxon(a, b)</code>. For an effect size, report what share of people rated selection higher, and what share rated price higher.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python"># H0: within a respondent, the selection and price ratings do not differ systematically
+both = survey[["sat_selection", "sat_price"]].dropna()
+wil = stats.wilcoxon(both["sat_selection"], both["sat_price"])
+
+print(f"n = {len(both)}, means {both['sat_selection'].mean():.2f} and {both['sat_price'].mean():.2f}")
+print(f"p = {wil.pvalue:.1e}")
+print(f"Selection rated higher: {(both['sat_selection'] &gt; both['sat_price']).mean():.0%}")
+print(f"Price rated higher:     {(both['sat_selection'] &lt; both['sat_price']).mean():.0%}")</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>n = 1702, means 4.04 and 3.31
+p = 1.2e-137
+Selection rated higher: 60%
+Price rated higher:     8%</code></pre>
+                        </div>
+                        <p>Six respondents in ten rate the selection above the prices and fewer than one in ten the reverse. The p-value is astronomically small, and here the effect is large too. Customers like what Pinecrest sells more than what it charges.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 5: How Small Could the Survey Have Been? (Stretch)</h3>
+                    <p>The Asheville staff-satisfaction gap was detected with 193 and 754 responses. Estimate by simulation the power of a Mann-Whitney test to detect it with only 25, 50, 100 or 200 responses <em>per group</em>. For each size, draw that many ratings (with replacement) from the real Asheville ratings and from the real other-store ratings, test, and repeat 2,000 times.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>rng.choice(array, n)</code> draws with replacement. Power is the share of the 2,000 p-values below 0.05. Use <code>staff_ash</code> and <code>staff_oth</code> from the lesson, converted with <code>.to_numpy()</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">rng = np.random.default_rng(42)
+a_pool, o_pool = staff_ash.to_numpy(), staff_oth.to_numpy()
+
+for n in [25, 50, 100, 200]:
+    hits = sum(stats.mannwhitneyu(rng.choice(a_pool, n), rng.choice(o_pool, n)).pvalue &lt; 0.05
+               for _ in range(2_000))
+    print(f"n = {n:&gt;3} per group: power about {hits / 2_000:.2f}")</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>n =  25 per group: power about 0.38
+n =  50 per group: power about 0.67
+n = 100 per group: power about 0.93
+n = 200 per group: power about 1.00</code></pre>
+                        </div>
+                        <p>About 100 responses per group would have been enough to detect this gap more than nine times in ten; 25 would have missed it most of the time. This treats the observed ratings as if they were the truth, so it is an estimate, and it is exactly the kind of estimate you make when planning the next survey.</p>
+                    </details>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="quiz" class="lesson-section">
+                <h2>🎯 Quick Quiz</h2>
+                <div class="card quiz-container">
+                    <h3>🎯 Check Your Understanding</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> A Welch t-test comparing two stores gives p = 0.03. Which statement is correct?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="The p-value is computed by assuming the null hypothesis is true, so it cannot also be the probability that the null is true.">
+                                A) There is a 3% probability that the two stores have the same mean
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="A p-value describes the data under the null hypothesis: how often chance alone would give a result at least this extreme. It says nothing directly about the probability of either hypothesis.">
+                                B) If the stores truly had the same mean, a difference at least this large would appear in about 3% of samples
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="A p-value mixes effect size with sample size. Which other number tells you how big a difference is?">
+                                C) The difference between the stores is large enough to matter to the business
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> What does this print, and why?</p>
+                        <pre><code class="language-python">q_res = stats.ttest_1samp([5, 6, 7, 8, 9], popmean=7)
+print(q_res.pvalue)</code></pre>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="The sample mean is exactly 7, so the t statistic is 0. Every possible sample is at least that far from the target, so the p-value is 1: the data are as compatible with the null as data can be.">
+                                A) <code>1.0</code>, because the sample mean equals the target exactly, so the data are not surprising at all under the null
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="A p-value near 0 means the data would be very surprising under the null. What is the mean of 5, 6, 7, 8, 9?">
+                                B) <code>0.0</code>, because the sample matches the target perfectly
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="0.05 is a cutoff that people choose. It is not something a test outputs. Work out the sample mean first.">
+                                C) <code>0.05</code>, because that is the significance level
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> You have daily revenue for two stores on the same 700 dates and want to know whether one store earns more. Both stores are busy on the same weekends and slow in the same months. Which test fits best?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Welch treats the two columns as unrelated groups, so the shared weekly and seasonal swings count as noise and can hide a real gap.">
+                                A) A Welch t-test, because the two stores are different groups
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Chi-square compares counts in categories. Revenue is a number measured on each day.">
+                                B) A chi-square test, because there are two stores
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Each date gives one value per store, so the data are pairs. Testing the daily differences removes the swings the stores share, which is what made the Bend and Flagstaff gap detectable in the lesson.">
+                                C) A paired t-test on the two stores matched by date
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 4:</strong> An analyst compares 20 product categories with the company average, each at &alpha; = 0.05, and finds one category with p = 0.04. What is the most reasonable reading?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="With 20 tests at 0.05 you expect about one false alarm even if no category differs, and the chance of at least one is 64%. After a Holm or Bonferroni correction, p = 0.04 would not be significant.">
+                                A) It could easily be a false alarm: about one such result is expected from 20 tests even if nothing differs
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="How many results below 0.05 would you expect from 20 tests if none of the categories truly differed?">
+                                B) That category is different, because p is below 0.05
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Nineteen non-significant results do not prove nineteen categories are average. What does a large p-value actually tell you?">
+                                C) The other 19 categories have been proven to match the company average
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 5:</strong> A test on 50,000 customers per group reports p = 0.001 and Cohen's d = 0.02. What should the report say?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="The p-value is small because the sample is enormous. Look at d: how far apart are the groups compared with the spread of individuals?">
+                                A) The effect is strong, since the p-value is far below 0.05
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="A p-value of 0.001 is solid evidence that the difference is not zero. The question is whether a difference of that size matters.">
+                                B) The result should be ignored, since d is too small for the test to be valid
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Statistical and practical significance are separate. A huge sample can detect a difference of two hundredths of a standard deviation; whether that matters is a business judgment based on the effect size and its interval.">
+                                C) The difference is very likely real and also very small; whether it matters is a practical judgment
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="faq" class="lesson-section">
+                <h2>❓ Common Questions at This Stage</h2>
+
+                <details>
+                    <summary>If the p-value is not the probability that the null is true, what is that probability?</summary>
+                    <p>A hypothesis test cannot tell you. To put a probability on a hypothesis you need to say how plausible it was <em>before</em> the data, and then update that with the evidence. That approach is called Bayesian statistics, and it is a different toolkit. What the p-value gives you is narrower and still useful: a measure of how badly the data fit the "nothing going on" story.</p>
+                </details>
+                <details>
+                    <summary>Do I need to test for normality before a t-test?</summary>
+                    <p>Usually not, and a formal normality test is a poor guide. With small samples such tests miss real skew, and with large samples they flag harmless departures. What the t-test needs is for the sample <em>means</em> to be roughly normal, which the Central Limit Theorem delivers for moderate samples unless the data are extremely skewed. Look at a histogram and the sample size. If the sample is small and lopsided, use a rank-based or permutation test.</p>
+                </details>
+                <details>
+                    <summary>Should I run a t-test and a Mann-Whitney test and report the better one?</summary>
+                    <p>No: that is a small case of p-hacking. Choose the test from the kind of data and the question (a difference in means, or a shift in ranks) before you see the result. Running a second method as a robustness check is fine, as long as you report both.</p>
+                </details>
+                <details>
+                    <summary>What about comparing three or more groups at once?</summary>
+                    <p>The usual first step is an overall test of "are all the groups the same?": one-way ANOVA (<code>stats.f_oneway</code>) for means, or Kruskal-Wallis (<code>stats.kruskal</code>) for ranks. If that is significant, pairwise comparisons with a multiple-comparison correction show where the differences are. The logic is the same as in this lesson.</p>
+                </details>
+                <details>
+                    <summary>Is a 95% confidence interval the range that holds 95% of the data?</summary>
+                    <p>No. It is a range for the <em>quantity being estimated</em> (a mean, a difference), not for individual values. The 95% describes the method: if you repeated the sampling many times, about 95% of the intervals built this way would contain the true value. Individual recommend scores range from 0 to 10; the interval for their mean was 7.27 to 7.45.</p>
+                </details>
+
+                <div class="card card-accent">
+                    <h3>🌟 Going Further: Bonus Challenge</h3>
+                    <p>Build a permutation test for <em>paired</em> data. Under the null, the sign of each Bend-minus-Flagstaff difference is a coin flip, so instead of shuffling labels you flip signs: multiply the 722 differences by a random array of +1 and &minus;1 (<code>rng.choice([-1, 1], size=len(diff))</code>), take the mean, and repeat 10,000 times. Compare your p-value with <code>stats.ttest_rel</code>. Then try the same idea with the median in place of the mean: a test no textbook formula covers, built in six lines.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="journal" class="lesson-section">
+                <h2>📓 Learning Journal</h2>
+                <div class="card card-accent">
+                    <p>Take five minutes to write in your learning journal (the <code>journal.md</code> file you started in Lesson 0.1, or a paper notebook). Jot down:</p>
+                    <ul>
+                        <li><strong>Key concepts</strong> you learned today</li>
+                        <li><strong>Techniques that clicked</strong> (and the ones that have not, yet)</li>
+                        <li><strong>Questions or confusion</strong> to come back to</li>
+                        <li><strong>Ideas to try</strong> on your own</li>
+                        <li><strong>Progress and feelings</strong>: how did this lesson go for you?</li>
+                    </ul>
+                    <p><strong>✍️ This lesson's prompt:</strong> Explain a p-value to a friend who has never studied statistics, using the shuffled stickers and no formulas. Then write down one claim you have seen recently (in the news, at work, in an advertisement) that reported a "significant" result, and list what else you would now want to know: the effect size, the interval, how many things were tested.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="summary" class="lesson-section">
+                <h2>📝 Lesson Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎓 Key Takeaways</h3>
+                    <ul>
+                        <li>A hypothesis test asks one question: <strong>how surprising would these data be if nothing were going on?</strong></li>
+                        <li>The <strong>p-value</strong> is the probability of a result at least this extreme <em>assuming the null is true</em>. It is not the probability that the null is true, and it is not a measure of size or importance</li>
+                        <li>A permutation test builds the null distribution by shuffling labels; the named tests reach the same answer with theory</li>
+                        <li>Use <strong>Welch's</strong> t-test (<code>equal_var=False</code>) for two independent groups, a <strong>paired</strong> test when observations come in pairs, <strong>chi-square</strong> for tables of counts, and <strong>rank tests</strong> for ordinal or badly skewed data</li>
+                        <li>Report an <strong>effect size</strong> and a <strong>confidence interval</strong> with every p-value: statistical significance is not practical significance</li>
+                        <li>"Not significant" means "not detected". <strong>Power</strong> tells you how likely a study was to detect an effect, and it depends on sample size</li>
+                        <li>Many tests produce false alarms. Count them all and correct with <strong>Holm</strong>; label scanned results as exploratory</li>
+                        <li>Every test assumes <strong>independent</strong> observations. Check the assumptions on the data, and say so when they are shaky</li>
+                    </ul>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🏆 What You've Accomplished</h3>
+                    <ul>
+                        <li>You built a hypothesis test from scratch with 10,000 shuffles and matched it to SciPy's t-test</li>
+                        <li>You ran one-sample, Welch, paired, chi-square and Mann-Whitney tests on real questions about Pinecrest</li>
+                        <li>You saw a significant result that was small, a tiny p-value that barely mattered, and a null result reported honestly</li>
+                        <li>You simulated a 5% false-alarm rate and a power curve, and sized a study with statsmodels</li>
+                        <li>You tested whether rain reduces store traffic, challenged your own result, and wrote it up with its caveats</li>
+                    </ul>
+                </div>
+
+                <h3>🔭 Looking Ahead</h3>
+                <p>In <a href="statistics_ab_testing.html"><strong>Lesson 4.6: A/B Testing</strong></a> you will apply all of this to a designed experiment: Pinecrest's test of a new checkout page. Because visitors were assigned at random, the "something else explains it" caveat largely disappears, and new questions take its place: how many visitors are needed before the test starts, why checking the results every week is dangerous, and how to turn a p-value into a decision.</p>
+
+                <h3>📋 Before the Next Lesson</h3>
+                <ul>
+                    <li>Keep your <code>cohens_d</code> function and the reporting template where you can find them.</li>
+                    <li>Open <code>data/ab_test.csv</code> and look at its columns. Before running anything, write down which test from this lesson you would use to compare conversion between the two variants, and why.</li>
+                    <li>Reread the "What a p-value Is Not" table once more tomorrow. It takes most people several passes.</li>
+                </ul>
+
+                <div class="card card-accent">
+                    <h3>🌱 Encouragement for the Journey</h3>
+                    <p>This lesson covers ideas that trip up working scientists, so if the p-value definition still feels slippery, you are in excellent company. Notice what you can already do: you can make chance visible by shuffling, you can tell a real effect from a large sample's rounding error, and you know to ask "how many things did they test?" Those habits matter more than memorizing any formula, and you now have them.</p>
+                </div>
+            </section>
+
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="statistics_correlation_analysis.html" class="prev-lesson">← Previous: Correlation Analysis</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="statistics_ab_testing.html" class="next-lesson">Next: A/B Testing →</a>
+            </nav>
         </div>
-    </section>
+    </main>
 
-    <!-- Lesson Summary (full standard block) -->
-    <section id="summary" class="lesson-section">
-        <h2>📝 Lesson Summary</h2>
-        <div class="card card-success">
-            <h3>🎓 Key Takeaways</h3>
-            <ul>
-                <li>Hypothesis testing is a disciplined way to decide whether an observed effect is real: assume the null, then measure how surprising the data would be if it were true.</li>
-                <li>The p-value is the probability of data at least this extreme <em>given the null is true</em> — not the probability the null is false.</li>
-                <li>Choosing the right test depends on data type, number of groups, pairing, and whether assumptions like normality hold; non-parametric tests are the fallback.</li>
-                <li>Significance is only half the story — always report effect size and confidence intervals, and plan power and multiple-testing corrections in advance.</li>
-            </ul>
-        </div>
-        <h3>🎉 What You've Accomplished</h3>
-        <p>You can now turn a vague claim into a testable hypothesis, pick the correct statistical test, run it in Python, and report a complete, honest result — significance, effect size, and uncertainty. This is the backbone of evidence-based decision making.</p>
-        <h3>❓ Common Questions at This Stage</h3>
-        <details>
-            <summary>Does "fail to reject the null" mean the null is true?</summary>
-            <p>No. It means you don't have enough evidence to reject it — absence of evidence isn't evidence of absence. A larger sample or bigger effect might still reveal a difference.</p>
-        </details>
-        <details>
-            <summary>How do I choose between a t-test and a non-parametric test?</summary>
-            <p>Use a t-test when its assumptions (roughly normal data, and for two-sample, comparable variances) are reasonable. When normality is violated or you have ordinal data, switch to the Mann-Whitney U or Wilcoxon signed-rank test.</p>
-        </details>
-        <details>
-            <summary>Why do I need to correct for multiple comparisons?</summary>
-            <p>Each test at α = 0.05 has a 5% false-positive chance. Run 20 tests and you expect one false positive by luck alone. Bonferroni, Holm, or FDR corrections control that inflated error rate.</p>
-        </details>
-        <h3>🔭 Looking Ahead</h3>
-        <p>Hypothesis testing tells you whether a relationship exists; next you'll quantify how two variables move together with correlation analysis — and learn why a significant relationship still isn't proof of causation.</p>
-        <h3>✅ Before the Next Lesson</h3>
-        <ul>
-            <li>Run a two-sample t-test on two groups and report the p-value, Cohen's d, and a 95% confidence interval.</li>
-            <li>Use a power analysis to find the sample size needed to detect a medium effect (d = 0.5) at 80% power.</li>
-            <li>Write your Learning Journal entry for this lesson</li>
-        </ul>
-        <div class="card card-accent" style="text-align: center; padding: 2rem;">
-            <h3>🌟 Encouragement for the Journey</h3>
-            <p>Hypothesis testing is how science keeps itself honest — and now it's a tool you own. Focus on interpreting results carefully, and you'll make decisions the data can actually support. Keep going!</p>
-        </div>
-    </section>
-
-    <footer>
-        <div class="navigation-links">
-            <a class="nav-prev" href="statistics_probability_distributions.html">← Previous: Probability Distributions</a>
-            <a class="nav-home" href="index.html">🏠 Course Home</a>
-            <a class="nav-next" href="statistics_correlation_analysis.html">Next: Correlation Analysis →</a>
-        </div>
-    </footer>
-    
-    <!-- Footer -->
     <footer class="site-footer">
         <p>&copy; 2026 Ray de la Paz. Python Data Science. All rights reserved.</p>
         <div class="footer-links">
@@ -1547,9 +1345,10 @@ print("🔬 Master hypothesis testing for confident decisions!")</code></pre>
             <a href="https://rays-home.netlify.app/contact">Contact</a>
             <a href="#" id="print-button">Print Page</a>
         </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
     </footer>
 
-    <!-- Copy to Clipboard functionality -->
-    <script src="scripts/clipboard.js"></script>
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
 </body>
 </html>

@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facilitator Guide: Session 12</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Instructor copy —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">contains answers &amp; timing · not for students</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Facilitator Guide</div>
+    <h1>Session 12: Correlation and Hypothesis Tests</h1>
+    <p class="sub">How to teach the session that turns description into claims. Before the break learners measure how two columns move together, choose between Pearson and Spearman, and take apart a correlation of 0.88 between staffing and revenue that points to exactly the wrong decision. After the break they ask whether a difference could be chance: they build a test by shuffling, read a p-value correctly, and report every test with an effect size and a confidence interval. Lesson 4.4 contains no hypothesis tests; they begin after the break.</p>
+    <div class="meta-row">
+      <span class="chip"><b>2</b> lessons</span>
+      <span class="chip"><b>3 hrs</b> session</span>
+      <span class="chip">Lessons <b>4.4–4.5</b></span>
+      <span class="chip">Session <b>12</b> of 21</span>
+    </div>
+  </header>
+
+  <div class="sec"><h2>How to Use This Guide</h2><span class="rule"></span></div>
+  <ul class="tick">
+          <li>Same rhythm as every session: <b>Frame</b> → <b>Live demo</b> (you type, they type along) → <b>Guided lab</b> (the kit's lab files) → <b>Start the lesson project</b>. The lesson's exercises, quiz and journal are homework.</li>
+          <li><b>Type, do not paste.</b> Every code block in the demo scripts is what to type, one notebook cell per step, in the course project folder. Every output shown was produced by running that code with the course environment (pandas 3.0, SciPy 1.18, statsmodels 0.15).</li>
+          <li><b>Keep the halves apart.</b> Lesson 4.4 describes association and never tests it: if a learner asks "is 0.46 significant?" before the break, write the question on the board and answer it after. In 4.5, never let a p-value appear without an effect size and an interval, in your own speech included.</li>
+          <li><b>Words matter more than code today.</b> Write the definition of the p-value on the board before class and point at it every time someone reads a p-value out loud.</li>
+          <li><b>The lessons are the reference.</b> Keep <code class="inline">statistics_correlation_analysis.html</code> and <code class="inline">statistics_hypothesis_testing.html</code> open for the figures (the four scatter panels, the heatmap, the staffing diagram, the pooled and like-with-like scatters, the shuffle histogram, the power curve) and the tables (choosing Pearson or Spearman, the five explanations, what a p-value is not, the test chooser).</li>
+          <li><span style="color:var(--lab);font-weight:600">Teal</span> = hands-on, <span style="color:var(--warn);font-weight:600">amber</span> = watch-outs. Labs for this session live in <code class="inline">labs/module-12/</code>: starters for learners, solutions for you.</li>
+        </ul>
+  <div class="note warn"><div class="t">The risk of Session 12: confident misreadings</div>
+    <p>Nothing in today's code is hard. The danger is in the sentences: "r = 0.88, so more staff sell more", "p = 0.03, so there is a 3% chance the stores are the same", "p = 0.57, so they are the same", "p = 0.003, so it is a big problem". Each one sounds right, and learners will hear all four in their working lives. Spend the session on the sentences. Two board rules carry it: <b>every correlation gets the question "how did this data come to be?"</b>, and <b>every p-value travels with an effect size and a confidence interval</b>. Never phrase a p-value as the probability that a hypothesis is true, including in passing; learners copy the instructor's wording. Second risk: the session ends Module 4's teaching, and Session 13 opens with a checkpoint. Announce it clearly at the wrap-up so nobody is surprised.</p>
+  </div>
+
+  <div class="sec"><h2>Before Session 12</h2><span class="rule"></span></div>
+  <ul class="tick lab">
+          <li>☐ Run the lab check from the kit folder: <code class="inline">python3 labs/check_labs.py module-12</code>. Eight lines should say PASS.</li>
+          <li>☐ Copy the starters and the two debug handouts (<code class="inline">*_starter.py</code>, <code class="inline">debug_*.py</code>) from <code class="inline">labs/module-12/</code> to the shared folder. Keep every <code class="inline">*_solution.py</code> on your machine.</li>
+          <li>☐ Projector machine: Jupyter (or VS Code notebooks) opened in the course project folder; font size at least 18 pt.</li>
+          <li>☐ Files used today: <code class="inline">data/daily_sales.csv</code>, <code class="inline">data/store_weather.csv</code>, <code class="inline">data/products.csv</code>, <code class="inline">data/order_items.csv</code>, <code class="inline">data/survey.csv</code>, <code class="inline">data/orders.csv</code> (and <code class="inline">data/customers.csv</code> for the lesson's null-result example). No servers to start, no accounts, nothing new to install: <code class="inline">scipy</code> and <code class="inline">statsmodels</code> are in the course environment. Check once: <code class="inline">python -c "import scipy, statsmodels; print(scipy.__version__, statsmodels.__version__)"</code>.</li>
+          <li>☐ Whiteboard, written before learners arrive: on the left <b>plot first · direction, form, strength · how did this data come to be?</b>; on the right the definition <b>p-value = the probability, if the null hypothesis were true, of a result at least as extreme as the one observed.</b></li>
+          <li>☐ Read the Session 13 plan from its author (lessons 4.6 A/B Testing and 4.7 the EDA workflow, with Checkpoint 1) so your wrap-up announcement matches: a short open-notebook checkpoint on Modules 1 to 4.</li>
+          <li>☐ <b>Known environment traps.</b> (1) <code class="inline">daily.corr()</code> on a table with text raises a ValueError: select numeric columns or pass <code class="inline">numeric_only=True</code>. (2) <code class="inline">np.corrcoef</code> returns <code class="inline">nan</code> with missing values; pandas <code class="inline">.corr()</code> drops missing pairs silently, so print the n. (3) SciPy tests return <code class="inline">nan</code> with missing values. (4) <code class="inline">stats.ttest_ind</code> defaults to Student's test; always type <code class="inline">equal_var=False</code>. (5) Result objects print NumPy wrappers (<code class="inline">np.float64(...)</code>): format with f-strings. (6) <code class="inline">permutation_test</code> takes a few seconds; <code class="inline">rng=</code> is the keyword in current SciPy (older versions used <code class="inline">random_state=</code>). (7) A <code class="inline">pearsonr</code> result carries a <code class="inline">.pvalue</code>; in 4.4 use only <code class="inline">.statistic</code>.</li>
+          <li>☐ Skim the Session 11 homework: the Store Profile Sheet (all 91 flagged days were weekends, promotions or December) and the Returns Forecast (capacity 4 a day; rate 1.56 with a CI of 1.47 to 1.65). Collect the "before the next lesson" predictions about staffing: they are the bridge into the staffing puzzle.</li>
+          <li>☐ Sticky notes or slips of paper for the exit ticket.</li>
+        </ul>
+
+  <div class="sec"><h2>Session 12 Agenda (3 hours)</h2><span class="rule"></span></div>
+  <table class="timing">
+    <thead><tr><th>Clock</th><th>Minutes</th><th>Segment</th><th>What happens</th></tr></thead>
+    <tbody>
+      <tr><td class="t">0:00</td><td class="t">10</td><td>Warm-up</td><td>Five retrieval questions on Session 11 (shape, outliers, distributions, the CLT), homework check.</td></tr>
+      <tr><td class="t">0:10</td><td class="t">10</td><td><b>4.4</b> Frame and mental model</td><td>Two dancers: in step, but who is leading, or is it the music? Plot first.</td></tr>
+      <tr><td class="t">0:20</td><td class="t">25</td><td><b>4.4</b> Live demo</td><td>r from z-scores, Spearman, a matrix, the staffing confound tested three ways, a regression line.</td></tr>
+      <tr><td class="t">0:45</td><td class="t">20</td><td><b>4.4</b> Guided lab</td><td><code class="inline">labs/module-12/l4_4-correlation-analysis/reviews_and_sales_starter.py</code>, then Steps 1 and 2 of <code class="inline">staffing_rule_starter.py</code>.</td></tr>
+      <tr><td class="t">1:05</td><td class="t">5</td><td><b>4.4</b> Start the lesson project</td><td>The Rain Check, Step 1: the merge keeps 2,903 rows.</td></tr>
+      <tr><td class="t">1:10</td><td class="t">10</td><td>Break</td><td>Leave the staffing verdict table (0.88, 0.14, 0.07, 0.03) on the projector.</td></tr>
+      <tr><td class="t">1:20</td><td class="t">15</td><td><b>4.5</b> Frame and mental model</td><td>The courtroom: assume nothing is going on, ask how surprising the data would be.</td></tr>
+      <tr><td class="t">1:35</td><td class="t">35</td><td><b>4.5</b> Live demo</td><td>A permutation test by hand, the p-value, Welch with CI and effect size, paired, chi-square, Mann-Whitney, false alarms.</td></tr>
+      <tr><td class="t">2:10</td><td class="t">25</td><td><b>4.5</b> Guided lab</td><td><code class="inline">labs/module-12/l4_5-hypothesis-testing/returned_order_size_starter.py</code>, then Step 1 of <code class="inline">footwear_returns_starter.py</code>.</td></tr>
+      <tr><td class="t">2:35</td><td class="t">15</td><td><b>4.5</b> Start the lesson project</td><td>Does Rain Keep Shoppers Away? Steps 1 and 2: hypotheses written before any test.</td></tr>
+      <tr><td class="t">2:50</td><td class="t">10</td><td>Wrap-up</td><td>Exit ticket (3 questions), homework, the Session 13 checkpoint, bring list.</td></tr>
+      <tr><td class="t"><b>Total</b></td><td class="t"><b>180</b></td><td></td><td>Ends at 3:00.</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:.9rem;color:var(--ink-2)">The lesson pages estimate 95 + 110 = 205 minutes for a solo learner, the longest pair in the course, and the room has 150 after the warm-up, break and wrap-up. So this session protects the two ideas everything after it depends on (the confound, and the correct reading of a test) and sends the breadth home. <b>Done in the room:</b> the scatter-first habit, r from z-scores, Spearman, a correlation matrix, the staffing confound tested three ways, a first regression line, a permutation test built by hand, the p-value and what it is not, Welch with its interval and Cohen's d, significance against importance, one paired test, one chi-square test, one Mann-Whitney test, false alarms by simulation, the <code class="inline">reviews_and_sales</code> and <code class="inline">returned_order_size</code> labs, and the first steps of both projects. <b>Goes home:</b> the rest of both projects (Rain Check Steps 2 to 6; Does Rain Keep Shoppers Away? Steps 3 to 7), the unfinished labs, the exercises, Quick Quizzes and journals, and the reading-only parts: the heatmap code, Simpson's paradox (a simulated example), the regression cautions in full, <code class="inline">permutation_test</code>, the null chi-square result on loyalty tiers, the power curve and <code class="inline">solve_power</code>, the 30-test scan, and the assumption checks.</p>
+
+  <div class="sec"><h2>Session at a Glance</h2><span class="rule"></span></div>
+  <table class="timing">
+    <thead><tr><th>Lesson</th><th>Topic</th><th>Room time</th><th>Learners leave able to…</th></tr></thead>
+    <tbody>
+      <tr><td class="t">4.4</td><td>Correlation Analysis</td><td class="t">60 of 95 min</td><td>plot before measuring, compute and choose between Pearson and Spearman, read a correlation matrix, test a suspected confounder by comparing like with like, and read a regression line in the units of the data</td></tr>
+      <tr><td class="t">4.5</td><td>Hypothesis Testing</td><td class="t">90 of 110 min</td><td>explain what a p-value is and is not, build a permutation test, choose and run Welch, one-sample, paired, chi-square and Mann-Whitney tests, and report every test with an effect size, a confidence interval and its caveats</td></tr>
+    </tbody>
+  </table>
+
+  <div class="sec"><h2>Warm-up</h2><span class="rule"></span></div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">0:00</span><h3>Warm-up: Retrieval from Session 11</h3><span class="dur">10 min</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Timing</div>
+        <table class="timing"><tbody>
+          <tr><td class="t">6m</td><td>Five questions, no notes: answer alone on paper, compare with a neighbor, then one answer per question out loud</td></tr>
+          <tr><td class="t">3m</td><td>Homework check: the Store Profile Sheet, the Returns Forecast, the staffing prediction</td></tr>
+          <tr><td class="t">1m</td><td>Bridge to today</td></tr>
+        </tbody></table>
+      </div>
+      <div class="blk"><div class="h">Five retrieval questions (no notes, pairs, 60 seconds each)</div>
+        <ol class="steps">
+          <li>A column has a skewness of 1.5. Which center and spread do you report, and what do you draw first? <b>Answer:</b> Median and IQR (strongly skewed, long right tail), and a histogram first: skewness does not show humps.</li>
+          <li>An outlier rule flags 4% of your rows. Which two questions do you ask before removing anything? <b>Answer:</b> Is it a provable error? Is it part of the question I am answering? Remove only provable errors, and say what you removed.</li>
+          <li>You have a frozen distribution <code class="inline">model</code>. Which method gives P(X at most x), and which gives P(X more than x)? <b>Answer:</b> <code class="inline">model.cdf(x)</code> and <code class="inline">model.sf(x)</code>.</li>
+          <li>In one sentence: what does the central limit theorem say becomes normal? <b>Answer:</b> The distribution of the sample mean (not the data): centered on the population mean, with SD sigma / sqrt(n).</li>
+          <li>A 95% confidence interval for the mean order total is $165 to $209. What does the 95% describe? <b>Answer:</b> The method: about 95 of 100 intervals built this way contain the true mean. It is not a range for 95% of orders.</li>
+        </ol>
+      </div>
+      <div class="blk"><div class="h">Homework check</div>
+        <p>Show of hands: who found out what the 91 "weird days" in the Store Profile Sheet were? (All weekends, promotions or December days: kept.) Who has a capacity number from the Returns Forecast? (4 a day, exceeded on about 2% of days.) Then the bridge: "You were asked to predict whether stores take more revenue on days with more staff, and why that might be true even if adding staff did nothing. What did you write?" Collect two or three answers; somebody will say "busy days get more staff". Write it on the board and leave it: the 4.4 demo proves them right.</p>
+      </div>
+      <div class="blk"><div class="h">Bridge to today</div>
+        <p>Say: "Until now we described one column at a time. Today, two columns, and two of the most useful and most misused ideas in statistics. Before the break: do two things move together, and does that mean what it seems? After the break: could a difference be nothing but chance?"</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="sec"><h2>Lesson Plans</h2><span class="rule"></span></div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">4.4</span><h3>Correlation Analysis</h3><span class="dur">60 min</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Timing</div>
+        <table class="timing"><tbody>
+          <tr><td class="t">10m</td><td>Frame: two dancers; plot first; direction, form, strength</td></tr>
+          <tr><td class="t">25m</td><td>Live demo: 11 short steps, ending with the staffing verdict and a regression line</td></tr>
+          <tr><td class="t">20m</td><td>Guided lab: <code class="inline">reviews_and_sales</code>, then the start of <code class="inline">staffing_rule</code></td></tr>
+          <tr><td class="t">5m</td><td>Start the lesson project: the Rain Check, Step 1 (the merge)</td></tr>
+        </tbody></table>
+      </div>
+      <div class="blk"><div class="h">Objectives (the lesson's own)</div>
+        <ul class="tick">
+          <li>Read direction, form and strength from a scatter plot, and explain why the plot comes before the number</li>
+          <li>Compute Pearson and Spearman correlations with pandas and scipy, and choose between them</li>
+          <li>Build a correlation matrix and draw it as an annotated heatmap with Matplotlib</li>
+          <li>Identify a confounding variable and test for it by comparing like with like</li>
+          <li>Fit and interpret a simple regression line, and state what it does and does not tell you</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Mental model to say</div>
+        <p>Say: "Watch two people on a dance floor. If they step forward and back together, they are positively correlated. If one steps forward whenever the other steps back, negatively. If each moves with no regard for the other, uncorrelated. Correlation measures how well their movements are synchronized. It says nothing about why: one may be leading, or both may be following the same music."</p>
+        <p>Write <b>plot first</b> on the board, and under it the three things to read from any scatter plot: <b>direction, form, strength</b>. Then the question that follows every correlation, which is the whole lesson: <b>how did this data come to be?</b> Tell the room up front that today's lesson has no p-values; "could this be chance?" is the second half of the session.</p>
+      </div>
+      <div class="blk"><div class="h">Live demo (you type, they follow)</div>
+        <p>New notebook <code class="inline">session12_correlation.ipynb</code>. The numbers are the lesson's own. Two steps are said, not typed (the list of explanations, and the heatmap, which the lab practices). If time runs short, cut step 4 to the printed matrix and step 6 to one sentence. Do not cut steps 5, 7 and 8: the staffing verdict is the lesson.</p>
+        <ol class="steps">
+          <li><b>Plot first (3m).</b> New notebook. Say: "Every lesson so far looked at one column. Most real questions involve two. The first move with two numeric columns is always the same: a scatter plot." Read three things from it out loud: direction, form, strength.
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+<span class="k">import</span> pandas <span class="k">as</span> pd
+<span class="k">import</span> matplotlib.pyplot <span class="k">as</span> plt
+<span class="k">from</span> scipy <span class="k">import</span> stats
+
+daily = pd.read_csv(<span class="s">"data/daily_sales.csv"</span>, parse_dates=[<span class="s">"date"</span>])
+sales = daily.dropna(subset=[<span class="s">"revenue"</span>]).copy()
+products = pd.read_csv(<span class="s">"data/products.csv"</span>)
+items = pd.read_csv(<span class="s">"data/order_items.csv"</span>)
+units_sold = items.groupby(<span class="s">"sku"</span>)[<span class="s">"quantity"</span>].sum().rename(<span class="s">"units_sold"</span>)
+catalog = products.merge(units_sold, on=<span class="s">"sku"</span>)   <span class="c"># products that sold</span>
+print(sales.shape, catalog.shape)
+
+fig, ax = plt.subplots(figsize=(<span class="s">7</span>, <span class="s">4</span>), layout=<span class="s">"constrained"</span>)
+ax.scatter(sales[<span class="s">"visitors"</span>], sales[<span class="s">"revenue"</span>], s=<span class="s">6</span>, alpha=<span class="s">0.3</span>)
+ax.set_xlabel(<span class="s">"Visitors"</span>)
+ax.set_ylabel(<span class="s">"Revenue ($)"</span>)
+fig.savefig(<span class="s">"visitors_revenue.png"</span>, dpi=<span class="s">110</span>)</pre>
+<pre class="out">(2897, 8) (234, 14)</pre>
+            A rising, straight, tight band. Then show the lesson's four-panel figure (visitors and revenue; price and units; price and rating; a perfect curve scored as 0) and say: "Two of these four are warnings. The number measures one specific thing, and you need the picture to know whether that is what your data is doing."</li>
+          <li><b>What r is made of (3m).</b> Say: "You already have the ingredients: z-scores. Multiply them row by row and average." Have the room predict whether the four routes agree.
+<pre class="code">x, y = sales[<span class="s">"visitors"</span>], sales[<span class="s">"revenue"</span>]
+zx = (x - x.mean()) / x.std()
+zy = (y - y.mean()) / y.std()
+print(<span class="s">"by hand        :"</span>, round((zx * zy).sum() / (len(x) - <span class="s">1</span>), <span class="s">4</span>))
+print(<span class="s">"pandas .corr() :"</span>, round(x.corr(y), <span class="s">4</span>))
+print(<span class="s">"np.corrcoef    :"</span>, round(np.corrcoef(x, y)[<span class="s">0</span>, <span class="s">1</span>], <span class="s">4</span>))
+print(<span class="s">"scipy pearsonr :"</span>, round(stats.pearsonr(x, y).statistic, <span class="s">4</span>))</pre>
+<pre class="out">by hand        : 0.9435
+pandas .corr() : 0.9435
+np.corrcoef    : 0.9435
+scipy pearsonr : 0.9435</pre>
+            Three properties follow: no units (try revenue in cents), symmetric, and not robust. Then the warning for the board: <b>r is not a slope and not a percentage.</b> 0.94 does not mean 94 cents per visitor. (<code class="inline">pearsonr</code> also carries a <code class="inline">.pvalue</code>; say "that is the next lesson's question" and move on.)</li>
+          <li><b>Spearman: correlation of ranks (3m).</b> Say: "Price against units sold. Obviously related, and it scores a feeble -0.32. It is just not straight."
+<pre class="code">price, units = catalog[<span class="s">"price"</span>], catalog[<span class="s">"units_sold"</span>]
+print(<span class="s">"Pearson         :"</span>, round(price.corr(units), <span class="s">3</span>))
+print(<span class="s">"Spearman        :"</span>, round(price.corr(units, method=<span class="s">"spearman"</span>), <span class="s">3</span>))
+print(<span class="s">"Pearson on ranks:"</span>, round(price.rank().corr(units.rank()), <span class="s">3</span>))
+print(<span class="s">"Pearson of logs :"</span>, round(np.log(price).corr(np.log(units)), <span class="s">3</span>))</pre>
+<pre class="out">Pearson         : -0.319
+Spearman        : -0.6
+Pearson on ranks: -0.6
+Pearson of logs : -0.628</pre>
+            Spearman is Pearson on the ranks: it measures whether one goes consistently up as the other goes down, straight or not. When the two disagree, there is a curve or an influential point. Spearman's other home is ordinal data: overall satisfaction and the recommend score give 0.63 in the lesson. Habit for the board: <b>compute both.</b></li>
+          <li><b>Many pairs at once (2m).</b> Say: "With more than two columns, compute every pair."
+<pre class="code">columns = [<span class="s">"visitors"</span>, <span class="s">"transactions"</span>, <span class="s">"units"</span>, <span class="s">"revenue"</span>,
+           <span class="s">"staff_on_duty"</span>, <span class="s">"promo_day"</span>]
+corr = sales[columns].corr().round(<span class="s">2</span>)
+print(corr.rename(columns=<span class="k">lambda</span> name: name[:<span class="s">6</span>]))</pre>
+<pre class="out">               visito  transa  units  revenu  staff_  promo_
+visitors         1.00    0.97   0.96    0.94    0.93    0.32
+transactions     0.97    1.00   0.99    0.98    0.90    0.37
+units            0.96    0.99   1.00    0.99    0.89    0.36
+revenue          0.94    0.98   0.99    1.00    0.88    0.37
+staff_on_duty    0.93    0.90   0.89    0.88    1.00    0.32
+promo_day        0.32    0.37   0.36    0.37    0.32    1.00</pre>
+            Read it: diagonal of 1s, mirror image, so only one triangle matters. Then the important sentence: "A solid block of very high correlations is not five discoveries. It is one fact seen five ways: some days are busier. Look for the common driver." The lesson draws it as an annotated heatmap (<code class="inline">imshow</code>, a diverging colormap, scale fixed at -1 to 1); the lab has learners draw one.</li>
+          <li><b>The staffing puzzle (3m).</b> Say: "One cell deserves a closer look: staff and revenue, 0.88. Imagine it arriving on an executive's desk."
+<pre class="code">staff, revenue = sales[<span class="s">"staff_on_duty"</span>], sales[<span class="s">"revenue"</span>]
+line = stats.linregress(staff, revenue)
+print(<span class="s">"r:"</span>, round(staff.corr(revenue), <span class="s">3</span>))
+print(<span class="s">"revenue with 4 staff:"</span>, round(revenue[staff == <span class="s">4</span>].mean()))
+print(<span class="s">"revenue with 8 staff:"</span>, round(revenue[staff == <span class="s">8</span>].mean()))
+print(<span class="s">"slope:"</span>, round(line.slope), <span class="s">"dollars per extra staff member"</span>)</pre>
+<pre class="out">r: 0.882
+revenue with 4 staff: 4759
+revenue with 8 staff: 9109
+slope: 1154 dollars per extra staff member</pre>
+            Let the proposal write itself ("schedule more staff, sell more"), then ask the question that follows every correlation: <b>how did this data come to be?</b> The data dictionary: staff are "scheduled in advance". Draw the lesson's diagram: expected demand drives both staffing and visitors. A third variable that drives both is a <b>confounder</b>.</li>
+          <li><b>The calendar moves both (2m).</b> Say: "Check the story before you believe it."
+<pre class="code">sales[<span class="s">"weekday"</span>] = sales[<span class="s">"date"</span>].dt.day_name()
+by_day = sales.groupby(<span class="s">"weekday"</span>)[[<span class="s">"staff_on_duty"</span>, <span class="s">"revenue"</span>]].mean()
+print(by_day.loc[[<span class="s">"Tuesday"</span>, <span class="s">"Saturday"</span>]].round(<span class="s">1</span>))
+print(sales.groupby(<span class="s">"promo_day"</span>)[[<span class="s">"staff_on_duty"</span>, <span class="s">"revenue"</span>]]
+      .mean().round(<span class="s">1</span>))</pre>
+<pre class="out">          staff_on_duty  revenue
+weekday                         
+Tuesday             5.0   5716.1
+Saturday            9.6  10932.9
+           staff_on_duty  revenue
+promo_day                        
+0                    6.3   7211.7
+1                   10.8  13950.5</pre>
+            Saturdays have the most staff and the most revenue, Tuesdays the least of both; promotion days have 10.8 staff against 6.3. The schedule and the sales both follow the calendar.</li>
+          <li><b>Test 1: compare like with like (3m).</b> Say: "If staff raise revenue, then among days expected to be equally busy, the days with an extra person should still sell more." Explain <code class="inline">transform</code> as "the group's mean, written on every row".
+<pre class="code">sales[<span class="s">"month"</span>] = sales[<span class="s">"date"</span>].dt.to_period(<span class="s">"M"</span>)
+alike = sales.groupby([<span class="s">"store"</span>, <span class="s">"month"</span>, <span class="s">"weekday"</span>, <span class="s">"promo_day"</span>])
+sales[<span class="s">"staff_dev"</span>] = (sales[<span class="s">"staff_on_duty"</span>]
+                      - alike[<span class="s">"staff_on_duty"</span>].transform(<span class="s">"mean"</span>))
+sales[<span class="s">"revenue_dev"</span>] = sales[<span class="s">"revenue"</span>] - alike[<span class="s">"revenue"</span>].transform(<span class="s">"mean"</span>)
+print(<span class="s">"groups:"</span>, alike.ngroups)
+print(<span class="s">"r, all days pooled       :"</span>, round(staff.corr(revenue), <span class="s">3</span>))
+print(<span class="s">"r, within comparable days:"</span>,
+      round(sales[<span class="s">"staff_dev"</span>].corr(sales[<span class="s">"revenue_dev"</span>]), <span class="s">3</span>))</pre>
+<pre class="out">groups: 768
+r, all days pooled       : 0.882
+r, within comparable days: 0.143</pre>
+            From 0.88 to 0.14. Among comparable days, more staff than usual tells you very little about revenue.</li>
+          <li><b>Tests 2 and 3 (3m).</b> Say: "Two more angles. Hold visitors constant. And ask whether each visitor spends more on well-staffed days."
+<pre class="code"><span class="k">def</span> residuals(target, predictor):
+    fit = stats.linregress(predictor, target)
+    <span class="k">return</span> target - (fit.intercept + fit.slope * predictor)
+
+staff_left = residuals(staff, sales[<span class="s">"visitors"</span>])
+revenue_left = residuals(revenue, sales[<span class="s">"visitors"</span>])
+print(<span class="s">"partial r, controlling for visitors:"</span>,
+      round(staff_left.corr(revenue_left), <span class="s">3</span>))
+print(<span class="s">"r, staff and spend per visitor     :"</span>,
+      round(staff.corr(revenue / sales[<span class="s">"visitors"</span>]), <span class="s">3</span>))</pre>
+<pre class="out">partial r, controlling for visitors: 0.068
+r, staff and spend per visitor     : 0.032</pre>
+            Put the verdict table on the board: 0.88 pooled, 0.14 like with like, 0.07 holding visitors constant, 0.03 with spend per visitor. Three checks agree. Then the honest limit: this does not prove staffing has <b>no</b> effect (no day in the data is badly understaffed). Observational data can rule a simple story out; to rule one in you need an experiment, which is Lesson 4.6.</li>
+          <li><b>Correlation is not causation, in a list (1m).</b> Write the lesson's five explanations for any correlation on the board without code: A causes B; B causes A; a confounder causes both; selection; chance. Ask which ones apply to staffing.
+            Reverse arrow (expected revenue causes the schedule) and confounder (the calendar). Chance is ruled out by 2,897 days; selection by how the file was built.</li>
+          <li><b>A first regression line (3m).</b> Say: "Correlation tells you how tightly points follow a line. Regression tells you which line."
+<pre class="code">fit = stats.linregress(sales[<span class="s">"visitors"</span>], sales[<span class="s">"revenue"</span>])
+print(<span class="s">"slope    :"</span>, round(fit.slope, <span class="s">2</span>))
+print(<span class="s">"intercept:"</span>, round(fit.intercept, <span class="s">2</span>))
+print(<span class="s">"r squared:"</span>, round(fit.rvalue ** <span class="s">2</span>, <span class="s">3</span>))
+
+predicted = fit.intercept + fit.slope * sales[<span class="s">"visitors"</span>]
+leftover = sales[<span class="s">"revenue"</span>] - predicted
+print(<span class="s">"predicted for 400 visitors:"</span>, round(fit.intercept + fit.slope * <span class="s">400</span>))
+print(<span class="s">"typical miss:"</span>, round(leftover.std()))</pre>
+<pre class="out">slope    : 21.19
+intercept: -107.93
+r squared: 0.89
+predicted for 400 visitors: 8367
+typical miss: 1081</pre>
+            Read every number in units: about $21 more revenue per extra visitor, on average; the intercept only positions the line (no day is near zero visitors); visitors account for 89% of the variance. Three cautions: do not extrapolate beyond 125 to 1,164 visitors; the line from revenue to visitors is a different line; <b>a slope is not a causal effect</b> (the $1,154 per staff member was a correct slope and almost entirely confound).</li>
+          <li><b>Two mistakes on purpose (2m).</b> Say: "Two that give a clean-looking answer."
+<pre class="code">print(np.corrcoef(daily[<span class="s">"visitors"</span>], daily[<span class="s">"revenue"</span>])[<span class="s">0</span>, <span class="s">1</span>])
+
+u = pd.Series(np.arange(-<span class="s">5</span>, <span class="s">6</span>))
+print(u.corr(u ** <span class="s">2</span>))</pre>
+<pre class="out">nan
+0.0</pre>
+            First: six missing revenues and NumPy returns <code class="inline">nan</code>; pandas drops missing pairs. Second: a perfect curve scores 0. r near zero means <b>no linear</b> relationship; only the scatter plot can say there is none.</li>
+        </ol>
+      </div>
+      <div class="blk warn"><div class="h">Three mistakes to expect, and how to coach each</div>
+        <ul class="tick">
+          <li><b>Reading r as a slope or a percentage.</b> "r = 0.94, so 94 cents a visitor" or "r = 0.5, half related". Coach: "r measures how tightly the points hug a line, not how steep it is. For the slope, fit the line. For 'how much does it account for', square r." Have them print <code class="inline">r ** 2</code> for 0.3, 0.5, 0.7, 0.9.</li>
+          <li><b>Reading a correlation as a cause.</b> The staffing proposal is the example everyone will make in real life. Coach with the five explanations on the board and one question: "Was either variable decided by someone using information related to the other?" Then: "Does it survive comparing like with like?"</li>
+          <li><b>Trusting r without the picture.</b> <code class="inline">r = 0</code> for a curve, <code class="inline">nan</code> from <code class="inline">np.corrcoef</code> with a missing value, or a <code class="inline">ValueError</code> from <code class="inline">daily.corr()</code> on a table with text. Coach: "Show me the scatter plot." For the errors: use pandas <code class="inline">.corr()</code> (which drops missing pairs and says nothing, so print the n), and select numeric columns or pass <code class="inline">numeric_only=True</code>.</li>
+        </ul>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab</div>
+        <p><b>First 12 minutes, everyone:</b> <code class="inline">labs/module-12/l4_4-correlation-analysis/reviews_and_sales_starter.py</code> (reference: <code class="inline">labs/module-12/l4_4-correlation-analysis/reviews_and_sales_solution.py</code>). Marketing claims "products with more reviews sell more". Learners plot first (the starter asks for one sentence per panel before any number), then Pearson and Spearman, a Spearman matrix and heatmap saved to <code class="inline">OUTPUT</code>, and a partial correlation holding price constant. Expected: reviews and units 0.456 and 0.442; rating and units about 0; price -0.319 and -0.600; partial 0.424. Debrief with the direction question: "Which way could the arrow run?" (Sales produce reviews.)</p>
+        <p><b>Last 8 minutes:</b> <code class="inline">labs/module-12/l4_4-correlation-analysis/staffing_rule_starter.py</code>, Steps 1 and 2: a regression line that recovers the managers' scheduling rule (1.59 staff per 100 visitors, r 0.925) and its typical miss. Steps 3 to 5 go home; Step 4's prediction (is the reversed line just 1 / slope?) is a good opener for Session 13.</p>
+        <p><b>Early finishers:</b> <code class="inline">labs/module-12/l4_4-correlation-analysis/debug_correlation_claims.py</code>: four claims about r, all wrong.</p>
+      </div>
+      <div class="blk lab"><div class="h">Start the lesson project</div>
+        <p>The lesson's project is <b>The Rain Check</b> (about 40 minutes alone, in <code class="inline">lesson_4_4_project</code>): does rain keep shoppers away, once you compare like with like? In the room do <b>Step 1</b> only: merge the weather into the sales with <code class="inline">left_on=["date", "store"], right_on=["date", "city"], how="left"</code> and check the row count: 2,903 before, 2,903 after, 0 missing weather. Tell them where it goes: the pooled correlation looks weak (about -0.19), and comparing like with like doubles it. The same merged table starts the 4.5 project after the break, so everyone should leave this step with it working. Steps 2 to 6 are homework.</p>
+      </div>
+      <div class="blk"><div class="h">Checks for understanding</div>
+        <p>Ask these out loud during the demo and the lab (cold call, then pair-share):</p>
+        <ol class="steps">
+          <li>"Pearson says -0.32 and Spearman says -0.60 for the same two columns. What do you suspect, and what do you look at?" <b>Answer:</b> A consistent relationship that is curved (or an influential point). Look at the scatter plot, perhaps on log axes.</li>
+          <li>"r = 0.88 between staff and revenue. Name two explanations other than 'staff cause revenue'." <b>Answer:</b> A confounder (expected demand, the calendar, drives both) and the reverse arrow (expected revenue decides the schedule).</li>
+          <li>"The line says $21 of revenue per extra visitor and the intercept is -$108. Does a store with no visitors lose $108?" <b>Answer:</b> No. No day is anywhere near zero visitors; the intercept only positions the line. Do not interpret it, and do not extrapolate.</li>
+        </ol>
+        <p>Workbook self-check, items Q1 to Q6 (do two in the room if time allows; the rest is homework):</p>
+        <p style="font-size:.9rem;margin:.2rem 0">Answers: <b>Q1</b> <span data-sc="1">B) Products with more reviews tend to have sold more; the arrow may run from sales to reviews, and the data alone cannot say</span>; <b>Q2</b> <span data-sc="2"><code class="inline">-1.0</code></span>; <b>Q3</b> <span data-sc="3">C) Subtract each group's mean (same store, month, weekday and promotion status) from both columns with <code class="inline">groupby().transform("mean")</code>, then correlate the deviations</span>; <b>Q4</b> <span data-sc="4">D) 1-to-5 overall satisfaction and the 0-to-10 recommend score</span>; <b>Q5</b> <span data-sc="5"><code class="inline">the line accounts for 25% of the variance</code></span>; <b>Q6</b> <span data-sc="6">A) A slope describes how revenue differs across days with different staffing, not what changing the staffing would do; here it is mostly the calendar acting on both</span>. Full set with explanations in the Answer Key.</p>
+      </div>
+      <div class="blk"><div class="h">Differentiation</div>
+        <p><b>Support:</b> give learners the five explanations for a correlation on a card and have them sort each example from the demo onto it. For like-with-like, do it first with four rows on the board (two Saturdays, two Tuesdays): subtract each group's mean by hand, then correlate. <code class="inline">transform("mean")</code> is then just "the group mean written on every row".</p>
+        <p><b>Stretch:</b> lesson Exercise 4 (a reusable <code class="inline">partial_corr</code> function: staff and revenue controlling for visitors, and the reverse), or the lab extension: the reviews-units link within each category (<code class="inline">groupby("category")</code>). Does it hold everywhere?</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">4.5</span><h3>Hypothesis Testing</h3><span class="dur">90 min</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Timing</div>
+        <table class="timing"><tbody>
+          <tr><td class="t">15m</td><td>Frame: the courtroom; the Asheville question; the four steps of every test</td></tr>
+          <tr><td class="t">35m</td><td>Live demo: 12 short steps from a test built by hand to false alarms and power</td></tr>
+          <tr><td class="t">25m</td><td>Guided lab: <code class="inline">returned_order_size</code>, then Step 1 of <code class="inline">footwear_returns</code></td></tr>
+          <tr><td class="t">15m</td><td>Start the lesson project: Does Rain Keep Shoppers Away?, Steps 1 and 2</td></tr>
+        </tbody></table>
+      </div>
+      <div class="blk"><div class="h">Objectives (the lesson's own)</div>
+        <ul class="tick">
+          <li>Explain the logic of a hypothesis test in plain words, and say what a p-value is and what it is not</li>
+          <li>Build a permutation test by simulation and match it to SciPy's ready-made tests</li>
+          <li>Choose and run a one-sample, Welch two-sample or paired t-test, a chi-square test, or a rank-based test for the data in front of you</li>
+          <li>Report every test with an effect size and a confidence interval, and check its assumptions on the data</li>
+          <li>Describe Type I and Type II errors and power, and correct for multiple comparisons</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Mental model to say</div>
+        <p>Say: "A court starts from 'innocent until proven guilty'. It does not ask the defendant to prove innocence. It asks whether the evidence would be surprising if the defendant were innocent. If it would be very surprising, the court rejects innocence. If not, the verdict is 'not guilty', which is not the same as 'proven innocent'. A hypothesis test works the same way. The starting assumption, the null hypothesis, is 'nothing is going on: any difference is chance'. Then you ask how surprising your data would be if that were true."</p>
+        <p>Write the two verdicts on the board: <b>reject the null</b> and <b>fail to reject the null</b> (never "accept"). Then say why this lesson matters more than any other in the module: "The p-value is the most misread number in statistics. By the end of today you will read it correctly, and you will never report one alone."</p>
+      </div>
+      <div class="blk"><div class="h">Live demo (you type, they follow)</div>
+        <p>New notebook <code class="inline">session12_tests.ipynb</code>. The numbers are the lesson's own; the two simulations use <code class="inline">default_rng(42)</code> created inside their cells, so they reproduce on every machine. Step 4 is said, not typed. If time runs short, say step 7 in one sentence and show step 10's numbers from the lesson page; never cut steps 2 to 6 (the test built by hand, the p-value, Welch with its interval and effect size).</p>
+        <ol class="steps">
+          <li><b>The question (3m).</b> New notebook. Say: "Head office noticed that Asheville shoppers give a lower recommend score. Before anyone schedules a meeting about Asheville: could that gap be luck?"
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+<span class="k">import</span> pandas <span class="k">as</span> pd
+<span class="k">from</span> scipy <span class="k">import</span> stats
+
+survey = pd.read_csv(<span class="s">"data/survey.csv"</span>)
+in_store = survey[survey[<span class="s">"store"</span>] != <span class="s">"Online"</span>]
+is_ash = in_store[<span class="s">"store"</span>] == <span class="s">"Asheville"</span>
+asheville = in_store.loc[is_ash, <span class="s">"recommend"</span>].dropna()
+others = in_store.loc[~is_ash, <span class="s">"recommend"</span>].dropna()
+
+<span class="k">for</span> name, g <span class="k">in</span> [(<span class="s">"Asheville"</span>, asheville), (<span class="s">"Other stores"</span>, others)]:
+    print(<span class="s">f"{name:&lt;12} n = {len(g)}  mean = {g.mean():.2f}"</span>
+          <span class="s">f"  sd = {g.std():.2f}"</span>)
+observed = asheville.mean() - others.mean()
+print(<span class="s">f"Observed difference: {observed:.3f}"</span>)</pre>
+<pre class="out">Asheville    n = 197  mean = 6.98  sd = 2.05
+Other stores n = 752  mean = 7.34  sd = 2.04
+Observed difference: -0.357</pre>
+            About a third of a point on an eleven-point scale, with answers spread about 2 points either side. Is 0.36 a lot? Looking will not tell you. You need to know how big a gap chance alone produces with groups of this size.</li>
+          <li><b>Build chance yourself: shuffle the labels (4m).</b> Say: "If the store makes no difference, the 'Asheville' label is a sticker that could have landed on anyone. Peel off all 949 stickers, shuffle, stick them back, measure the gap. Ten thousand times."
+<pre class="code">rng = np.random.default_rng(<span class="s">42</span>)
+pooled = np.concatenate([asheville, others])
+n_ash = len(asheville)
+shuffled_diffs = np.empty(<span class="s">10_000</span>)
+<span class="k">for</span> i <span class="k">in</span> range(<span class="s">10_000</span>):
+    shuffled = rng.permutation(pooled)
+    shuffled_diffs[i] = shuffled[:n_ash].mean() - shuffled[n_ash:].mean()
+
+print(shuffled_diffs[:<span class="s">5</span>].round(<span class="s">3</span>))
+print(<span class="s">f"typical chance gap (SD): {shuffled_diffs.std():.3f}"</span>)</pre>
+<pre class="out">[-0.03   0.034 -0.216  0.277  0.124]
+typical chance gap (SD): 0.165</pre>
+            Each number is a gap between two groups that cannot truly differ. Their spread, about 0.165, is a standard error measured by simulation: Session 11's idea, for a difference. The real gap is a little more than two of those from zero. Show the lesson's histogram with the real gap marked in the tail.</li>
+          <li><b>Count: the p-value (3m).</b> Say: "How often did chance produce a gap at least this large, in either direction?"
+<pre class="code">as_extreme = np.abs(shuffled_diffs) &gt;= abs(observed)
+print(as_extreme.sum(), <span class="s">"of 10,000 shuffles gave a gap at least this large"</span>)
+print(<span class="s">f"p-value = {as_extreme.mean():.3f}"</span>)</pre>
+<pre class="out">300 of 10,000 shuffles gave a gap at least this large
+p-value = 0.030</pre>
+            Write the definition on the board and leave it there all session: <b>the p-value is the probability, if the null hypothesis were true, of a result at least as extreme as the one observed.</b> Then the four steps of every test: state what "nothing going on" means; work out what that produces; see where the real result falls; report how rare it is. Vocabulary: H0, H1, alpha = 0.05 chosen before looking, "reject" or "fail to reject" (never "accept").</li>
+          <li><b>What a p-value is not (2m).</b> Read the lesson's table aloud, no code. Have learners say "no" out loud to each.
+            "There is a 3% chance the null is true": no, p is computed <b>assuming</b> the null. "97% chance Asheville is worse": no, same mistake turned around. "The gap is large": no, p mixes effect size with sample size. "p = 0.20 means the stores are the same": no, not detected is not absent. And 0.049 against 0.051 is the same evidence: report the number.</li>
+          <li><b>The shortcut: Welch's t-test (3m).</b> Say: "For a difference in means there is a classic shortcut: the difference divided by its standard error, read off the t distribution. Welch's version does not assume equal variances. SciPy's default does, so type <code class="inline">equal_var=False</code> every time."
+<pre class="code">res = stats.ttest_ind(asheville, others, equal_var=<span class="k">False</span>)
+ci = res.confidence_interval(confidence_level=<span class="s">0.95</span>)
+print(<span class="s">f"t = {res.statistic:.2f}, df = {res.df:.0f}, p = {res.pvalue:.3f}"</span>)
+print(<span class="s">f"95% CI for the difference: {ci.low:.2f} to {ci.high:.2f}"</span>)</pre>
+<pre class="out">t = -2.17, df = 305, p = 0.030
+95% CI for the difference: -0.68 to -0.03</pre>
+            The same p as the shuffle: one by simulation, one by theory. The interval is the more useful half: Asheville is between 0.68 and 0.03 points lower. It excludes 0, which is the same fact as p below 0.05, and it shows what p cannot: the true gap might be meaningful or almost nothing.</li>
+          <li><b>How big? Cohen's d (2m).</b> Say: "A p-value never travels alone. It comes with an effect size and an interval."
+<pre class="code"><span class="k">def</span> cohens_d(x, y):
+    nx, ny = len(x), len(y)
+    pooled = (((nx - <span class="s">1</span>) * np.var(x, ddof=<span class="s">1</span>) + (ny - <span class="s">1</span>) * np.var(y, ddof=<span class="s">1</span>))
+              / (nx + ny - <span class="s">2</span>))
+    <span class="k">return</span> (np.mean(x) - np.mean(y)) / np.sqrt(pooled)
+
+print(<span class="s">f"Cohen's d = {cohens_d(asheville, others):.2f}"</span>)</pre>
+<pre class="out">Cohen's d = -0.17</pre>
+            Near 0.2 small, 0.5 medium, 0.8 large: this is small. Say the honest sentence: "Asheville shoppers rated Pinecrest 0.36 points lower on average (95% CI 0.03 to 0.68 lower; Welch p = 0.030; d = -0.17, small)." Evidence worth following up, nowhere near a crisis.</li>
+          <li><b>Significant is not the same as important (2m).</b> Say: "Now the opposite case. Target score 7.5, all 1,746 answers."
+<pre class="code">everyone = survey[<span class="s">"recommend"</span>].dropna()
+res1 = stats.ttest_1samp(everyone, popmean=<span class="s">7.5</span>)
+ci1 = res1.confidence_interval()
+print(<span class="s">f"n = {len(everyone)}, mean = {everyone.mean():.2f}"</span>)
+print(<span class="s">f"p = {res1.pvalue:.4f}"</span>)
+print(<span class="s">f"95% CI {ci1.low:.2f} to {ci1.high:.2f}, "</span>
+      <span class="s">f"d = {(everyone.mean() - 7.5) / everyone.std():.2f}"</span>)</pre>
+<pre class="out">n = 1746, mean = 7.36
+p = 0.0028
+95% CI 7.27 to 7.45, d = -0.07</pre>
+            A smaller p than Asheville's and a tiny shortfall (d = -0.07). With 1,746 answers even a small miss is detectable. Write on the board: <b>statistically significant = unlikely to be chance alone; practically significant = big enough to matter.</b> The first is a calculation, the second a judgment.</li>
+          <li><b>Pairs: the same days, two stores (3m).</b> Say: "Bend against Flagstaff, visitors, on the same dates. Watch the verdict change with the test."
+<pre class="code">daily = pd.read_csv(<span class="s">"data/daily_sales.csv"</span>, parse_dates=[<span class="s">"date"</span>])
+visitors = daily.pivot(index=<span class="s">"date"</span>, columns=<span class="s">"store"</span>, values=<span class="s">"visitors"</span>)
+pair = visitors[[<span class="s">"Bend"</span>, <span class="s">"Flagstaff"</span>]].dropna()
+wrong = stats.ttest_ind(pair[<span class="s">"Bend"</span>], pair[<span class="s">"Flagstaff"</span>], equal_var=<span class="k">False</span>)
+right = stats.ttest_rel(pair[<span class="s">"Bend"</span>], pair[<span class="s">"Flagstaff"</span>])
+print(len(pair), <span class="s">"days; mean difference"</span>,
+      round((pair[<span class="s">"Bend"</span>] - pair[<span class="s">"Flagstaff"</span>]).mean(), <span class="s">1</span>))
+print(<span class="s">f"as independent groups: p = {wrong.pvalue:.3f}"</span>)
+print(<span class="s">f"as pairs             : p = {right.pvalue:.4f}"</span>)</pre>
+<pre class="out">722 days; mean difference 6.5
+as independent groups: p = 0.274
+as pairs             : p = 0.0024</pre>
+            Traffic swings from a February Tuesday to an August Saturday in both stores together. The independent test sees all that swing as noise; pairing by date subtracts it out. Real and small: about 6.5 visitors a day. Caveat to say once: consecutive days are not fully independent, so daily-data p-values are approximate.</li>
+          <li><b>Categories: chi-square (3m).</b> Say: "Means are for numbers. When both variables are categories, compare counts."
+<pre class="code">orders = pd.read_csv(<span class="s">"data/orders.csv"</span>)
+orders[<span class="s">"returned"</span>] = orders[<span class="s">"status"</span>] == <span class="s">"returned"</span>
+table = pd.crosstab(orders[<span class="s">"channel"</span>], orders[<span class="s">"returned"</span>])
+chi = stats.chi2_contingency(table)
+print(table)
+print(<span class="s">f"chi-square = {chi.statistic:.1f}, df = {chi.dof}"</span>)
+print(<span class="s">f"p = {chi.pvalue:.1e}"</span>)
+print(<span class="s">"smallest expected count:"</span>, round(chi.expected_freq.min(), <span class="s">1</span>))
+rates = orders.groupby(<span class="s">"channel"</span>)[<span class="s">"returned"</span>].mean()
+print(<span class="s">f"online {rates['online']:.1%}, store {rates['store']:.1%}"</span>)</pre>
+<pre class="out">returned  False  True 
+channel               
+online    11964    890
+store      7195    253
+chi-square = 109.7, df = 1
+p = 1.1e-25
+smallest expected count: 419.3
+online 6.9%, store 3.4%</pre>
+            The null: channel and returning are unrelated. The expected counts are the assumption check (about 5 or more in every cell; the smallest is 419). The effect: online orders come back twice as often (6.9% against 3.4%). Cramér's V is only 0.07 here, so for a 2 x 2 table report the rates and their ratio: that is what a reader can act on.</li>
+          <li><b>Ratings: Mann-Whitney (3m).</b> Say: "A t-test compares means, and a mean assumes equal steps between 1, 2, 3, 4 and 5. For ratings, use ranks."
+<pre class="code">staff_ash = in_store.loc[is_ash, <span class="s">"sat_staff"</span>].dropna()
+staff_oth = in_store.loc[~is_ash, <span class="s">"sat_staff"</span>].dropna()
+mw = stats.mannwhitneyu(staff_ash, staff_oth)
+print(<span class="s">f"n = {len(staff_ash)} and {len(staff_oth)}, p = {mw.pvalue:.1e}"</span>)
+print(<span class="s">"probability of superiority:"</span>,
+      round(mw.statistic / (len(staff_ash) * len(staff_oth)), <span class="s">2</span>))</pre>
+<pre class="out">n = 193 and 754, p = 3.0e-09
+probability of superiority: 0.37</pre>
+            This is the gap learners described in Session 11 (57.5% satisfied against 75 to 79%). Now it has a test: p about 3 in a billion. The effect size: pick one Asheville shopper and one other-store shopper at random; the Asheville rating is the higher one 37% of the time (50% would be no difference).</li>
+          <li><b>False alarms, watched (3m).</b> Say: "A test can be wrong two ways. Here is the first one, happening." Draw two groups from the same pool, so the null is true by construction.
+<pre class="code">rng = np.random.default_rng(<span class="s">42</span>)
+pool = in_store[<span class="s">"recommend"</span>].dropna().to_numpy()
+p_null = np.array([
+    stats.ttest_ind(rng.choice(pool, <span class="s">197</span>), rng.choice(pool, <span class="s">752</span>),
+                    equal_var=<span class="k">False</span>).pvalue
+    <span class="k">for</span> _ <span class="k">in</span> range(<span class="s">2_000</span>)])
+share = (p_null &lt; <span class="s">0.05</span>).mean()
+print(<span class="s">f"{share:.1%} of 2,000 tests of a true null were significant"</span>)</pre>
+<pre class="out">5.3% of 2,000 tests of a true null were significant</pre>
+            About 5%, as alpha promises: one test in twenty rings the alarm when nothing is going on (a <b>Type I error</b>). The other way to be wrong is a miss (<b>Type II</b>); the chance of catching a real effect is <b>power</b>, and it depends on sample size: with 50 per group a small real effect (d = 0.2) is caught only 17% of the time. Then multiple comparisons in one line: 30 tests of true nulls give a 79% chance of at least one false alarm. The lesson's scan of 6 age groups x 5 items finds 6 "significant" results, 3 after Holm's correction. Count every test you ran.</li>
+          <li><b>A mistake on purpose (1m).</b> Say: "SciPy does not skip missing values."
+<pre class="code">raw = in_store.loc[in_store[<span class="s">"store"</span>] == <span class="s">"Asheville"</span>, <span class="s">"recommend"</span>]
+print(stats.ttest_ind(raw, others, equal_var=<span class="k">False</span>).pvalue)
+print(round(stats.ttest_ind(raw, others, equal_var=<span class="k">False</span>,
+                            nan_policy=<span class="s">"omit"</span>).pvalue, <span class="s">3</span>))</pre>
+<pre class="out">nan
+0.03</pre>
+            <code class="inline">nan</code> with no error. Fix: <code class="inline">.dropna()</code> first, or <code class="inline">nan_policy="omit"</code>. Close with the reporting template from the lesson, on the board: <b>what was compared (and n) · the estimate · its 95% CI · the test and p · the effect size in words · caveats (how the data were collected, how many tests).</b></li>
+        </ol>
+      </div>
+      <div class="blk warn"><div class="h">Three mistakes to expect, and how to coach each</div>
+        <ul class="tick">
+          <li><b>Reading the p-value as the probability that the null is true</b> ("a 3% chance the stores are the same", "97% sure Asheville is worse"). Coach with one question every time: "What was assumed when p was computed?" Then have them rewrite the sentence starting with "If there were no difference, ...". The board definition stays up all session.</li>
+          <li><b>"Not significant" read as "no difference", and "significant" read as "big".</b> Coach both with the effect size and the interval: "What does the confidence interval allow?" For a small sample show the lesson's pilot (10 answers, p = 0.82 for a real gap). For a huge sample show the target test (p = 0.003, d = -0.07). Two separate questions: is it chance? does it matter?</li>
+          <li><b>Silent mechanical errors.</b> <code class="inline">nan</code> from a missing value (SciPy does not skip: <code class="inline">.dropna()</code> or <code class="inline">nan_policy="omit"</code>); <code class="inline">stats.ttest_ind(x, y)</code> without <code class="inline">equal_var=False</code> (Student's test, no warning); <code class="inline">chi2_contingency</code> on raw columns instead of a <code class="inline">crosstab</code> table; a paired test on two columns dropped separately (misaligned days); <code class="inline">alternative="less"</code> chosen after looking. Coach: "Read your call out loud and say what each argument means."</li>
+        </ul>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab</div>
+        <p><b>First 15 minutes, everyone:</b> <code class="inline">labs/module-12/l4_5-hypothesis-testing/returned_order_size_starter.py</code> (reference: <code class="inline">labs/module-12/l4_5-hypothesis-testing/returned_order_size_solution.py</code>). Customer service believes "people send back the big orders". The starter has a TODO 0: write H0, H1 and alpha before anything runs; check that every learner did. Expected: difference $25.54 (95% CI $15.29 to $35.79), p = 1.1e-06, d = 0.14, permutation p 0.0002; online only $23.85. The debrief is the point of the lab: <b>real, and small</b>. Ask a volunteer to read their report and the room to find any sentence that misreads p.</p>
+        <p><b>Last 10 minutes:</b> <code class="inline">labs/module-12/l4_5-hypothesis-testing/footwear_returns_starter.py</code>, Step 1: the online table, the rates (14.4% against 4.8%) and the chi-square test with its expected counts. Steps 2 to 4 (stores, where nothing is detected; Holm; the report) go home.</p>
+        <p><b>Early finishers:</b> <code class="inline">labs/module-12/l4_5-hypothesis-testing/debug_test_report.py</code>: five conclusions, five misreadings.</p>
+      </div>
+      <div class="blk lab"><div class="h">Start the lesson project</div>
+        <p>The lesson's project is <b>Does Rain Keep Shoppers Away?</b> (about 40 minutes alone, in <code class="inline">lesson_4_5_project</code>). In the room do <b>Steps 1 and 2</b>: the same merge as the Rain Check plus <code class="inline">days["rainy"] = days["precip_in"] &gt;= 0.10</code> (rainy-day shares: Asheville 0.24, Bend 0.07, Boise 0.09, Flagstaff 0.14), then the table of visitors by store and rain. Before anyone runs a test, everyone writes the hypotheses and alpha as a comment, exactly as the lesson shows; walk the room and read them. Steps 3 to 7 (one store completely, a permutation check, all four stores with Holm, the seasonal challenge, the written finding) are homework.</p>
+      </div>
+      <div class="blk"><div class="h">Checks for understanding</div>
+        <p>Ask these out loud during the demo and the lab (cold call, then pair-share):</p>
+        <ol class="steps">
+          <li>"Finish the sentence: a p-value of 0.03 means that, if ..." <b>Answer:</b> "... there were no real difference, a result at least this extreme would turn up in about 3% of samples." Not the probability that the null is true.</li>
+          <li>"Bend and Flagstaff visitor counts on the same 722 dates. Which test, and why?" <b>Answer:</b> A paired t-test (<code class="inline">ttest_rel</code>): the days pair one to one, and pairing removes the shared swing of the calendar.</li>
+          <li>"You ran 30 tests and 6 came out below 0.05. What do you do before reporting any of them?" <b>Answer:</b> Correct for multiple comparisons (Holm), report how many tests were run, and label scanned findings as exploratory.</li>
+        </ol>
+        <p>Workbook self-check, items Q7 to Q12 (do two in the room if time allows; the rest is homework):</p>
+        <p style="font-size:.9rem;margin:.2rem 0">Answers: <b>Q7</b> <span data-sc="7">A) In a world where the store makes no difference, about 3% of shuffles produced a gap at least as large as the real one</span>; <b>Q8</b> <span data-sc="8">D) A Mann-Whitney U test</span>; <b>Q9</b> <span data-sc="9"><code class="inline">nan</code></span>; <b>Q10</b> <span data-sc="10">C) It is below 0.05</span>; <b>Q11</b> <span data-sc="11">B) We could not detect a difference with this sample; it is too small to say much</span>; <b>Q12</b> <span data-sc="12"><code class="inline">23%</code></span>. Full set with explanations in the Answer Key.</p>
+      </div>
+      <div class="blk"><div class="h">Differentiation</div>
+        <p><b>Support:</b> keep the four steps of a test and the definition of the p-value on the board, and have learners say the four steps for each test in the demo. Give anyone overwhelmed by the menu of tests the lesson's decision chart on paper (category outcome? rating? one group against a target? the same units twice? otherwise Welch). Reassure the room that the permutation test is always available: if a formula feels like magic, shuffle.</p>
+        <p><b>Stretch:</b> lesson Exercise 5 (simulate the power of a Mann-Whitney test at 25, 50, 100 and 200 answers per group), or extend Lab 4.5-B: in the store result, how large a difference could the data have missed? (A confidence interval for a difference in proportions, or a power calculation.)</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="sec"><h2>Closing</h2><span class="rule"></span></div>
+  <div class="blk"><div class="h">Exit ticket (3 questions, on paper or sticky notes, no notes)</div>
+    <ol class="steps">
+          <li>Staff on duty and revenue correlate at r = 0.88. Give two explanations other than "more staff cause more revenue". <b>Answer:</b> A confounder (expected demand, the calendar, drives both) and the reverse arrow (expected revenue decides the schedule). Selection and chance also count as explanations in general.</li>
+          <li>Complete the sentence: "A p-value is the probability of ______, assuming ______." <b>Answer:</b> "... a result at least as extreme as the one observed, assuming the null hypothesis is true." It is not the probability that the null is true.</li>
+          <li>Besides the p-value, which two numbers belong in every test report? <b>Answer:</b> An effect size (how big?) and a confidence interval (how sure, and how big it could be).</li>
+        </ol>
+    <p>Read the slips before Session 13. Question 2 is the one to watch: any answer that turns the p-value into the probability of a hypothesis means the learner needs the "What a p-value Is Not" table again before the A/B-testing lesson, which leans on it. Session 13's author can open with it if several miss it; pass on the count.</p>
+  </div>
+  <div class="note"><div class="t">Homework (about 2 to 3 hours)</div>
+    <ul class="tick">
+          <li><b>Lesson 4.4 project:</b> finish the Rain Check (Steps 2 to 6): look, measure two ways, compare like with like, the effect in visitors, the finding with its limits.</li>
+          <li><b>Lesson 4.4 practice:</b> Exercises 1 to 3 (Exercise 4 is a stretch), the Quick Quiz, and the journal prompt.</li>
+          <li><b>Lesson 4.5 project:</b> finish Does Rain Keep Shoppers Away? (Steps 3 to 7), ending with a written finding in the reporting template.</li>
+          <li><b>Lesson 4.5 practice:</b> Exercises 1 to 4 (Exercise 5 is a stretch), the Quick Quiz, and the journal prompt. Reread the "What a p-value Is Not" table tomorrow.</li>
+          <li><b>Kit labs:</b> finish <code class="inline">staffing_rule</code> (Steps 3 to 5) and <code class="inline">footwear_returns</code> (Steps 2 to 4).</li>
+          <li><b>Workbook:</b> the 12 self-check items and anything left in Predict, then run.</li>
+          <li><b>Before Lesson 4.6</b> (from the lesson page): open <code class="inline">data/ab_test.csv</code> and look at its columns. Before running anything, write down which test from Lesson 4.5 you would use to compare conversion between the two variants, and why.</li>
+          <li><b>Prepare for the Session 13 checkpoint:</b> a short open-notebook task on Modules 1 to 4 (NumPy, pandas, Matplotlib, statistics). Tidy your lesson notebooks so you can find things, and skim the key ideas pages of this workbook from Session 1 on. No memorizing needed: it is open-notebook.</li>
+        </ul>
+  </div>
+  <div class="note lab"><div class="t">Bring list for Session 13</div>
+    <ul class="tick">
+          <li><b>Session 13 includes Checkpoint 1: a short open-notebook analysis task on Modules 1 to 4</b> (about 30 minutes inside the session). Learners bring their lesson notebooks from Modules 1 to 4 and this workbook; they may use them, the lesson pages and the documentation. Not graded on speed.</li>
+          <li>Their <code class="inline">cohens_d</code> function and the reporting template (Lesson 4.6 uses both), and their note on which test they would use for <code class="inline">ab_test.csv</code>.</li>
+          <li>Data files: <code class="inline">ab_test.csv</code> for Lesson 4.6, and all the Pinecrest CSV files in <code class="inline">data/</code> for Lesson 4.7 and the checkpoint (already in place).</li>
+          <li>Installs: none new. Lesson 4.6 uses <code class="inline">statsmodels</code> power functions, already in the course environment (checked in this session).</li>
+          <li>Servers to start: none. Accounts: none needed.</li>
+          <li>A charged laptop that can run the course environment for the whole three hours.</li>
+        </ul>
+  </div>
+
+  <div class="sec"><h2>If You Run Long or Short</h2><span class="rule"></span></div>
+  <p><b>Protect:</b> the staffing confound tested like with like (4.4 demo steps 5 to 8), the permutation test and the definition of the p-value (4.5 steps 2 to 4), Welch with its interval and effect size and the significant-is-not-important contrast (steps 5 to 7), the <code class="inline">returned_order_size</code> lab with its "real and small" debrief, the merge that starts both projects, and the Session 13 checkpoint announcement.</p>
+  <p><b>Running long, cut in this order:</b> (1) 4.4 step 4 (the matrix: show the lesson's heatmap instead) and step 11 (the two mistakes: one sentence each); (2) <code class="inline">staffing_rule</code> in the room; (3) 4.5 step 8 (the paired test: show the two p-values from the lesson and say why they differ); (4) 4.5 step 10 (Mann-Whitney: one sentence and the result, since learners know the gap from Session 11); (5) <code class="inline">footwear_returns</code> in the room. Never cut the p-value definition, the effect size, or the exit ticket.</p>
+  <p><b>Running short:</b> run both debug handouts as whole-room hunts (one sentence per conclusion, the room votes on what is wrong), then let learners continue the 4.5 project to Step 3 (Asheville in full) and read their reports aloud against the template.</p>
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 12 · Facilitator Guide · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Answer Key: Session 5</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Instructor copy —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">answers &amp; solutions · not for students</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Answer Key</div>
+    <h1>Session 5: Cleaning and Grouping</h1>
+    <p class="sub">Answers with reasoning for the 12 self-check items and the predict-then-run boxes, the real output of every lab solution with what to check while circulating, the fixes for the 'find the bug' handout, the two lesson pages' own Quick Quiz answers, and the warm-up and exit-ticket answers.</p>
+    <div class="meta-row">
+      <span class="chip">Session <b>5</b></span>
+      <span class="chip"><b>12</b> self-check items</span>
+      <span class="chip"><b>4</b> lab pairs</span>
+      <span class="chip">Confidential</span>
+    </div>
+  </header>
+
+  <div class="note"><div class="t">How this key is organized</div><p>Self-check numbering matches the workbook: Q1 to Q6 are on Lesson 2.3, Q7 to Q12 on Lesson 2.4. Each item repeats the four options with the correct one marked and says why each wrong option is wrong. Every printed output below comes from running the code against the course data. The lesson pages' own five-question Quick Quizzes (three options each) are answered at the end of each lesson's part.</p></div>
+
+  <div class="sec"><h2>2.3 · Cleaning Data: self-check</h2><span class="rule"></span></div>
+  <div class="q" data-sc="1"><div class="qn">Q1</div><div class="qt">An audit shows that the <code class="inline">Store</code> column has 31 distinct values. Pinecrest has four stores and an online shop. What is the right first move?</div><div class="opts"><div class="opt">A) Delete the rows whose store name is unusual</div><div class="opt correct">B) Print <code class="inline">value_counts()</code> to see the variants, then strip, fix the case, and map what is left</div><div class="opt">C) Convert the column to the <code class="inline">category</code> dtype</div><div class="opt">D) Fill the unusual names with the most common store</div></div><div class="why"><b>Why:</b> Look before you fix. <code class="inline">value_counts()</code> shows which variants exist; whitespace and case are mechanical, and the remaining misspellings need a mapping dictionary that you write from what you see.<br><b>A</b> is wrong: Those rows are real orders with a badly typed store name. Deleting them deletes revenue.<br><b>C</b> is wrong: A category column with 31 categories is still 31 stores. The dtype does not merge spellings.<br><b>D</b> is wrong: That would move orders from Boise, Bend and the rest to Online: an invented value, not a repair.</div></div>
+  <div class="q" data-sc="2" data-kind="short"><div class="qn">Q2</div><div class="qt">What does this print?</div><pre class="code">d = pd.Series([<span class="s">"2024-03-05"</span>, <span class="s">"03/05/2024"</span>, <span class="s">"March 5, 2024"</span>, <span class="s">"2024-02-30"</span>])
+iso = pd.to_datetime(d, format=<span class="s">"%Y-%m-%d"</span>, errors=<span class="s">"coerce"</span>)
+us = pd.to_datetime(d, format=<span class="s">"%m/%d/%Y"</span>, errors=<span class="s">"coerce"</span>)
+print(iso.notna().sum(), iso.fillna(us).notna().sum())</pre><div class="opts"><div class="opt correct"><code class="inline">1 2</code></div></div><div class="why"><b>Why:</b> The ISO pass understands only the first value: the next two are in other formats and February 30th does not exist, so all three become NaT. Filling from the month/day/year pass recovers the second value. The written-out date needs a third pass, and the impossible date stays missing.</div></div>
+  <div class="q" data-sc="3"><div class="qn">Q3</div><div class="qt">What does this print?</div><pre class="code">s = pd.Series([<span class="s">"none"</span>, <span class="s">"TRAIL15"</span>, <span class="s">"-"</span>, <span class="s">"trail15"</span>])
+p = s.str.upper()
+print(p.where(~p.isin([<span class="s">"NONE"</span>, <span class="s">"-"</span>])).tolist())</pre><div class="opts"><div class="opt">A) <code class="inline">['NONE', 'TRAIL15', '-', 'TRAIL15']</code></div><div class="opt">B) <code class="inline">['TRAIL15', 'TRAIL15']</code></div><div class="opt correct">C) <code class="inline">[nan, 'TRAIL15', nan, 'TRAIL15']</code></div><div class="opt">D) <code class="inline">[nan, 'TRAIL15', nan, 'trail15']</code></div></div><div class="why"><b>Why:</b> <code class="inline">.str.upper()</code> standardizes the case, and <code class="inline">.where(condition)</code> keeps a value where the condition is true and puts a missing value where it is false. The two placeholders become real missing values; the length stays 4.<br><b>A</b> is wrong: That is <code class="inline">p</code> before <code class="inline">.where()</code>: the placeholders are still there, counted as promo codes.<br><b>B</b> is wrong: <code class="inline">.where()</code> never removes rows; it replaces values. The result has four items.<br><b>D</b> is wrong: The last code was uppercased before the test, so it is <code class="inline">TRAIL15</code>.</div></div>
+  <div class="q" data-sc="4"><div class="qn">Q4</div><div class="qt">In <code class="inline">orders_messy.csv</code> one order total is $4,990.00, while the largest genuine order is $4,893.00. What justified dividing the $4,990.00 by 100?</div><div class="opts"><div class="opt">A) It is above the 99th percentile of order totals</div><div class="opt">B) It is an online order, and online totals are less reliable</div><div class="opt">C) It is a round number, which suggests a typing error</div><div class="opt correct">D) Its item lines add up to $34.95, so the recorded total is over 100 times what was bought</div></div><div class="why"><b>Why:</b> An outlier is a question, not a verdict. The independent evidence is in <code class="inline">order_items.csv</code>: the order's items total $34.95, and the recorded total is about 143 times that. The genuine $4,893 order matches its items.<br><b>A</b> is wrong: So is the genuine $4,893 bulk order. Being extreme is not evidence of an error.<br><b>B</b> is wrong: Nothing in the data says online totals are less reliable; the twelve largest genuine orders are all online.<br><b>C</b> is wrong: Plenty of real totals are round numbers. That is a hunch, not evidence.</div></div>
+  <div class="q" data-sc="5" data-kind="short"><div class="qn">Q5</div><div class="qt">What does this print?</div><pre class="code">df = pd.DataFrame({<span class="s">"total"</span>: [<span class="s">10.0</span>, <span class="k">None</span>, <span class="s">50.0</span>]})
+print(df[<span class="s">"total"</span>].mean(), df[<span class="s">"total"</span>].fillna(<span class="s">0</span>).mean())</pre><div class="opts"><div class="opt correct"><code class="inline">30.0 20.0</code></div></div><div class="why"><b>Why:</b> <code class="inline">.mean()</code> skips the missing value: (10 + 50) / 2 = 30. Filling the gap with 0 claims that the customer paid nothing and divides by three: 60 / 3 = 20. A fill is a claim about the data.</div></div>
+  <div class="q" data-sc="6"><div class="qn">Q6</div><div class="qt"><code class="inline">trial</code> has 406 missing payment methods. What happens when you run <code class="inline">trial["payment_method"].fillna("unknown", inplace=True)</code>?</div><div class="opts"><div class="opt correct">A) <code class="inline">trial</code> is unchanged, and pandas warns with <code class="inline">ChainedAssignmentError</code></div><div class="opt">B) The 406 gaps in <code class="inline">trial</code> are filled with <code class="inline">unknown</code></div><div class="opt">C) A <code class="inline">TypeError</code>, because text cannot be used to fill a column</div><div class="opt">D) The gaps are filled, but only in the first 406 rows</div></div><div class="why"><b>Why:</b> <code class="inline">trial["payment_method"]</code> is a new, derived object. Under copy-on-write, filling it 'in place' changes that temporary object and never reaches <code class="inline">trial</code>. Assign the result back: <code class="inline">trial["payment_method"] = trial["payment_method"].fillna("unknown")</code>.<br><b>B</b> is wrong: That is what older pandas did, and what old tutorials promise. Under copy-on-write it no longer happens.<br><b>C</b> is wrong: Filling a text column with text is fine; the problem is where the result goes.<br><b>D</b> is wrong: <code class="inline">fillna</code> fills by position of the gaps, not the first rows; and here nothing in <code class="inline">trial</code> is filled at all.</div></div>
+
+  <div class="sec"><h2>2.3 · Predict, then run</h2><span class="rule"></span></div>
+  <div class="q"><div class="qn">P1</div><div class="qt">Case without whitespace.</div><pre class="code">s = pd.Series([<span class="s">" Bend"</span>, <span class="s">"bend "</span>, <span class="s">"BEND"</span>, <span class="s">"Bend OR"</span>])
+print(s.str.title().nunique(), s.str.strip().str.title().nunique())</pre><pre class="out">4 2</pre><div class="why"><b>Why:</b> Title case alone leaves four different values, because two of them still carry a space and <code class="inline">Bend OR</code> becomes <code class="inline">Bend Or</code>. Stripping first merges the three spellings of Bend. Two remain: <code class="inline">Bend</code> and <code class="inline">Bend Or</code>, and the second needs a mapping, which is a decision, not a mechanical step.</div></div>
+  <div class="q"><div class="qn">P2</div><div class="qt">A detector for values that are not numbers.</div><pre class="code">s = pd.Series([<span class="s">"$1,200.50"</span>, <span class="s">"80"</span>, <span class="s">"free"</span>, <span class="k">None</span>])
+n = pd.to_numeric(s.str.replace(<span class="s">"$"</span>, <span class="s">""</span>).str.replace(<span class="s">","</span>, <span class="s">""</span>), errors=<span class="s">"coerce"</span>)
+print(n.tolist(), n.isna().sum())</pre><pre class="out">[1200.5, 80.0, nan, nan] 2</pre><div class="why"><b>Why:</b> After the symbols are removed, two values convert. <code class="inline">free</code> cannot, so <code class="inline">coerce</code> makes it NaN; the empty value was already missing. Two NaNs, for two different reasons: one was a word that needs a decision (free means 0), the other was never there.</div></div>
+  <div class="q"><div class="qn">P3</div><div class="qt">Three ways to lose rows.</div><pre class="code">df = pd.DataFrame({<span class="s">"id"</span>: [<span class="s">1</span>, <span class="s">2</span>, <span class="s">2</span>, <span class="s">3</span>], <span class="s">"promo"</span>: [<span class="k">None</span>, <span class="s">"A"</span>, <span class="s">"A"</span>, <span class="k">None</span>],
+                   <span class="s">"amt"</span>: [<span class="s">5.0</span>, <span class="s">7.0</span>, <span class="s">7.0</span>, <span class="k">None</span>]})
+print(len(df.drop_duplicates()), len(df.dropna()), len(df.dropna(subset=[<span class="s">"amt"</span>])))</pre><pre class="out">3 2 3</pre><div class="why"><b>Why:</b> One exact duplicate goes, leaving 3. <code class="inline">dropna()</code> with no arguments drops every row with a gap in any column: only the two rows with a promo code survive. Naming the column that matters keeps the 3 rows that have an amount.</div></div>
+
+  <div class="sec"><h2>2.3 · Lab reference solutions</h2><span class="rule"></span></div>
+  <div class="blk lab"><div class="h"><code class="inline">labs/module-05/l2_3-cleaning-data/register_log_solution.py</code></div>
+    <p><b>Question:</b> Clean the Asheville manager's hand-typed log of May 2025 (<code class="inline">asheville_may_log.csv</code>) and score it against the same 31 days of <code class="inline">daily_sales.csv</code>.</p>
+    <p><b>How the solution works:</b> Structure first: strip and lowercase the headers, rename three of them, save the TOTAL row's number, drop that row and the 3 exact duplicates (31 rows). Text: strip and title-case the store name, map the one misspelling; reduce yes/Yes/Y/YES and no/No/N to their first letter and map to 1/0. Numbers: remove <code class="inline">$</code> and <code class="inline">,</code>, coerce (the word <code class="inline">pending</code> becomes NaN); revenue per transaction exposes one day that is 100 times too large (9,551 per sale against a median of 90), fixed with one <code class="inline">.loc</code> assignment; the count columns become <code class="inline">Int64</code>. Dates: three formats, one pass each, combined with <code class="inline">fillna</code>. Two values stay blank. The stretch step repairs one of them with a firm rule: the TOTAL row minus the sum of the known days.</p>
+<pre class="out">['Date ', 'Store', ' Visitors', 'Transactions', 'Units', 'Revenue ($)', 'Staff', 'Promo?']
+                dtype  missing  distinct
+Date              str        0        32
+Store             str        1         5
+ Visitors     float64        2        26
+Transactions  float64        1        24
+Units         float64        1        27
+Revenue ($)       str        0        32
+Staff         float64        1         8
+Promo?            str        1         7
+rows: 35 | exact duplicate rows: 3
+after structure: (31, 8) | stated total: 201379.71
+{'Asheville': 16, 'asheville': 5, ' Asheville': 4, 'ASHEVILLE': 4, 'Ashville': 2}
+{'no': 21, 'No': 4, 'N': 2, 'yes': 1, 'Yes': 1, 'Y': 1, 'YES': 1}
+['Asheville'] {0: 27, 1: 4}
+not a number: [['05/09/2025', 'pending']]
+{'min': 73.24, '50%': 90.06, 'max': 9551.47}
+lost decimal point: [['2025-05-17', 93.0, 888287.0]]
+dates per format: 17 10 4
+                        dtype  missing  distinct
+date           datetime64[us]        0        31
+store                     str        0         1
+visitors                Int64        1        26
+transactions            Int64        0        24
+units                   Int64        0        27
+revenue               float64        1        30
+staff_on_duty           Int64        0         8
+promo_day               int64        0         2
+still missing: {'visitors': 1, 'revenue': 1}
+cells compared: 217 | still blank: 2 | wrong: 0
+the pending day, recovered from the TOTAL row: ['2025-05-09'] 3668.5
+cells compared: 217 | still blank: 1 | wrong: 0</pre>
+    <ul class="tick lab">
+          <li>Audit before: 35 rows, 3 exact duplicates, <code class="inline">Store</code> with 5 distinct spellings, <code class="inline">Promo?</code> with 7, <code class="inline">Revenue ($)</code> as text, four count columns as float (the TOTAL row's empty cells did that).</li>
+          <li>After structure: <code class="inline">(31, 8)</code> and a stated total of 201,379.71.</li>
+          <li>Not a number: <code class="inline">pending</code> on 05/09/2025. Lost decimal point: 2025-05-17, 888,287.00 for 93 transactions. The genuine promo-day figure of $16,558.00 (May 24) must NOT be touched: 96.83 per sale is ordinary.</li>
+          <li>Dates per format: 17 ISO, 10 month/day/year, 4 written out. No date is missing.</li>
+          <li>Scorecard: <code class="inline">cells compared: 217 | still blank: 2 | wrong: 0</code>. The two blanks are the <code class="inline">pending</code> revenue and one <code class="inline">n/a</code> visitor count, which <code class="inline">read_csv</code> turned into NaN by itself.</li>
+          <li>Stretch: 201,379.71 minus the known revenue is 3,668.50, the true figure for May 9. Scorecard then says 1 blank. The visitor count cannot be recovered from this file: it stays blank.</li>
+          <li><code class="inline">wrong: 1</code> nearly always means the lost decimal was not repaired, or a threshold on revenue alone caught May 24 as well. <code class="inline">wrong: 31</code> in one column means <code class="inline">promo_day</code> is still text.</li>
+        </ul>
+  </div>
+  <div class="blk lab"><div class="h"><code class="inline">labs/module-05/l2_3-cleaning-data/total_row_check_solution.py</code></div>
+    <p><b>Question:</b> If someone simply added up <code class="inline">Order Total</code> in <code class="inline">orders_messy.csv</code>, how far off would they be, and which flaw moves the sum the most?</p>
+    <p><b>How the solution works:</b> The TOTAL row's 3,950,701.45 is the sum of all true order totals (it equals the sum of <code class="inline">order_total</code> in <code class="inline">orders.csv</code>). The lab converts the column, takes the careless sum, then applies three repairs in turn and records the sum after each: dropping the 212 duplicates, making the 15 negative totals positive, and dividing the 8 lost-decimal totals by 100 (found with the item-subtotal ratio from the lesson). What is left is explained to the cent by the 40 blank totals.</p>
+<pre class="out">                      step        sum     change  off_by_pct
+              careless sum 4126451.89        NaN        4.45
+       drop 212 duplicates 4083821.73  -42630.16        3.37
+15 negatives made positive 4090475.89    6654.16        3.54
+     8 lost decimal points 3943079.74 -147396.15       -0.19
+stated total (TOTAL row): 3,950,701.45
+gap after all repairs   : 7,621.71
+blank totals: 40 | their true sum in orders.csv: 7,621.71
+the gap is exactly the blank totals: True</pre>
+    <ul class="tick lab">
+          <li>Careless sum 4,126,451.89: 4.45% too high.</li>
+          <li>Dropping duplicates: -42,630.16. Negatives made positive: +6,654.16. Lost decimals: -147,396.15, the largest effect by far, from only 8 rows.</li>
+          <li>After all repairs 3,943,079.74, which is 7,621.71 below the stated total. The 40 orders with a blank total add up to exactly 7,621.71 in <code class="inline">orders.csv</code>.</li>
+          <li>Discussion: eight rows did three times the damage of 212 duplicates. Counting how many rows a flaw touches says little about how much it matters.</li>
+          <li>If <code class="inline">after_decimals</code> is unchanged, the ratio was computed before <code class="inline">order_id</code> was converted to <code class="inline">int64</code>, so <code class="inline">.map()</code> found no matches.</li>
+        </ul>
+  </div>
+
+  <div class="sec"><h2>2.3 · The lesson page's Quick Quiz</h2><span class="rule"></span></div>
+  <p style="font-size:.9rem;color:var(--ink-2)">These are the five questions at the end of the lesson page (three options each), with the lesson's own explanation.</p>
+  <div class="q"><div class="qn">2.3 Q1</div><div class="qt">What does this print?</div><pre class="code">qs = pd.Series([<span class="s">"12"</span>, <span class="s">"7"</span>, <span class="s">"n/a"</span>, <span class="s">"3.5"</span>])
+print(pd.to_numeric(qs, errors=<span class="s">"coerce"</span>).tolist())</pre><div class="opts"><div class="opt correct">A) [12.0, 7.0, nan, 3.5]</div><div class="opt">B) Nothing: it raises a ValueError at 'n/a'</div><div class="opt">C) [12.0, 7.0, 0.0, 3.5]</div></div><div class="why"><b>Why:</b> errors='coerce' converts every value that can be a number and turns the rest into NaN instead of raising an error. The NaN makes the result float.</div></div>
+  <div class="q"><div class="qn">2.3 Q2</div><div class="qt">A column holds " boise", "BOISE " and "Boise". After .str.title() alone, how many distinct values does it have?</div><div class="opts"><div class="opt">A) 1</div><div class="opt">B) 2</div><div class="opt correct">C) 3</div></div><div class="why"><b>Why:</b> Title case does not remove whitespace, so a leading space, a trailing space and no space are still three different texts. Strip first, then fix the case.</div></div>
+  <div class="q"><div class="qn">2.3 Q3</div><div class="qt">Forty of 20,302 orders have no recorded total, and nothing in the file lets you work it out. You need the average order value. What is the most defensible approach?</div><div class="opts"><div class="opt">A) Fill the 40 gaps with 0 so that every row has a number</div><div class="opt correct">B) Leave them missing, compute the mean of the known totals, and report that 40 were excluded</div><div class="opt">C) Call dropna() on the table first, then take the mean</div></div><div class="why"><b>Why:</b> mean() skips missing values, so the average is computed from the 20,262 known totals, and stating that 40 were excluded lets a reader judge the result. No value is invented.</div></div>
+  <div class="q"><div class="qn">2.3 Q4</div><div class="qt">What does this print?</div><pre class="code">qd = pd.DataFrame({<span class="s">"id"</span>: [<span class="s">1</span>, <span class="s">1</span>, <span class="s">2</span>, <span class="s">3</span>, <span class="s">3</span>, <span class="s">3</span>], <span class="s">"v"</span>: [<span class="s">"a"</span>, <span class="s">"a"</span>, <span class="s">"b"</span>, <span class="s">"c"</span>, <span class="s">"c"</span>, <span class="s">"d"</span>]})
+print(len(qd.drop_duplicates()), len(qd.drop_duplicates(subset=[<span class="s">"id"</span>])))</pre><div class="opts"><div class="opt">A) 3 3</div><div class="opt">B) 4 4</div><div class="opt correct">C) 4 3</div></div><div class="why"><b>Why:</b> Comparing whole rows leaves four distinct rows: 1 a, 2 b, 3 c and 3 d. Comparing only id keeps the first row of each id, which leaves three, and silently discards the 3 d row.</div></div>
+  <div class="q"><div class="qn">2.3 Q5</div><div class="qt">One order total is $55,690, far above the rest. What should you do first?</div><div class="opts"><div class="opt correct">A) Look for independent evidence about that order, such as its item lines</div><div class="opt">B) Delete every order above a chosen threshold</div><div class="opt">C) Replace it with the median order total</div></div><div class="why"><b>Why:</b> An extreme value is a question. Independent evidence, here the item lines for that order, tells you whether it is a real bulk order or an entry error, and what the right value is.</div></div>
+
+  <div class="sec"><h2>2.4 · GroupBy Operations: self-check</h2><span class="rule"></span></div>
+  <div class="q" data-sc="7"><div class="qn">Q7</div><div class="qt">What does this print?</div><pre class="code">df = pd.DataFrame({<span class="s">"store"</span>: [<span class="s">"a"</span>, <span class="s">"a"</span>, <span class="s">"b"</span>], <span class="s">"amt"</span>: [<span class="s">10</span>, <span class="s">30</span>, <span class="s">5</span>]})
+r = df.groupby(<span class="s">"store"</span>)[<span class="s">"amt"</span>].agg([<span class="s">"count"</span>, <span class="s">"mean"</span>])
+print(r.shape, r.loc[<span class="s">"a"</span>, <span class="s">"mean"</span>])</pre><div class="opts"><div class="opt">A) <code class="inline">(3, 2) 20.0</code></div><div class="opt">B) <code class="inline">(2, 2) 40.0</code></div><div class="opt">C) <code class="inline">(2,) 20.0</code></div><div class="opt correct">D) <code class="inline">(2, 2) 20.0</code></div></div><div class="why"><b>Why:</b> Two groups give two rows, and two function names give two columns. The index is the store, so <code class="inline">r.loc["a", "mean"]</code> is the mean of 10 and 30.<br><b>A</b> is wrong: Aggregation returns one row per group, not one per original row.<br><b>B</b> is wrong: 40 is the sum for store <code class="inline">a</code>; the column asked for is the mean.<br><b>C</b> is wrong: A list of two functions makes a DataFrame with two columns, not a Series.</div></div>
+  <div class="q" data-sc="8" data-kind="short"><div class="qn">Q8</div><div class="qt">What does this print?</div><pre class="code">df = pd.DataFrame({<span class="s">"k"</span>: [<span class="s">"x"</span>, <span class="s">"x"</span>, <span class="s">"y"</span>], <span class="s">"v"</span>: [<span class="s">1</span>, <span class="s">3</span>, <span class="s">10</span>]})
+df[<span class="s">"share"</span>] = df[<span class="s">"v"</span>] / df.groupby(<span class="s">"k"</span>)[<span class="s">"v"</span>].transform(<span class="s">"sum"</span>)
+print(df[<span class="s">"share"</span>].tolist())</pre><div class="opts"><div class="opt correct"><code class="inline">[0.25, 0.75, 1.0]</code></div></div><div class="why"><b>Why:</b> <code class="inline">transform("sum")</code> returns one value per original row: 4, 4, 10 (each row's group total). Dividing each value by its own group's total gives each row's share of its group.</div></div>
+  <div class="q" data-sc="9"><div class="qn">Q9</div><div class="qt"><code class="inline">orders</code> has a True/False column <code class="inline">returned</code>. Which expression gives the fraction of each channel's orders that were returned?</div><div class="opts"><div class="opt correct">A) <code class="inline">orders.groupby("channel")["returned"].mean()</code></div><div class="opt">B) <code class="inline">orders.groupby("channel")["returned"].count()</code></div><div class="opt">C) <code class="inline">orders.groupby("channel")["returned"].size()</code></div><div class="opt">D) <code class="inline">orders.groupby("channel")["returned"].nunique()</code></div></div><div class="why"><b>Why:</b> True counts as 1 and False as 0, so the mean of a boolean column within each group is the rate.<br><b>B</b> is wrong: <code class="inline">count</code> is the number of non-missing values: every order, returned or not.<br><b>C</b> is wrong: <code class="inline">size</code> is the number of rows in each group.<br><b>D</b> is wrong: <code class="inline">nunique</code> is the number of distinct values: 2 for each channel (True and False).</div></div>
+  <div class="q" data-sc="10"><div class="qn">Q10</div><div class="qt"><code class="inline">orders.groupby("promo_code").size().sum()</code> gives 2,148, but <code class="inline">orders</code> has 20,302 rows. Why?</div><div class="opts"><div class="opt">A) <code class="inline">size()</code> skips rows whose order total is missing</div><div class="opt">B) <code class="inline">groupby</code> removes duplicate rows before it counts</div><div class="opt correct">C) Rows whose key is missing are dropped by default; <code class="inline">dropna=False</code> keeps them as a group</div><div class="opt">D) <code class="inline">promo_code</code> is text and must be a category before grouping</div></div><div class="why"><b>Why:</b> 18,154 orders have no promo code. By default <code class="inline">groupby</code> silently leaves out every row whose key is missing. <code class="inline">dropna=False</code> adds a group for them, and the sizes then add up to 20,302.<br><b>A</b> is wrong: <code class="inline">size()</code> counts rows whatever they contain; it does not look at <code class="inline">order_total</code>.<br><b>B</b> is wrong: <code class="inline">groupby</code> never removes duplicates.<br><b>D</b> is wrong: Text keys group perfectly well. The dtype is not the issue.</div></div>
+  <div class="q" data-sc="11" data-kind="short"><div class="qn">Q11</div><div class="qt">What does this print?</div><pre class="code">df = pd.DataFrame({<span class="s">"g"</span>: [<span class="s">"a"</span>, <span class="s">"a"</span>, <span class="s">"b"</span>], <span class="s">"x"</span>: [<span class="s">1.0</span>, <span class="k">None</span>, <span class="s">3.0</span>]})
+print(df.groupby(<span class="s">"g"</span>)[<span class="s">"x"</span>].size().tolist(), df.groupby(<span class="s">"g"</span>)[<span class="s">"x"</span>].count().tolist())</pre><div class="opts"><div class="opt correct"><code class="inline">[2, 1] [1, 1]</code></div></div><div class="why"><b>Why:</b> <code class="inline">size</code> counts rows: two in group <code class="inline">a</code>, one in group <code class="inline">b</code>. <code class="inline">count</code> counts non-missing values of <code class="inline">x</code>: group <code class="inline">a</code> has one missing, so 1 and 1.</div></div>
+  <div class="q" data-sc="12"><div class="qn">Q12</div><div class="qt">You want the original order rows of every customer who placed 25 or more orders. Which call returns them?</div><div class="opts"><div class="opt">A) <code class="inline">orders.groupby("customer_id")["order_id"].count() &gt;= 25</code></div><div class="opt correct">B) <code class="inline">orders.groupby("customer_id").filter(lambda g: len(g) &gt;= 25)</code></div><div class="opt">C) <code class="inline">orders.groupby("customer_id").agg(n=("order_id", "count"))</code></div><div class="opt">D) <code class="inline">orders.groupby("customer_id")["order_id"].transform("count")</code></div></div><div class="why"><b>Why:</b> <code class="inline">filter</code> hands each group to the function and keeps all rows of the groups for which it returns True: fewer of the same rows.<br><b>A</b> is wrong: That is a True/False Series with one value per customer, not order rows.<br><b>C</b> is wrong: That is a summary with one row per customer.<br><b>D</b> is wrong: That is one count per order row: the first half of the transform-then-mask pattern. You would still need <code class="inline">orders[... &gt;= 25]</code>.</div></div>
+
+  <div class="sec"><h2>2.4 · Predict, then run</h2><span class="rule"></span></div>
+  <div class="q"><div class="qn">P1</div><div class="qt">An average of averages.</div><pre class="code">df = pd.DataFrame({<span class="s">"team"</span>: [<span class="s">"a"</span>, <span class="s">"b"</span>, <span class="s">"a"</span>, <span class="s">"b"</span>, <span class="s">"a"</span>], <span class="s">"pts"</span>: [<span class="s">2</span>, <span class="s">10</span>, <span class="s">4</span>, <span class="s">20</span>, <span class="s">6</span>]})
+means = df.groupby(<span class="s">"team"</span>)[<span class="s">"pts"</span>].mean()
+print(means.tolist(), means.mean(), df[<span class="s">"pts"</span>].mean())</pre><pre class="out">[4.0, 15.0] 9.5 8.4</pre><div class="why"><b>Why:</b> Team <code class="inline">a</code> averages 4 over three rows and team <code class="inline">b</code> averages 15 over two rows. The mean of those two means, 9.5, weights the teams equally; the mean of all five rows, 8.4, weights every row equally. They differ because the groups are different sizes.</div></div>
+  <div class="q"><div class="qn">P2</div><div class="qt">A key with gaps.</div><pre class="code">df = pd.DataFrame({<span class="s">"code"</span>: [<span class="s">"X"</span>, <span class="k">None</span>, <span class="s">"X"</span>, <span class="k">None</span>], <span class="s">"amt"</span>: [<span class="s">1</span>, <span class="s">2</span>, <span class="s">3</span>, <span class="s">4</span>]})
+print(len(df.groupby(<span class="s">"code"</span>)), len(df.groupby(<span class="s">"code"</span>, dropna=<span class="k">False</span>)),
+      df.groupby(<span class="s">"code"</span>)[<span class="s">"amt"</span>].sum().sum())</pre><pre class="out">1 2 4</pre><div class="why"><b>Why:</b> By default the two rows with no code are dropped, so there is one group (<code class="inline">X</code>) and the sums add up to 1 + 3 = 4, not 10. With <code class="inline">dropna=False</code> the missing key becomes a second group.</div></div>
+  <div class="q"><div class="qn">P3</div><div class="qt">Three shapes.</div><pre class="code">df = pd.DataFrame({<span class="s">"k"</span>: [<span class="s">"a"</span>, <span class="s">"a"</span>, <span class="s">"b"</span>], <span class="s">"v"</span>: [<span class="s">1</span>, <span class="s">2</span>, <span class="s">3</span>]})
+a = df.groupby(<span class="s">"k"</span>)[<span class="s">"v"</span>].sum()
+t = df.groupby(<span class="s">"k"</span>)[<span class="s">"v"</span>].transform(<span class="s">"sum"</span>)
+f = df.groupby(<span class="s">"k"</span>).filter(<span class="k">lambda</span> g: len(g) &gt; <span class="s">1</span>)
+print(len(a), len(t), len(f))</pre><pre class="out">2 3 2</pre><div class="why"><b>Why:</b> <code class="inline">agg</code> (here <code class="inline">sum</code>) returns one row per group: 2. <code class="inline">transform</code> returns one value per original row: 3. <code class="inline">filter</code> returns the original rows of the groups that pass the test: only group <code class="inline">a</code> has more than one row, so 2 rows.</div></div>
+
+  <div class="sec"><h2>2.4 · Lab reference solutions</h2><span class="rule"></span></div>
+  <div class="blk lab"><div class="h"><code class="inline">labs/module-05/l2_4-groupby-operations/store_days_solution.py</code></div>
+    <p><b>Question:</b> For each store: days, revenue and conversion; how much a promo day brings in; whether the lesson's growth claim (+19.7% Flagstaff, -5.0% Asheville) holds; and how many days were at least twice the store's own average.</p>
+    <p><b>How the solution works:</b> One named aggregation gives the store table; conversion is the sum of transactions divided by the sum of visitors, computed after the aggregation. Two keys (<code class="inline">store</code>, <code class="inline">promo_day</code>) and <code class="inline">unstack</code> give ordinary and promo-day means side by side, and a ratio column gives the lift. A computed year key reproduces the growth figures the lesson quotes. <code class="inline">transform("mean")</code> puts each store's average on every row so that each day can be compared with its own store.</p>
+<pre class="out">(2903, 8)
+           days  days_with_revenue     revenue  visitors  transactions  conversion
+store                                                                             
+Asheville   727                726  4140977.47    199851         46918       0.235
+Bend        724                721  5045467.37    242447         57190       0.236
+Boise       727                726  7364698.20    352716         83251       0.236
+Flagstaff   725                724  4988176.84    238135         56366       0.237
+groups add up: 2903 == 2903
+promo_day        0         1  lift
+store                             
+Asheville  5541.10  10463.59  1.89
+Bend       6776.66  13422.32  1.98
+Boise      9830.07  19332.90  1.97
+Flagstaff  6694.55  12583.02  1.88
+ordinary and promo day means: [7211.74, 13950.46]
+average of those two averages: 10581.1
+true average store-day       : 7435.04
+year            2024       2025  growth_pct
+store                                      
+Flagstaff  2270180.0  2717997.0        19.7
+Boise      3518292.0  3846406.0         9.3
+Bend       2476118.0  2569350.0         3.8
+Asheville  2123278.0  2017699.0        -5.0
+store
+Asheville    12
+Bend         15
+Boise        15
+Flagstaff    21
+dtype: int64
+standout days: 63 | share that were promo days: 0.619
+           date      store   revenue  store_avg  vs_store_avg
+970  2024-08-31       Bend  20935.21    6997.87          2.99
+2023 2025-05-24  Asheville  16558.00    5703.83          2.90
+2775 2025-11-29  Asheville  15828.25    5703.83          2.78</pre>
+    <ul class="tick lab">
+          <li>Store table: Asheville 727 days and 726 with revenue, Bend 724 / 721, Boise 727 / 726, Flagstaff 725 / 724. <code class="inline">size</code> counts rows, <code class="inline">count</code> skips the 6 missing revenues. The days add up to 2,903.</li>
+          <li>Conversion is 23.5% to 23.7% in every store: no store converts visitors noticeably better.</li>
+          <li>Promo days bring in 1.88 to 1.98 times an ordinary day's revenue in every store.</li>
+          <li>The trap: ordinary days average 7,211.74 and promo days 13,950.46; the average of those two is 10,581.10, but the true average store-day is 7,435.04, because only 96 of 2,903 store-days are promo days.</li>
+          <li>Growth, 2024 to 2025: Flagstaff +19.7%, Boise +9.3%, Bend +3.8%, Asheville -5.0%. The lesson's claim holds.</li>
+          <li>Standout days (at least twice the store's own average): Flagstaff 21, Bend 15, Boise 15, Asheville 12; 63 in all, and 61.9% of them were promo days. The biggest relative day is Bend on 2024-08-31, 2.99 times its average.</li>
+          <li>A learner whose conversion column is a mean of daily ratios gets nearly the same numbers here; ask them which one answers 'what share of all visitors bought?' (the ratio of sums).</li>
+        </ul>
+  </div>
+  <div class="blk lab"><div class="h"><code class="inline">labs/module-05/l2_4-groupby-operations/basket_sizes_solution.py</code></div>
+    <p><b>Question:</b> How big is a typical basket, are the best sellers by units the best sellers by revenue, what share of its order is each line, and which orders have six or more lines?</p>
+    <p><b>How the solution works:</b> Grouping by <code class="inline">order_id</code> gives one row per order (20,302) with lines, units and subtotal; grouping by <code class="inline">sku</code> gives one row per product (240) with units, revenue and distinct orders. <code class="inline">transform("sum")</code> puts each order's subtotal on every one of its lines so a share can be computed. <code class="inline">filter</code> with <code class="inline">len(g) &gt;= 6</code> and the transform-then-mask version return the same 1,106 lines.</p>
+<pre class="out">(45490, 6)
+orders: 20302 | lines add up: True
+      lines  units  subtotal
+mean   2.24   3.21    195.23
+50%    2.00   3.00    147.80
+max    8.00  48.00   4893.00
+{1: 5890, 2: 7244, 3: 4559, 4: 1841, 5: 593, 6: 128, 7: 38, 8: 9}
+products sold: 240
+          units    revenue  orders
+sku                               
+ACC-1015   3475  159029.25    2620
+KIT-1008   3124   24771.00    1391
+ACC-1017   2479   34513.50    1394
+          units    revenue  orders
+sku                               
+ACC-1015   3475  159029.25    2620
+APL-1001    420  117579.00     420
+PCK-1001    784  107368.80     784
+   order_id       sku  line_total  order_subtotal  share_of_order
+0    100001  SLP-1021      371.95           434.9           0.855
+1    100001  KIT-1014       62.95           434.9           0.145
+2    100002  CLM-1012       32.95           278.9           0.118
+3    100002  SNW-1022      245.95           278.9           0.882
+lines that are a whole order: 5890
+filter       : 1106 lines in 175 orders
+transform+mask: 1106 lines in 175 orders
+same rows: True</pre>
+    <ul class="tick lab">
+          <li>20,302 orders; the lines add up to 45,490. Mean 2.24 lines and 3.21 units per order; the median basket has 2 lines; the largest has 8 lines, and one order has 48 units (a bulk order).</li>
+          <li>240 SKUs were sold (the catalog has 242, but 8 never sold and 6 discontinued SKUs appear here).</li>
+          <li>By units: ACC-1015 (3,475), KIT-1008 (3,124), ACC-1017 (2,479). By revenue: ACC-1015 ($159,029.25), APL-1001 ($117,579.00), PCK-1001 ($107,368.80). Only the first product is on both lists: a cheap item can sell in volume and earn little.</li>
+          <li>5,890 lines are a whole order by themselves (share exactly 1): the single-line orders.</li>
+          <li>Six or more lines: 1,106 lines in 175 orders, by both methods, and the two results have the same index.</li>
+          <li><code class="inline">lines=("sku", "size")</code> is equally correct; <code class="inline">("sku", "nunique")</code> also works here only because SKUs are distinct within an order.</li>
+        </ul>
+  </div>
+  <div class="blk warn"><div class="h"><code class="inline">labs/module-05/l2_4-groupby-operations/debug_groupby.py</code></div>
+    <ul class="tick">
+          <li>Bug 1: <code class="inline">orders.groupby("store").mean()</code> raises <code class="inline">TypeError: dtype 'str' does not support operation 'mean'</code>. Select the column: <code class="inline">orders.groupby("store")["order_total"].mean()</code>.</li>
+          <li>Bug 2: <code class="inline">summary["store"]</code> raises <code class="inline">KeyError: 'store'</code>. The key is the index: <code class="inline">summary.index.tolist()</code> or <code class="inline">summary.reset_index()["store"].tolist()</code>.</li>
+          <li>Bug 3 (quiet): <code class="inline">["promo_code"].count()</code> counts only orders with a promo code (card 1,271). Use <code class="inline">.size()</code>: card 12,392.</li>
+          <li>Bug 4 (quiet): rows with no promo code are dropped, so the groups sum to 2,148. Add <code class="inline">dropna=False</code>: 20,302 of 20,302.</li>
+          <li>Bug 5 (quiet): the mean of five store means is 182.66. The company average is <code class="inline">orders["order_total"].mean()</code>: 194.6.</li>
+        </ul>
+  </div>
+
+  <div class="sec"><h2>2.4 · The lesson page's Quick Quiz</h2><span class="rule"></span></div>
+  <p style="font-size:.9rem;color:var(--ink-2)">These are the five questions at the end of the lesson page (three options each), with the lesson's own explanation.</p>
+  <div class="q"><div class="qn">2.4 Q1</div><div class="qt">What does this print?</div><pre class="code">qdf = pd.DataFrame({<span class="s">"team"</span>: [<span class="s">"a"</span>, <span class="s">"a"</span>, <span class="s">"b"</span>, <span class="s">"b"</span>, <span class="s">"b"</span>], <span class="s">"pts"</span>: [<span class="s">1</span>, <span class="s">3</span>, <span class="s">2</span>, <span class="s">4</span>, <span class="s">6</span>]})
+qres = qdf.groupby(<span class="s">"team"</span>)[<span class="s">"pts"</span>].transform(<span class="s">"mean"</span>)
+print(len(qres), qres.tolist())</pre><div class="opts"><div class="opt">A) 2 [2.0, 4.0]</div><div class="opt correct">B) 5 [2.0, 2.0, 4.0, 4.0, 4.0]</div><div class="opt">C) 5 [1.0, 3.0, 2.0, 4.0, 6.0]</div></div><div class="why"><b>Why:</b> transform returns one value for every original row: each row gets the mean of its own group. Team a averages 2 and team b averages 4, repeated for their two and three rows.</div></div>
+  <div class="q"><div class="qn">2.4 Q2</div><div class="qt">You want one row per store, with a column orders (the number of orders) and a column revenue (the sum of order_total). Which call produces it?</div><div class="opts"><div class="opt">A) orders.groupby("store").agg({"order_total": {"revenue": "sum"}})</div><div class="opt">B) orders.groupby("store")["order_total"].transform("sum")</div><div class="opt correct">C) orders.groupby("store").agg(orders=("order_id", "count"), revenue=("order_total", "sum"))</div></div><div class="why"><b>Why:</b> Named aggregation: each keyword is the new column name, and its tuple gives the source column and the function. The result has one row per store and exactly these two columns.</div></div>
+  <div class="q"><div class="qn">2.4 Q3</div><div class="qt">Two of the five rows have no code. What does this print?</div><pre class="code">qd2 = pd.DataFrame({<span class="s">"code"</span>: [<span class="s">"X"</span>, <span class="k">None</span>, <span class="s">"X"</span>, <span class="k">None</span>, <span class="s">"Y"</span>], <span class="s">"amt"</span>: [<span class="s">1</span>, <span class="s">2</span>, <span class="s">3</span>, <span class="s">4</span>, <span class="s">5</span>]})
+print(qd2.groupby(<span class="s">"code"</span>)[<span class="s">"amt"</span>].sum().sum())</pre><div class="opts"><div class="opt correct">A) 9</div><div class="opt">B) 15</div><div class="opt">C) nan</div></div><div class="why"><b>Why:</b> By default groupby drops rows whose key is missing. Only X (1 + 3) and Y (5) form groups, so the group sums total 9, not 15. dropna=False would keep the missing key as a group.</div></div>
+  <div class="q"><div class="qn">2.4 Q4</div><div class="qt">The five stores' average order totals are $174.90, $172.91, $177.22, $183.61 and $204.65. Their mean is $182.66, but the average over all orders is $194.60. Why do the two differ?</div><div class="opts"><div class="opt">A) Rounding errors build up when averages are averaged</div><div class="opt">B) Missing order totals were skipped in one calculation and not in the other</div><div class="opt correct">C) The groups are very different sizes, and a mean of means weights each group equally</div></div><div class="why"><b>Why:</b> Averaging the five store averages gives each store equal weight, but the online shop has 12,854 orders and Asheville 1,413. The true overall average weights every order equally, so the large online group pulls it up.</div></div>
+  <div class="q"><div class="qn">2.4 Q5</div><div class="qt">Which statement about orders.groupby("payment_method")["promo_code"] is true?</div><div class="opts"><div class="opt correct">A) .size() counts all orders in each group; .count() counts only those with a promo code</div><div class="opt">B) .size() and .count() always return the same numbers</div><div class="opt">C) .count() returns the number of distinct promo codes in each group</div></div><div class="why"><b>Why:</b> size counts the rows in each group whatever they contain. count counts only the non-missing values of the selected column, so it reports how many orders in each group used a promo code.</div></div>
+
+  <div class="sec"><h2>Warm-up Answers</h2><span class="rule"></span></div>
+  <ol class="steps">
+          <li>What three things make up a Series? <b>Answer:</b> An array of values, an index of labels, and an optional name.</li>
+          <li>On a table with the default index, how many rows do <code class="inline">df.loc[0:3]</code> and <code class="inline">df.iloc[0:3]</code> return? <b>Answer:</b> 4 and 3: a label slice includes its end, a position slice leaves out the stop.</li>
+          <li><code class="inline">df[df["price"] &gt; 100]["price"] = 0</code> changes nothing. What do you write instead? <b>Answer:</b> <code class="inline">df.loc[df["price"] &gt; 100, "price"] = 0</code>: one <code class="inline">.loc</code> on the table you want to change.</li>
+          <li>A column of birth years loads as <code class="inline">float64</code> and prints <code class="inline">1989.0</code>. Why, and what is the fix? <b>Answer:</b> Some years are missing and NumPy's <code class="inline">int64</code> cannot hold a missing value. Load it as <code class="inline">"Int64"</code> (capital I).</li>
+          <li>After <code class="inline">pd.read_excel(...)</code> the columns are called <code class="inline">Unnamed: 1</code>, <code class="inline">Unnamed: 2</code>. What happened, and what do you check after every load? <b>Answer:</b> The header is not on the row pandas read as the header (<code class="inline">skiprows</code> / <code class="inline">header</code>). After every load: <code class="inline">shape</code>, <code class="inline">dtypes</code>, <code class="inline">head()</code>.</li>
+        </ol>
+
+  <div class="sec"><h2>Exit Ticket Answers</h2><span class="rule"></span></div>
+  <ol class="steps">
+          <li>In what order do you repair a damaged table, and why does structure come first? <b>Answer:</b> Structure (headers, rows that are not data, duplicates), then text, numbers, dates, missing values. Fixing the shape first makes later steps simpler and counts honest (for example <code class="inline">astype</code> fails while a TOTAL row is present).</li>
+          <li>Forty of 20,302 order totals are blank and nothing in the file gives their value. You need the average order value. What do you do, and what do you say? <b>Answer:</b> Leave them missing, take the mean of the known totals, and report that 40 orders were excluded. Filling with 0 or with the median would invent data.</li>
+          <li>One row per group; one value per original row; fewer of the same rows. Name the groupby tool for each. <b>Answer:</b> <code class="inline">agg</code> (or a built-in such as <code class="inline">sum</code>); <code class="inline">transform</code>; <code class="inline">filter</code> (or a <code class="inline">transform</code> and a mask).</li>
+        </ol>
+
+  <div class="sec"><h2>Common Wrong Answers and What They Reveal</h2><span class="rule"></span></div>
+  <ul class="tick">
+          <li><b>Q2 answered <code class="inline">2 2</code> or <code class="inline">1 3</code>.</b> They expect one format string to understand another format, or they expect the impossible date to be parsed. Have them print <code class="inline">iso</code> and <code class="inline">us</code> side by side: each pass understands its own format only, and February 30th stays NaT.</li>
+          <li><b>Q5 answered <code class="inline">30.0 30.0</code>.</b> They think <code class="inline">fillna(0)</code> is neutral. Ask what three customers paid in the second calculation: 10, 0 and 50.</li>
+          <li><b>Q6 answered B ('the gaps are filled').</b> The copy-on-write rule from Session 4 has not transferred to <code class="inline">inplace=True</code>. Show the cell and the warning; the fix is to assign the result back.</li>
+          <li><b>Q4 answered A ('above the 99th percentile').</b> They treat 'extreme' as 'wrong'. Remind them that the $4,893 bulk order is extreme and true.</li>
+          <li><b>Q8 answered <code class="inline">[4, 4, 10]</code> or a two-item list.</b> They are thinking of <code class="inline">agg</code>. Draw the two shapes: <code class="inline">transform</code> returns one value per original row.</li>
+          <li><b>Q11 answered <code class="inline">[2, 1] [2, 1]</code>.</b> <code class="inline">size</code> and <code class="inline">count</code> are the same to them. Ask what <code class="inline">count</code> does with the missing value in group <code class="inline">a</code>.</li>
+          <li><b>Exit ticket 2 answered 'fill with the mean'.</b> It leaves the mean unchanged, which feels safe, but it invents 40 perfectly average orders and shrinks the spread. With 40 gaps in 20,302 rows, leaving them missing costs nothing.</li>
+          <li><b>Lab <code class="inline">register_log</code>: <code class="inline">wrong: 1</code>.</b> The lost decimal was missed, or a threshold on revenue caught the genuine promo day. Ask for the evidence in the row (revenue per transaction).</li>
+          <li><b>Lab <code class="inline">store_days</code>: 726 days for Asheville.</b> <code class="inline">count</code> on <code class="inline">revenue</code> was used for the number of days. Ask what happens to a day with no revenue figure.</li>
+        </ul>
+
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 5 · Answer Key · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

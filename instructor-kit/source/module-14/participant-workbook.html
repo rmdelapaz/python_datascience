@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Participant Workbook: Session 14</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Student workbook —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">write in it · bring it to every session</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Participant Workbook</div>
+    <h1>Session 14: SQL from Python: Queries and Joins</h1>
+    <p class="sub">Your notes, worked examples, labs and self-check for the first SQL session: one table, asked safely, then several tables joined without losing a row.</p>
+    <div class="meta-row">
+      <span class="chip">Lessons <b>5.1–5.2</b></span>
+      <span class="chip">Session <b>14</b> · 3 hours</span>
+      <span class="chip">Name: ____________________</span>
+    </div>
+  </header>
+
+  <div class="sec"><h2>Session Goals</h2><span class="rule"></span></div>
+<p>Today you start Module 5: data that lives in a database instead of a file. By the end of the session you will have:</p><ul class="tick">
+  <li>connected to Pinecrest's database from Python and explored its tables and columns;</li>
+  <li>written your first SQL: filters, sorts, aggregates, groups and group filters;</li>
+  <li>passed values into a query safely, and watched what happens when it is done the unsafe way;</li>
+  <li>moved results into pandas with <code class="inline">pd.read_sql</code> and back with <code class="inline">to_sql</code>;</li>
+  <li>joined tables and accounted for every row that did not match;</li>
+  <li>named the steps of a longer query with <code class="inline">WITH</code>, walked a reporting tree, and met the logic of NULL.</li>
+</ul>  <div class="note"><div class="t">You already speak this</div>
+    <p>Filtering, sorting, grouping and merging are what you did in Module 2. SQL is a second language for the same ideas. When a query feels foreign, translate it into pandas in your head. The table below is your phrase book.</p><table class="rubric"><thead><tr><th>SQL</th><th>What it does</th><th>pandas</th></tr></thead><tbody>
+<tr><td><code class="inline">SELECT a, b</code></td><td>Choose columns</td><td><code class="inline">df[["a", "b"]]</code></td></tr>
+<tr><td><code class="inline">WHERE x &gt; 5</code></td><td>Keep rows</td><td><code class="inline">df[df["x"] &gt; 5]</code></td></tr>
+<tr><td><code class="inline">GROUP BY g</code> with aggregates</td><td>One row per group</td><td><code class="inline">df.groupby("g").agg(...)</code></td></tr>
+<tr><td><code class="inline">HAVING COUNT(*) &gt; 5</code></td><td>Keep groups</td><td>a mask on the aggregated result</td></tr>
+<tr><td><code class="inline">ORDER BY x DESC</code></td><td>Sort</td><td><code class="inline">df.sort_values("x", ascending=False)</code></td></tr>
+<tr><td><code class="inline">LIMIT 10</code></td><td>First rows only</td><td><code class="inline">df.head(10)</code></td></tr>
+<tr><td><code class="inline">A JOIN B ON ...</code></td><td>Matched pairs only</td><td><code class="inline">a.merge(b, how="inner")</code></td></tr>
+<tr><td><code class="inline">A LEFT JOIN B ON ...</code></td><td>All of A</td><td><code class="inline">a.merge(b, how="left")</code></td></tr>
+<tr><td><code class="inline">LEFT JOIN ... WHERE b.key IS NULL</code></td><td>Rows of A with no partner</td><td><code class="inline">indicator=True</code>, keep <code class="inline">left_only</code></td></tr>
+<tr><td><code class="inline">COALESCE(x, 0)</code></td><td>Replace NULL</td><td><code class="inline">s.fillna(0)</code></td></tr>
+</tbody></table>
+  </div>
+
+  <div class="sec"><h2>Lessons</h2><span class="rule"></span></div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">5.1</span><h3>Database Connections</h3></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Key ideas</div>
+<ul class="tick">
+  <li><b>A database answers questions</b> and returns only what you ask for. SQL is the language of the request. SQLite is a complete database engine in one file; Python includes it as <code class="inline">sqlite3</code>.</li>
+  <li><b>Work on a copy</b> (<code class="inline">shutil.copy</code>) or open the file read-only, so the original stays as documented.</li>
+  <li><b>Connection, cursor, rows.</b> <code class="inline">sqlite3.connect()</code> gives a connection. Running a statement gives a cursor that walks forward through the result. Rows come back as tuples; <code class="inline">fetchone()</code>, <code class="inline">fetchmany(n)</code>, <code class="inline">fetchall()</code>.</li>
+  <li><b>One statement does most of the work:</b> <code class="inline">SELECT ... FROM ... WHERE ... GROUP BY ... HAVING ... ORDER BY ... LIMIT</code>, always written in that order. The engine runs it starting from <code class="inline">FROM</code>: FROM, WHERE, GROUP BY, HAVING, SELECT, ORDER BY, LIMIT.</li>
+  <li><b>WHERE filters rows before grouping; HAVING filters groups after it.</b> Every selected column is either in the <code class="inline">GROUP BY</code> or inside an aggregate.</li>
+  <li><b>Three COUNTs:</b> <code class="inline">COUNT(*)</code> rows, <code class="inline">COUNT(col)</code> rows where <code class="inline">col</code> is not NULL, <code class="inline">COUNT(DISTINCT col)</code> different values.</li>
+  <li><b>Values go in through placeholders</b> (<code class="inline">?</code> with a tuple, or <code class="inline">:name</code> with a dictionary). Never with an f-string, <code class="inline">.format()</code>, <code class="inline">%</code> or <code class="inline">+</code>. A one-item tuple needs its comma: <code class="inline">("Boise",)</code>.</li>
+  <li><b>Changes are saved only on commit.</b> <code class="inline">with conn:</code> commits if the block finishes and rolls back if it raises: all or nothing.</li>
+  <li><b>SQLAlchemy</b> gives one way to talk to any database: <code class="inline">create_engine(url)</code>, <code class="inline">with engine.connect() as c:</code>, <code class="inline">text("...")</code> with <code class="inline">:name</code> parameters.</li>
+  <li><b><code class="inline">pd.read_sql(query, connection, params=...)</code></b> brings a result into a DataFrame; <code class="inline">df.to_sql(name, engine, if_exists=..., index=False)</code> saves one as a table. Let the database do the heavy filtering and grouping.</li>
+</ul>
+      </div>
+      <div class="blk"><div class="h">Worked example: a report function with parameters</div>
+<p>Marketing asks, for any year: how many completed orders used each promo code, and what was the average order? The year changes, so it travels through <code class="inline">params</code>. (The f-strings build the two date VALUES from an integer; the SQL text itself is fixed. <code class="inline">conn</code> is the lesson's connection.)</p><pre class="code"><span class="k">def</span> promo_report(conn, year):
+    <span class="s">"""Orders and average total for each promo code in one calendar year."""</span>
+    sql = <span class="s">"""
+        SELECT promo_code,
+               MAX(discount_pct)          AS discount_pct,
+               COUNT(*)                   AS orders,
+               ROUND(AVG(order_total), 2) AS avg_total
+        FROM orders
+        WHERE status = 'completed'
+          AND order_date &gt;= :start AND order_date &lt; :end
+        GROUP BY promo_code
+        HAVING COUNT(*) &gt;= 100
+        ORDER BY orders DESC
+    """</span>
+    params = {<span class="s">"start"</span>: <span class="s">f"{year}-01-01"</span>, <span class="s">"end"</span>: <span class="s">f"{year + 1}-01-01"</span>}
+    <span class="k">return</span> pd.read_sql(sql, conn, params=params)
+
+print(promo_report(conn, <span class="s">2025</span>))</pre><pre class="out">  promo_code  discount_pct  orders  avg_total
+0        NaN             0    9162     197.15
+1  WELCOME10            10     262     183.36
+2    GEARUP5             5     235     159.03
+3    TRAIL15            15     183     170.37
+4   SUMMIT20            20     128     141.76</pre><p><b>Reading it.</b> The first row has no promo code: NULL is its own group, and pandas shows it as <code class="inline">NaN</code>. Most orders use no code. <code class="inline">HAVING COUNT(*) &gt;= 100</code> removed the smaller groups after grouping. The averages fall as the discount rises (SUMMIT20 orders average $141.76), partly because <code class="inline">order_total</code> is the amount AFTER the discount: compare like with like before you conclude anything about basket size. Call <code class="inline">promo_report(conn, 2024)</code> and the same function answers for another year, with no SQL rewritten.</p>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab</div>
+<p>Open <code class="inline">labs/module-14/l5_1-database-connections/staff_report_starter.py</code>. The people team wants a quick picture of Pinecrest's 55 employees, a table that exists only in the database. TODO 1 to 6 take you from the list of columns to a grouped report with <code class="inline">HAVING</code>, and a check in pandas.</p><p>Then <code class="inline">labs/module-14/l5_1-database-connections/safe_lookup_starter.py</code>: store managers want to look up low stock by location. An unsafe function is given; you write the safe one and attack both with the same input.</p><p>At home: <code class="inline">labs/module-14/l5_1-database-connections/save_summary_starter.py</code> builds a small summary table and saves it with <code class="inline">to_sql</code>, on a copy of the database.</p>
+      </div>
+      <div class="blk"><div class="h">Predict, then run</div>
+<p>Write your prediction first, then run it. <code class="inline">conn</code> is the connection from the demo.</p><div class="q"><div class="qn">P1</div><div class="qt">18 or 0? The product names say "Tent", the pattern says "TENT".</div><pre class="code">sql = <span class="s">"SELECT COUNT(*) FROM products WHERE name LIKE '%TENT%'"</span>
+print(conn.execute(sql).fetchone()[<span class="s">0</span>])</pre><div class="write"></div></div>
+<div class="q"><div class="qn">P2</div><div class="qt">Five rows were asked for. Two are fetched one at a time. What are the two things printed?</div><pre class="code">cur = conn.execute(<span class="s">"SELECT order_id FROM orders ORDER BY order_id LIMIT 5"</span>)
+cur.fetchone()
+cur.fetchone()
+print(len(cur.fetchall()), cur.fetchone())</pre><div class="write"></div></div>
+<div class="q"><div class="qn">P3</div><div class="qt">20,302 orders; 18,154 have no promo code. What is the tuple?</div><pre class="code">print(conn.execute(<span class="s">"SELECT COUNT(*), COUNT(promo_code) FROM orders"</span>).fetchone())</pre><div class="write"></div></div>
+      </div>
+      <div class="blk"><div class="h">Notes</div>
+<div class="notes-lines"></div>
+      </div>
+      <div class="blk"><div class="h">Self-check (do these at home, without notes first)</div>
+<div class="q" data-sc="1"><div class="qn">Q1</div><div class="qt">A query is written <code class="inline">SELECT ... FROM ... WHERE ... GROUP BY ... HAVING ... ORDER BY ... LIMIT</code>. Which clause does the engine work on <b>first</b>?</div><div class="opts"><div class="opt">A) <code class="inline">SELECT</code>, because it is written first</div><div class="opt">B) <code class="inline">WHERE</code>, because rows must be filtered before anything else</div><div class="opt">C) <code class="inline">FROM</code>, because the engine has to pick the table before it can filter, group or select</div><div class="opt">D) <code class="inline">ORDER BY</code>, because sorted rows are faster to filter</div></div></div>
+<div class="q" data-sc="2" data-kind="short"><div class="qn">Q2</div><div class="qt">What does this print?</div><pre class="code">conn = sqlite3.connect(<span class="s">":memory:"</span>)
+conn.execute(<span class="s">"CREATE TABLE t (x INTEGER, y TEXT)"</span>)
+conn.executemany(<span class="s">"INSERT INTO t VALUES (?, ?)"</span>,
+                 [(<span class="s">1</span>, <span class="s">"a"</span>), (<span class="s">2</span>, <span class="k">None</span>), (<span class="s">3</span>, <span class="s">"c"</span>)])
+print(conn.execute(<span class="s">"SELECT COUNT(*), COUNT(y), SUM(x) FROM t"</span>).fetchone())</pre><div class="write"></div></div>
+<div class="q" data-sc="3"><div class="qn">Q3</div><div class="qt">This line raises <code class="inline">ProgrammingError: Incorrect number of bindings supplied. The current statement uses 1, and there are 5 supplied.</code> What is the fix?</div><pre class="code">conn.execute(<span class="s">"SELECT COUNT(*) FROM orders WHERE store = ?"</span>, <span class="s">"Boise"</span>)</pre><div class="opts"><div class="opt">A) Pass a one-item tuple: <code class="inline">("Boise",)</code></div><div class="opt">B) Write five placeholders: <code class="inline">?????</code></div><div class="opt">C) Put the value in the text with an f-string</div><div class="opt">D) Use double quotes around the <code class="inline">?</code></div></div></div>
+<div class="q" data-sc="4"><div class="qn">Q4</div><div class="qt">You want the average order per store for completed orders in 2025, but only for stores whose average is above $190. Which condition belongs in <code class="inline">HAVING</code>?</div><div class="opts"><div class="opt">A) <code class="inline">status = 'completed'</code></div><div class="opt">B) <code class="inline">AVG(order_total) &gt; 190</code></div><div class="opt">C) <code class="inline">order_date &gt;= '2025-01-01'</code></div><div class="opt">D) <code class="inline">store IN ('Boise', 'Bend')</code></div></div></div>
+<div class="q" data-sc="5"><div class="qn">Q5</div><div class="qt">A store name typed into a web form arrives in the variable <code class="inline">store</code>. Which line passes it to the database safely?</div><div class="opts"><div class="opt">A) <code class="inline">conn.execute(f"SELECT * FROM orders WHERE store = '{store}'")</code></div><div class="opt">B) <code class="inline">conn.execute("SELECT * FROM orders WHERE store = '" + store + "'")</code></div><div class="opt">C) <code class="inline">conn.execute("SELECT * FROM orders WHERE store = '{}'".format(store))</code></div><div class="opt">D) <code class="inline">conn.execute("SELECT * FROM orders WHERE store = ?", (store,))</code></div></div></div>
+<div class="q" data-sc="6" data-kind="short"><div class="qn">Q6</div><div class="qt">What does this print?</div><pre class="code">conn = sqlite3.connect(<span class="s">":memory:"</span>)
+conn.execute(<span class="s">"CREATE TABLE t (k INTEGER PRIMARY KEY)"</span>)
+conn.commit()
+<span class="k">try</span>:
+    <span class="k">with</span> conn:
+        conn.execute(<span class="s">"INSERT INTO t VALUES (1)"</span>)
+        conn.execute(<span class="s">"INSERT INTO t VALUES (1)"</span>)
+<span class="k">except</span> sqlite3.IntegrityError:
+    <span class="k">pass</span>
+print(conn.execute(<span class="s">"SELECT COUNT(*) FROM t"</span>).fetchone()[<span class="s">0</span>])</pre><div class="write"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">5.2</span><h3>Complex Queries</h3></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Key ideas</div>
+<ul class="tick">
+  <li><b>A join pairs rows by key.</b> Join types differ only in what happens to a row with no partner.</li>
+  <li><b><code class="inline">JOIN</code> (inner) keeps matched pairs only</b> and drops the rest without telling you. <b><code class="inline">LEFT JOIN</code> keeps every row of the first table</b>, with NULL where there is no partner.</li>
+  <li><b>The anti-join</b> answers "which ones are missing?": <code class="inline">LEFT JOIN ... WHERE right.key IS NULL</code>. <code class="inline">NOT EXISTS</code> does the same job.</li>
+  <li><b>Count after every join.</b> Four numbers to remember: 739 orders have no customer row; 1,058 customers never ordered; 609 order lines have no product row; 8 products never sold.</li>
+  <li><b>The fan-out trap:</b> joining to a "many" side repeats the "one" side. Sum a column at the level where it lives; when you need two levels, aggregate first (a subquery or CTE), then join.</li>
+  <li><b>Subqueries</b> return a value, a list or a table depending on where they sit. <b>CTEs</b> (<code class="inline">WITH name AS (...)</code>) give the steps names, so a long query reads top to bottom.</li>
+  <li><b>A recursive CTE</b> (anchor, <code class="inline">UNION ALL</code>, recursive part) walks a hierarchy of any depth. It stops when a round finds no new rows.</li>
+  <li><b><code class="inline">CASE</code></b> is if / elif / else. Inside <code class="inline">SUM</code> or <code class="inline">COUNT</code> it makes side-by-side columns. Multiply by <code class="inline">100.0</code>, not <code class="inline">100</code>, or integer division gives you zeros.</li>
+  <li><b>NULL means unknown.</b> <code class="inline">= NULL</code> never matches (use <code class="inline">IS NULL</code>); a condition and its opposite do not add up to everything; <code class="inline">NOT IN</code> with a NULL in the list returns nothing. <code class="inline">COALESCE(x, y)</code> is the SQL <code class="inline">fillna</code>.</li>
+</ul>
+      </div>
+      <div class="blk"><div class="h">How the four tables connect (finish the sketch you brought)</div>
+<table class="rubric"><thead><tr><th>Link</th><th>Key</th><th>Which side is "one"?</th><th>Unmatched rows</th></tr></thead><tbody>
+<tr><td class="crit">customers and orders</td><td>customer_id</td><td><div class="write"></div></td><td><div class="write"></div></td></tr>
+<tr><td class="crit">orders and order_items</td><td>order_id</td><td><div class="write"></div></td><td><div class="write"></div></td></tr>
+<tr><td class="crit">products and order_items</td><td>sku</td><td><div class="write"></div></td><td><div class="write"></div></td></tr>
+</tbody></table>
+      </div>
+      <div class="blk"><div class="h">Worked example: return rate by loyalty tier, with every order accounted for</div>
+<p>Does the return rate differ by the customer's loyalty tier? The tier is in <code class="inline">customers</code>, the status in <code class="inline">orders</code>. An inner join would quietly leave out the 739 orders from closed accounts, so this uses a LEFT JOIN and names those rows with <code class="inline">COALESCE</code>. (<code class="inline">conn</code> and <code class="inline">show</code> are the lesson's.)</p><pre class="code">show(<span class="s">"""
+    SELECT COALESCE(c.loyalty_tier, '(closed account)') AS tier,
+           COUNT(*)                                     AS orders,
+           SUM(CASE WHEN o.status = 'returned' THEN 1 ELSE 0 END) AS returned,
+           ROUND(100.0 * SUM(CASE WHEN o.status = 'returned' THEN 1 ELSE 0 END)
+                 / COUNT(*), 1)                         AS return_pct
+    FROM orders AS o
+    LEFT JOIN customers AS c ON c.customer_id = o.customer_id
+    GROUP BY tier
+    ORDER BY orders DESC
+"""</span>)
+show(<span class="s">"""
+    SELECT COUNT(*) AS rows_with_inner_join
+    FROM orders AS o
+    JOIN customers AS c ON c.customer_id = o.customer_id
+"""</span>)</pre><pre class="out">            tier  orders  returned  return_pct
+            Gold    8491       403         4.7
+          Silver    7132       383         5.4
+           Basic    3940       316         8.0
+(closed account)     739        41         5.5
+ rows_with_inner_join
+                19563</pre><p><b>Reading it.</b> The <code class="inline">orders</code> column adds up to 20,302: every order is counted once. The second query shows what an inner join would have kept: 19,563. Basic customers' orders come back 8.0% of the time against 4.7% for Gold. Before calling that a finding, ask how the tier is made: it is earned from COMPLETED spend, and a returned order does not count. A customer who returns a lot is held in a lower tier, so the tier partly reflects returns rather than causing them. SQL got the numbers right; the reading needs Lesson 4.4's question: how was this data generated? The pattern to keep: LEFT JOIN from the table you care about, COALESCE to name the unmatched, conditional aggregation for the rate, and a row-count check at the end.</p>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab</div>
+<p>Open <code class="inline">labs/module-14/l5_2-complex-queries/join_row_counts_starter.py</code>. The buying team wants item revenue by brand for completed orders. Before you write a join, write down how many rows you expect; the starter has a line for it. You will see what the tempting inner join loses, give the lost rows a name, and list them with an anti-join.</p><p>Then start <code class="inline">labs/module-14/l5_2-complex-queries/stock_vs_sales_starter.py</code>: units sold against units on hand, by category. Steps 1 and 2 in the room (the trap), Steps 3 to 5 at home (the fix, with CTEs).</p><p>Stretch: <code class="inline">labs/module-14/l5_2-complex-queries/org_payroll_starter.py</code> asks how many people and how much salary sit under each of the CEO's direct reports, however deep the tree goes.</p>
+      </div>
+      <div class="blk"><div class="h">Predict, then run</div>
+<p>Write your prediction first, then run it. <code class="inline">conn</code> is the read-only connection from the second demo.</p><div class="q"><div class="qn">P1</div><div class="qt">A JOIN with no ON. <code class="inline">employees</code> has 55 rows. How many rows come back?</div><pre class="code">sql = <span class="s">"SELECT COUNT(*) FROM employees AS e JOIN employees AS m"</span>
+print(conn.execute(sql).fetchone()[<span class="s">0</span>])</pre><div class="write"></div></div>
+<div class="q"><div class="qn">P2</div><div class="qt">Three values. Which of them is <code class="inline">None</code>?</div><pre class="code">print(conn.execute(<span class="s">"SELECT NULL = NULL, NULL IS NULL, COUNT(NULL)"</span>).fetchone())</pre><div class="write"></div></div>
+<div class="q"><div class="qn">P3</div><div class="qt"><code class="inline">orders</code> has 20,302 rows and two channels. What are the two counts?</div><pre class="code">q = <span class="s">"SELECT channel FROM orders"</span>
+<span class="k">for</span> op <span class="k">in</span> [<span class="s">"UNION"</span>, <span class="s">"UNION ALL"</span>]:
+    print(op, conn.execute(<span class="s">f"SELECT COUNT(*) FROM ({q} {op} {q})"</span>).fetchone()[<span class="s">0</span>])</pre><div class="write"></div></div>
+      </div>
+      <div class="blk"><div class="h">Notes</div>
+<div class="notes-lines"></div>
+      </div>
+      <div class="blk"><div class="h">Self-check (do these at home, without notes first)</div>
+<div class="q" data-sc="7"><div class="qn">Q7</div><div class="qt"><code class="inline">orders</code> has 20,302 rows; 739 of them have a <code class="inline">customer_id</code> that is not in <code class="inline">customers</code>; 1,058 customers have never ordered. How many rows does <code class="inline">orders JOIN customers ON c.customer_id = o.customer_id</code> return?</div><div class="opts"><div class="opt">A) 20,302</div><div class="opt">B) 19,563</div><div class="opt">C) 21,360</div><div class="opt">D) 19,244</div></div></div>
+<div class="q" data-sc="8" data-kind="short"><div class="qn">Q8</div><div class="qt">What does this print?</div><pre class="code">conn = sqlite3.connect(<span class="s">":memory:"</span>)
+conn.executescript(<span class="s">"""
+    CREATE TABLE o (id INTEGER, total REAL);
+    CREATE TABLE i (order_id INTEGER, sku TEXT);
+    INSERT INTO o VALUES (1, 100), (2, 50);
+    INSERT INTO i VALUES (1, 'a'), (1, 'b'), (1, 'c'), (2, 'd');
+"""</span>)
+sql = <span class="s">"SELECT SUM(o.total) FROM o JOIN i ON i.order_id = o.id"</span>
+print(conn.execute(sql).fetchone()[<span class="s">0</span>])</pre><div class="write"></div></div>
+<div class="q" data-sc="9"><div class="qn">Q9</div><div class="qt">Which query lists the customers who have <b>never</b> placed an order?</div><div class="opts"><div class="opt">A) <code class="inline">SELECT c.* FROM customers AS c LEFT JOIN orders AS o ON o.customer_id = c.customer_id WHERE o.order_id IS NULL</code></div><div class="opt">B) <code class="inline">SELECT c.* FROM customers AS c JOIN orders AS o ON o.customer_id = c.customer_id WHERE o.order_id IS NULL</code></div><div class="opt">C) <code class="inline">SELECT c.* FROM customers AS c LEFT JOIN orders AS o ON o.customer_id = c.customer_id WHERE o.order_id = NULL</code></div><div class="opt">D) <code class="inline">SELECT c.* FROM orders AS o LEFT JOIN customers AS c ON c.customer_id = o.customer_id WHERE c.customer_id IS NULL</code></div></div></div>
+<div class="q" data-sc="10"><div class="qn">Q10</div><div class="qt">359 of the 20,302 orders used the code TRAIL15. <code class="inline">SELECT COUNT(*) FROM orders WHERE promo_code &lt;&gt; 'TRAIL15'</code> returns 1,789, not 19,943. Why?</div><div class="opts"><div class="opt">A) <code class="inline">&lt;&gt;</code> is not a valid operator in SQLite</div><div class="opt">B) The query needs <code class="inline">DISTINCT</code></div><div class="opt">C) Text comparison ignores case, so some codes were double counted</div><div class="opt">D) For the 18,154 orders with no code the comparison with NULL is unknown, and WHERE keeps only rows where the condition is true</div></div></div>
+<div class="q" data-sc="11" data-kind="short"><div class="qn">Q11</div><div class="qt">What does this print?</div><pre class="code">conn = sqlite3.connect(<span class="s">":memory:"</span>)
+print(conn.execute(<span class="s">"SELECT 7 / 2, 7 / 2.0, 100 * 1 / 4"</span>).fetchone())</pre><div class="write"></div></div>
+<div class="q" data-sc="12"><div class="qn">Q12</div><div class="qt">A recursive CTE walks the employee tree from the CEO down. What makes the recursion stop?</div><div class="opts"><div class="opt">A) The <code class="inline">LIMIT</code> that every recursive CTE must have</div><div class="opt">B) It reaches the row whose <code class="inline">manager_id</code> is NULL</div><div class="opt">C) A round of the recursive part finds no new rows</div><div class="opt">D) It has run once for every row in the table</div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="sec"><h2>Homework Checklist</h2><span class="rule"></span></div>
+<ul class="tick">
+  <li>☐ <b>Lesson 5.1 project:</b> The Store Scorecard, Steps 3 to 6. Your check: revenue from SQL matches revenue from pandas for all five stores.</li>
+  <li>☐ <b>Lesson 5.2 project:</b> The Returns Investigation, Steps 2 to 6. Your check: the four rows of the footwear table add up to 20,302 orders.</li>
+  <li>☐ Lesson 5.1: read "Where PostgreSQL Differs" and "Common Mistakes"; Exercises 1 to 3 (4 is a stretch); quiz; journal.</li>
+  <li>☐ Lesson 5.2: read the sections on set operations and outer joins; Exercises 1 to 4 (5 is a stretch); quiz; journal.</li>
+  <li>☐ Kit labs: <code class="inline">labs/module-14/l5_1-database-connections/save_summary_starter.py</code>; Steps 3 to 5 of <code class="inline">labs/module-14/l5_2-complex-queries/stock_vs_sales_starter.py</code>. Stretch: <code class="inline">org_payroll</code>.</li>
+  <li>☐ Self-check Q1 to Q12 in this workbook.</li>
+  <li>☐ <b>For Session 15:</b> keep <code class="inline">show()</code> and <code class="inline">ORG_CTE</code>; check that <code class="inline">python -c "import sqlite3; print(sqlite3.sqlite_version)"</code> prints 3.25 or later; glance back at Lesson 2.8 (<code class="inline">rolling</code>, <code class="inline">shift</code>, <code class="inline">cumsum</code>, <code class="inline">rank</code>).</li>
+</ul>
+  <div class="sec"><h2>Glossary</h2><span class="rule"></span></div>
+<p><b>SQL:</b> the language for asking a relational database for data. <b>SQLite:</b> a complete SQL database engine that lives in one file; included in Python as sqlite3. <b>Connection:</b> an open line from your program to a database. <b>Cursor:</b> a pointer that runs one statement and walks forward through its result. <b>Aggregate function:</b> a function that turns many rows into one value: COUNT, SUM, AVG, MIN, MAX. <b>GROUP BY:</b> split rows into groups and return one row per group. <b>HAVING:</b> a filter on groups, applied after GROUP BY. <b>Placeholder:</b> a ? or :name in the SQL text where a value will be supplied separately. <b>SQL injection:</b> an attack in which text supplied as a value becomes part of the SQL command. <b>Transaction:</b> a batch of changes that is saved all together (commit) or not at all (rollback). <b>Engine (SQLAlchemy):</b> an object made from a database URL that hands out connections. <b>Key:</b> a column whose value identifies a row, or points at a row in another table. <b>Inner join:</b> keeps only rows that found a partner. <b>Left join:</b> keeps every row of the first table; unmatched rows get NULL on the other side. <b>Anti-join:</b> the rows of one table that have no partner in another. <b>Fan-out:</b> the repetition of "one"-side rows when joined to a "many" side; it inflates sums. <b>Subquery:</b> a SELECT in parentheses inside another query. <b>CTE:</b> common table expression: a named query defined with WITH and used like a table in the statement that follows. <b>Recursive CTE:</b> a CTE that refers to itself to walk a hierarchy level by level. <b>CASE:</b> SQL's if / elif / else expression. <b>NULL:</b> the marker for an unknown or missing value; comparisons with it are unknown. <b>COALESCE:</b> returns its first argument that is not NULL.</p>
+
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 14 · Participant Workbook · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

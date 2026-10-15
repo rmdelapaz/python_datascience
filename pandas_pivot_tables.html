@@ -3,769 +3,1389 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pivot Tables - Python Data Science Path</title>
-    <link rel="icon" href="/favicon.png" type="image/png">
+    <meta name="description" content="Summarize long data into readable grids with pivot_table and crosstab, reshape between wide and tidy layouts with pivot, melt, stack and unstack, and read a pivot without fooling yourself. Python Data Science Lesson 2.6.">
+    <meta name="author" content="Ray de la Paz">
+    <title>Pivot Tables and Reshaping - Python Data Science</title>
     <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/enhanced.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid: rendered (and re-rendered on theme change) by js/course-enhancements.js -->
     <script type="module">
         import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({ startOnLoad: true });
+        window.__mermaid = mermaid;
+        mermaid.initialize({ startOnLoad: false });
+        document.dispatchEvent(new Event('mermaid-ready'));
     </script>
-    <style>
-        :root {
-            --primary-color: #2563eb;
-            --secondary-color: #1e40af;
-            --accent-color: #10b981;
-            --bg-dark: #1e293b;
-            --bg-light: #f8fafc;
-            --text-dark: #0f172a;
-            --text-light: #64748b;
-            --border-color: #e2e8f0;
-            --code-bg: #f1f5f9;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.6;
-            color: var(--text-dark);
-            background: linear-gradient(135deg, var(--bg-light) 0%, #e0f2fe 100%);
-            min-height: 100vh;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 1rem;
-        }
-
-        header {
-            background: white;
-            border-radius: 1rem;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            border-left: 5px solid var(--accent-color);
-        }
-
-        h1 {
-            color: var(--primary-color);
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .breadcrumb {
-            color: var(--text-light);
-            font-size: 0.9rem;
-            margin-bottom: 1rem;
-        }
-
-        .breadcrumb a {
-            color: var(--primary-color);
-            text-decoration: none;
-            transition: color 0.3s ease;
-        }
-
-        .breadcrumb a:hover {
-            color: var(--secondary-color);
-            text-decoration: underline;
-        }
-
-        .intro {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 2rem;
-            border-radius: 1rem;
-            margin-bottom: 2rem;
-            animation: slideIn 0.6s ease;
-        }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .pivot-section {
-            background: white;
-            border-radius: 1rem;
-            padding: 2rem;
-            margin: 2rem 0;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .concept-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .concept-card {
-            background: white;
-            border-radius: 1rem;
-            padding: 1.5rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            border-top: 4px solid var(--accent-color);
-        }
-
-        .concept-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-        }
-
-        .concept-card h3 {
-            color: var(--primary-color);
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .code-example {
-            background: var(--code-bg);
-            border-radius: 0.5rem;
-            padding: 1rem;
-            margin: 1rem 0;
-            border-left: 4px solid var(--primary-color);
-            overflow-x: auto;
-        }
-
-        pre {
-            margin: 0;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 0.9rem;
-        }
-
-        code {
-            background: var(--code-bg);
-            padding: 0.2rem 0.4rem;
-            border-radius: 0.25rem;
-            font-family: 'Courier New', Courier, monospace;
-            color: var(--secondary-color);
-        }
-
-        .interactive-demo {
-            background: white;
-            border-radius: 1rem;
-            padding: 2rem;
-            margin: 2rem 0;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        canvas {
-            border: 2px solid var(--border-color);
-            border-radius: 0.5rem;
-            margin: 1rem 0;
-            display: block;
-            width: 100%;
-            max-width: 800px;
-        }
-
-        .table-example {
-            background: var(--code-bg);
-            border-radius: 0.5rem;
-            padding: 1rem;
-            margin: 1rem 0;
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.9rem;
-        }
-
-        th {
-            background: var(--primary-color);
-            color: white;
-            padding: 0.5rem;
-            text-align: left;
-        }
-
-        td {
-            padding: 0.5rem;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        tr:nth-child(even) {
-            background: rgba(0, 0, 0, 0.02);
-        }
-
-        .tip-box {
-            background: linear-gradient(135deg, #10b98120, #06b67420);
-            border-left: 4px solid var(--accent-color);
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin: 1rem 0;
-        }
-
-        .warning-box {
-            background: linear-gradient(135deg, #f5922020, #ef444420);
-            border-left: 4px solid #ef4444;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin: 1rem 0;
-        }
-
-        /* ---- Pivot-specific reconstructed styles ---- */
-        .pivot-builder {
-            display: grid;
-            grid-template-columns: 220px 1fr;
-            gap: 1.5rem;
-            margin: 1rem 0;
-        }
-
-        .field-list {
-            background: var(--code-bg);
-            border-radius: 0.5rem;
-            padding: 1rem;
-        }
-
-        .field-list h4 {
-            color: var(--primary-color);
-            margin-bottom: 0.75rem;
-        }
-
-        .draggable-field {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            padding: 0.5rem 0.75rem;
-            border-radius: 0.5rem;
-            margin-bottom: 0.5rem;
-            cursor: grab;
-            font-weight: 600;
-            text-align: center;
-            user-select: none;
-            transition: transform 0.2s ease, opacity 0.2s ease;
-        }
-
-        .draggable-field:hover { transform: scale(1.03); }
-        .draggable-field.dragging { opacity: 0.5; cursor: grabbing; }
-
-        .drop-zones {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-            gap: 1rem;
-        }
-
-        .drag-area {
-            border: 2px dashed var(--border-color);
-            border-radius: 0.5rem;
-            padding: 1rem;
-            min-height: 90px;
-            background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
-            transition: background 0.2s ease, border-color 0.2s ease;
-        }
-
-        .drag-area.drag-over {
-            border-color: var(--accent-color);
-            background: #d1fae5;
-        }
-
-        .drag-area .zone-label {
-            font-weight: bold;
-            color: var(--primary-color);
-            display: block;
-            margin-bottom: 0.5rem;
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .toggle-row {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin: 1rem 0;
-        }
-
-        .toggle-switch {
-            width: 48px;
-            height: 26px;
-            border-radius: 13px;
-            background: var(--border-color);
-            position: relative;
-            cursor: pointer;
-            transition: background 0.3s ease;
-            flex-shrink: 0;
-        }
-
-        .toggle-switch::after {
-            content: '';
-            position: absolute;
-            top: 3px;
-            left: 3px;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: white;
-            transition: transform 0.3s ease;
-        }
-
-        .toggle-switch.active { background: var(--accent-color); }
-        .toggle-switch.active::after { transform: translateX(22px); }
-
-        .navigation {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 3rem;
-            padding: 1rem;
-            background: white;
-            border-radius: 1rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .nav-button {
-            padding: 0.75rem 1.5rem;
-            background: var(--primary-color);
-            color: white;
-            text-decoration: none;
-            border-radius: 0.5rem;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .nav-button:hover {
-            background: var(--secondary-color);
-            transform: translateX(5px);
-        }
-
-        .nav-button.prev:hover { transform: translateX(-5px); }
-
-        @media (max-width: 768px) {
-            h1 { font-size: 1.8rem; }
-            .concept-grid { grid-template-columns: 1fr; }
-            .pivot-builder { grid-template-columns: 1fr; }
-            .navigation { flex-direction: column; gap: 1rem; }
-            .nav-button { width: 100%; justify-content: center; }
-        }
-    </style>
-    <script src="/js/course-enhancements.js" defer></script>
-    <script src="/js/clipboard.js" defer></script>
-    <link rel="stylesheet" href="styles/standard.css">
 </head>
 <body>
-    <!-- Skip to main content for accessibility -->
     <a href="#main-content" class="skip-to-main">Skip to main content</a>
 
-    <!-- Progress indicator -->
     <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
         <div class="progress-bar"></div>
     </div>
-    <div class="container" id="main-content">
-        <header>
-            <div class="breadcrumb">
-                <a href="index.html">Home</a> /
-                <a href="foundation.html">Foundation Module</a> /
-                <a href="pandas_essentials.html">Pandas Essentials</a> /
-                Pivot Tables
-            </div>
-            <h1>📐 Pivot Tables</h1>
 
-            <!-- What You'll Learn (learning objectives) -->
-            <div class="card card-info">
-                <h2>📚 What You'll Learn</h2>
-                <p>By the end of this lesson, you will be able to:</p>
-                <ul>
-                    <li>Reshape long data into a wide summary table with <code>pivot_table()</code></li>
-                    <li>Choose the right <code>index</code>, <code>columns</code>, and <code>values</code> for a question you want to answer</li>
-                    <li>Summarize with any <code>aggfunc</code> — <code>mean</code>, <code>sum</code>, <code>count</code>, or a list of several functions at once</li>
-                    <li>Add row and column totals with <code>margins=True</code> and fill gaps with <code>fill_value</code></li>
-                    <li>Build multi-level pivots across several index and column keys</li>
-                    <li>Know when to reach for <code>pd.crosstab()</code> and how <code>pivot_table</code> differs from plain <code>pivot()</code></li>
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">📊 Python Data Science</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">☰</button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
+    </nav>
+
+    <main id="main-content">
+        <div class="container">
+            <header>
+                <h1>📐 Lesson 2.6: Pivot Tables and Reshaping</h1>
+                <p class="lead">Turn thousands of rows into a grid a person can read, turn a grid back into rows a program can use, and learn to tell when a tidy-looking table is hiding something.</p>
+
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Build a summary grid with <code>pivot_table()</code> by choosing its rows, columns, values and aggregation, and add totals with <code>margins=True</code></li>
+                        <li>Count and compare categories with <code>pd.crosstab()</code>, including row and column percentages</li>
+                        <li>Choose between <code>pivot()</code> and <code>pivot_table()</code>, and explain the "duplicate entries" error</li>
+                        <li>Recognize wide and tidy (long) layouts and convert between them with <code>melt()</code>, <code>stack()</code> and <code>unstack()</code></li>
+                        <li>Check a pivot before you trust it: its aggregation, its cell counts, its empty cells and its totals</li>
+                    </ul>
+                </div>
+
+                <ul class="lesson-meta">
+                    <li><span class="meta-label">⏱️ Time</span> 85 minutes</li>
+                    <li><span class="meta-label">📋 Prerequisites</span> <a href="pandas_groupby_operations.html">Lesson 2.4: GroupBy Operations</a> and <a href="pandas_merging_joining.html">Lesson 2.5: Merging and Joining</a></li>
+                    <li><span class="meta-label">🛠️ You will build</span> A category-by-month seasonality report for Pinecrest, saved as a tidy CSV</li>
+                    <li><span class="meta-label">📂 Data</span> <code>data/orders.csv</code>, <code>data/order_items.csv</code>, <code>data/products.csv</code>, <code>data/daily_sales.csv</code>, <code>data/survey.csv</code>, <code>data/sales_2025.xlsx</code></li>
                 </ul>
-                <p><strong>⏱️ Estimated Time:</strong> 40–55 minutes</p>
-                <p><strong>🎯 Project:</strong> Turn a flat sales log into an executive summary — revenue by product and region, with subtotals, grand totals, and a heatmap you can read at a glance.</p>
-            </div>
-            <p>Reshape and summarize data the way spreadsheet pivot tables do — but with the full power of pandas behind them.</p>
-        </header>
+            </header>
 
-        <div class="intro">
-            <h2>🌟 From Long Rows to a Readable Summary</h2>
-            <p>A raw transaction log is great for storage but terrible for reading. Thousands of rows like <em>"North, Laptop, 1499"</em> answer nothing on their own. A pivot table rotates that long list into a compact grid — products down the side, regions across the top, revenue in every cell — so the story jumps out immediately.</p>
-            <p>If you have ever built a pivot table in Excel or Google Sheets, you already know the idea. In pandas, <code>pivot_table()</code> does the same reshape-and-aggregate move in a single, reproducible line of code, and it scales to millions of rows. In this lesson you will map the four questions every pivot answers — <strong>what goes down, what goes across, what gets measured, and how is it summarized</strong> — and then build one interactively.</p>
-        </div>
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#shapes" class="toc-link">Two Shapes for the Same Facts</a></li>
+                        <li><a href="#first-pivot" class="toc-link">Your First Pivot Table</a></li>
+                        <li><a href="#aggfunc" class="toc-link">Choosing the Aggregation</a></li>
+                        <li><a href="#margins" class="toc-link">Empty Cells and Totals</a></li>
+                        <li><a href="#crosstab" class="toc-link">Counting with crosstab</a></li>
+                        <li><a href="#pivot" class="toc-link">pivot vs pivot_table</a></li>
+                        <li><a href="#melt" class="toc-link">Wide to Tidy with melt</a></li>
+                        <li><a href="#stack" class="toc-link">stack and unstack</a></li>
+                        <li><a href="#honest" class="toc-link">Reading a Pivot Honestly</a></li>
+                        <li><a href="#mistakes" class="toc-link">Common Mistakes</a></li>
+                        <li><a href="#project" class="toc-link">Project: The Seasonality Report</a></li>
+                        <li><a href="#exercises" class="toc-link">Hands-on Exercises</a></li>
+                        <li><a href="#quiz" class="toc-link">Quick Quiz</a></li>
+                        <li><a href="#faq" class="toc-link">Common Questions</a></li>
+                        <li><a href="#journal" class="toc-link">Learning Journal</a></li>
+                        <li><a href="#summary" class="toc-link">Lesson Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
 
-        <div class="pivot-section">
-            <h2>🔄 The Anatomy of a Pivot</h2>
-            <p>Every call to <code>pivot_table()</code> answers four questions. Keep them in mind and the API stops feeling mysterious:</p>
-            <div class="mermaid">
-                graph LR
-                    A[Long DataFrame] --> B[index<br/>rows to keep]
-                    A --> C[columns<br/>spread across the top]
-                    A --> D[values<br/>the number to summarize]
-                    A --> E[aggfunc<br/>how to combine]
-                    B --> F[Wide Pivot Table]
-                    C --> F
-                    D --> F
-                    E --> F
-                    style A fill:#f9f,stroke:#333,stroke-width:2px
-                    style F fill:#9f9,stroke:#333,stroke-width:2px
-            </div>
-            <div class="code-example">
-                <pre><code>import pandas as pd
+            <!-- ============================================================ -->
+            <section id="shapes" class="lesson-section">
+                <h2>🗂️ Two Shapes for the Same Facts</h2>
 
-# The four building blocks of every pivot table
-pivot = pd.pivot_table(
-    sales,               # the long DataFrame
-    index='product',     # rows   -> what goes DOWN the side
-    columns='region',    # columns -> what spreads ACROSS the top
-    values='revenue',    # values  -> the number in each cell
-    aggfunc='sum',       # aggfunc -> how duplicate combinations combine
-    fill_value=0         # replace missing combinations with 0
-)
-print(pivot)</code></pre>
-            </div>
-            <p>Because a product can appear in the same region many times, pandas must decide how to <em>combine</em> those matching rows — that is the job of <code>aggfunc</code>. This is the one thing a spreadsheet hides from you, and the one thing that makes pandas pivots so flexible.</p>
-        </div>
+                <p>Pinecrest's operations manager does not want 20,302 order rows. She wants one small grid: stores down the side, years across the top, revenue in the cells. The data you load and the table you present are usually different shapes, and most of this lesson is about moving between them on purpose.</p>
 
-        <div class="interactive-demo">
-            <h2>🎮 Interactive Pivot Builder</h2>
-            <p>Drag fields into the layout areas to see how <code>index</code>, <code>columns</code>, and <code>values</code> shape the result. Then toggle grand totals on and off.</p>
-            <div class="pivot-builder">
-                <div class="field-list">
-                    <h4>Available Fields</h4>
-                    <div class="draggable-field" draggable="true">product</div>
-                    <div class="draggable-field" draggable="true">region</div>
-                    <div class="draggable-field" draggable="true">quarter</div>
-                    <div class="draggable-field" draggable="true">revenue</div>
+                <div class="card card-info">
+                    <h4>💡 Mental Model: The Logbook and the Scoreboard</h4>
+                    <p>A <strong>logbook</strong> records one event per line: this order, on this date, at this store, for this amount. It is long and narrow, it grows by adding lines, and it is easy for a program to filter, group and merge. This layout is called <strong>long</strong> or <strong>tidy</strong>.</p>
+                    <p>A <strong>scoreboard</strong> arranges a summary in a grid so a person can compare across a row or down a column at a glance. It is short and <strong>wide</strong>, and it is what goes into a report.</p>
+                    <p>Analysis happens in the logbook. Communication happens on the scoreboard. <code>pivot_table()</code> turns a logbook into a scoreboard, and <code>melt()</code> turns a scoreboard back into a logbook.</p>
                 </div>
-                <div class="drop-zones">
-                    <div class="drag-area" data-zone="rows"><span class="zone-label">Index (rows)</span></div>
-                    <div class="drag-area" data-zone="cols"><span class="zone-label">Columns</span></div>
-                    <div class="drag-area" data-zone="vals"><span class="zone-label">Values</span></div>
+
+                <div class="diagram">
+                    <svg viewBox="0 0 440 372" width="440" height="372" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A long table with one row per store and year is turned into a wide grid with one row per store and one column per year by pivot_table, and back again by melt.">
+                        <defs>
+                            <marker id="arrow-pivot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                                <path d="M0,0 L8,4 L0,8 Z" class="svg-arrow"/>
+                            </marker>
+                        </defs>
+                        <text x="20" y="20" class="svg-text" font-size="14" font-weight="bold">Long (tidy): one row per fact</text>
+                        <rect x="20" y="30" width="110" height="26" class="svg-box-1"/>
+                        <rect x="130" y="30" width="80" height="26" class="svg-box-1"/>
+                        <rect x="210" y="30" width="110" height="26" class="svg-box-1"/>
+                        <text x="75" y="48" text-anchor="middle" class="svg-text" font-size="12" font-weight="bold">store</text>
+                        <text x="170" y="48" text-anchor="middle" class="svg-text" font-size="12" font-weight="bold">year</text>
+                        <text x="265" y="48" text-anchor="middle" class="svg-text" font-size="12" font-weight="bold">revenue</text>
+                        <rect x="20" y="56" width="110" height="24" class="svg-box"/>
+                        <rect x="130" y="56" width="80" height="24" class="svg-box"/>
+                        <rect x="210" y="56" width="110" height="24" class="svg-box"/>
+                        <text x="75" y="73" text-anchor="middle" class="svg-text" font-size="12">Bend</text>
+                        <text x="170" y="73" text-anchor="middle" class="svg-text" font-size="12">2024</text>
+                        <text x="265" y="73" text-anchor="middle" class="svg-text svg-mono" font-size="12">136,989</text>
+                        <rect x="20" y="80" width="110" height="24" class="svg-box"/>
+                        <rect x="130" y="80" width="80" height="24" class="svg-box"/>
+                        <rect x="210" y="80" width="110" height="24" class="svg-box"/>
+                        <text x="75" y="97" text-anchor="middle" class="svg-text" font-size="12">Bend</text>
+                        <text x="170" y="97" text-anchor="middle" class="svg-text" font-size="12">2025</text>
+                        <text x="265" y="97" text-anchor="middle" class="svg-text svg-mono" font-size="12">147,586</text>
+                        <rect x="20" y="104" width="110" height="24" class="svg-box"/>
+                        <rect x="130" y="104" width="80" height="24" class="svg-box"/>
+                        <rect x="210" y="104" width="110" height="24" class="svg-box"/>
+                        <text x="75" y="121" text-anchor="middle" class="svg-text" font-size="12">Boise</text>
+                        <text x="170" y="121" text-anchor="middle" class="svg-text" font-size="12">2024</text>
+                        <text x="265" y="121" text-anchor="middle" class="svg-text svg-mono" font-size="12">212,140</text>
+                        <rect x="20" y="128" width="110" height="24" class="svg-box"/>
+                        <rect x="130" y="128" width="80" height="24" class="svg-box"/>
+                        <rect x="210" y="128" width="110" height="24" class="svg-box"/>
+                        <text x="75" y="145" text-anchor="middle" class="svg-text" font-size="12">Boise</text>
+                        <text x="170" y="145" text-anchor="middle" class="svg-text" font-size="12">2025</text>
+                        <text x="265" y="145" text-anchor="middle" class="svg-text svg-mono" font-size="12">231,247</text>
+
+                        <path d="M120,162 L120,222" class="svg-line-accent" marker-end="url(#arrow-pivot)"/>
+                        <text x="132" y="188" class="svg-accent svg-mono" font-size="12">pivot_table()</text>
+                        <text x="132" y="204" class="svg-muted" font-size="12">unstack()</text>
+                        <path d="M300,222 L300,162" class="svg-line-accent" marker-end="url(#arrow-pivot)"/>
+                        <text x="312" y="188" class="svg-accent svg-mono" font-size="12">melt()</text>
+                        <text x="312" y="204" class="svg-muted" font-size="12">stack()</text>
+
+                        <text x="20" y="250" class="svg-text" font-size="14" font-weight="bold">Wide: one row per store, one column per year</text>
+                        <rect x="20" y="260" width="110" height="26" class="svg-box-1"/>
+                        <rect x="130" y="260" width="110" height="26" class="svg-box-2"/>
+                        <rect x="240" y="260" width="110" height="26" class="svg-box-2"/>
+                        <text x="75" y="278" text-anchor="middle" class="svg-text" font-size="12" font-weight="bold">store</text>
+                        <text x="185" y="278" text-anchor="middle" class="svg-text" font-size="12" font-weight="bold">2024</text>
+                        <text x="295" y="278" text-anchor="middle" class="svg-text" font-size="12" font-weight="bold">2025</text>
+                        <rect x="20" y="286" width="110" height="24" class="svg-box"/>
+                        <rect x="130" y="286" width="110" height="24" class="svg-box"/>
+                        <rect x="240" y="286" width="110" height="24" class="svg-box"/>
+                        <text x="75" y="303" text-anchor="middle" class="svg-text" font-size="12">Bend</text>
+                        <text x="185" y="303" text-anchor="middle" class="svg-text svg-mono" font-size="12">136,989</text>
+                        <text x="295" y="303" text-anchor="middle" class="svg-text svg-mono" font-size="12">147,586</text>
+                        <rect x="20" y="310" width="110" height="24" class="svg-box"/>
+                        <rect x="130" y="310" width="110" height="24" class="svg-box"/>
+                        <rect x="240" y="310" width="110" height="24" class="svg-box"/>
+                        <text x="75" y="327" text-anchor="middle" class="svg-text" font-size="12">Boise</text>
+                        <text x="185" y="327" text-anchor="middle" class="svg-text svg-mono" font-size="12">212,140</text>
+                        <text x="295" y="327" text-anchor="middle" class="svg-text svg-mono" font-size="12">231,247</text>
+                        <text x="20" y="356" class="svg-muted" font-size="12">The values of "year" became column headers. Same four numbers.</text>
+                    </svg>
                 </div>
-            </div>
 
-            <div class="toggle-row">
-                <div class="toggle-switch" id="marginsToggle" role="switch" aria-checked="false" aria-label="Show grand totals"></div>
-                <span>Show row &amp; column totals (<code>margins=True</code>)</span>
-            </div>
+                <h3>🤔 Why This Matters</h3>
+                <p>Reshaping is not decoration. Many questions are only easy in one shape: "which store grew fastest?" wants the two years side by side, while "average revenue per month across all stores" wants one column of numbers to group. Analysts who can flip a table from one shape to the other in a line of code spend their time on the question instead of on the layout.</p>
+            </section>
 
-            <h3>Source data (long format)</h3>
-            <div class="table-example">
-                <table>
-                    <thead>
-                        <tr><th>Product</th><th>Region</th><th>Revenue</th></tr>
-                    </thead>
-                    <tbody id="originalTable"></tbody>
-                </table>
-            </div>
+            <!-- ============================================================ -->
+            <section id="first-pivot" class="lesson-section">
+                <h2>🚀 Your First Pivot Table</h2>
 
-            <h3>Pivot result (revenue by product &amp; region)</h3>
-            <div class="table-example">
-                <table id="pivotResult"></table>
-            </div>
+                <p>Start a new notebook and load the orders. This is the logbook: one row per order.</p>
 
-            <h3>Revenue heatmap</h3>
-            <p>Darker cells mean more revenue — exactly how an analyst scans a pivot for hot spots.</p>
-            <canvas id="crosstabCanvas" width="640" height="260"></canvas>
-        </div>
+                <pre><code class="language-python">import pandas as pd
 
-        <div class="concept-grid">
-            <div class="concept-card">
-                <h3>🎯 Basic Pivot Table</h3>
-                <p>One index, one column set, one value, one aggregation.</p>
-                <div class="code-example">
-                    <pre><code># Average revenue for each product in each region
-pd.pivot_table(
-    sales,
-    index='product',
-    columns='region',
-    values='revenue',
-    aggfunc='mean'
-)
+pd.set_option("display.width", 150)
+pd.set_option("display.max_columns", 20)
 
-# Shorthand: DataFrame method form
-sales.pivot_table(
-    index='product',
-    values='revenue',
-    aggfunc='sum'
-)</code></pre>
+orders = pd.read_csv("data/orders.csv", parse_dates=["order_date"])
+print(orders[["order_id", "order_date", "store", "status", "order_total"]].head())
+print(orders.shape)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>   order_id order_date      store     status  order_total
+0    100001 2024-01-01  Flagstaff  completed       434.90
+1    100002 2024-01-01  Asheville  completed       278.90
+2    100003 2024-01-01     Online  completed        75.90
+3    100004 2024-01-01     Online  completed       399.80
+4    100005 2024-01-01     Online  completed        26.71
+(20302, 11)</code></pre>
                 </div>
-            </div>
 
-            <div class="concept-card">
-                <h3>🧮 Multiple Aggregations</h3>
-                <p>Pass a list — or a dict per column — to summarize several ways at once.</p>
-                <div class="code-example">
-                    <pre><code># Several stats for one value column
-pd.pivot_table(
-    sales, index='product', values='revenue',
-    aggfunc=['sum', 'mean', 'count']
-)
+                <p>The manager's question is "completed revenue by store and year". You can already answer it with the <code>groupby</code> you learned in Lesson 2.4, using two keys.</p>
 
-# Different aggregation per value column
-pd.pivot_table(
-    sales, index='region',
-    values=['revenue', 'quantity'],
-    aggfunc={'revenue': 'sum', 'quantity': 'mean'}
-)</code></pre>
+                <pre><code class="language-python">done = orders[orders["status"] == "completed"].copy()
+done["year"] = done["order_date"].dt.year
+
+by_store_year = done.groupby(["store", "year"])["order_total"].sum()
+print(by_store_year)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>store      year
+Asheville  2024     127336.98
+           2025     110442.39
+Bend       2024     136989.18
+           2025     147586.07
+Boise      2024     212140.12
+           2025     231246.73
+Flagstaff  2024     129032.48
+           2025     171547.87
+Online     2024    1077800.75
+           2025    1280183.70
+Name: order_total, dtype: float64</code></pre>
                 </div>
-            </div>
 
-            <div class="concept-card">
-                <h3>➕ Margins (Totals)</h3>
-                <p><code>margins=True</code> adds an "All" row and column of subtotals.</p>
-                <div class="code-example">
-                    <pre><code>pd.pivot_table(
-    sales,
-    index='product',
-    columns='region',
-    values='revenue',
-    aggfunc='sum',
-    margins=True,          # add grand totals
-    margins_name='Total',  # label for the totals
-    fill_value=0
-)</code></pre>
+                <p>The answer is correct, and it is still a logbook: ten lines, one per store and year. To compare 2024 with 2025 your eyes have to hop between lines. Now ask for the same numbers as a grid.</p>
+
+                <pre><code class="language-python">table = done.pivot_table(index="store", columns="year", values="order_total", aggfunc="sum")
+print(table)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>year             2024        2025
+store
+Asheville   127336.98   110442.39
+Bend        136989.18   147586.07
+Boise       212140.12   231246.73
+Flagstaff   129032.48   171547.87
+Online     1077800.75  1280183.70</code></pre>
                 </div>
-            </div>
 
-            <div class="concept-card">
-                <h3>🏗️ Multi-Level Pivots</h3>
-                <p>Lists of keys create hierarchical (MultiIndex) rows and columns.</p>
-                <div class="code-example">
-                    <pre><code>pd.pivot_table(
-    sales,
-    index=['region', 'product'],   # nested rows
-    columns=['year', 'quarter'],   # nested columns
-    values='revenue',
-    aggfunc='sum',
-    fill_value=0
-)
+                <p>Same ten numbers, arranged so that each store's two years sit next to each other. Every pivot table answers four questions:</p>
 
-# Flatten a MultiIndex afterwards
-pivot.columns = ['_'.join(map(str, c))
-                 for c in pivot.columns]</code></pre>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Argument</th><th>The question it answers</th><th>Here</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>index</code></td><td>What should each <strong>row</strong> be?</td><td class="nowrap"><code>"store"</code></td></tr>
+                            <tr><td><code>columns</code></td><td>What should each <strong>column</strong> be?</td><td class="nowrap"><code>"year"</code></td></tr>
+                            <tr><td><code>values</code></td><td>Which number goes <strong>in the cells</strong>?</td><td class="nowrap"><code>"order_total"</code></td></tr>
+                            <tr><td><code>aggfunc</code></td><td>Many rows land in each cell. How are they <strong>combined</strong>?</td><td class="nowrap"><code>"sum"</code></td></tr>
+                        </tbody>
+                    </table>
                 </div>
-            </div>
 
-            <div class="concept-card">
-                <h3>🔀 pivot() vs pivot_table()</h3>
-                <p><code>pivot()</code> only reshapes and fails on duplicates; <code>pivot_table()</code> reshapes <em>and</em> aggregates.</p>
-                <div class="code-example">
-                    <pre><code># pivot(): pure reshape, no aggregation.
-# Raises if (index, columns) pairs repeat.
-sales.pivot(index='date',
-            columns='product',
-            values='revenue')
+                <p>If you can say those four things in a sentence ("for each store, by year, the sum of order totals"), you can write the pivot. A pivot table is a <code>groupby</code> on the row and column keys whose result has been spread into a grid. Nothing new is being calculated.</p>
 
-# pivot_table(): safe with duplicates because
-# aggfunc collapses them (default is 'mean').
-sales.pivot_table(index='date',
-                  columns='product',
-                  values='revenue',
-                  aggfunc='sum')</code></pre>
+                <h3>The Result Is an Ordinary DataFrame</h3>
+
+                <p>The grid is not a picture. It has an index (the stores) and columns (the years, as integers), and everything you know about DataFrames works on it.</p>
+
+                <pre><code class="language-python">print(table.loc["Boise", 2025])
+
+table["growth_pct"] = ((table[2025] / table[2024] - 1) * 100).round(1)
+print(table.sort_values("growth_pct", ascending=False))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>231246.73
+year             2024        2025  growth_pct
+store
+Flagstaff   129032.48   171547.87        32.9
+Online     1077800.75  1280183.70        18.8
+Boise       212140.12   231246.73         9.0
+Bend        136989.18   147586.07         7.7
+Asheville   127336.98   110442.39       -13.3</code></pre>
                 </div>
-            </div>
 
-            <div class="concept-card">
-                <h3>📊 crosstab()</h3>
-                <p>A pivot specialized for frequency counts and proportions.</p>
-                <div class="code-example">
-                    <pre><code># Count of transactions per product/region
-pd.crosstab(sales['product'], sales['region'])
+                <p>That growth column is the reason to go wide: with the years side by side, year-over-year change is one line of column arithmetic.</p>
 
-# Normalize to row proportions
-pd.crosstab(
-    sales['product'], sales['region'],
-    normalize='index'
-)
-
-# Weighted crosstab acts like a pivot_table
-pd.crosstab(
-    sales['product'], sales['region'],
-    values=sales['revenue'], aggfunc='sum'
-)</code></pre>
+                <div class="card card-warning">
+                    <h4>⚠️ Know What a Row of Your Source Means</h4>
+                    <p><code>orders.csv</code> holds every online order, but only the in-store orders made by signed-in account holders. So the store rows here describe account-holder purchases, not everything that went through the registers. All in-store sales live in <code>daily_sales.csv</code>, where Asheville's change is -5.0%, not -13.3%. A pivot can only summarize the rows it is given. Before you present one, be able to finish the sentence "one row of the source is ...".</p>
                 </div>
-            </div>
-        </div>
+            </section>
 
-        <div class="pivot-section">
-            <h2>🌍 Real-World Scenario: Executive Sales Summary</h2>
-            <p>Let's turn a flat sales log into the kind of summary a manager actually wants to read:</p>
-            <div class="code-example">
-                <pre><code>import pandas as pd
-import numpy as np
+            <!-- ============================================================ -->
+            <section id="aggfunc" class="lesson-section">
+                <h2>🧮 Choosing the Aggregation</h2>
 
-# Sample flat sales log
-np.random.seed(7)
-n = 1000
-sales = pd.DataFrame({
-    'date': pd.to_datetime('2024-01-01') +
-            pd.to_timedelta(np.random.randint(0, 365, n), unit='D'),
-    'product': np.random.choice(['Laptop', 'Phone', 'Tablet', 'Watch'], n),
-    'region': np.random.choice(['North', 'South', 'East', 'West'], n),
-    'quantity': np.random.randint(1, 6, n),
-    'unit_price': np.random.uniform(100, 1500, n).round(2),
+                <p>Leave <code>aggfunc</code> out and see what you get.</p>
+
+                <pre><code class="language-python">print(done.pivot_table(index="store", columns="year", values="order_total").round(2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>year         2024    2025
+store
+Asheville  181.13  168.61
+Bend       168.08  176.75
+Boise      179.48  175.19
+Flagstaff  176.76  186.87
+Online     201.01  205.09</code></pre>
+                </div>
+
+                <p>No error, and a completely different table. The default <code>aggfunc</code> is <code>"mean"</code>, so these are average order values, about $168 to $205, not revenue. This default surprises people coming from spreadsheets, where a pivot sums unless told otherwise.</p>
+
+                <div class="card card-success">
+                    <h4>✅ A Habit Worth Having</h4>
+                    <p>Always write <code>aggfunc=</code>, even when you want the mean. The next person to read your code (probably you, in a month) should not have to remember a default to know what the numbers are.</p>
+                </div>
+
+                <h3>Several Aggregations at Once</h3>
+
+                <p>Pass a list and pandas builds one block of columns per function.</p>
+
+                <pre><code class="language-python">multi = done.pivot_table(index="store", columns="year", values="order_total",
+                         aggfunc=["sum", "mean", "count"]).round(2)
+print(multi)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>                  sum                mean         count
+year             2024        2025    2024    2025  2024  2025
+store
+Asheville   127336.98   110442.39  181.13  168.61   703   655
+Bend        136989.18   147586.07  168.08  176.75   815   835
+Boise       212140.12   231246.73  179.48  175.19  1182  1320
+Flagstaff   129032.48   171547.87  176.76  186.87   730   918
+Online     1077800.75  1280183.70  201.01  205.09  5362  6242</code></pre>
+                </div>
+
+                <p>The column header now has two levels: the function on top, the year underneath. This is a <strong>MultiIndex</strong> on the columns. Select a whole block with the top-level name, or a single column with a tuple.</p>
+
+                <pre><code class="language-python">print(multi["count"])
+print(multi[("mean", 2025)])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>year       2024  2025
+store
+Asheville   703   655
+Bend        815   835
+Boise      1182  1320
+Flagstaff   730   918
+Online     5362  6242
+store
+Asheville    168.61
+Bend         176.75
+Boise        175.19
+Flagstaff    186.87
+Online       205.09
+Name: (mean, 2025), dtype: float64</code></pre>
+                </div>
+
+                <h3>Different Functions for Different Columns</h3>
+
+                <p>A pivot does not need a <code>columns=</code> argument at all. With only <code>index</code>, it is a compact way to write a grouped summary, and a dictionary gives each value column its own function.</p>
+
+                <pre><code class="language-python">profile = orders.pivot_table(index="store",
+                             values=["order_id", "order_total", "discount_pct"],
+                             aggfunc={"order_id": "count", "order_total": "median", "discount_pct": "mean"})
+print(profile.round(2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>           discount_pct  order_id  order_total
+store
+Asheville          1.22      1413       130.90
+Bend               1.25      1725       130.85
+Boise              1.17      2594       133.90
+Flagstaff          1.15      1716       136.95
+Online             1.16     12854       156.40</code></pre>
+                </div>
+
+                <p>Notice that pandas sorted the value columns alphabetically. If the order matters for a report, reselect them: <code>profile[["order_id", "order_total", "discount_pct"]]</code>.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="margins" class="lesson-section">
+                <h2>➕ Empty Cells and Totals</h2>
+
+                <p>How do customers pay at each store? Count orders by payment method and store.</p>
+
+                <pre><code class="language-python">pay = orders.pivot_table(index="payment_method", columns="store", values="order_id", aggfunc="count")
+print(pay)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>store           Asheville    Bend   Boise  Flagstaff  Online
+payment_method
+card                835.0  1050.0  1533.0     1021.0  7953.0
+cash                293.0   370.0   577.0      374.0     NaN
+digital_wallet      181.0   203.0   325.0      209.0  3876.0
+gift_card           104.0   102.0   159.0      112.0  1025.0</code></pre>
+                </div>
+
+                <p>One cell is <code>NaN</code>: there are no rows at all with cash and Online, because you cannot hand cash to a website. A pivot shows <code>NaN</code> wherever a row-and-column combination never occurs in the data. That one <code>NaN</code> also forced every count to become a float (<code>835.0</code>), since <code>NaN</code> cannot live in an integer column.</p>
+
+                <p>For a count, "no rows" honestly means zero, so say so with <code>fill_value</code>. And ask for totals with <code>margins=True</code>.</p>
+
+                <pre><code class="language-python">pay = orders.pivot_table(index="payment_method", columns="store", values="order_id",
+                         aggfunc="count", fill_value=0, margins=True, margins_name="Total")
+print(pay)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>store           Asheville  Bend  Boise  Flagstaff  Online  Total
+payment_method
+card                  835  1050   1533       1021    7953  12392
+cash                  293   370    577        374       0   1614
+digital_wallet        181   203    325        209    3876   4794
+gift_card             104   102    159        112    1025   1502
+Total                1413  1725   2594       1716   12854  20302</code></pre>
+                </div>
+
+                <p>The bottom-right corner, 20,302, is the number of rows in <code>orders</code>. That is a free sanity check: if the grand total of a count pivot is not the number of rows you started with, some rows fell out, and you should find out why before reading anything else.</p>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Zero and "Nothing There" Are Different Claims</h4>
+                    <p><code>fill_value=0</code> is right for counts and sums: no orders means 0 orders and $0. It is wrong for averages. An "average cash order online of $0.00" would be a false statement about orders that do not exist. Leave means as <code>NaN</code>, or display them as a dash in the final report.</p>
+                </div>
+
+                <h3>Totals of Averages Are Not Averages of Totals</h3>
+
+                <p>Margins use the same <code>aggfunc</code> as the cells, applied to <em>all the underlying rows</em>. Watch what that means for a mean.</p>
+
+                <pre><code class="language-python">aov = done.pivot_table(index="store", columns="year", values="order_total",
+                       aggfunc="mean", margins=True).round(2)
+print(aov)
+
+print(round(done["order_total"].mean(), 2))                         # every completed order
+print(round(done.groupby("store")["order_total"].mean().mean(), 2)) # the five store means, averaged</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>year         2024    2025     All
+store
+Asheville  181.13  168.61  175.10
+Bend       168.08  176.75  172.47
+Boise      179.48  175.19  177.21
+Flagstaff  176.76  186.87  182.39
+Online     201.01  205.09  203.20
+All        191.46  194.68  193.17
+193.17
+182.07</code></pre>
+                </div>
+
+                <p>The <code>All</code> corner is the mean of all 18,762 completed orders, which matches the first check. It is <em>not</em> the average of the five numbers above it. Online has far more orders than any store, so it pulls the overall mean toward its own. pandas gets this right for you. People reading the table often get it wrong, so it is worth a sentence in your report.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="crosstab" class="lesson-section">
+                <h2>🔢 Counting with crosstab</h2>
+
+                <p>"How many of each combination?" is so common that it has its own function. <code>pd.crosstab()</code> takes two columns (as Series, not as names) and counts.</p>
+
+                <pre><code class="language-python">print(pd.crosstab(orders["channel"], orders["status"], margins=True))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>status   cancelled  completed  returned    All
+channel
+online         360      11604       890  12854
+store           37       7158       253   7448
+All            397      18762      1143  20302</code></pre>
+                </div>
+
+                <p>Raw counts are hard to compare here because online has almost twice as many orders. What you want is each row as percentages of its own total, and <code>normalize</code> does that.</p>
+
+                <pre><code class="language-python">pct = pd.crosstab(orders["channel"], orders["status"], normalize="index") * 100
+print(pct.round(1))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>status   cancelled  completed  returned
+channel
+online         2.8       90.3       6.9
+store          0.5       96.1       3.4</code></pre>
+                </div>
+
+                <p>Now the comparison is fair, and a finding appears: <strong>6.9% of online orders are returned, against 3.4% of store orders</strong>. Buying without trying things on has a cost.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th><code>normalize=</code></th><th>Each cell is a share of</th><th>Answers</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>"index"</code></td><td>its row total (rows sum to 1)</td><td>"Of online orders, what share were returned?"</td></tr>
+                            <tr><td><code>"columns"</code></td><td>its column total (columns sum to 1)</td><td>"Of returned orders, what share were online?"</td></tr>
+                            <tr><td><code>"all"</code></td><td>the grand total</td><td>"What share of all orders are online returns?"</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>The first two answer different questions, and mixing them up is one of the most common ways to misread a table. Try the other direction.</p>
+
+                <pre><code class="language-python">by_col = pd.crosstab(orders["channel"], orders["status"], normalize="columns") * 100
+print(by_col.round(1))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>status   cancelled  completed  returned
+channel
+online        90.7       61.8      77.9
+store          9.3       38.2      22.1</code></pre>
+                </div>
+
+                <p>"77.9% of returns are online" sounds dramatic, but 63.3% of <em>all</em> orders are online, so most of that number is just size. The row percentages (6.9% against 3.4%) are the ones that compare like with like.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="pivot" class="lesson-section">
+                <h2>🔀 pivot vs pivot_table</h2>
+
+                <p>pandas has a second method with a confusingly similar name. <code>pivot()</code> only <strong>rearranges</strong>. It does no arithmetic, so it requires that each row-and-column combination appears <em>at most once</em>.</p>
+
+                <p><code>daily_sales.csv</code> fits: it has one row per store per day, so (date, store) is a unique key.</p>
+
+                <pre><code class="language-python">daily = pd.read_csv("data/daily_sales.csv", parse_dates=["date"])
+print(daily.head(5))
+
+wide = daily.pivot(index="date", columns="store", values="revenue")
+print(wide.head())
+print(wide.shape)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>        date      store  visitors  transactions  units  revenue  staff_on_duty  promo_day
+0 2024-01-01  Asheville       201            51    110  5017.07              4          0
+1 2024-01-01       Bend       200            52    105  4132.92              5          0
+2 2024-01-01      Boise       333            68    148  5962.00              6          0
+3 2024-01-01  Flagstaff       144            33     69  3061.66              3          0
+4 2024-01-02  Asheville       209            39     88  3605.81              3          0
+store       Asheville     Bend    Boise  Flagstaff
+date
+2024-01-01    5017.07  4132.92  5962.00    3061.66
+2024-01-02    3605.81  3675.57  6583.13    3575.24
+2024-01-03    4265.55  6275.05  3866.59    3974.93
+2024-01-04    4531.48  5487.11  7667.88    4329.55
+2024-01-05    7359.82  4755.15  9570.46    5606.62
+(727, 4)</code></pre>
+                </div>
+
+                <p>2,903 rows became 727 rows and 4 columns. Not one number changed. Each value simply moved to the cell named by its date and store. This wide layout, one column per store with dates down the side, is exactly what the next lesson on time series wants.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th></th><th><code>pivot()</code></th><th><code>pivot_table()</code></th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Job</td><td>Rearrange</td><td>Summarize, then arrange</td></tr>
+                            <tr><td>Several rows for one cell</td><td>Error</td><td>Combined with <code>aggfunc</code></td></tr>
+                            <tr><td>Works on text values</td><td>Yes, nothing is computed</td><td>Only with a function that suits text, such as <code>"count"</code> or <code>"first"</code></td></tr>
+                            <tr><td>Totals</td><td>No</td><td><code>margins=True</code></td></tr>
+                            <tr><td>Use it when</td><td>The data is already one row per cell</td><td>The data is a logbook of events</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>Reshaping Reveals Holes</h3>
+
+                <pre><code class="language-python">print(wide.isna().sum())
+print(daily["revenue"].isna().sum())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>store
+Asheville    1
+Bend         6
+Boise        1
+Flagstaff    3
+dtype: int64
+6</code></pre>
+                </div>
+
+                <p>The long table had 6 missing revenue values. The wide table has 11 empty cells. The extra five were never <code>NaN</code> in the file: they are store-days with <strong>no row at all</strong> (Bend's export failed for three days in August 2024, and Flagstaff's for two in January 2025). In a logbook, a missing line is invisible. On a grid, it is an empty square you can see. Going wide is one of the quickest ways to discover that data is missing, and <a href="pandas_time_series.html">Lesson 2.7</a> picks up exactly these gaps.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="melt" class="lesson-section">
+                <h2>🫠 Wide to Tidy with melt</h2>
+
+                <p>Data often arrives already wide, because a person built it in a spreadsheet for other people to read. The finance team's 2025 summary is a typical case.</p>
+
+                <pre><code class="language-python">sheet = pd.read_excel("data/sales_2025.xlsx", sheet_name="Monthly Sales", skiprows=3)
+print(sheet.head(4))
+print(sheet.shape)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>  Month   Boise    Bend  Flagstaff  Asheville  Online
+0   Jan  242847  169817     160348     147792   86269
+1   Feb  218456  146918     154777     127039   86043
+2   Mar  273191  177576     192909     153370   96183
+3   Apr  278786  193930     198083     155298   92205
+(12, 6)</code></pre>
+                </div>
+
+                <p>It reads nicely. Now try to answer "what was total revenue per month?" or "which store-month was the best?" and you will find yourself writing code that names five columns one by one. The trouble is that <code>Boise</code>, <code>Bend</code> and the rest are not really five different variables. They are five <em>values</em> of one variable, the sales channel, that have been spread across the header.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Tidy Data in Three Rules</h4>
+                    <p>A table is <strong>tidy</strong> when (1) each variable is a column, (2) each observation is a row, and (3) each cell holds one value. Here the variables are month, store and revenue, so a tidy version has exactly those three columns. A quick test: if a column header is a piece of data (a store name, a year, a month) rather than the name of a measurement, the table is wide.</p>
+                </div>
+
+                <p><code>melt()</code> is the tool. You tell it which columns identify a row (<code>id_vars</code>) and it stacks all the others into two new columns: one holding the old header, one holding the value.</p>
+
+                <pre><code class="language-python">tidy = sheet.melt(id_vars="Month", var_name="store", value_name="revenue")
+print(tidy.head(4))
+print(tidy.shape)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>  Month  store  revenue
+0   Jan  Boise   242847
+1   Feb  Boise   218456
+2   Mar  Boise   273191
+3   Apr  Boise   278786
+(60, 3)</code></pre>
+                </div>
+
+                <p>12 rows × 5 store columns became 60 rows. Now the earlier questions are one-liners with tools you already have.</p>
+
+                <pre><code class="language-python">print(tidy.groupby("store")["revenue"].sum().sort_values(ascending=False))
+print(tidy.loc[tidy["revenue"].idxmax()])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>store
+Boise        3846407
+Flagstaff    2717996
+Bend         2569347
+Asheville    2017700
+Online       1280185
+Name: revenue, dtype: int64
+Month         Aug
+store       Boise
+revenue    397246
+Name: 7, dtype: object</code></pre>
+                </div>
+
+                <h3>And Back Again</h3>
+
+                <p>Since the tidy table has one row per month and store, plain <code>pivot()</code> will rebuild the grid.</p>
+
+                <pre><code class="language-python">back = tidy.pivot(index="Month", columns="store", values="revenue")
+print(back.head(4))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>store  Asheville    Bend   Boise  Flagstaff  Online
+Month
+Apr       155298  193930  278786     198083   92205
+Aug       181528  271392  397246     266465  125729
+Dec       201331  255359  387449     286876  130155
+Feb       127039  146918  218456     154777   86043</code></pre>
+                </div>
+
+                <p>The numbers are right, but look at the row order: Apr, Aug, Dec, Feb. Both pivot methods <strong>sort their row and column labels</strong>, and text sorts alphabetically. Month names and weekday names are scrambled by this every time. The fix is to put the labels back in the order you want with <code>reindex</code>.</p>
+
+                <pre><code class="language-python">back = back.reindex(index=sheet["Month"], columns=["Boise", "Bend", "Flagstaff", "Asheville", "Online"])
+print(back.head(4))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>store   Boise    Bend  Flagstaff  Asheville  Online
+Month
+Jan    242847  169817     160348     147792   86269
+Feb    218456  146918     154777     127039   86043
+Mar    273191  177576     192909     153370   96183
+Apr    278786  193930     198083     155298   92205</code></pre>
+                </div>
+
+                <h3>Melting Several Measurements</h3>
+
+                <p>The customer survey is wide in a different way: five satisfaction questions, each in its own column. Melting them lets you treat "which question" as a variable.</p>
+
+                <pre><code class="language-python">survey = pd.read_csv("data/survey.csv")
+sat_cols = ["sat_overall", "sat_selection", "sat_price", "sat_staff", "sat_website"]
+
+answers = survey.melt(id_vars=["response_id", "store", "age_group"], value_vars=sat_cols,
+                      var_name="item", value_name="score")
+print(answers.head(3))
+print(answers.shape)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>   response_id      store age_group         item  score
+0            1  Asheville       65+  sat_overall    5.0
+1            2      Boise     18-24  sat_overall    3.0
+2            3     Online     25-34  sat_overall    4.0
+(9000, 5)</code></pre>
+                </div>
+
+                <p><code>value_vars</code> names the columns to melt. Columns in neither list (the survey date, the comment) are dropped. 1,800 responses × 5 items gives 9,000 rows, and now a single pivot compares every store on every question.</p>
+
+                <pre><code class="language-python">by_item = answers.pivot_table(index="store", columns="item", values="score", aggfunc="mean")
+print(by_item.round(2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>item       sat_overall  sat_price  sat_selection  sat_staff  sat_website
+store
+Asheville         3.77       3.35           4.05       3.62         3.58
+Bend              3.96       3.30           4.01       4.16         3.63
+Boise             3.86       3.24           4.01       4.11         3.50
+Flagstaff         3.99       3.40           4.00       4.02         3.50
+Online            3.96       3.30           4.07       4.07         3.54</code></pre>
+                </div>
+
+                <p>Scan down the <code>sat_staff</code> column. Four of the five rows are between 4.02 and 4.16. <strong>Asheville is at 3.62.</strong> That is the kind of thing a grid is for: one number that does not look like its neighbors. Whether the gap is real is a question for the statistics module. Finding it took one melt and one pivot.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="stack" class="lesson-section">
+                <h2>📚 stack and unstack</h2>
+
+                <p><code>pivot_table</code> and <code>melt</code> work with column names. <code>unstack()</code> and <code>stack()</code> do the same two moves using the <strong>index</strong>, which is handy straight after a <code>groupby</code>.</p>
+
+                <p>Remember <code>by_store_year</code>, the grouped Series from the start of the lesson? Its index has two levels, store and year. <code>unstack()</code> takes the innermost level and swings it up to become the columns.</p>
+
+                <pre><code class="language-python">print(by_store_year.unstack())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>year             2024        2025
+store
+Asheville   127336.98   110442.39
+Bend        136989.18   147586.07
+Boise       212140.12   231246.73
+Flagstaff   129032.48   171547.87
+Online     1077800.75  1280183.70</code></pre>
+                </div>
+
+                <p>That is the first pivot table of this lesson, built a different way. <code>groupby([...]).sum().unstack()</code> and <code>pivot_table(..., aggfunc="sum")</code> are two spellings of one idea. To move a different level, name it: <code>by_store_year.unstack("store")</code> puts stores across the top instead.</p>
+
+                <p><code>stack()</code> is the reverse. It takes the column labels and pushes them down into the index, giving a long Series.</p>
+
+                <pre><code class="language-python">pay_counts = orders.pivot_table(index="payment_method", columns="store", values="order_id", aggfunc="count")
+long_again = pay_counts.stack()
+print(long_again.head(7))
+print(len(long_again), long_again.isna().sum())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>payment_method  store
+card            Asheville     835.0
+                Bend         1050.0
+                Boise        1533.0
+                Flagstaff    1021.0
+                Online       7953.0
+cash            Asheville     293.0
+                Bend          370.0
+dtype: float64
+20 1</code></pre>
+                </div>
+
+                <div class="card card-warning">
+                    <h4>⚠️ stack() Keeps Empty Cells</h4>
+                    <p>The grid had 4 × 5 = 20 cells, and the stacked Series has 20 rows, including <code>cash / Online</code> as <code>NaN</code>. Older tutorials say <code>stack()</code> silently drops missing values, and show a <code>dropna=</code> argument. In the pandas you installed, <code>stack()</code> keeps every cell and passing <code>dropna=</code> raises an error. If you do not want the empty rows, say so yourself: <code>pay_counts.stack().dropna()</code>.</p>
+                </div>
+
+                <p>To turn a stacked Series into an ordinary tidy table, name it and reset the index.</p>
+
+                <pre><code class="language-python">print(long_again.dropna().rename("orders").reset_index().head(3))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>  payment_method      store  orders
+0           card  Asheville   835.0
+1           card       Bend  1050.0
+2           card      Boise  1533.0</code></pre>
+                </div>
+
+                <h3>Which Tool When?</h3>
+
+                <div class="mermaid">
+graph TD
+    A["What do you need?"] --> B{"A grid from long rows?"}
+    B -->|"yes"| C{"One row per cell already?"}
+    C -->|"yes"| D["pivot"]
+    C -->|"no, summarize"| E{"Only counting?"}
+    E -->|"yes"| F["crosstab"]
+    E -->|"no"| G["pivot_table"]
+    B -->|"no, long rows from a grid"| H{"Labels in columns or index?"}
+    H -->|"plain columns"| I["melt"]
+    H -->|"index levels"| J["stack or unstack"]
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="honest" class="lesson-section">
+                <h2>🔍 Reading a Pivot Honestly</h2>
+
+                <p>A pivot table looks authoritative. It is small, aligned and full of decimals. That is exactly why it deserves suspicion: every cell hides the rows behind it. Two short examples show what can hide.</p>
+
+                <h3>A Mean with Nothing Behind It</h3>
+
+                <p>In the survey grid, the Online row has a staff satisfaction score of 4.07. Put the count next to the mean.</p>
+
+                <pre><code class="language-python">staff = answers[answers["item"] == "sat_staff"].groupby("store")["score"].agg(["mean", "count", "size"])
+staff.columns = ["mean", "answered", "asked"]
+staff["answered_pct"] = (staff["answered"] / staff["asked"] * 100).round(0)
+print(staff.round(2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>           mean  answered  asked  answered_pct
+store
+Asheville  3.62       193    202          96.0
+Bend       4.16       228    232          98.0
+Boise      4.11       320    329          97.0
+Flagstaff  4.02       206    213          97.0
+Online     4.07       248    824          30.0</code></pre>
+                </div>
+
+                <p>(With a single key and no column split, a plain <code>groupby</code> is the simplest tool.) <code>"count"</code> counts non-missing values, while <code>"size"</code> counts rows, so the difference is the people who skipped the question. Only 30% of online shoppers rated the staff, which makes sense: most of them never met any. The 4.07 is the opinion of the minority who did. It is not wrong, but it should not sit in a report beside the store scores as if it meant the same thing. <strong>A mean without its count is half a fact.</strong></p>
+
+                <h3>A Total That Hides the Story</h3>
+
+                <p>Does buying footwear make an order more likely to be returned? Every footwear SKU starts with <code>FTW</code>, so you can flag the orders that contain one, then pivot the return rate. The mean of a True/False column is the share that are True.</p>
+
+                <pre><code class="language-python">items = pd.read_csv("data/order_items.csv")
+footwear_orders = items.loc[items["sku"].str.startswith("FTW"), "order_id"].unique()
+
+orders["has_footwear"] = orders["order_id"].isin(footwear_orders)
+orders["returned"] = orders["status"] == "returned"
+
+rate = orders.pivot_table(index="has_footwear", columns="channel", values="returned",
+                          aggfunc="mean", margins=True) * 100
+print(rate.round(1))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>channel       online  store   All
+has_footwear
+False            4.8    3.3   4.2
+True            14.4    3.8  10.7
+All              6.9    3.4   5.6</code></pre>
+                </div>
+
+                <p>Read only the <code>All</code> column and you would report "footwear orders are returned 10.7% of the time against 4.2%" and move on. The inside of the table says something much more specific: <strong>online, footwear triples the return rate (14.4% against 4.8%). In stores it makes no real difference (3.8% against 3.3%).</strong> People can try shoes on in a store. The margin averaged two very different situations into one misleading number.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Six Questions Before You Trust a Pivot</h4>
+                    <ol>
+                        <li><strong>What is one row of the source?</strong> An order, an order line, a store-day? Summing the wrong grain double counts.</li>
+                        <li><strong>What is the aggregation?</strong> Sum, mean, count, median? Is it written in the code and in the table's title?</li>
+                        <li><strong>How many rows are behind each cell?</strong> Pivot the count beside the mean. A cell built from 12 rows is an anecdote.</li>
+                        <li><strong>What do the empty cells mean?</strong> Zero, not applicable, or missing data? Do not let <code>fill_value=0</code> decide for you.</li>
+                        <li><strong>Do the totals reconcile?</strong> The grand total of a sum or count should match the source. If it does not, rows were dropped.</li>
+                        <li><strong>Does a total hide a difference inside it?</strong> Split by one more variable before you believe a margin.</li>
+                    </ol>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="mistakes" class="lesson-section">
+                <h2>⚠️ Common Mistakes</h2>
+
+                <p>Reshaping errors are some of the most informative in pandas once you know how to read them. Each of these has stopped every analyst at least once. None of them means you are doing badly.</p>
+
+                <h3>1. Using pivot() on Data with Repeats</h3>
+                <pre data-raises="ValueError"><code class="language-python">orders.pivot(index="store", columns="status", values="order_total")</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>ValueError: Index contains duplicate entries, cannot reshape</code></pre>
+                </div>
+                <p><strong>What it means:</strong> thousands of orders share the same store and status, and <code>pivot()</code> has no idea which one belongs in the cell. <strong>Fix:</strong> decide how to combine them and use <code>pivot_table(..., aggfunc="sum")</code>. If you believed the pairs were unique, the error has just told you something about your data: <code>df.duplicated(["store", "status"]).sum()</code> counts the repeats.</p>
+
+                <h3>2. Forgetting That the Default Is the Mean</h3>
+                <p>You saw this in <a href="#aggfunc">Choosing the Aggregation</a>. There is no error, only a table of averages labeled as if it were revenue. <strong>Fix:</strong> always write <code>aggfunc=</code>, and sanity-check one cell by hand: <code>done[(done["store"] == "Boise") &amp; (done["year"] == 2025)]["order_total"].sum()</code>.</p>
+
+                <h3>3. Averaging a Text Column</h3>
+                <pre data-raises="TypeError"><code class="language-python">orders.pivot_table(index="store", columns="channel", values="status")</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>TypeError: dtype 'str' does not support operation 'mean'</code></pre>
+                </div>
+                <p><strong>What it means:</strong> with no <code>aggfunc</code>, pandas tried to take the mean of <code>status</code>, which is text. <strong>Fix:</strong> you almost certainly wanted to count. Use <code>aggfunc="count"</code>, or <code>pd.crosstab(orders["store"], orders["status"])</code>.</p>
+
+                <h3>4. Reaching into Two-Level Columns with One Label</h3>
+                <pre data-raises="KeyError"><code class="language-python">multi[2025]</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>KeyError: 2025</code></pre>
+                </div>
+                <p><strong>What it means:</strong> after <code>aggfunc=["sum", "mean", "count"]</code> the top level of the columns holds the function names, and <code>2025</code> lives one level down. <strong>Fix:</strong> go through the top level first, <code>multi["sum"][2025]</code>, or use the tuple <code>multi[("sum", 2025)]</code>. Print <code>multi.columns</code> whenever you are unsure what the labels are.</p>
+
+                <h3>5. Melting Without Saying What Identifies a Row</h3>
+                <pre><code class="language-python">print(sheet.melt().head(3))
+print(sheet.melt().shape)</code></pre>
+                <div class="card card-output">
+                    <h4>Output (not what you wanted)</h4>
+                    <pre><code>  variable value
+0    Month   Jan
+1    Month   Feb
+2    Month   Mar
+(72, 2)</code></pre>
+                </div>
+                <p><strong>What happened:</strong> with no <code>id_vars</code>, <em>every</em> column was melted, including <code>Month</code>. The month names are now mixed into the value column and no row knows which month it belongs to. <strong>Fix:</strong> <code>sheet.melt(id_vars="Month", ...)</code>. The id columns are the ones you want repeated on every row.</p>
+
+                <h3>6. Months in Alphabetical Order</h3>
+                <p>You met this in <a href="#melt">Wide to Tidy with melt</a>: Apr, Aug, Dec, Feb. There is no error, and a careless reader sees a "trend" that is only the alphabet. <strong>Fix:</strong> pivot on the month <em>number</em> (<code>dt.month</code>) and rename at the end, or <code>reindex</code> with the labels in calendar order.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="project" class="lesson-section">
+                <h2>🛠️ Project: The Seasonality Report</h2>
+
+                <p>Pinecrest's buyers need to know when each product category sells, so they can order snow gear before the snow and tents before the summer. You will build a category-by-month revenue grid from three files, catch a silent error in it, turn it into percentages, and save a tidy version for later lessons. Work in a new notebook called <code>lesson_2_6_project</code>. Allow about 30 minutes.</p>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 1: Build the logbook <span class="step-time">(5 min)</span></h3>
+                    <p>Revenue by category needs three tables: order lines (what was sold), orders (when, and whether the order was completed) and products (which category). Join them with the merges from Lesson 2.5. <code>validate="many_to_one"</code> makes pandas confirm that each line matches at most one order and one product.</p>
+                    <pre><code class="language-python">import pandas as pd
+
+orders = pd.read_csv("data/orders.csv", parse_dates=["order_date"])
+items = pd.read_csv("data/order_items.csv")
+products = pd.read_csv("data/products.csv")
+
+lines = (items
+         .merge(orders[["order_id", "order_date", "status"]], on="order_id", validate="many_to_one")
+         .merge(products[["sku", "category"]], on="sku", how="left", validate="many_to_one"))
+lines["revenue"] = lines["quantity"] * lines["unit_price"]
+
+sold = lines[lines["status"] == "completed"].copy()
+sold["month"] = sold["order_date"].dt.month
+
+print(sold[["order_id", "sku", "category", "month", "revenue"]].head(3))
+print(len(sold))
+print(f"{sold['revenue'].sum():,.2f}")</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>   order_id       sku      category  month  revenue
+0    100001  SLP-1021      Sleeping      1   371.95
+1    100001  KIT-1014  Camp Kitchen      1    62.95
+2    100002  CLM-1012      Climbing      1    32.95
+41788
+3,636,286.35</code></pre>
+                    </div>
+                    <p>One row of <code>sold</code> is one product line on a completed order. Write down the total: it is the number every later step has to reconcile with.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 2: Pivot, with totals <span class="step-time">(5 min)</span></h3>
+                    <p>Rows are categories, columns are month numbers (numbers, so they sort correctly), cells are summed revenue. Print a few columns and the grand total.</p>
+                    <pre><code class="language-python">season = sold.pivot_table(index="category", columns="month", values="revenue",
+                          aggfunc="sum", margins=True)
+print(season[[1, 7, 12, "All"]].round(0))
+print(f"{season.loc['All', 'All']:,.2f}")</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>month                1         7        12        All
+category
+Accessories    39901.0   51946.0   63571.0   567699.0
+Apparel        37807.0   25130.0   61911.0   435425.0
+Camp Kitchen   19571.0   41365.0   35792.0   367312.0
+Climbing       14553.0   20140.0   17045.0   272994.0
+Footwear       23075.0   29330.0   34201.0   391189.0
+Packs          23254.0   35686.0   35966.0   387082.0
+Sleeping       20051.0   62898.0   38637.0   516302.0
+Snow           42252.0     169.0   60100.0   216940.0
+Tents          11849.0   59714.0   28154.0   447115.0
+All           232314.0  326378.0  375376.0  3602058.0
+3,602,058.10</code></pre>
+                    </div>
+                    <p>Stop. The pivot's grand total is smaller than the total from Step 1. Some revenue fell out of the table.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 3: Find the missing revenue <span class="step-time">(5 min)</span></h3>
+                    <p>Pivot tables and <code>groupby</code> both drop rows whose key is missing, without a word. Check the keys.</p>
+                    <pre><code class="language-python">no_category = sold[sold["category"].isna()]
+print(len(no_category), f"{no_category['revenue'].sum():,.2f}")
+print(sorted(no_category["sku"].unique()))
+
+sold["category"] = sold["category"].fillna("Discontinued")
+season = sold.pivot_table(index="category", columns="month", values="revenue",
+                          aggfunc="sum", fill_value=0, margins=True)
+print(f"{season.loc['All', 'All']:,.2f}")</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>567 34,228.25
+['APL-1033', 'KIT-1016', 'PCK-1015', 'PCK-1025', 'SNW-1007', 'SNW-1018']
+3,636,286.35</code></pre>
+                    </div>
+                    <p>Six discontinued SKUs are not in <code>products.csv</code>, so the left merge gave their lines no category, and the pivot quietly left them out. Giving them an honest label brings the total back to the cent. <code>fill_value=0</code> is right here because the cells are sums: the discontinued products sold nothing in the months after they were dropped.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 4: Read the grid <span class="step-time">(5 min)</span></h3>
+                    <p>Print the whole table in whole dollars.</p>
+                    <pre><code class="language-python">print(season.round(0).astype(int))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>month              1       2       3       4       5       6       7       8       9      10      11      12      All
+category
+Accessories    39901   33832   40590   41044   46971   49251   51946   55621   49172   47309   48493   63571   567699
+Apparel        37807   33211   31847   26034   28793   29381   25130   28089   36636   44971   51615   61911   435425
+Camp Kitchen   19571   17586   25601   28417   36774   41130   41365   38727   31469   22928   27953   35792   367312
+Climbing       14553   15171   23850   26098   28562   24782   20140   29599   28755   25862   18579   17045   272994
+Discontinued    7616    6722    5201    2564    2274    2947    2111    2394    2397       0       0       0    34228
+Footwear       23075   24984   31654   34683   37506   34165   29330   33752   39911   37162   30765   34201   391189
+Packs          23254   19714   31034   29286   39170   37815   35686   42809   32233   30511   29604   35966   387082
+Sleeping       20051   24300   35415   45014   58300   73437   62898   54208   43874   33116   27053   38637   516302
+Snow           42252   35021   14163    3256    1580    1088     169     728    2686   18965   36931   60100   216940
+Tents          11849   21237   30701   36602   51356   55858   59714   60746   38805   30109   21982   28154   447115
+All           239931  231776  270057  272999  331286  349854  328489  346674  305938  290932  292976  375376  3636286</code></pre>
+                    </div>
+                    <p>Read across the Snow row: tens of thousands of dollars in winter, almost nothing in July. Tents do the opposite. But raw dollars make big categories look more seasonal than small ones, so convert each row to percentages of its own year.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 5: Each category's year as percentages <span class="step-time">(5 min)</span></h3>
+                    <p><code>crosstab</code> can sum a value column instead of counting, and <code>normalize="index"</code> makes every row add up to 100%.</p>
+                    <pre><code class="language-python">share = pd.crosstab(sold["category"], sold["month"], values=sold["revenue"],
+                    aggfunc="sum", normalize="index") * 100
+share = share.drop(index="Discontinued")
+print(share.round(1))
+
+body = season.drop(index=["All", "Discontinued"], columns="All")
+summary = pd.DataFrame({
+    "peak_month": body.idxmax(axis=1),       # axis=1: look across each row
+    "low_month": body.idxmin(axis=1),
+    "peak_to_low": (body.max(axis=1) / body.min(axis=1)).round(1),
 })
-sales['revenue'] = (sales['quantity'] * sales['unit_price']).round(2)
-sales['quarter'] = sales['date'].dt.to_period('Q').astype(str)
+print(summary.sort_values("peak_to_low", ascending=False))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>month           1     2    3    4     5     6     7     8     9     10    11    12
+category
+Accessories    7.0   6.0  7.1  7.2   8.3   8.7   9.2   9.8   8.7   8.3   8.5  11.2
+Apparel        8.7   7.6  7.3  6.0   6.6   6.7   5.8   6.5   8.4  10.3  11.9  14.2
+Camp Kitchen   5.3   4.8  7.0  7.7  10.0  11.2  11.3  10.5   8.6   6.2   7.6   9.7
+Climbing       5.3   5.6  8.7  9.6  10.5   9.1   7.4  10.8  10.5   9.5   6.8   6.2
+Footwear       5.9   6.4  8.1  8.9   9.6   8.7   7.5   8.6  10.2   9.5   7.9   8.7
+Packs          6.0   5.1  8.0  7.6  10.1   9.8   9.2  11.1   8.3   7.9   7.6   9.3
+Sleeping       3.9   4.7  6.9  8.7  11.3  14.2  12.2  10.5   8.5   6.4   5.2   7.5
+Snow          19.5  16.1  6.5  1.5   0.7   0.5   0.1   0.3   1.2   8.7  17.0  27.7
+Tents          2.7   4.7  6.9  8.2  11.5  12.5  13.4  13.6   8.7   6.7   4.9   6.3
+             peak_month low_month  peak_to_low
+category
+Snow                 12         7        354.8
+Tents                 8         1          5.1
+Sleeping              6         1          3.7
+Apparel              12         7          2.5
+Camp Kitchen          7         2          2.4
+Packs                 8         2          2.2
+Climbing              8         1          2.0
+Accessories          12         2          1.9
+Footwear              9         1          1.7</code></pre>
+                    </div>
+                    <p>If sales were perfectly even, every cell would be 8.3% (one twelfth). Snow does 28% of its year in December alone, and its best month outsells its worst by a factor of several hundred. Footwear is the steadiest category. The buyers now have their calendar.</p>
+                </div>
 
-# 1. Revenue by product and region, with grand totals
-summary = pd.pivot_table(
-    sales,
-    index='product',
-    columns='region',
-    values='revenue',
-    aggfunc='sum',
-    margins=True,
-    margins_name='All',
-    fill_value=0
-).round(0)
-print("Revenue by Product x Region:")
-print(summary)
+                <div class="card card-info">
+                    <h3>🛠️ Step 6: Save a tidy copy <span class="step-time">(5 min)</span></h3>
+                    <p>The grid is for people. Save the logbook version for programs: charting in Module 3 will want it this way.</p>
+                    <pre><code class="language-python">tidy_season = body.reset_index().melt(id_vars="category", var_name="month", value_name="revenue")
+tidy_season["month"] = tidy_season["month"].astype(int)
+tidy_season["revenue"] = tidy_season["revenue"].round(2)
+tidy_season.to_csv("category_seasonality.csv", index=False)
 
-# 2. Several metrics at once
-metrics = pd.pivot_table(
-    sales,
-    index='product',
-    values=['revenue', 'quantity'],
-    aggfunc={'revenue': ['sum', 'mean'], 'quantity': 'sum'}
-).round(2)
-print("\nPer-product metrics:")
-print(metrics)
+print(tidy_season.shape)
+print(tidy_season.sort_values("revenue", ascending=False).head(3))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>(108, 3)
+       category  month   revenue
+51     Sleeping      6  73436.90
+99  Accessories     12  63570.75
+60     Sleeping      7  62897.65</code></pre>
+                    </div>
+                </div>
 
-# 3. Multi-level pivot: quarter nested under region
-trend = pd.pivot_table(
-    sales,
-    index='region',
-    columns='quarter',
-    values='revenue',
-    aggfunc='sum',
-    fill_value=0
-).round(0)
-print("\nRegional revenue by quarter:")
-print(trend)
+                <div class="card card-success">
+                    <h3>✅ Project Completion Checklist</h3>
+                    <ul class="checklist">
+                        <li><code>sold</code> has one row per completed order line, and you wrote down its total revenue</li>
+                        <li>Your first pivot's grand total came up short, and you found the 6 discontinued SKUs that explain the gap</li>
+                        <li>After relabeling, the pivot's <code>All / All</code> cell equals the Step 1 total to the cent</li>
+                        <li>Month columns run 1 to 12 in calendar order</li>
+                        <li>Your percentage table shows Snow peaking in December and Tents in summer</li>
+                        <li><code>category_seasonality.csv</code> has 108 rows (9 categories × 12 months) and three columns</li>
+                    </ul>
+                </div>
+            </section>
 
-# 4. Share of total: divide each cell by the grand total
-share = summary.iloc[:-1, :-1]
-share = (share.div(share.values.sum()) * 100).round(1)
-print("\n% of total revenue by cell:")
-print(share)</code></pre>
-            </div>
-        </div>
+            <!-- ============================================================ -->
+            <section id="exercises" class="lesson-section">
+                <h2>🏋️ Hands-on Exercises</h2>
 
-        <div class="tip-box">
-            <h3>💡 Pro Tips for Pivot Mastery</h3>
-            <ul>
-                <li><strong>Always set <code>fill_value</code>:</strong> empty product/region combinations become <code>NaN</code> otherwise, which breaks later math.</li>
-                <li><strong>Name your margins:</strong> <code>margins_name='Total'</code> reads better than the default "All".</li>
-                <li><strong>Flatten MultiIndex columns</strong> before exporting to CSV or plotting.</li>
-                <li><strong>Reach for <code>crosstab</code></strong> when you only need counts or proportions.</li>
-                <li><strong>Chain with <code>.style.background_gradient()</code></strong> in notebooks to get an instant heatmap.</li>
-                <li><strong>Remember the default <code>aggfunc</code> is <code>'mean'</code></strong> — set it explicitly so readers are never surprised.</li>
-            </ul>
-        </div>
+                <p>Before each one, say the four pivot questions out loud: rows, columns, values, how to combine. Then write the code.</p>
 
-        <div class="warning-box">
-            <h3>⚠️ Common Pitfalls to Avoid</h3>
-            <ul>
-                <li><strong>Using <code>pivot()</code> on duplicate keys:</strong> it raises a <code>ValueError</code>; use <code>pivot_table()</code> to aggregate instead.</li>
-                <li><strong>Forgetting the default aggregation:</strong> a "wrong" total is usually a silent <code>mean</code> where you wanted a <code>sum</code>.</li>
-                <li><strong>Ignoring <code>NaN</code> cells:</strong> missing combinations skew averages and totals unless filled.</li>
-                <li><strong>Losing the keys:</strong> pivot results index by the group keys — call <code>.reset_index()</code> for a flat table.</li>
-                <li><strong>Including margins in downstream math:</strong> the "All" row/column will double-count if you aggregate again.</li>
-            </ul>
-        </div>
+                <div class="card">
+                    <h3>🏋️ Exercise 1: The Weekly Rhythm</h3>
+                    <p>Using <code>daily</code> (the daily store sales), build a table of <strong>average revenue</strong> with one row per store and one column per day of the week. Use <code>dt.dayofweek</code> (0 = Monday, 6 = Sunday) so the columns stay in order. Which day is best at every store, and which is worst?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Add a <code>weekday</code> column first, then <code>pivot_table(index=..., columns=..., values="revenue", aggfunc="mean")</code>. <code>idxmax(axis=1)</code> names the best column in each row.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">daily["weekday"] = daily["date"].dt.dayofweek
+rhythm = daily.pivot_table(index="store", columns="weekday", values="revenue", aggfunc="mean")
+print(rhythm.round(0))
+print(rhythm.idxmax(axis=1).tolist(), rhythm.idxmin(axis=1).tolist())</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>weekday         0       1       2       3        4        5        6
+store
+Asheville  4776.0  4428.0  4481.0  5008.0   5849.0   8442.0   6945.0
+Bend       5956.0  5208.0  5692.0  5844.0   7305.0  10230.0   8712.0
+Boise      8314.0  8016.0  8201.0  8656.0  10372.0  15119.0  12306.0
+Flagstaff  5503.0  5220.0  5557.0  5778.0   7304.0   9941.0   8878.0
+[5, 5, 5, 5] [1, 1, 1, 1]</code></pre>
+                        </div>
+                        <p>Saturday (5) is the best day everywhere and Tuesday (1) the worst. The mean skipped the six missing revenue values on its own, as pandas aggregations do.</p>
+                    </details>
+                </div>
 
-        <div class="pivot-section">
-            <h2>📋 Pivot Table Cheat Sheet</h2>
-            <div class="table-example">
-                <table>
-                    <thead>
-                        <tr><th>Goal</th><th>Code</th><th>Notes</th></tr>
-                    </thead>
-                    <tbody>
-                        <tr><td>Basic summary</td><td><code>pd.pivot_table(df, index='a', values='v', aggfunc='sum')</code></td><td>One dimension down the side</td></tr>
-                        <tr><td>Cross-tab layout</td><td><code>pd.pivot_table(df, index='a', columns='b', values='v')</code></td><td>Second dimension across the top</td></tr>
-                        <tr><td>Several stats</td><td><code>aggfunc=['sum', 'mean', 'count']</code></td><td>List for multiple functions</td></tr>
-                        <tr><td>Per-column stats</td><td><code>aggfunc={'v1':'sum','v2':'mean'}</code></td><td>Dict keyed by value column</td></tr>
-                        <tr><td>Add totals</td><td><code>margins=True, margins_name='Total'</code></td><td>Adds subtotal row &amp; column</td></tr>
-                        <tr><td>Fill gaps</td><td><code>fill_value=0</code></td><td>Replaces missing combinations</td></tr>
-                        <tr><td>Nested keys</td><td><code>index=['a','b'], columns=['c']</code></td><td>Creates a MultiIndex</td></tr>
-                        <tr><td>Counts only</td><td><code>pd.crosstab(df.a, df.b)</code></td><td>Frequency table</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+                <div class="card">
+                    <h3>🏋️ Exercise 2: Which Channel Brings Gold Customers?</h3>
+                    <p>Load <code>data/customers.csv</code>. Use <code>pd.crosstab</code> to show, for each <code>acquisition_channel</code>, the percentage of its customers in each <code>loyalty_tier</code>. Which channel has the highest share of Gold customers? Then answer the opposite question from a second table: of all Gold customers, what share came from that channel?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>The first table needs rows that sum to 100% (<code>normalize="index"</code>). The second needs columns that sum to 100% (<code>normalize="columns"</code>).</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">customers = pd.read_csv("data/customers.csv")
 
-        <!-- Learning Journal (REQUIRED per the Courseware Authoring Standard) -->
-        <section id="journal" class="lesson-section">
-            <h2>📓 Learning Journal</h2>
-            <div class="card card-info">
-                <p>Keep a learning journal — digital or physical. After this lesson, take a few minutes to write down:</p>
+of_channel = pd.crosstab(customers["acquisition_channel"], customers["loyalty_tier"], normalize="index") * 100
+print(of_channel.round(1))
+
+of_tier = pd.crosstab(customers["acquisition_channel"], customers["loyalty_tier"], normalize="columns") * 100
+print(of_tier.round(1))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>loyalty_tier         Basic  Gold  Silver
+acquisition_channel
+in_store              59.4  13.7    27.0
+organic               57.9  14.8    27.4
+paid_search           58.3  14.3    27.4
+referral              55.3  18.7    26.0
+social                59.2  16.2    24.6
+loyalty_tier         Basic  Gold  Silver
+acquisition_channel
+in_store              20.9  18.5    20.7
+organic               31.1  30.5    32.1
+paid_search           20.6  19.3    21.1
+referral              11.0  14.3    11.3
+social                16.4  17.3    14.8</code></pre>
+                        </div>
+                        <p>Referral customers are the most likely to reach Gold (18.7% of them), yet referrals supply the smallest share of all Gold customers, because referral is the smallest channel. Both statements are true. They answer different questions.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 3: Melt the Weather</h3>
+                    <p><code>data/store_weather.csv</code> has a <code>high_f</code> and a <code>low_f</code> column for each city and date. Melt those two columns into a tidy table with columns <code>date</code>, <code>city</code>, <code>measure</code> and <code>temp_f</code>. How many rows should it have? Then pivot it to show the average high and low for each city.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>The id columns are <code>date</code> and <code>city</code>. Use <code>value_vars</code> so the precipitation column is left out. Two measures per original row means twice the rows.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">weather = pd.read_csv("data/store_weather.csv", parse_dates=["date"])
+temps = weather.melt(id_vars=["date", "city"], value_vars=["high_f", "low_f"],
+                     var_name="measure", value_name="temp_f")
+print(len(weather), len(temps))
+print(temps.pivot_table(index="city", columns="measure", values="temp_f", aggfunc="mean").round(1))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>2924 5848
+measure    high_f  low_f
+city
+Asheville    66.5   51.7
+Bend         58.1   36.8
+Boise        62.4   44.6
+Flagstaff    60.0   39.6</code></pre>
+                        </div>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 4: Audit the Spreadsheet (Stretch)</h3>
+                    <p>The note in <code>sales_2025.xlsx</code> says its store columns are monthly sums of <code>daily_sales.csv</code>. Check that claim. From <code>daily</code>, compute 2025 revenue by month and store, get it into the same tidy shape as <code>tidy</code> (the melted sheet), merge the two, and report the largest absolute difference. The sheet is in whole dollars, so differences under $0.50 are rounding.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>dt.strftime("%b")</code> gives <code>Jan</code>, <code>Feb</code> and so on, matching the sheet. Group by month and store, sum, <code>reset_index()</code>, then merge on both keys. The sheet's Online column has no partner in <code>daily</code>, so use an inner merge and check you get 48 rows.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">d25 = daily[daily["date"].dt.year == 2025].copy()
+d25["Month"] = d25["date"].dt.strftime("%b")
+computed = d25.groupby(["Month", "store"])["revenue"].sum().rename("computed").reset_index()
+
+audit = tidy.merge(computed, on=["Month", "store"], how="inner", validate="one_to_one")
+audit["diff"] = audit["revenue"] - audit["computed"]
+print(len(audit))
+print(audit.head(3))
+print(round(audit["diff"].abs().max(), 2))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>48
+  Month  store  revenue   computed  diff
+0   Jan  Boise   242847  242846.80  0.20
+1   Feb  Boise   218456  218456.31 -0.31
+2   Mar  Boise   273191  273191.26 -0.26
+0.49</code></pre>
+                        </div>
+                        <p>All 48 store-months agree to within rounding. The audit was only possible because both tables were tidy with the same keys: comparing two grids cell by cell is much harder than merging two logbooks.</p>
+                    </details>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="quiz" class="lesson-section">
+                <h2>🎯 Quick Quiz</h2>
+                <div class="card quiz-container">
+                    <h3>🎯 Check Your Understanding</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> A colleague writes <code>orders.pivot_table(index="store", columns="channel", values="order_total")</code> and titles the result "Revenue by store and channel". What is wrong?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="pivot_table accepts column names as plain strings, and this call runs without an error. Think about which argument was left out.">
+                                A) The call fails, because <code>index</code> and <code>columns</code> must be lists
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="With no aggfunc, pivot_table uses the mean. The cells are average order values, so calling the table revenue is wrong. Writing aggfunc='sum' gives revenue.">
+                                B) The cells are average order values, because the default <code>aggfunc</code> is the mean
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Counting is what crosstab does by default. pivot_table has a different default, and it is not sum either.">
+                                C) The cells are counts of orders, because nothing was summed
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> What is in the Bend row, 2024 column of the table this code prints?</p>
+                        <pre><code class="language-python">toy = pd.DataFrame({"store": ["Boise", "Boise", "Bend"],
+                    "year": [2024, 2025, 2025],
+                    "sales": [10, 20, 30]})
+print(toy.pivot_table(index="store", columns="year", values="sales", aggfunc="sum"))</code></pre>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="No row has store Bend and year 2024, so there is nothing to sum and the cell is NaN. Adding fill_value=0 would show 0 instead.">
+                                A) <code>NaN</code>, because no row has that store and year
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="A sum of nothing would be 0 in plain arithmetic, but a pivot marks combinations that never occur differently unless you pass fill_value.">
+                                B) <code>0</code>, because the sum of no rows is zero
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Missing combinations are normal in real data and do not raise an error. pivot_table builds the full grid and marks the gaps.">
+                                C) Nothing: the code raises an error because the grid is incomplete
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> <code>df.pivot(index="date", columns="store", values="revenue")</code> raises <code>ValueError: Index contains duplicate entries, cannot reshape</code>. What does that tell you?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Missing values are fine for pivot: they simply become empty cells. The message is about something appearing too many times, not too few.">
+                                A) Some revenue values are missing
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="pivot does not care about the dtype of the keys. Read the words 'duplicate entries' again: what is duplicated?">
+                                B) The <code>date</code> column is text and must be converted first
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="pivot only rearranges, so each date and store pair may appear once. Duplicates mean either the data has repeated rows to investigate, or you need pivot_table with an aggfunc to combine them.">
+                                C) At least one date and store pair appears on more than one row
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 4:</strong> A wide table has 12 rows and the columns <code>Month</code>, <code>Boise</code>, <code>Bend</code>, <code>Flagstaff</code>, <code>Asheville</code>, <code>Online</code>. How many rows does <code>table.melt(id_vars="Month")</code> have?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="Month is kept as the identifier and the other 5 columns are stacked, so each of the 12 months appears once per store: 12 x 5 = 60 rows, with columns Month, variable and value.">
+                                A) 60
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="That counts every column. But Month is the id column: it is repeated on each row rather than melted.">
+                                B) 72
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="melt makes a table longer, not the same length. Each original row turns into one row per melted column.">
+                                C) 12
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 5:</strong> A pivot of average order value by store with <code>margins=True</code> shows store means of 175.10, 172.47, 177.21, 182.39 and 203.20, and an <code>All</code> value of 193.17. The plain average of the five store means is 182.07. Why is <code>All</code> different?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="pandas computed it correctly. The question is what it computed the mean of: five numbers, or something much larger?">
+                                A) It is a rounding error that grows with the number of rows
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Margins include every row that the cells include. Nothing is left out of the All row.">
+                                B) The margin leaves out the rows with missing values, so it uses fewer orders
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Margins apply the aggfunc to all the underlying rows. The store with the 203.20 mean has far more orders than the others, so it pulls the overall mean toward itself.">
+                                C) <code>All</code> is the mean of every order, so the store with the most orders counts the most
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="faq" class="lesson-section">
+                <h2>❓ Common Questions at This Stage</h2>
+
+                <details>
+                    <summary>If a pivot table is a groupby, which one should I use?</summary>
+                    <p>Use <code>groupby</code> when the result feeds more code: it stays long and is easy to filter and merge. Use <code>pivot_table</code> when the result is for reading, when you want totals, or when you need two things side by side to do arithmetic across them (this year against last year). Many analysts group first and call <code>.unstack()</code> at the last moment.</p>
+                </details>
+                <details>
+                    <summary>My pivot has two header rows. How do I get plain column names back?</summary>
+                    <p>Two header rows means the columns are a MultiIndex. Join the levels into single names: <code>multi.columns = [f"{func}_{year}" for func, year in multi.columns]</code> gives <code>sum_2024</code>, <code>sum_2025</code>, <code>mean_2024</code> and so on. To turn the row labels back into an ordinary column, use <code>.reset_index()</code>.</p>
+                </details>
+                <details>
+                    <summary>Is wide data "wrong"?</summary>
+                    <p>No. Wide is the right shape for a report, for arithmetic between columns, and for some time series work, as you will see next lesson. Tidy is the right shape for storing, filtering, grouping, merging and most charting. The skill is not preferring one. It is noticing which one you have and converting without fuss.</p>
+                </details>
+                <details>
+                    <summary>What does the name next to the column labels mean, like <code>year</code> above <code>store</code>?</summary>
+                    <p>When pandas prints a pivot, the top-left corner shows two names: the name of the column labels (<code>year</code>) and, on the line below, the name of the index (<code>store</code>). They are labels for the axes, not data. If the extra name gets in the way when you export, remove it with <code>table.columns.name = None</code>.</p>
+                </details>
+
+                <div class="card card-accent">
+                    <h3>🌟 Going Further: Bonus Challenge</h3>
+                    <p>Build a <strong>cohort table</strong>. For every customer in <code>orders</code>, find the month of their first order (their cohort) with <code>groupby("customer_id")["order_date"].transform("min")</code>. For every order, compute how many months after the cohort month it happened. Then pivot: rows are cohort months, columns are "months since first order", cells are the number of <em>distinct</em> customers who ordered (<code>aggfunc="nunique"</code> on <code>customer_id</code>). Divide each row by its first column to get retention percentages. What share of a typical cohort orders again three months later? Why is the bottom-right of the table empty, and what would it mean to fill those cells with zeros?</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="journal" class="lesson-section">
+                <h2>📓 Learning Journal</h2>
+                <div class="card card-accent">
+                    <p>Take five minutes to write in your learning journal (the <code>journal.md</code> file you started in Lesson 0.1, or a paper notebook). Jot down:</p>
+                    <ul>
+                        <li><strong>Key concepts</strong> you learned today</li>
+                        <li><strong>Techniques that clicked</strong> (and the ones that have not, yet)</li>
+                        <li><strong>Questions or confusion</strong> to come back to</li>
+                        <li><strong>Ideas to try</strong> on your own</li>
+                        <li><strong>Progress and feelings</strong>: how did this lesson go for you?</li>
+                    </ul>
+                    <p><strong>✍️ This lesson's prompt:</strong> Think of a table you see regularly: a budget, a gradebook, a schedule, a league table. Is it a logbook or a scoreboard? Write down what its tidy version would look like (name the columns), and one question that would be easier to answer in that shape. Then note which of the six "trust" questions you are most likely to forget, and why.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="summary" class="lesson-section">
+                <h2>📝 Lesson Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎓 Key Takeaways</h3>
+                    <ul>
+                        <li><strong>Long (tidy)</strong> data has one row per observation and is for analysis; <strong>wide</strong> data spreads one variable across the header and is for reading</li>
+                        <li><code>pivot_table(index, columns, values, aggfunc)</code> is a <code>groupby</code> spread into a grid; its default <code>aggfunc</code> is the <strong>mean</strong>, so always write it</li>
+                        <li><code>margins=True</code> adds totals computed from all the underlying rows; <code>fill_value=0</code> suits counts and sums, not averages</li>
+                        <li><code>pd.crosstab()</code> counts combinations, and <code>normalize</code> turns counts into row, column or overall shares that answer different questions</li>
+                        <li><code>pivot()</code> only rearranges and fails on duplicates; that error is information about your data</li>
+                        <li><code>melt(id_vars, value_vars)</code> turns header labels back into a column; <code>stack()</code> and <code>unstack()</code> do the same moves on index levels, and <code>stack()</code> keeps empty cells</li>
+                        <li>Pivots sort labels, so month and weekday names come out alphabetical: pivot on numbers or <code>reindex</code></li>
+                        <li>Missing keys are dropped silently. Reconcile the grand total with the source, and show counts beside means</li>
+                    </ul>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🏆 What You've Accomplished</h3>
+                    <ul>
+                        <li>You turned 20,302 orders into a store-by-year grid and computed growth from it in one line</li>
+                        <li>You found that online orders are returned twice as often as store orders, and that footwear is the reason</li>
+                        <li>You reshaped a finance spreadsheet into tidy data and audited it against the raw daily sales</li>
+                        <li>You spotted Asheville's low staff score in a survey grid, and learned why the Online score beside it needs a caveat</li>
+                        <li>You caught a pivot that had silently dropped $34,000 of revenue, and built a seasonality report you can defend</li>
+                    </ul>
+                </div>
+
+                <h3>🔭 Looking Ahead</h3>
+                <p>In <a href="pandas_time_series.html"><strong>Lesson 2.7: Time Series</strong></a> the date column stops being just another key and becomes the backbone of the table. You will put dates in the index, slice by month with a string, roll daily sales up to weeks and months with <code>resample</code>, measure change with <code>shift</code> and <code>pct_change</code>, and deal properly with the missing store-days that the wide table exposed today.</p>
+
+                <h3>📋 Before the Next Lesson</h3>
                 <ul>
-                    <li><strong>Key concepts</strong> you learned</li>
-                    <li><strong>Techniques that clicked</strong> for you</li>
-                    <li><strong>Questions or confusion points</strong> to revisit</li>
-                    <li><strong>Ideas you want to try</strong></li>
-                    <li><strong>Your progress and feelings</strong> about learning this</li>
+                    <li>Keep <code>category_seasonality.csv</code> in your project folder. Module 3 charts it.</li>
+                    <li>Rebuild <code>wide</code> (daily revenue, one column per store) from memory, without looking at the lesson. It is the starting point of Lesson 2.7.</li>
+                    <li>Look at <code>wide.loc["2024-08-10":"2024-08-16", "Bend"]</code> and write down what you see. What would you want to do about it?</li>
                 </ul>
-                <p><strong>✍️ This lesson's prompt:</strong> Think of a flat list you deal with — expenses, tickets, grades, workouts. Write out the four pivot questions for it: what goes down the side (<code>index</code>), what spreads across the top (<code>columns</code>), what number you would measure (<code>values</code>), and how you would combine it (<code>aggfunc</code>). What summary would suddenly become obvious?</p>
-            </div>
-        </section>
 
-        <!-- Lesson Summary (full standard block) -->
-        <section id="summary" class="lesson-section">
-            <h2>📝 Lesson Summary</h2>
-            <div class="card card-success">
-                <h3>🎓 Key Takeaways</h3>
-                <ul>
-                    <li>A pivot table is a reshape plus an aggregation: <code>index</code> down the side, <code>columns</code> across the top, <code>values</code> in the cells, combined by <code>aggfunc</code>.</li>
-                    <li>The default <code>aggfunc</code> is <code>mean</code> — always state it so totals mean what you intend.</li>
-                    <li><code>margins=True</code> adds subtotals and a grand total; <code>fill_value</code> replaces missing combinations.</li>
-                    <li>Lists of keys build multi-level pivots; <code>pivot_table()</code> aggregates duplicates while plain <code>pivot()</code> only reshapes, and <code>crosstab()</code> specializes in counts.</li>
-                </ul>
-            </div>
-            <h3>🎉 What You've Accomplished</h3>
-            <p>You can now collapse a long transaction log into a boardroom-ready grid — products against regions, quarters against categories — complete with totals and a heatmap. That single skill turns raw data into the summaries decisions are actually made from.</p>
-            <h3>❓ Common Questions at This Stage</h3>
-            <details>
-                <summary>When should I use <code>pivot_table()</code> instead of <code>groupby()</code>?</summary>
-                <p>They overlap heavily — a pivot table is essentially a <code>groupby</code> followed by an <code>unstack</code>. Reach for <code>pivot_table()</code> when you want a two-dimensional grid (one field down, another across) and built-in <code>margins</code>. Reach for <code>groupby()</code> when you want a long, tidy result or more complex chained operations.</p>
-            </details>
-            <details>
-                <summary>Why are some cells <code>NaN</code>?</summary>
-                <p>A <code>NaN</code> means that combination of index and column never appeared in the source data — for example, a product that was never sold in a region. Pass <code>fill_value=0</code> (or another sensible default) so those gaps do not break averages, sums, or plotting.</p>
-            </details>
-            <details>
-                <summary>My totals look wrong — too small?</summary>
-                <p>Almost always the default <code>aggfunc='mean'</code> is the culprit: you are seeing averages where you expected sums. Set <code>aggfunc='sum'</code> explicitly. If you added <code>margins=True</code>, also make sure you are not re-aggregating the "All" row/column downstream.</p>
-            </details>
-            <h3>🔭 Looking Ahead</h3>
-            <p>Pivots summarize a snapshot. Next you'll add the dimension of time — working with datetime indexes, resampling to new frequencies, and smoothing trends — so your summaries can move as well as sit still.</p>
-            <h3>✅ Before the Next Lesson</h3>
-            <ul>
-                <li>Build a pivot with two index levels and two aggregations on a dataset of your own.</li>
-                <li>Add <code>margins=True</code> and confirm the grand total matches <code>df['value'].sum()</code>.</li>
-                <li>Recreate one pivot as a <code>crosstab</code> and compare the outputs.</li>
-                <li>Write your Learning Journal entry for this lesson.</li>
-            </ul>
-            <div class="card card-accent" style="text-align: center; padding: 2rem;">
-                <h3>🌟 Encouragement for the Journey</h3>
-                <p>Pivot tables are where scattered rows finally line up into a picture. The first time your one-line <code>pivot_table()</code> reproduces a report that used to take an afternoon in a spreadsheet, you'll feel the power of pandas click into place. Keep reshaping!</p>
-            </div>
-        </section>
+                <div class="card card-accent">
+                    <h3>🌱 Encouragement for the Journey</h3>
+                    <p>Reshaping is one of those skills that feels like a puzzle for a while and then, one day, does not. If you had to stop and think about which argument was <code>index</code> and which was <code>columns</code>, or drew the table on paper before writing the melt, you were doing it the way working analysts do. What matters more than speed is what you did in the project: you noticed a total that did not add up and refused to move on until it did. That instinct is worth more than any method name.</p>
+                </div>
+            </section>
 
-        <div class="navigation">
-            <a href="pandas_time_series.html" class="nav-button prev">← Time Series</a>
-            <a href="pandas_window_functions.html" class="nav-button">Window Functions →</a>
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="pandas_merging_joining.html" class="prev-lesson">← Previous: Merging and Joining</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="pandas_time_series.html" class="next-lesson">Next: Time Series →</a>
+            </nav>
         </div>
-    </div>
+    </main>
 
-    <!-- Footer -->
     <footer class="site-footer">
         <p>&copy; 2026 Ray de la Paz. Python Data Science. All rights reserved.</p>
         <div class="footer-links">
@@ -773,181 +1393,10 @@ print(share)</code></pre>
             <a href="https://rays-home.netlify.app/contact">Contact</a>
             <a href="#" id="print-button">Print Page</a>
         </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
     </footer>
 
-    <script>
-        // Sample long-format sales data for the interactive demo
-        const pivotSource = [
-            { product: 'Laptop', region: 'North', revenue: 1499 },
-            { product: 'Laptop', region: 'South', revenue: 1350 },
-            { product: 'Laptop', region: 'East',  revenue: 1600 },
-            { product: 'Phone',  region: 'North', revenue: 900 },
-            { product: 'Phone',  region: 'South', revenue: 820 },
-            { product: 'Phone',  region: 'West',  revenue: 780 },
-            { product: 'Tablet', region: 'East',  revenue: 640 },
-            { product: 'Tablet', region: 'West',  revenue: 700 },
-            { product: 'Watch',  region: 'North', revenue: 320 },
-            { product: 'Watch',  region: 'South', revenue: 290 }
-        ];
-
-        const products = [...new Set(pivotSource.map(d => d.product))];
-        const regions = [...new Set(pivotSource.map(d => d.region))].sort();
-        let showMargins = false;
-
-        // Fill the source (long-format) table
-        function populateOriginalData() {
-            const tbody = document.getElementById('originalTable');
-            if (!tbody) return;
-            tbody.innerHTML = pivotSource.map(r =>
-                `<tr><td>${r.product}</td><td>${r.region}</td><td>${r.revenue.toLocaleString()}</td></tr>`
-            ).join('');
-        }
-
-        // Build a product x region sum-of-revenue grid
-        function buildGrid() {
-            const grid = {};
-            products.forEach(p => { grid[p] = {}; regions.forEach(r => grid[p][r] = 0); });
-            pivotSource.forEach(d => { grid[d.product][d.region] += d.revenue; });
-            return grid;
-        }
-
-        // Render the pivot result table, optionally with margins
-        function updatePivotTable() {
-            const table = document.getElementById('pivotResult');
-            if (!table) return;
-            const grid = buildGrid();
-
-            let head = '<thead><tr><th>Product</th>' +
-                regions.map(r => `<th>${r}</th>`).join('');
-            if (showMargins) head += '<th>Total</th>';
-            head += '</tr></thead>';
-
-            const colTotals = {}; regions.forEach(r => colTotals[r] = 0);
-            let grand = 0;
-
-            let body = '<tbody>';
-            products.forEach(p => {
-                let rowTotal = 0;
-                body += `<tr><td><strong>${p}</strong></td>`;
-                regions.forEach(r => {
-                    const v = grid[p][r];
-                    rowTotal += v; colTotals[r] += v; grand += v;
-                    body += `<td>${v ? v.toLocaleString() : '0'}</td>`;
-                });
-                if (showMargins) body += `<td><strong>${rowTotal.toLocaleString()}</strong></td>`;
-                body += '</tr>';
-            });
-            if (showMargins) {
-                body += '<tr><td><strong>Total</strong></td>';
-                regions.forEach(r => { body += `<td><strong>${colTotals[r].toLocaleString()}</strong></td>`; });
-                body += `<td><strong>${grand.toLocaleString()}</strong></td></tr>`;
-            }
-            body += '</tbody>';
-            table.innerHTML = head + body;
-        }
-
-        // Draw a revenue heatmap of the product x region grid
-        function drawCrosstabHeatmap() {
-            const canvas = document.getElementById('crosstabCanvas');
-            if (!canvas) return;
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            const grid = buildGrid();
-            let maxVal = 0;
-            products.forEach(p => regions.forEach(r => { maxVal = Math.max(maxVal, grid[p][r]); }));
-            maxVal = maxVal || 1;
-
-            const marginLeft = 90, marginTop = 40;
-            const cellW = (canvas.width - marginLeft - 20) / regions.length;
-            const cellH = (canvas.height - marginTop - 20) / products.length;
-
-            ctx.font = '13px Arial';
-            ctx.textBaseline = 'middle';
-
-            // Column headers
-            ctx.fillStyle = '#0f172a';
-            ctx.textAlign = 'center';
-            regions.forEach((r, c) => {
-                ctx.fillText(r, marginLeft + c * cellW + cellW / 2, marginTop - 15);
-            });
-
-            products.forEach((p, row) => {
-                // Row header
-                ctx.fillStyle = '#0f172a';
-                ctx.textAlign = 'right';
-                ctx.fillText(p, marginLeft - 10, marginTop + row * cellH + cellH / 2);
-
-                regions.forEach((r, col) => {
-                    const v = grid[p][r];
-                    const intensity = v / maxVal;
-                    const x = marginLeft + col * cellW;
-                    const y = marginTop + row * cellH;
-                    // Blue gradient by intensity
-                    ctx.fillStyle = `rgba(37, 99, 235, ${0.12 + intensity * 0.85})`;
-                    ctx.fillRect(x + 2, y + 2, cellW - 4, cellH - 4);
-                    // Cell value
-                    ctx.fillStyle = intensity > 0.55 ? '#ffffff' : '#0f172a';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(v ? v.toLocaleString() : '0', x + cellW / 2, y + cellH / 2);
-                });
-            });
-        }
-
-        // Margins toggle
-        function initMarginToggles() {
-            const toggle = document.getElementById('marginsToggle');
-            if (!toggle) return;
-            toggle.addEventListener('click', function () {
-                showMargins = !showMargins;
-                this.classList.toggle('active', showMargins);
-                this.setAttribute('aria-checked', String(showMargins));
-                updatePivotTable();
-            });
-        }
-
-        // Drag and drop layout builder (illustrative)
-        let draggedField = null;
-        function initDragAndDrop() {
-            document.querySelectorAll('.draggable-field').forEach(field => {
-                field.addEventListener('dragstart', e => {
-                    draggedField = e.target;
-                    e.target.classList.add('dragging');
-                });
-                field.addEventListener('dragend', e => e.target.classList.remove('dragging'));
-            });
-            document.querySelectorAll('.drag-area').forEach(zone => {
-                zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
-                zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
-                zone.addEventListener('drop', e => {
-                    e.preventDefault();
-                    zone.classList.remove('drag-over');
-                    if (draggedField) zone.appendChild(draggedField.cloneNode(true));
-                });
-            });
-        }
-
-        // Copy code function
-        function copyCode(button) {
-            const codeBlock = button.parentElement.nextElementSibling.querySelector('code');
-            const text = codeBlock.textContent;
-            navigator.clipboard.writeText(text).then(() => {
-                button.textContent = 'Copied!';
-                setTimeout(() => { button.textContent = 'Copy'; }, 2000);
-            });
-        }
-
-        // Initialize on load
-        window.addEventListener('load', function () {
-            populateOriginalData();
-            updatePivotTable();
-            drawCrosstabHeatmap();
-            initDragAndDrop();
-            initMarginToggles();
-        });
-
-        // Redraw heatmap on resize
-        window.addEventListener('resize', drawCrosstabHeatmap);
-    </script>
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
 </body>
 </html>

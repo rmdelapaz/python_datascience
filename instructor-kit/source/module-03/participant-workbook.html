@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Participant Workbook: Session 3</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Student workbook —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">write in it · bring it to every session</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Participant Workbook</div>
+    <h1>Session 3: Randomness and Linear Algebra</h1>
+    <p class="sub">Your working notebook for Session 3, the last of the NumPy module. In the first half you make your own numbers: random draws you can reproduce, fair samples of real rows, and simulations that answer "what could happen?". In the second half you meet the working parts of linear algebra, with no proofs: weighted sums, the <code class="inline">@</code> operator, solving for unknowns, and fitting a line through real data.</p>
+    <div class="meta-row">
+      <span class="chip">Lessons <b>1.4–1.5</b></span>
+      <span class="chip">Session <b>3</b> · 3 hours</span>
+      <span class="chip">Name: ____________________</span>
+    </div>
+  </header>
+<div class="note"><div class="t">How to use this workbook</div>
+<p>Each lesson has <b>By the end you can</b>, <b>Key ideas</b>, a <b>Worked example</b> (new code with its real output), the <b>Guided lab</b> you do in class, <b>Predict, then run</b> items, the lesson <b>project</b> (started in class, finished at home), a six-question <b>Self-check</b> and the <b>Journal</b> prompt. Lab files are in <code class="inline">labs/module-03/</code>. Two habits for today: in random code, run from the top when you want the same numbers again; in <code class="inline">@</code> code, write the shapes down before you run the line.</p>
+</div>
+
+  <div class="sec"><h2>Session Goals</h2><span class="rule"></span></div>
+<ul class="tick">
+  <li>Create a seeded generator and draw floats, whole numbers and whole tables from it.</li>
+  <li>Explain why rerunning a cell changes your numbers, and make a random result reproducible.</li>
+  <li>Sample rows fairly (with and without replacement), shuffle, and split rows at random.</li>
+  <li>Answer a "what are the chances?" question by simulation, and check the model against real data.</li>
+  <li>Compute weighted sums with <code class="inline">@</code>, predict the shape of a matrix product, and tell <code class="inline">@</code> from <code class="inline">*</code>.</li>
+  <li>Solve for unknowns with <code class="inline">np.linalg.solve</code>, and fit a line with <code class="inline">np.linalg.lstsq</code>.</li>
+  <li>Read a coefficient as a careful sentence, and quote a forecast with its typical miss.</li>
+  <li>Start both lesson projects: 10,000 possible months, and a first revenue model.</li>
+</ul>
+
+  <div class="sec"><h2>Warm-up: What Do You Remember from Session 2?</h2><span class="rule"></span></div>
+<p>Five questions, no notes. Write a short answer to each, then check with the class.</p>
+<div class="q"><div class="qn">W1</div><div class="qt"><code class="inline">big = revenue &gt; 15000</code>. What does <code class="inline">big.sum()</code> tell you? And <code class="inline">big.mean()</code>?</div><div class="write"></div></div>
+<div class="q"><div class="qn">W2</div><div class="qt">Write a mask for "Boise and a sale day", given the parallel arrays <code class="inline">stores</code> and <code class="inline">promo</code>.</div><div class="write"></div></div>
+<div class="q"><div class="qn">W3</div><div class="qt"><code class="inline">table</code> has shape <code class="inline">(224, 4)</code>: days by stores. What is the shape of <code class="inline">table.sum(axis=1)</code> and what does it hold?</div><div class="write"></div></div>
+<div class="q"><div class="qn">W4</div><div class="qt">State the two broadcasting rules.</div><div class="write"></div></div>
+<div class="q"><div class="qn">W5</div><div class="qt">How do you divide every row of that table by its own row total?</div><div class="write"></div></div>
+
+  <div class="sec"><h2>Lessons</h2><span class="rule"></span></div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">1.4</span><h3>Random Number Generation</h3></div>
+    <div class="lesson-body">
+<div class="blk"><div class="h">By the end you can</div>
+<ul class="tick">
+  <li>Create a random number generator with <code class="inline">np.random.default_rng</code> and draw floats, integers and arrays of any shape from it</li>
+  <li>Explain what a seed does, and structure your code so its random results can be reproduced</li>
+  <li>Sample from an array with and without replacement, shuffle it, and split rows at random</li>
+  <li>Draw from the normal, Poisson and binomial distributions and say what kind of quantity each one models</li>
+  <li>Estimate a probability by simulation, and judge how far to trust the estimate and the model behind it</li>
+</ul>
+</div>
+<div class="blk"><div class="h">Key ideas</div>
+<ul class="tick">
+  <li><b>Create one generator, once, with a seed:</b> <code class="inline">rng = np.random.default_rng(42)</code>. Draw everything from it.</li>
+  <li><b>A seed fixes where the sequence starts.</b> The generator then moves forward with every draw, like a bookmark. Reproducible means: same code, run from the top, same result.</li>
+  <li>**<code class="inline">rng.integers(low, high)</code> leaves out the upper end.** A die is <code class="inline">integers(1, 7)</code>. <code class="inline">size</code> can be a shape.</li>
+  <li>**<code class="inline">rng.choice</code> draws from your own values.** With replacement by default; <code class="inline">replace=False</code> gives different items; <code class="inline">p</code> sets the chances.</li>
+  <li><b>Sample row positions, then use them on every column</b>, so parallel arrays stay matched.</li>
+  <li>**<code class="inline">rng.permutation</code> returns a shuffled copy. <code class="inline">rng.shuffle</code> works in place and returns <code class="inline">None</code>.**</li>
+  <li><b>Normal</b> for measurements around a typical value, <b>Poisson</b> for counts of events, <b>binomial</b> for successes out of n tries.</li>
+  <li><b>Simulation: model, repeat, count.</b> Describe one case with random draws, simulate many at once, take the mean of a mask.</li>
+  <li><b>More simulations make an estimate more precise. Only a better model makes it more true.</b> Check the model against real data.</li>
+</ul>
+<table class="timing">
+<thead><tr><th>You want to...</th><th>Write</th></tr></thead>
+<tbody>
+<tr><td>Floats from 0 up to 1</td><td><code class="inline">rng.random(5)</code></td></tr>
+<tr><td>Ten dice</td><td><code class="inline">rng.integers(1, 7, size=10)</code></td></tr>
+<tr><td>A table of draws</td><td><code class="inline">rng.integers(0, 100, size=(3, 4))</code></td></tr>
+<tr><td>Draw from your own values</td><td><code class="inline">rng.choice(values, size=6)</code></td></tr>
+<tr><td>Different items only</td><td><code class="inline">rng.choice(values, size=3, replace=False)</code></td></tr>
+<tr><td>Five different row positions</td><td><code class="inline">rng.choice(n, size=5, replace=False)</code></td></tr>
+<tr><td>A shuffled copy / shuffle in place</td><td><code class="inline">rng.permutation(x)</code> / <code class="inline">rng.shuffle(x)</code></td></tr>
+<tr><td>A random 80/20 split</td><td><code class="inline">order = rng.permutation(n); order[:cut], order[cut:]</code></td></tr>
+<tr><td>Counts of events / successes in n tries</td><td><code class="inline">rng.poisson(lam, size)</code> / <code class="inline">rng.binomial(n, p, size)</code></td></tr>
+<tr><td>A chance, from a simulation</td><td><code class="inline">(sim &gt; 130).mean()</code></td></tr>
+</tbody>
+</table>
+</div>
+<div class="blk"><div class="h">Worked example: how good is an average from only 40 days?</div>
+<p>Suppose Asheville's door counter worked on only 40 days. How far from the truth could a 40-day average of visitors be? You have all 727 real days, so you can find out by sampling.</p>
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+
+<span class="k">def</span> load(col, dtype=float):
+    <span class="s">"""Read one column of daily_sales.csv into an array."""</span>
+    <span class="k">return</span> np.genfromtxt(<span class="s">"data/daily_sales.csv"</span>, delimiter=<span class="s">","</span>,
+                         skip_header=<span class="s">1</span>, usecols=col, dtype=dtype)
+
+stores = load(<span class="s">1</span>, dtype=str)
+visitors = load(<span class="s">2</span>)
+asheville = visitors[stores == <span class="s">"Asheville"</span>]
+print(asheville.size, <span class="s">"days | true average"</span>, asheville.mean().round(<span class="s">1</span>))</pre>
+<pre class="out">727 days | true average 274.9</pre>
+<p>The true average over all 727 days is 274.9 visitors. Normally you would not know it; here it lets you judge the samples.</p>
+<pre class="code">rng = np.random.default_rng(<span class="s">21</span>)
+
+sample = rng.choice(asheville, size=<span class="s">40</span>, replace=<span class="k">False</span>)     <span class="c"># 40 different days</span>
+print(sample[:<span class="s">8</span>])
+print(<span class="s">"estimate from 40 days:"</span>, sample.mean().round(<span class="s">1</span>))</pre>
+<pre class="out">[238. 234. 173. 178. 403. 282. 199. 286.]
+estimate from 40 days: 276.0</pre>
+<p>One sample of 40 different days gives one estimate. It is close, and a different sample would give a different number. How different?</p>
+<pre class="code">many = rng.choice(asheville, size=(<span class="s">10_000</span>, <span class="s">40</span>))            <span class="c"># 10,000 samples of 40 days, one per row</span>
+estimates = many.mean(axis=<span class="s">1</span>)
+low, high = np.percentile(estimates, [<span class="s">5</span>, <span class="s">95</span>])
+print(many.shape, estimates.shape)
+print(<span class="s">f"90% of 40-day estimates fall between {low:.0f} and {high:.0f}"</span>)</pre>
+<pre class="out">(10000, 40) (10000,)
+90% of 40-day estimates fall between 253 and 299</pre>
+<p>Ten thousand samples at once: <code class="inline">size=(10_000, 40)</code> is one sample per row, and <code class="inline">mean(axis=1)</code> collapses the 40 days. Nine times in ten, a 40-day average lands between 253 and 299: within about 23 visitors of the truth.</p>
+<pre class="code">bigger = rng.choice(asheville, size=(<span class="s">10_000</span>, <span class="s">160</span>)).mean(axis=<span class="s">1</span>)
+low, high = np.percentile(bigger, [<span class="s">5</span>, <span class="s">95</span>])
+print(<span class="s">f"90% of 160-day estimates fall between {low:.0f} and {high:.0f}"</span>)
+print(estimates.std().round(<span class="s">1</span>), bigger.std().round(<span class="s">1</span>))</pre>
+<pre class="out">90% of 160-day estimates fall between 263 and 287
+14.1 7.0</pre>
+<p>With four times as many days the range is half as wide (263 to 287), and the spread of the estimates halves from 14.1 to 7.0. More data helps, with diminishing returns. Module 4 gives this a name and a formula.</p>
+</div>
+<div class="blk lab"><div class="h">Guided lab</div>
+<p><b>Lab A (everyone):</b> open <code class="inline">labs/module-03/l1_4-random-generation/mystery_shopper_starter.py</code>. Let the generator choose 2 pilot stores and 12 different Flagstaff days in 2025, prove the same seed gives the same schedule, and split all the rows 70/30 at random. Use the seed 7 and make the draws in the order the file gives them: your output should then match your neighbor's exactly.</p>
+<p><b>Lab B (pairs):</b> open <code class="inline">labs/module-03/l1_4-random-generation/returns_desk_starter.py</code>. The question: <b>on how many days should customer service expect 4 or more returns from one day's orders?</b> Model, repeat, count; then check your simulation against the 731 real days; then try the same model on orders per day and see it fail.</p>
+<p>Before you start Lab B, fill in the three steps for the returns question. Model: one day is ________________. Repeat: ________ days, in one call. Count: the mean of the mask ________________ :</p>
+<div class="write"></div>
+<p>Finished early? <code class="inline">labs/module-03/l1_4-random-generation/debug_random.py</code>: four bugs in random code, three of them silent.</p>
+</div>
+<div class="blk"><div class="h">Predict, then run</div>
+<p>Write what you think each one prints <b>before</b> you run it. Being wrong here is useful: it shows you exactly which idea to look at again.</p>
+<div class="q"><div class="qn">P1</div><div class="qt">What does this print?</div><pre class="code">r = np.random.default_rng(<span class="s">9</span>)
+first = r.random(<span class="s">3</span>)
+r = np.random.default_rng(<span class="s">9</span>)
+second = r.random(<span class="s">3</span>)
+third = r.random(<span class="s">3</span>)
+print(np.array_equal(first, second), np.array_equal(second, third))</pre><div class="write"></div></div>
+<div class="q"><div class="qn">P2</div><div class="qt">What does this print?</div><pre class="code">r = np.random.default_rng(<span class="s">1</span>)
+picks = r.choice(<span class="s">4</span>, size=<span class="s">4</span>, replace=<span class="k">False</span>)
+print(np.sort(picks), picks.sum())</pre><div class="write"></div></div>
+<div class="q"><div class="qn">P3</div><div class="qt">This line fails. Predict the kind of error and what the message says.</div><pre class="code">np.random.default_rng(<span class="s">2</span>).choice(np.array([<span class="s">"A"</span>, <span class="s">"B"</span>, <span class="s">"C"</span>]), size=<span class="s">5</span>, replace=<span class="k">False</span>)</pre><div class="write"></div></div>
+</div>
+<div class="blk lab"><div class="h">Lesson project: start in class, finish at home</div>
+<p><b>Project:</b> how much could a month vary? (lesson page: "Project: How Much Could a Month Vary?"). You build 10,000 possible months from real Boise days, then check the simulation against the 24 real months.</p>
+<p><b>In class:</b> Step 1 (726 Boise days, mean $10,144.21, and ONE generator with seed 42) and Step 2 (two simulated months: $324,963.33 and $303,054.24 if you draw nothing else in between).</p>
+<p><b>At home:</b> Steps 3 to 7. Check yourself: <code class="inline">sims</code> has shape <code class="inline">(10000, 30)</code>; the middle 90% of months runs from about $271,698 to $339,193; <code class="inline">simulate_months(7)</code> gives identical results twice. In Step 7 only 10 of the 24 real months fall inside your 90% range. That is not a mistake in your code. Work out why.</p>
+</div>
+<div class="blk"><div class="h">Self-check</div>
+<p>Six questions on this lesson. Circle or write your answer, then check with the class.</p>
+<div class="q" data-sc="1"><div class="qn">Q1</div><div class="qt">What does this print?</div><pre class="code">a = np.random.default_rng(<span class="s">5</span>)
+b = np.random.default_rng(<span class="s">5</span>)
+x = a.integers(<span class="s">0</span>, <span class="s">100</span>, size=<span class="s">3</span>)
+y = a.integers(<span class="s">0</span>, <span class="s">100</span>, size=<span class="s">3</span>)
+z = b.integers(<span class="s">0</span>, <span class="s">100</span>, size=<span class="s">3</span>)
+print(np.array_equal(x, y), np.array_equal(x, z))</pre><div class="opts"><div class="opt">A) <code class="inline">True True</code></div><div class="opt">B) <code class="inline">False True</code></div><div class="opt">C) <code class="inline">True False</code></div><div class="opt">D) <code class="inline">False False</code></div></div></div>
+<div class="q" data-sc="2"><div class="qn">Q2</div><div class="qt">Which line rolls ten ordinary six-sided dice (values 1 to 6)?</div><div class="opts"><div class="opt">A) <code class="inline">rng.integers(1, 6, size=10)</code></div><div class="opt">B) <code class="inline">rng.random(6, size=10)</code></div><div class="opt">C) <code class="inline">rng.choice(6, size=10)</code></div><div class="opt">D) <code class="inline">rng.integers(1, 7, size=10)</code></div></div></div>
+<div class="q" data-sc="3" data-kind="short"><div class="qn">Q3</div><div class="qt">What does this print?</div><pre class="code">d = np.arange(<span class="s">5</span>)
+r = np.random.default_rng(<span class="s">0</span>).shuffle(d)
+print(r, np.sort(d))</pre><div class="write"></div></div>
+<div class="q" data-sc="4"><div class="qn">Q4</div><div class="qt"><code class="inline">orders</code> has <code class="inline">n</code> rows. Which line chooses 50 different rows to audit?</div><div class="opts"><div class="opt">A) <code class="inline">rng.choice(n, size=50, replace=False)</code></div><div class="opt">B) <code class="inline">rng.choice(n, size=50)</code></div><div class="opt">C) <code class="inline">rng.integers(0, 50, size=n)</code></div><div class="opt">D) <code class="inline">rng.permutation(50)</code></div></div></div>
+<div class="q" data-sc="5"><div class="qn">Q5</div><div class="qt">A simulation of 1,000,000 days says a store runs out of gift bags on 4.5% of days, and the estimate barely moves from run to run. The model assumed exactly 485 visitors every day. What is the best reading?</div><div class="opts"><div class="opt">A) The answer is correct, because a million simulations cannot be wrong</div><div class="opt">B) The answer is useless, because the numbers were random</div><div class="opt">C) The estimate is precise, but it is only as true as the model; a better model of visitors could change it a lot</div><div class="opt">D) Run ten million simulations to remove the effect of the assumption</div></div></div>
+<div class="q" data-sc="6" data-kind="short"><div class="qn">Q6</div><div class="qt">What does this print?</div><pre class="code">s = np.random.default_rng(<span class="s">3</span>).integers(<span class="s">1</span>, <span class="s">4</span>, size=(<span class="s">1000</span>, <span class="s">2</span>))
+print(s.shape, s.min(), s.max())</pre><div class="write"></div></div>
+</div>
+<div class="blk"><div class="h">Journal</div>
+<p>This lesson's prompt (from the lesson page): the gift-bag question got three different answers from three models. In your own words, what is the difference between an estimate being precise and being right? Then think of a "what are the chances?" question from your own work or life, and sketch the three steps (model, repeat, count) you would use to simulate it. What assumption in your model worries you most?</p>
+<div class="write tall"></div>
+</div>
+    </div>
+  </section>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">1.5</span><h3>Linear Algebra Essentials</h3></div>
+    <div class="lesson-body">
+<div class="blk"><div class="h">By the end you can</div>
+<ul class="tick">
+  <li>Compute a dot product and explain it as a weighted sum</li>
+  <li>Multiply matrices and vectors with <code class="inline">@</code>, predict the shape of the result, and tell <code class="inline">@</code> apart from <code class="inline">*</code></li>
+  <li>Solve a system of linear equations with <code class="inline">np.linalg.solve</code> and check the answer</li>
+  <li>Fit a line or a multi-feature linear model with <code class="inline">np.linalg.lstsq</code>, and interpret its coefficients and its error</li>
+  <li>Measure length and distance with <code class="inline">np.linalg.norm</code>, and standardize features before comparing them</li>
+</ul>
+</div>
+<div class="blk"><div class="h">Key ideas</div>
+<ul class="tick">
+  <li><b>A dot product</b> multiplies matching positions and adds them up: a weighted sum. <code class="inline">a @ b</code>. Two vectors in, one number out.</li>
+  <li><b>matrix @ vector</b> takes the dot product of every row with the vector: many totals, or many predictions, at once.</li>
+  <li><b>The shape rule:</b> <code class="inline">(n, k) @ (k, m)</code> gives <code class="inline">(n, m)</code>. The inner numbers must match, and order matters.</li>
+  <li>**<code class="inline">*</code> is position by position and keeps the shape. <code class="inline">@</code> multiplies and adds.** When shapes broadcast, <code class="inline">*</code> gives the wrong thing with no error: check the shape.</li>
+  <li>**<code class="inline">.T</code>** swaps rows and columns.</li>
+  <li>**<code class="inline">np.linalg.solve(A, b)</code>** finds the unknowns of an exact system. Check with <code class="inline">np.allclose(A @ x, b)</code>.</li>
+  <li>**<code class="inline">np.linalg.lstsq(A, y)</code>** finds the best-fitting weights when there are more equations than unknowns. That is linear regression. A column of ones gives the intercept; more features are more columns.</li>
+  <li><b>RMSE</b> is the typical miss, in the units of what you predict. <b>R squared</b> is the share of the variation the model accounts for.</li>
+  <li><b>A fitted line describes; it does not prove.</b> Read a coefficient as "goes with", with the other columns held fixed.</li>
+  <li>**<code class="inline">np.linalg.norm</code>** measures length; the norm of a difference is a distance. Standardize the columns first.</li>
+</ul>
+<table class="timing">
+<thead><tr><th>You want to...</th><th>Write</th></tr></thead>
+<tbody>
+<tr><td>A weighted sum</td><td><code class="inline">quantities @ prices</code></td></tr>
+<tr><td>A weighted average</td><td><code class="inline">ratings @ reviews / reviews.sum()</code></td></tr>
+<tr><td>One total (or prediction) per row</td><td><code class="inline">table @ weights</code></td></tr>
+<tr><td>Rows become columns</td><td><code class="inline">M.T</code></td></tr>
+<tr><td>Solve an exact system</td><td><code class="inline">np.linalg.solve(A, b)</code></td></tr>
+<tr><td>Build the matrix for a line</td><td><code class="inline">A = np.column_stack([np.ones(x.size), x])</code></td></tr>
+<tr><td>Fit by least squares</td><td><code class="inline">coef, *_ = np.linalg.lstsq(A, y)</code></td></tr>
+<tr><td>Predictions and residuals</td><td><code class="inline">A @ coef</code> and <code class="inline">y - A @ coef</code></td></tr>
+<tr><td>Typical miss (RMSE)</td><td><code class="inline">np.sqrt((residuals ** 2).mean())</code></td></tr>
+<tr><td>Distance from row 0 to every row</td><td><code class="inline">np.linalg.norm(z - z[0], axis=1)</code></td></tr>
+</tbody>
+</table>
+</div>
+<div class="blk"><div class="h">Worked example: which product is most like this one?</div>
+<p>A shopper is looking at a pair of trail runners. Which other footwear product is most like it, judged by price and weight? <code class="inline">products.csv</code> has both columns (5 is price, 7 is weight in kilograms; 2 is the category and 3 the product type).</p>
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+
+<span class="k">def</span> col(k, dtype=float):
+    <span class="k">return</span> np.genfromtxt(<span class="s">"data/products.csv"</span>, delimiter=<span class="s">","</span>, skip_header=<span class="s">1</span>, usecols=k, dtype=dtype)
+
+category, kind = col(<span class="s">2</span>, dtype=str), col(<span class="s">3</span>, dtype=str)
+price, weight = col(<span class="s">5</span>), col(<span class="s">7</span>)
+
+keep = (category == <span class="s">"Footwear"</span>) &amp; ~np.isnan(weight)
+shoes = np.column_stack([price[keep], weight[keep]])     <span class="c"># one row per product: price, weight_kg</span>
+kinds = kind[keep]
+print(shoes.shape)
+print(kinds[<span class="s">1</span>], shoes[<span class="s">1</span>])</pre>
+<pre class="out">(26, 2)
+Trail Runners [135.95   0.57]</pre>
+<p>One mask (footwear, and a weight present) applied to every column keeps them parallel. <code class="inline">np.column_stack</code> puts price and weight side by side: 26 products, 2 features. Row 1 is a pair of trail runners at $135.95 and 0.57 kg.</p>
+<pre class="code">raw = np.linalg.norm(shoes - shoes[<span class="s">1</span>], axis=<span class="s">1</span>)           <span class="c"># a table minus a row, then one norm per row</span>
+raw[<span class="s">1</span>] = np.inf                                          <span class="c"># a product is not its own neighbor</span>
+print(<span class="s">"closest on raw numbers:"</span>, kinds[raw.argmin()], shoes[raw.argmin()])</pre>
+<pre class="out">closest on raw numbers: Hiking Boots [135.95   1.21]</pre>
+<p><code class="inline">shoes - shoes[1]</code> is a table minus a row, and <code class="inline">axis=1</code> asks for one norm per row. The "closest" product is a pair of hiking boots: exactly the same price, and more than twice the weight. Price is measured in tens and hundreds, weight in fractions of a kilogram, so price decided everything.</p>
+<pre class="code">z = (shoes - shoes.mean(axis=<span class="s">0</span>)) / shoes.std(axis=<span class="s">0</span>)     <span class="c"># every column on one scale</span>
+dist = np.linalg.norm(z - z[<span class="s">1</span>], axis=<span class="s">1</span>)
+dist[<span class="s">1</span>] = np.inf
+print(<span class="s">"closest after standardizing:"</span>, kinds[dist.argmin()], shoes[dist.argmin()])</pre>
+<pre class="out">closest after standardizing: Trail Runners [132.95   0.62]</pre>
+<p>After standardizing (the one-line step from Lesson 1.3), both columns pull equal weight, and the nearest product is another pair of trail runners: $3 cheaper and 50 grams heavier. That is what a shopper would call similar.</p>
+</div>
+<div class="blk lab"><div class="h">Guided lab</div>
+<p><b>Lab A (everyone):</b> open <code class="inline">labs/module-03/l1_5-linear-algebra/payroll_receipt_starter.py</code>. Staff counts times pay rates, added up: the lesson's receipt with different things on it. Five parts, each one <code class="inline">@</code> (or one <code class="inline">solve</code>). The starter leaves a blank for the result shape: fill it in before you run the line.</p>
+<p><b>Lab B (pairs):</b> open <code class="inline">labs/module-03/l1_5-linear-algebra/basket_model_starter.py</code>. Fit Flagstaff's revenue against the number of purchases, read the slope as a sentence, reach the same number a second way, add a sale-day column and decide whether it earned its place, then forecast three days with one <code class="inline">@</code>.</p>
+<p>Shape practice before Lab A. Write the result shape, or "error": <code class="inline">(7, 4) @ (4,)</code> gives ________ · <code class="inline">(7, 4) @ (4, 2)</code> gives ________ · <code class="inline">(4,) @ (7, 4)</code> gives ________ · <code class="inline">(4, 7) @ (7,)</code> gives ________ · <code class="inline">(3, 3)</code> and <code class="inline">(3,)</code> into <code class="inline">np.linalg.solve</code> gives ________ :</p>
+<div class="write"></div>
+<p>Finished early? <code class="inline">labs/module-03/l1_5-linear-algebra/debug_linalg.py</code>: four bugs, two of which print wrong numbers with no error.</p>
+</div>
+<div class="blk"><div class="h">Predict, then run</div>
+<p>Write what you think each one prints <b>before</b> you run it. Being wrong here is useful: it shows you exactly which idea to look at again.</p>
+<div class="q"><div class="qn">P1</div><div class="qt">What does this print?</div><pre class="code">M = np.array([[<span class="s">1</span>, <span class="s">0</span>, <span class="s">2</span>],
+              [<span class="s">0</span>, <span class="s">3</span>, <span class="s">1</span>]])
+w = np.array([<span class="s">10</span>, <span class="s">1</span>, <span class="s">5</span>])
+print(M @ w, (M * w).shape)</pre><div class="write"></div></div>
+<div class="q"><div class="qn">P2</div><div class="qt">What does this print?</div><pre class="code">a = np.array([[<span class="s">2.0</span>, <span class="s">0.0</span>],
+              [<span class="s">0.0</span>, <span class="s">4.0</span>]])
+print(np.linalg.solve(a, np.array([<span class="s">6.0</span>, <span class="s">8.0</span>])))</pre><div class="write"></div></div>
+<div class="q"><div class="qn">P3</div><div class="qt">This line fails. Say why, using the shape rule, before you run it.</div><pre class="code">np.ones((<span class="s">2</span>, <span class="s">3</span>)) @ np.ones((<span class="s">2</span>, <span class="s">3</span>))</pre><div class="write"></div></div>
+</div>
+<div class="blk lab"><div class="h">Lesson project: start in class, finish at home</div>
+<p><b>Project:</b> a first revenue model (lesson page: "Project: A First Revenue Model"): turn a forecast of visitors into a forecast of revenue for the Asheville store.</p>
+<p><b>In class:</b> Step 1 (one mask, 726 complete days, mean visitors 275, mean revenue $5,703.83) and Step 2 (the fit: <code class="inline">revenue = 4.73 + 20.73 * visitors</code>). Write the slope as a sentence:</p>
+<div class="write"></div>
+<p><b>At home:</b> Steps 3 to 6. Check yourself: RMSE $902.58 and R squared 0.809 for visitors only; RMSE $890.88 with four columns; a normal Saturday with 380 visitors forecast at $7,818.61, give or take about $891; the five biggest misses are all days that did far better than predicted.</p>
+<p><b>Do Exercise 4 (the staffing trap).</b> It shows a coefficient that looks like a business recommendation and is not.</p>
+</div>
+<div class="blk"><div class="h">Self-check</div>
+<p>Six questions on this lesson. Circle or write your answer, then check with the class.</p>
+<div class="q" data-sc="7"><div class="qn">Q7</div><div class="qt">What does this print?</div><pre class="code">u = np.array([<span class="s">2</span>, <span class="s">0</span>, <span class="s">1</span>])
+v = np.array([<span class="s">10</span>, <span class="s">5</span>, <span class="s">3</span>])
+print(u @ v, u * v)</pre><div class="opts"><div class="opt">A) <code class="inline">23 [20  0  3]</code></div><div class="opt">B) <code class="inline">[20  0  3] 23</code></div><div class="opt">C) <code class="inline">23 23</code></div><div class="opt">D) A <code class="inline">ValueError</code>, because <code class="inline">@</code> needs 2-D arrays</div></div></div>
+<div class="q" data-sc="8"><div class="qn">Q8</div><div class="qt"><code class="inline">X</code> has shape <code class="inline">(100, 3)</code> (100 days, 3 features) and <code class="inline">w</code> has shape <code class="inline">(3,)</code>. What is the shape of <code class="inline">X @ w</code>?</div><div class="opts"><div class="opt">A) <code class="inline">(100, 3)</code></div><div class="opt">B) <code class="inline">(100,)</code></div><div class="opt">C) <code class="inline">(3,)</code></div><div class="opt">D) It fails, because the shapes are different</div></div></div>
+<div class="q" data-sc="9" data-kind="short"><div class="qn">Q9</div><div class="qt">What does this print?</div><pre class="code">A = np.array([[<span class="s">1</span>, <span class="s">2</span>],
+              [<span class="s">3</span>, <span class="s">4</span>]])
+print(A @ np.array([<span class="s">1</span>, <span class="s">1</span>]), A.T[<span class="s">0</span>])</pre><div class="write"></div></div>
+<div class="q" data-sc="10"><div class="qn">Q10</div><div class="qt">A least-squares fit with the columns (ones, visitors, sale day) returns the coefficients <code class="inline">[189.11, 20.34, 2502.17]</code>. What does the model predict for a sale day with 400 visitors?</div><pre class="code">print((np.array([<span class="s">1</span>, <span class="s">400</span>, <span class="s">1</span>]) @ np.array([<span class="s">189.11</span>, <span class="s">20.34</span>, <span class="s">2502.17</span>])).round(<span class="s">2</span>))</pre><div class="opts"><div class="opt">A) <code class="inline">8325.11</code></div><div class="opt">B) <code class="inline">8136.0</code></div><div class="opt">C) <code class="inline">10827.28</code></div><div class="opt">D) <code class="inline">2711.62</code></div></div></div>
+<div class="q" data-sc="11" data-kind="short"><div class="qn">Q11</div><div class="qt">What does this print?</div><pre class="code">print(np.linalg.norm(np.array([<span class="s">6.0</span>, <span class="s">8.0</span>])),
+      np.linalg.norm(np.array([<span class="s">1.0</span>, <span class="s">1.0</span>]) - np.array([<span class="s">4.0</span>, <span class="s">5.0</span>])))</pre><div class="write"></div></div>
+<div class="q" data-sc="12"><div class="qn">Q12</div><div class="qt">You look for the product most like a given one by distance over two columns: price (in the hundreds) and weight in kilograms (single digits). The "nearest" product has almost the same price and twice the weight. What is the fix?</div><div class="opts"><div class="opt">A) Use <code class="inline">*</code> in place of <code class="inline">@</code> when computing the distance</div><div class="opt">B) Add a column of ones to the table</div><div class="opt">C) Sort the table by price first</div><div class="opt">D) Standardize each column (subtract its mean, divide by its standard deviation) before measuring distance</div></div></div>
+</div>
+<div class="blk"><div class="h">Journal</div>
+<p>This lesson's prompt (from the lesson page): name three weighted sums from your own life or work (a grade, a budget, a score of some kind) and say what the weights are in each. Then look back over Module 1: write one sentence for each of the five lessons about the single idea you most want to keep. Which of them did you find hardest, and what would you tell someone about to start it?</p>
+<div class="write tall"></div>
+</div>
+    </div>
+  </section>
+
+  <div class="sec"><h2>Exit Ticket</h2><span class="rule"></span></div>
+<p>Three questions, no notes. Write your answers, hand them in or keep them: they tell you and your instructor what to revisit.</p>
+<div class="q"><div class="qn">E1</div><div class="qt">You run a cell that draws from <code class="inline">rng</code> twice and get different numbers. Is the code broken? What makes a random result reproducible?</div><div class="write"></div></div>
+<div class="q"><div class="qn">E2</div><div class="qt"><code class="inline">orders</code> has shape <code class="inline">(3, 3)</code> (orders by products) and <code class="inline">prices</code> has shape <code class="inline">(3,)</code>. What is the difference between <code class="inline">orders * prices</code> and <code class="inline">orders @ prices</code>?</div><div class="write"></div></div>
+<div class="q"><div class="qn">E3</div><div class="qt">A fit of revenue on visitors gives a slope of 21.39. Write the sentence a manager should hear, and one caution.</div><div class="write"></div></div>
+
+  <div class="sec"><h2>Notes</h2><span class="rule"></span></div>
+<div class="notes-lines"></div>
+
+  <div class="sec"><h2>Homework Checklist</h2><span class="rule"></span></div>
+<ul class="tick">
+  <li>☐ Finish the month simulation (Steps 3 to 7). Real months inside my simulated 90% range: ______ of 24. Why so few?</li>
+  <li>☐ Finish the Asheville revenue model (Steps 3 to 6). My forecast for a normal Saturday: $ ______________ give or take $ ________</li>
+  <li>☐ Read "Distributions: Shaped Randomness" in Lesson 1.4</li>
+  <li>☐ Lesson 1.4 exercises 1 to 3 (4 is a stretch)</li>
+  <li>☐ Lesson 1.5 exercises 1 to 3, and Exercise 4 (the staffing trap). The staff coefficient before and after: ________ → ________</li>
+  <li>☐ Both Quick Quizzes on the lesson pages</li>
+  <li>☐ Journal: both entries, including one sentence for each of the five Module 1 lessons</li>
+  <li>☐ Before Session 4: read the header row of <code class="inline">data/daily_sales.csv</code>, and skim my <code class="inline">first_look.py</code> from Lesson 0.1</li>
+</ul>
+<div class="note lab"><div class="t">Bring to Session 4</div>
+<ul class="tick">
+  <li>Your laptop with the same working environment (nothing new to install)</li>
+  <li>The whole unzipped <code class="inline">data/</code> folder in <code class="inline">pinecrest-analysis</code> (Session 4 opens many of its files, not only <code class="inline">daily_sales.csv</code>)</li>
+  <li>Your finished Module 1 projects and <code class="inline">first_look.py</code> from Lesson 0.1</li>
+  <li>Your <code class="inline">labs/</code> folder, this workbook, and your journal with the Module 1 review</li>
+</ul>
+</div>
+
+  <div class="sec"><h2>Glossary</h2><span class="rule"></span></div>
+<table class="timing">
+<tbody>
+<tr><td>**Generator (<code class="inline">rng</code>)**</td><td>The object that produces random numbers: <code class="inline">rng = np.random.default_rng(seed)</code>.</td></tr>
+<tr><td><b>Seed</b></td><td>A whole number that fixes where the generator's sequence starts, so results can be reproduced.</td></tr>
+<tr><td><b>Pseudo-random</b></td><td>Produced by a fixed recipe, yet statistically indistinguishable from random for sampling and simulation.</td></tr>
+<tr><td><b>With / without replacement</b></td><td>Whether a drawn value can be drawn again. <code class="inline">replace=False</code> gives different items.</td></tr>
+<tr><td><b>Sampling variation</b></td><td>The gap between what the probabilities say and what one particular sample shows.</td></tr>
+<tr><td><b>Distribution</b></td><td>A description of which values are likely: normal, Poisson, binomial, and many more.</td></tr>
+<tr><td><b>Monte Carlo simulation</b></td><td>Answering a question by modeling one case with random draws, repeating it many times, and counting.</td></tr>
+<tr><td><b>Law of large numbers</b></td><td>The average of more and more random draws settles toward the true underlying value.</td></tr>
+<tr><td><b>Vector / matrix</b></td><td>A 1-D array / a 2-D array.</td></tr>
+<tr><td><b>Dot product</b></td><td>Multiply matching positions and add them up: a weighted sum. Written <code class="inline">a @ b</code>.</td></tr>
+<tr><td>**Transpose (<code class="inline">.T</code>)**</td><td>The same matrix with rows and columns swapped.</td></tr>
+<tr><td><b>Least squares</b></td><td>Choosing the weights that make the sum of squared misses as small as possible. Linear regression.</td></tr>
+<tr><td><b>Coefficient</b></td><td>A fitted weight: how much the prediction changes per unit of one feature, with the others held fixed.</td></tr>
+<tr><td><b>Residual</b></td><td>An actual value minus the model's prediction for it.</td></tr>
+<tr><td><b>RMSE</b></td><td>Root mean squared error: the typical size of a miss, in the units of what is predicted.</td></tr>
+<tr><td><b>R squared</b></td><td>The share of the variation that a model accounts for: 1 is a perfect fit, 0 no better than the mean.</td></tr>
+<tr><td><b>Norm / distance</b></td><td>The length of a vector / the norm of the difference between two vectors.</td></tr>
+</tbody>
+</table>
+
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 3 · Participant Workbook · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

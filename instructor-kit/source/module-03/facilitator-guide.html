@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facilitator Guide: Session 3</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Instructor copy —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">contains answers &amp; timing · not for students</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Facilitator Guide</div>
+    <h1>Session 3: Randomness and Linear Algebra</h1>
+    <p class="sub">How to teach the session that closes the NumPy module. In the first half learners make their own numbers: random draws they can reproduce exactly, fair samples and shuffles of real rows, and small simulations that answer "what could happen?", with the discipline of checking a model against reality. In the second half they meet the working parts of linear algebra with no proofs: the dot product as a receipt, the <code class="inline">@</code> operator, solving for unknowns, and least squares, which is linear regression. They leave having fitted a model to real store data with a matrix they built themselves, and having questioned what its coefficients mean.</p>
+    <div class="meta-row">
+      <span class="chip"><b>2</b> lessons</span>
+      <span class="chip"><b>3 hrs</b> session</span>
+      <span class="chip">Lessons <b>1.4–1.5</b></span>
+      <span class="chip">Session <b>3</b> of 21</span>
+    </div>
+  </header>
+
+  <div class="sec"><h2>How to Use This Guide</h2><span class="rule"></span></div>
+<ul class="tick">
+  <li><b>Same rhythm for both lessons:</b> frame (one mental model) → live demo (you type, they type along) → guided lab (two kit labs per lesson: new questions on the course data) → start the lesson's own project. The lesson exercises, quiz and journal are homework.</li>
+  <li><b>Two different kinds of checking today.</b> In 1.4 the check is "does my simulation agree with the real data?". In 1.5 it is last session's shape check, plus "put the answer back in" (<code class="inline">np.allclose(A @ x, b)</code>) and "what else could explain this coefficient?".</li>
+  <li><b>Every code block below was run</b> to produce the output printed under it. The 1.4 outputs depend on drawing in the order shown from a fresh generator: type the steps in order, each cell once.</li>
+  <li><b>The lessons are the reference.</b> Keep <code class="inline">numpy_random_generation.html</code> and <code class="inline">numpy_linear_algebra.html</code> open for the figures: the three distribution histograms, the estimate settling as simulations accumulate, the receipt, the shape rule, and the scatter plot with its least-squares line. Labs live in <code class="inline">labs/module-03/</code>.</li>
+  <li><b>This session ends Module 1.</b> The wrap-up names what carries over to pandas (everything) and hands over to Session 4. Teal blocks are hands-on, amber blocks are watch-outs.</li>
+</ul>
+<div class="note warn"><div class="t">The #1 risk of Session 3: a confident number that nobody questions</div>
+<p>Both lessons produce impressive output very easily: a probability to three decimals from one line of simulation, a regression coefficient from one call to <code class="inline">lstsq</code>. The danger is that learners leave trusting whatever comes out. Each lesson carries its own antidote, and both are the parts most easily cut when time is short, so protect them. In 1.4 it is the second gift-bag model (the answer moves from about 4% to about 28% when one assumption changes) and Lab B's reality check. In 1.5 it is reading a slope as "goes with" and quoting a forecast with its typical miss; the staffing trap (Exercise 4) is the homework that makes it stick. The second risk is the title of 1.5. "Linear algebra" frightens people who had a bad time with it in school. Say early and plainly that there are no proofs, that a vector is a 1-D array and a matrix a 2-D array, and keep the receipt on the board.</p>
+</div>
+
+  <div class="sec"><h2>Before the Session</h2><span class="rule"></span></div>
+<ul class="tick">
+  <li>☐ <b>Run the kit check:</b> <code class="inline">python3 labs/check_labs.py module-03</code> from the <code class="inline">instructor-kit</code> folder (8 files, all PASS).</li>
+  <li>☐ <b>Files to hand out:</b> <code class="inline">labs/module-03/</code> without the <code class="inline">*_solution.py</code> files: four starters and the handouts <code class="inline">debug_random.py</code> and <code class="inline">debug_linalg.py</code>.</li>
+  <li>☐ <b>Servers to start:</b> none. No internet needed.</li>
+  <li>☐ <b>Projector machine:</b> <code class="inline">(.venv)</code> active in <code class="inline">pinecrest-analysis</code>, two empty notebooks <code class="inline">lesson_1_4</code> and <code class="inline">lesson_1_5</code>, font 18 pt or more. Browser tabs: both lesson pages, scrolled to the distribution histograms (1.4) and the Boise scatter plot (1.5).</li>
+  <li>☐ <b>Rehearse the 1.4 demo once from a restarted kernel</b>, in order, so the numbers on your screen match this guide. One accidental rerun of a cell changes everything after it.</li>
+  <li>☐ <b>Board, before learners arrive:</b> a blank column headed "Two random 30-day totals: how different?" for the homework guesses. Space for <b>model → repeat → count</b>. For the second half: the receipt's four sides and the shape rule.</li>
+  <li>☐ <b>Sort last session's exit tickets.</b> If many missed <code class="inline">keepdims</code>, give warm-up question 5 an extra minute: 1.5 leans on shapes from its first matrix product.</li>
+</ul>
+<div class="blk warn"><div class="h">Known environment traps</div>
+<table class="timing">
+<thead><tr><th>Symptom</th><th>Cause</th><th>Fix</th></tr></thead>
+<tbody>
+<tr><td>A learner's random numbers do not match yours or the lesson page</td><td>A cell was run twice or out of order; or a different seed; or draws made in a different order</td><td>Restart the kernel and run from the top. If it still differs from the lesson page after the dice in Step 2, that is expected: the lesson draws more in between.</td></tr>
+<tr><td><code class="inline">AttributeError: module 'numpy.random' has no attribute 'default_rng'</code></td><td>A very old NumPy in a kernel that is not the course environment</td><td>Run <code class="inline">check_environment.py</code>; select the <code class="inline">.venv</code> kernel.</td></tr>
+<tr><td>A chart window does not appear, or <code class="inline">plt.show()</code> prints nothing, in a script</td><td>A script run in a terminal without a display; or the figure was closed</td><td>Work in a notebook for the project's charts, or save with <code class="inline">fig.savefig("months.png")</code>. Charts are taught in Module 3; today they are typed as given.</td></tr>
+<tr><td><code class="inline">LinAlgError: Singular matrix</code> from <code class="inline">np.linalg.solve</code></td><td>Two rows (or columns) of the matrix carry the same information</td><td>Print the matrix. One equation repeats another: a different slip, or <code class="inline">lstsq</code>, is needed.</td></tr>
+<tr><td><code class="inline">lstsq</code> returns <code class="inline">[nan nan]</code></td><td>A missing value in the data</td><td>One mask, <code class="inline">&amp; ~np.isnan(revenue)</code>, applied to every array before building the matrix.</td></tr>
+<tr><td><code class="inline">FutureWarning</code> about <code class="inline">rcond</code> from <code class="inline">np.linalg.lstsq</code></td><td>NumPy older than 2.0</td><td>Harmless; <code class="inline">rcond=None</code> silences it. Check the environment: the course uses NumPy 2.5.</td></tr>
+</tbody>
+</table>
+</div>
+
+  <div class="sec"><h2>Session 3 Agenda (3 hours)</h2><span class="rule"></span></div>
+  <table class="timing">
+    <thead><tr><th>Clock</th><th>Minutes</th><th>Segment</th><th>What happens</th></tr></thead>
+    <tbody>
+      <tr><td class="t">0:00</td><td class="t">10</td><td>Warm-up</td><td>Five retrieval questions on Session 2 (no notes), homework check, collect the "two random months" guesses.</td></tr>
+      <tr><td class="t">0:10</td><td class="t">10</td><td><b>1.4</b> Frame and mental model</td><td>Why make numbers up; the book of random digits and the seed as a page number.</td></tr>
+      <tr><td class="t">0:20</td><td class="t">25</td><td><b>1.4</b> Live demo</td><td>A seeded generator, the moving bookmark, <code class="inline">choice</code>, shuffling, sampling rows, model-repeat-count, precise is not the same as right.</td></tr>
+      <tr><td class="t">0:45</td><td class="t">25</td><td><b>1.4</b> Guided lab</td><td><code class="inline">labs/module-03/l1_4-random-generation/mystery_shopper_starter.py</code>, then <code class="inline">returns_desk_starter.py</code> in pairs.</td></tr>
+      <tr><td class="t">1:10</td><td class="t">10</td><td><b>1.4</b> Start the lesson project</td><td>10,000 possible months, Steps 1 and 2; Steps 3 to 7 go home.</td></tr>
+      <tr><td class="t">1:20</td><td class="t">10</td><td>Break</td><td>Write the receipt's four sides on the board for the second half.</td></tr>
+      <tr><td class="t">1:30</td><td class="t">10</td><td><b>1.5</b> Frame and mental model</td><td>The receipt; vector and matrix are names for arrays you already use; the shape rule.</td></tr>
+      <tr><td class="t">1:40</td><td class="t">30</td><td><b>1.5</b> Live demo</td><td>Dot product, matrix @ vector, <code class="inline">@</code> is not <code class="inline">*</code>, transpose, <code class="inline">solve</code>, <code class="inline">lstsq</code> with RMSE and R squared, a prediction, distance.</td></tr>
+      <tr><td class="t">2:10</td><td class="t">25</td><td><b>1.5</b> Guided lab</td><td><code class="inline">labs/module-03/l1_5-linear-algebra/payroll_receipt_starter.py</code>, then <code class="inline">basket_model_starter.py</code> in pairs.</td></tr>
+      <tr><td class="t">2:35</td><td class="t">15</td><td><b>1.5</b> Start the lesson project</td><td>A first revenue model for Asheville, Steps 1 and 2; Steps 3 to 6 go home.</td></tr>
+      <tr><td class="t">2:50</td><td class="t">10</td><td>Wrap-up</td><td>Exit ticket (3 questions), homework, Module 1 close, bring list for Session 4.</td></tr>
+      <tr><td class="t"><b>Total</b></td><td class="t"><b>180</b></td><td></td><td>Ends at 3:00.</td></tr>
+    </tbody>
+  </table>
+<p><b>In the room.</b> The lesson pages estimate 85 + 90 = 175 minutes for a solo learner, and after the warm-up, the break and the wrap-up the room has 150. The room does, for each lesson: the mental model, the live demo, two guided kit labs, and the first two steps of the lesson project.</p>
+<p><b>Goes home (about 3 hours: this is the heaviest homework of the module).</b> The month simulation Steps 3 to 7 and the Asheville revenue model Steps 3 to 6; each lesson's Hands-on Exercises (three, plus a stretch, and 1.5's stretch Exercise 4 is strongly recommended); both Quick Quizzes; both journal entries (1.5's prompt reviews all of Module 1); each lesson's "Before the Next Lesson" list. Lesson 1.4's section on distributions (normal, Poisson, binomial, with the three histograms) gets one demo step: tell learners to read that section in full.</p>
+<p><b>Protect, in this order:</b> 1.4 demo Step 12 (the better gift-bag model) and Lab B's reality check; 1.5 demo Steps 9 to 13 (least squares from matrix to prediction); Lab A of 1.5. <b>Cut first:</b> 1.5 demo Step 14 (distance: the workbook's worked example covers it), then 1.5 demo Steps 2 and 7 (weighted average, transpose), then Lab A of 1.4 (assign as homework), then the 1.4 project start.</p>
+
+  <div class="sec"><h2>Warm-up</h2><span class="rule"></span></div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">0:00</span><h3>Warm-up: Retrieval from Session 2</h3><span class="dur">10 min</span></div>
+    <div class="lesson-body">
+<div class="blk"><div class="h">How to run it</div>
+<ul class="tick">
+  <li>Slide up, notes closed, three minutes of silent writing in the workbook's Warm-up box, then answers out loud, one question per learner.</li>
+  <li>Questions 3 to 5 are the ones today depends on: <code class="inline">axis</code>, the two rules and <code class="inline">keepdims</code>. Lesson 1.4 sums a <code class="inline">(10000, 30)</code> table along <code class="inline">axis=1</code>, and Lesson 1.5 is shape arithmetic from the first matrix product.</li>
+  <li>Keep it to seven minutes so three are left for the homework check.</li>
+</ul>
+</div>
+<div class="blk"><div class="h">Five questions (answers for you)</div>
+<ol class="steps">
+  <li><code class="inline">big = revenue &gt; 15000</code>. What does <code class="inline">big.sum()</code> tell you? And <code class="inline">big.mean()</code>? <b>Answer:</b> How many store-days are above $15,000, and what fraction of all store-days that is.</li>
+  <li>Write a mask for "Boise and a sale day", given the parallel arrays <code class="inline">stores</code> and <code class="inline">promo</code>. <b>Answer:</b> <code class="inline">(stores == "Boise") &amp; (promo == 1)</code>: <code class="inline">&amp;</code>, with parentheses around each comparison.</li>
+  <li><code class="inline">table</code> has shape <code class="inline">(224, 4)</code>: days by stores. What is the shape of <code class="inline">table.sum(axis=1)</code> and what does it hold? <b>Answer:</b> <code class="inline">(224,)</code>: one total per day. The axis you name (the 4 stores) disappears.</li>
+  <li>State the two broadcasting rules. <b>Answer:</b> Line the shapes up from the right, a missing entry counting as 1. Each pair of lengths must be equal, or one of them 1; the result takes the larger.</li>
+  <li>How do you divide every row of that table by its own row total? <b>Answer:</b> <code class="inline">table / table.sum(axis=1, keepdims=True)</code>: the totals must stand as a column of shape <code class="inline">(224, 1)</code>.</li>
+</ol>
+</div>
+<div class="blk"><div class="h">Homework check</div>
+<ul class="tick">
+  <li>Collect the guesses from 1.3's "Before the Next Lesson": two random 30-day totals of Boise revenue, how different? Write four or five on the board and leave them there: the 1.4 project answers the question at 1:10.</li>
+  <li>Quick show of hands on the two projects: who got a sale-day lift of 1.93x? Who has a weekday index with Saturday near 1.5 at every store?</li>
+  <li>Ask one learner to state the accidental grid in a sentence (a row meets a column: n in, n-squared out, no error). If nobody can, take one minute for it now.</li>
+  <li>Unfinished Lab B files from Session 2: note who, and have a word at the break.</li>
+</ul>
+</div>
+    </div>
+  </section>
+
+  <div class="sec"><h2>Lesson Plans</h2><span class="rule"></span></div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">1.4</span><h3>Random Number Generation</h3><span class="dur">70 min</span></div>
+    <div class="lesson-body">
+<div class="blk"><div class="h">Objectives (from the lesson page)</div>
+<ul class="tick">
+  <li>Create a random number generator with <code class="inline">np.random.default_rng</code> and draw floats, integers and arrays of any shape from it</li>
+  <li>Explain what a seed does, and structure your code so its random results can be reproduced</li>
+  <li>Sample from an array with and without replacement, shuffle it, and split rows at random</li>
+  <li>Draw from the normal, Poisson and binomial distributions and say what kind of quantity each one models</li>
+  <li>Estimate a probability by simulation, and judge how far to trust the estimate and the model behind it</li>
+</ul>
+</div>
+<div class="blk"><div class="h">Timing in the room</div>
+<table class="timing">
+<tbody>
+<tr><td class="t">10m</td><td>Frame: why make numbers up; the book of random digits; the homework guesses on the board</td></tr>
+<tr><td class="t">25m</td><td>Live demo: a seeded generator, the moving bookmark, <code class="inline">choice</code>, shuffling, sampling rows, a binomial, model-repeat-count, precise is not the same as right</td></tr>
+<tr><td class="t">25m</td><td>Guided lab: <code class="inline">mystery_shopper_starter.py</code>, then <code class="inline">returns_desk_starter.py</code></td></tr>
+<tr><td class="t">10m</td><td>Start the lesson project: 10,000 possible months, Steps 1 and 2</td></tr>
+</tbody>
+</table>
+</div>
+<div class="blk"><div class="h">Mental model to say</div>
+<p>Start with the homework guess: "If you picked 30 days at random from Boise's revenue and added them up, then did it again with a different 30, how different would the two totals be?" Write four or five guesses on the board, unedited. You will come back to them at the project start.</p>
+<p>Say: "Imagine an enormous book filled with digits that pass every test of randomness. You open it at some page and read off numbers as you need them. A computer's random numbers work like that book: a fixed recipe that produces a sequence which looks random. The seed is the page you open at. Open at the same page tomorrow and you read the same numbers in the same order. That is not a weakness. It is what lets someone else rerun your analysis and get your result."</p>
+<p>Four uses, one line each, so the room knows why a data course spends a lesson on invented numbers: <b>sampling</b> (pick 200 orders to audit, with no bias), <b>shuffling</b> (what does "no real difference" look like?), <b>simulation</b> (act a question out thousands of times and count), <b>test data</b>. Board, for later: <b>model → repeat → count</b>, and under it <b>more simulations: more precise. A better model: more true.</b></p>
+</div>
+<div class="blk"><div class="h">Live demo (you type, they follow)</div>
+<p>New notebook, <code class="inline">lesson_1_4</code>. Run the steps in order, each cell once: because the generator moves forward with every draw, the numbers printed below are what you get from a fresh <code class="inline">default_rng(42)</code> drawn from in exactly this sequence. They match the lesson page for Step 1 and the dice in Step 2, and then differ, because the lesson draws more in between; say so if a learner compares. If you rerun a cell by accident, your numbers will change. Use it: that is Step 4's point.</p>
+<ol class="steps">
+  <li><b>A generator, and numbers everyone can reproduce (2m).</b> Say: "Create a generator once, with a seed, and ask it for numbers. If you typed what I typed, your screen shows exactly these digits." Walk the room and check: it is a small moment of magic worth the thirty seconds.
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+
+rng = np.random.default_rng(<span class="s">42</span>)
+
+print(rng.random())        <span class="c"># one float, from 0 up to (not including) 1</span>
+print(rng.random(<span class="s">5</span>))       <span class="c"># an array of five</span></pre>
+<pre class="out">0.7739560485559633
+[0.43887844 0.85859792 0.69736803 0.09417735 0.97562235]</pre>
+Say: "The seed is the page you open the book of random digits at. Same page, same numbers."</li>
+  <li><b>Whole numbers and whole tables (2m).</b> Ask: "A six-sided die: what goes in the brackets?" Take answers before typing.
+<pre class="code">print(rng.integers(<span class="s">1</span>, <span class="s">7</span>, size=<span class="s">10</span>))             <span class="c"># ten dice rolls: 1 to 6</span>
+print(rng.integers(<span class="s">0</span>, <span class="s">100</span>, size=(<span class="s">2</span>, <span class="s">4</span>)))       <span class="c"># size can be a shape</span></pre>
+<pre class="out">[5 5 5 5 4 1 6 3 4 3]
+[[18 92 78 64]
+ [40 82 54 44]]</pre>
+Say: "The upper end is left out, like <code class="inline">range</code> and slicing. <code class="inline">integers(1, 6)</code> is a die with five faces, and nothing warns you." <code class="inline">size</code> can be a shape.</li>
+  <li><b>Same seed, same sequence (2m).</b> Say: "Three generators. Two share a seed." Ask for the prediction.
+<pre class="code">a = np.random.default_rng(<span class="s">2024</span>)
+b = np.random.default_rng(<span class="s">2024</span>)
+c = np.random.default_rng(<span class="s">2025</span>)
+
+print(a.integers(<span class="s">0</span>, <span class="s">100</span>, size=<span class="s">5</span>))
+print(b.integers(<span class="s">0</span>, <span class="s">100</span>, size=<span class="s">5</span>))
+print(c.integers(<span class="s">0</span>, <span class="s">100</span>, size=<span class="s">5</span>))</pre>
+<pre class="out">[24 67  9 21 31]
+[24 67  9 21 31]
+[44 99 99 38 95]</pre>
+The seed's value does not matter. What matters is that it is written in the code.</li>
+  <li><b>The bookmark moves (2m).</b> Ask: "If I draw from <code class="inline">a</code> again, do I get the same five?"
+<pre class="code">print(a.integers(<span class="s">0</span>, <span class="s">100</span>, size=<span class="s">5</span>))     <span class="c"># the next five: different</span>
+
+a = np.random.default_rng(<span class="s">2024</span>)       <span class="c"># back to the first page</span>
+print(a.integers(<span class="s">0</span>, <span class="s">100</span>, size=<span class="s">5</span>))     <span class="c"># the first five again</span></pre>
+<pre class="out">[30 90 79 91 99]
+[24 67  9 21 31]</pre>
+Say: "A generator moves forward with every draw, like a bookmark. This is why rerunning a notebook cell gives you new numbers. Nothing is broken. Reproducible means: same code, run from the top, same answer."</li>
+  <li><b>Draw from your own values (2m).</b> Say: "Names on slips in a hat. With replacement you put the slip back. Without, it stays out."
+<pre class="code">store_names = np.array([<span class="s">"Asheville"</span>, <span class="s">"Bend"</span>, <span class="s">"Boise"</span>, <span class="s">"Flagstaff"</span>])
+
+print(rng.choice(store_names, size=<span class="s">6</span>))                    <span class="c"># with replacement: repeats allowed</span>
+print(rng.choice(store_names, size=<span class="s">3</span>, replace=<span class="k">False</span>))     <span class="c"># without: three different stores</span></pre>
+<pre class="out">['Bend' 'Asheville' 'Asheville' 'Boise' 'Flagstaff' 'Asheville']
+['Flagstaff' 'Bend' 'Boise']</pre>
+Ask: "Five prize winners: with or without?" (Without.) "A thousand simulated visitors, each choosing a store?" (With: the draws are independent events.)</li>
+  <li><b>Unequal chances, and sampling variation (2m).</b> Say: "Boise gets about a third of the visitors, so a simulated visitor should be more likely to be in Boise. <code class="inline">p</code> sets the probabilities."
+<pre class="code">visits = rng.choice(store_names, size=<span class="s">10_000</span>, p=[<span class="s">0.19</span>, <span class="s">0.24</span>, <span class="s">0.34</span>, <span class="s">0.23</span>])
+names, counts = np.unique(visits, return_counts=<span class="k">True</span>)
+print(names)
+print(counts)</pre>
+<pre class="out">['Asheville' 'Bend' 'Boise' 'Flagstaff']
+[1935 2409 3401 2255]</pre>
+Say: "Close to 1,900, 2,400, 3,400 and 2,300, and not exactly. That gap between what the probabilities say and what one sample shows is sampling variation. Reasoning about it is most of statistics."</li>
+  <li><b>Two ways to shuffle (2m).</b> Ask: "What does <code class="inline">rng.shuffle(deck)</code> return?" Most will say "the shuffled deck".
+<pre class="code">deck = np.arange(<span class="s">10</span>)
+
+mixed = rng.permutation(deck)    <span class="c"># returns a shuffled COPY</span>
+print(mixed)
+print(deck)                      <span class="c"># the original is untouched</span>
+
+print(rng.shuffle(deck))         <span class="c"># shuffles IN PLACE and returns None</span>
+print(deck)</pre>
+<pre class="out">[4 7 9 2 6 0 1 5 8 3]
+[0 1 2 3 4 5 6 7 8 9]
+None
+[3 4 0 7 6 5 9 1 2 8]</pre>
+Say: "<code class="inline">permutation</code> returns a shuffled copy. <code class="inline">shuffle</code> changes your array and returns <code class="inline">None</code>. Write <code class="inline">deck = rng.shuffle(deck)</code> and your deck is gone."</li>
+  <li><b>Sample rows, keep the columns matched (3m).</b> Say: "With parallel arrays, the thing to sample is the row position. Draw positions once, use them on every column."
+<pre class="code"><span class="k">def</span> load(col, dtype=float):
+    <span class="s">"""Read one column of daily_sales.csv into an array."""</span>
+    <span class="k">return</span> np.genfromtxt(<span class="s">"data/daily_sales.csv"</span>, delimiter=<span class="s">","</span>,
+                         skip_header=<span class="s">1</span>, usecols=col, dtype=dtype)
+
+dates = load(<span class="s">0</span>, dtype=<span class="s">"datetime64[D]"</span>)
+stores = load(<span class="s">1</span>, dtype=str)
+visitors = load(<span class="s">2</span>)
+revenue = load(<span class="s">5</span>)
+
+picks = rng.choice(revenue.size, size=<span class="s">4</span>, replace=<span class="k">False</span>)      <span class="c"># four different row positions</span>
+print(picks)
+print(dates[picks])
+print(stores[picks])
+print(revenue[picks])</pre>
+<pre class="out">[2556 2179  902 2107]
+['2025-10-04' '2025-07-02' '2024-08-14' '2025-06-14']
+['Bend' 'Asheville' 'Asheville' 'Asheville']
+[11372.49  6611.42  4739.33  8154.94]</pre>
+Ask: "Why not <code class="inline">rng.choice(revenue, ...)</code> and <code class="inline">rng.choice(stores, ...)</code> separately?" (Two separate draws: the revenue would no longer belong to the store next to it.)</li>
+  <li><b>Shaped randomness: a binomial (2m).</b> Say: "Of 485 visitors, each buying with probability 0.236, how many buy? That is a binomial: successes out of a number of tries. Normal is for measurements around a typical value, Poisson for counts of events at some rate. Module 4 studies all three."
+<pre class="code">buyers = rng.binomial(n=<span class="s">485</span>, p=<span class="s">0.236</span>, size=<span class="s">100_000</span>)     <span class="c"># purchases on a 485-visitor day</span>
+print(buyers[:<span class="s">10</span>])
+print(buyers.mean().round(<span class="s">2</span>), <span class="s">485</span> * <span class="s">0.236</span>)</pre>
+<pre class="out">[130 118 106 117 110 111 103 112 119 113]
+114.46 114.46</pre>
+The average of 100,000 draws sits on 485 × 0.236. A distribution is a recipe for which values are likely.</li>
+  <li><b>Simulation: model, repeat, count (2m).</b> Say: "Boise has 130 gift bags for Saturday's buyers. What is the chance they run out? We already modeled one day and repeated it 100,000 times. Now count: a mask and its mean, exactly as in Lesson 1.2."
+<pre class="code">ran_out = buyers &gt; <span class="s">130</span>
+print(ran_out.sum(), <span class="s">"of"</span>, buyers.size, <span class="s">"simulated days"</span>)
+print(<span class="s">f"estimated chance of running out: {ran_out.mean():.1%}"</span>)</pre>
+<pre class="out">4430 of 100000 simulated days
+estimated chance of running out: 4.4%</pre>
+About 1 day in 23. Write <b>model, repeat, count</b> on the board.</li>
+  <li><b>How many simulations are enough? (1m).</b> Say: "An estimate from a simulation is itself a little random."
+<pre class="code"><span class="k">for</span> n_days <span class="k">in</span> [<span class="s">100</span>, <span class="s">10_000</span>, <span class="s">1_000_000</span>]:
+    sim = rng.binomial(n=<span class="s">485</span>, p=<span class="s">0.236</span>, size=n_days)
+    print(<span class="s">f"{n_days:&gt;9,} days: {(sim &gt; 130).mean():.4f}"</span>)</pre>
+<pre class="out">      100 days: 0.0400
+   10,000 days: 0.0421
+1,000,000 days: 0.0445</pre>
+With 100 days the estimate can only move in steps of 0.01. More simulations buy more decimal places, slowly.</li>
+  <li><b>The part no amount of simulation fixes (3m).</b> Say: "That estimate is precise. Is it right? The model said every day has exactly 485 visitors. Real days run from 177 to 1,164. We have the real counts, so use them."
+<pre class="code">boise_visitors = visitors[stores == <span class="s">"Boise"</span>].astype(int)
+print(boise_visitors.min(), boise_visitors.max(), boise_visitors.mean().round(<span class="s">1</span>))
+
+sim_visitors = rng.choice(boise_visitors, size=<span class="s">100_000</span>)      <span class="c"># a random real day's visitor count</span>
+sim_buyers = rng.binomial(n=sim_visitors, p=<span class="s">0.236</span>)           <span class="c"># buyers among that many visitors</span>
+print(<span class="s">f"estimated chance of running out: {(sim_buyers &gt; 130).mean():.1%}"</span>)</pre>
+<pre class="out">177 1164 485.2
+estimated chance of running out: 27.8%</pre>
+Let it land: same question, same 100,000 simulations, and the answer went from about 4% to about 28%. Say: "More simulations make an estimate more precise. Only a better model makes it more true." (And the plan was for a Saturday, the busiest day: Exercise 3 picks that up.)</li>
+  <li><b>A mistake on purpose: the generator in the loop (1m).</b> Say: "Three simulated days."
+<pre class="code"><span class="k">for</span> day <span class="k">in</span> range(<span class="s">3</span>):
+    loop_rng = np.random.default_rng(<span class="s">42</span>)          <span class="c"># same seed, every time around</span>
+    print(loop_rng.integers(<span class="s">100</span>, <span class="s">200</span>, size=<span class="s">4</span>))</pre>
+<pre class="out">[108 177 165 143]
+[108 177 165 143]
+[108 177 165 143]</pre>
+Say: "Each pass opened the book at page 42 again. In a real simulation this turns 10,000 runs into one run repeated 10,000 times. Create the generator once, above the loop."</li>
+</ol>
+</div>
+<div class="blk warn"><div class="h">Three mistakes to expect, and how to coach each</div>
+<ul class="tick">
+  <li><b>"My numbers changed and I did not change the code."</b> Symptom: output that no longer matches a neighbor's, the solution, or the learner's own earlier run. Cause: a cell that draws was run twice, or cells were run out of order, so the bookmark is somewhere else. Coach: "When did the cell that creates <code class="inline">rng</code> last run? Run from there." Reproducible means "same code, run from the top, same answer". This is the Session 1 notebook lesson again with a new consequence.</li>
+  <li><b>A seeded generator created inside a loop or a function that is called repeatedly.</b> Symptom: every simulated day, week or trial is identical; a suspiciously tidy result. No error. Coach: "Print the first two simulated weeks. Should they be the same?" Then: "Where is the generator created? How many times does that line run?" The rule for the board: create the generator once, near the top, and pass it in.</li>
+  <li><b>Confusing precise with right.</b> Symptom: a learner answers "how could we improve the estimate?" with "more simulations" when the weak point is an assumption. Coach: "What did we assume about one day? Is it true of the real days? What data do we have that could replace the assumption?" Lab B is built to give them a model that passes its check and one that fails, so they see both.</li>
+</ul>
+</div>
+<div class="blk lab"><div class="h">Guided lab</div>
+<p><b>Lab A (12m, everyone):</b> <code class="inline">labs/module-03/l1_4-random-generation/mystery_shopper_starter.py</code>; reference <code class="inline">labs/module-03/l1_4-random-generation/mystery_shopper_solution.py</code>. A schedule nobody can call biased: 2 pilot stores, 12 different Flagstaff days in 2025 (drawn as row positions), proof that the seed reproduces it, and a random 70/30 split. With seed 7, and the draws made in the order the starter gives, every learner's output matches the solution.</p>
+<p><b>Expected, Lab A:</b> 361 Flagstaff rows in 2025; pilot stores Boise and Flagstaff; twelve dates from 2025-01-02 to 2025-11-26; 2 of the 12 on a weekend; same schedule from the same seed: True; group sizes 2,032 and 871; mean visitors 356.8 and 353.8 (all rows 355.9).</p>
+<p><b>Circulate in Lab A for:</b> output that does not match a neighbor's (a draw was repeated or done in a different order: perfect, ask why before fixing); <code class="inline">replace=False</code> forgotten (it may still print twelve dates, so ask "could a date repeat?"); <code class="inline">rng.choice(dates, ...)</code> instead of positions (it works for the dates but then <code class="inline">weekday[picks]</code> fails: the reason to sample positions); in Step 4, a second generator made but only one of the two draws repeated, so the comparison prints False.</p>
+<p><b>Lab B (13m, pairs):</b> <code class="inline">labs/module-03/l1_4-random-generation/returns_desk_starter.py</code>; reference <code class="inline">labs/module-03/l1_4-random-generation/returns_desk_solution.py</code>. Model, repeat, count on a new question (how often will 4 or more of a day's orders be returned?), then a check against the 731 real days, then the same model on a question where it fails.</p>
+<p><b>Expected, Lab B:</b> 731 days, 1,143 returned orders; average 1.564 returns per day; 4 or more returns: simulated 7.4%, real 7.3%; no returns: simulated 21.1%, real 20.7%; real mean 1.56 and variance 1.52. Then orders per day: 40 or more: simulated 1.7%, real 7.3%; real mean 27.77 and variance 64.35.</p>
+<p><b>Debrief Lab B (3m), the point of the session's first half:</b> "The Poisson model passed its check for returns and failed it for orders. Why?" (Returns trickle in at a steady rate; orders have weekends, seasons and sale days, so real days vary far more than one average rate allows. For a Poisson the variance about equals the mean; for orders it is more than twice the mean.) "Would ten million simulations have fixed the orders estimate?" (No.)</p>
+<p><b>Fast finishers:</b> <code class="inline">labs/module-03/l1_4-random-generation/debug_random.py</code>: a five-faced die, a deck replaced by <code class="inline">None</code>, three identical "random" weeks, and probabilities that do not add up to 1.</p>
+</div>
+<div class="blk lab"><div class="h">Start the lesson project</div>
+<p>The lesson project asks how much a month of Boise revenue could vary: 10,000 possible months built from real Boise days, then an honest check against the 24 real months. In the room, do <b>Steps 1 and 2</b> (10 minutes).</p>
+<p>Step 1 together: load, keep Boise's days with revenue present (one combined mask), and create the generator <b>once</b>, with seed 42. Done = <code class="inline">726 days</code> and a mean of $10,144.21.</p>
+<p>Step 2 on their own: two simulated months of 30 days with <code class="inline">rng.choice(boise, size=30)</code>. With seed 42 and no other draws in between, everyone gets $324,963.33 and $303,054.24. Now point at the guesses on the board: the two totals differ by about $22,000. Ask who was closest.</p>
+<p>Goes home: Step 3 (10,000 months in one call with <code class="inline">size=(10_000, 30)</code>; middle 90% from $271,698 to $339,193), Step 4 (chances as the mean of a mask), Step 5 (the histogram), Step 6 (a function that takes a seed) and Step 7, which matters most: only 10 of the 24 real months fall inside the simulated 90% range, because real days come in seasons. Tell them to expect that, and that catching it is the point.</p>
+</div>
+<div class="blk"><div class="h">Checks for understanding</div>
+<p>Ask these out loud during the demo and the lab (cold-call gently, or think-pair-share):</p>
+<ol class="steps">
+  <li>What does a seed do? <b>Answer:</b> It fixes where the generator's sequence starts, so the same code run from the top gives the same numbers.</li>
+  <li>I ran my simulation cell twice and got two different answers. Is the code broken? <b>Answer:</b> No. The generator moved forward. Rerun from the cell that creates it.</li>
+  <li>Five prize winners from 4,850 customers: with or without replacement? <b>Answer:</b> Without (<code class="inline">replace=False</code>): nobody should win twice.</li>
+  <li>Returns arriving per day, purchases out of 485 visitors, a purchase amount around $88: which distribution for each? <b>Answer:</b> Poisson (counts of events at a rate), binomial (successes out of n tries), normal (a measurement around a typical value).</li>
+  <li>My estimate is stable to three decimals over a million runs. What have I learned about whether it is right? <b>Answer:</b> Only that it is precise. Whether it is right depends on the model's assumptions.</li>
+</ol>
+<p>Workbook self-check, items Q1 to Q6 (learners do them at the end of the block or at home).</p>
+<p style="font-size:.9rem;margin:.2rem 0">Answers: <b>Q1</b> <span data-sc="1">B) <code class="inline">False True</code></span>; <b>Q2</b> <span data-sc="2">D) <code class="inline">rng.integers(1, 7, size=10)</code></span>; <b>Q3</b> <span data-sc="3"><code class="inline">None [0 1 2 3 4]</code></span>; <b>Q4</b> <span data-sc="4">A) <code class="inline">rng.choice(n, size=50, replace=False)</code></span>; <b>Q5</b> <span data-sc="5">C) The estimate is precise, but it is only as true as the model; a better model of visitors could change it a lot</span>; <b>Q6</b> <span data-sc="6"><code class="inline">(1000, 2) 1 3</code></span>. Full set with explanations in the Answer Key.</p>
+</div>
+<div class="blk"><div class="h">Differentiation</div>
+<p><b>Support:</b> For learners unsettled by numbers that will not sit still: have them put the generator line and one draw in the SAME cell and run it five times (identical every time), then split them into two cells and run only the second (different every time). That one experiment explains most of the confusion. In Lab B, give the three steps as sentence starters on paper: "One day is modeled as ___. I repeat it ___ times. I count how often ___."</p>
+<p><b>Stretch:</b> <code class="inline">debug_random.py</code>; then the lesson's Exercise 4 (a permutation test: could shuffling explain the gap between Bend and Flagstaff?) or the Bonus Challenge (simulate next December from real December days only, and say what that model still ignores).</p>
+</div>
+    </div>
+  </section>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">1.5</span><h3>Linear Algebra Essentials</h3><span class="dur">80 min</span></div>
+    <div class="lesson-body">
+<div class="blk"><div class="h">Objectives (from the lesson page)</div>
+<ul class="tick">
+  <li>Compute a dot product and explain it as a weighted sum</li>
+  <li>Multiply matrices and vectors with <code class="inline">@</code>, predict the shape of the result, and tell <code class="inline">@</code> apart from <code class="inline">*</code></li>
+  <li>Solve a system of linear equations with <code class="inline">np.linalg.solve</code> and check the answer</li>
+  <li>Fit a line or a multi-feature linear model with <code class="inline">np.linalg.lstsq</code>, and interpret its coefficients and its error</li>
+  <li>Measure length and distance with <code class="inline">np.linalg.norm</code>, and standardize features before comparing them</li>
+</ul>
+</div>
+<div class="blk"><div class="h">Timing in the room</div>
+<table class="timing">
+<tbody>
+<tr><td class="t">10m</td><td>Frame: the receipt, seen from four sides; vector and matrix are new names for arrays you already use</td></tr>
+<tr><td class="t">30m</td><td>Live demo: dot product, matrix @ vector, <code class="inline">@</code> is not <code class="inline">*</code>, the shape rule, transpose, <code class="inline">solve</code>, <code class="inline">lstsq</code> with RMSE and R squared, a prediction, distance</td></tr>
+<tr><td class="t">25m</td><td>Guided lab: <code class="inline">payroll_receipt_starter.py</code>, then <code class="inline">basket_model_starter.py</code></td></tr>
+<tr><td class="t">15m</td><td>Start the lesson project: a first revenue model for Asheville, Steps 1 and 2</td></tr>
+</tbody>
+</table>
+</div>
+<div class="blk"><div class="h">Mental model to say</div>
+<p>Say: "A receipt has a column of quantities and a column of prices. Multiply across each line, add down the page, and you have the total. Nearly everything in this lesson is that receipt, seen from a different side."</p>
+<p>Write the four sides on the board as you say them, and tick each one off during the demo: <b>one receipt: a dot product</b> · <b>a stack of receipts with one price list: a matrix times a vector</b> · <b>quantities and totals known, prices unknown: solving a system</b> · <b>the same with noisy totals, so nothing fits perfectly: least squares</b>.</p>
+<p>Take the fear out of the title: "A vector is a 1-D array. A matrix is a 2-D array. You have used both since Session 1. Only the names are new, and there are no proofs today." Then the one rule to add to the board before the first matrix product: <b>(n, k) @ (k, m) gives (n, m). The inner numbers must match.</b></p>
+</div>
+<div class="blk"><div class="h">Live demo (you type, they follow)</div>
+<p>New notebook, <code class="inline">lesson_1_5</code>. Nothing here is random, so every learner's output should match this page exactly. Keep last session's habit: before each <code class="inline">@</code>, write the two shapes on the board and take the room's call on the result. Steps 6 and 15 are mistakes on purpose. The demo covers a great deal; if you fall behind, Steps 2, 7 and 14 are the ones to shorten (see If You Run Long).</p>
+<ol class="steps">
+  <li><b>One receipt: the dot product (3m).</b> Say: "2 tents, 1 stove, 3 mugs. Lesson 1.2 already gives the total: multiply position by position, then sum. That pattern is so common it has a name, the dot product, and an operator."
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+
+quantities = np.array([<span class="s">2</span>, <span class="s">1</span>, <span class="s">3</span>])
+prices = np.array([<span class="s">299.95</span>, <span class="s">82.95</span>, <span class="s">24.50</span>])
+
+print(quantities * prices)             <span class="c"># the three line totals</span>
+print((quantities * prices).sum())     <span class="c"># the order total</span>
+print(quantities @ prices)             <span class="c"># the same thing: a dot product</span></pre>
+<pre class="out">[599.9   82.95  73.5 ]
+756.35
+756.35</pre>
+Two vectors in, one number out. Ask: "What must be true of the two lengths?" (Equal: every quantity needs its price.)</li>
+  <li><b>Any weighted sum is a dot product (2m).</b> Say: "Three products' ratings, weighted by how many reviews each one has."
+<pre class="code">ratings = np.array([<span class="s">4.0</span>, <span class="s">3.7</span>, <span class="s">4.7</span>])
+reviews = np.array([<span class="s">8</span>, <span class="s">3</span>, <span class="s">41</span>])
+
+print(ratings.mean().round(<span class="s">3</span>))                         <span class="c"># every product counts equally</span>
+print((ratings @ reviews / reviews.sum()).round(<span class="s">3</span>))    <span class="c"># every review counts equally</span></pre>
+<pre class="out">4.133
+4.535</pre>
+The weighted average is higher because the best-rated product also has by far the most reviews.</li>
+  <li><b>A stack of receipts: matrix @ vector (3m).</b> Say: "Three orders, one price list. Stack the orders as rows." Board: <code class="inline">(3, 3) @ (3,)</code>. Ask for the shape of the result.
+<pre class="code">orders = np.array([[<span class="s">2</span>, <span class="s">1</span>, <span class="s">3</span>],      <span class="c"># order A: 2 tents, 1 stove, 3 mugs</span>
+                   [<span class="s">1</span>, <span class="s">0</span>, <span class="s">2</span>],      <span class="c"># order B</span>
+                   [<span class="s">0</span>, <span class="s">4</span>, <span class="s">1</span>]])     <span class="c"># order C</span>
+
+totals = orders @ prices
+print(totals)
+print(orders.shape, prices.shape, totals.shape)</pre>
+<pre class="out">[756.35 348.95 356.3 ]
+(3, 3) (3,) (3,)</pre>
+Say: "The dot product of each row with the price vector: three receipts in one step. Hold on to this picture, because it is also what a prediction looks like: a row of measurements per day, times how much each measurement is worth."</li>
+  <li><b>@ is not * (2m).</b> Ask: "<code class="inline">orders * prices</code> also runs. What does it give?"
+<pre class="code">print((orders * prices).shape)     <span class="c"># a table of line totals, no error</span>
+print((orders @ prices).shape)     <span class="c"># the three order totals</span></pre>
+<pre class="out">(3, 3)
+(3,)</pre>
+Say: "<code class="inline">*</code> is position by position and keeps the shape: a table of line totals. <code class="inline">@</code> multiplies and adds, collapsing an axis. When shapes happen to broadcast, <code class="inline">*</code> gives you the wrong thing with no complaint. Check the shape."</li>
+  <li><b>Matrix @ matrix, and the shape rule (3m).</b> Say: "Two price lists side by side: regular and sale." Write the rule on the board before running: <b>(n, k) @ (k, m) gives (n, m). The inner numbers must match.</b>
+<pre class="code">price_lists = np.array([[<span class="s">299.95</span>, <span class="s">254.96</span>],     <span class="c"># tent:  regular, sale</span>
+                        [ <span class="s">82.95</span>,  <span class="s">70.51</span>],     <span class="c"># stove</span>
+                        [ <span class="s">24.50</span>,  <span class="s">20.83</span>]])    <span class="c"># mug</span>
+
+both = orders @ price_lists
+print(both)
+print(orders.shape, <span class="s">"@"</span>, price_lists.shape, <span class="s">"gives"</span>, both.shape)</pre>
+<pre class="out">[[756.35 642.92]
+ [348.95 296.62]
+ [356.3  302.87]]
+(3, 3) @ (3, 2) gives (3, 2)</pre>
+First column: the order totals at regular prices, the same numbers as before. Second: at sale prices.</li>
+  <li><b>Order matters: read the end of the message (2m).</b> Say: "Unlike ordinary multiplication, you cannot swap the two sides." Board: <code class="inline">(3, 2) @ (3, 3)</code>: inner numbers 2 and 3.
+<pre class="code">wrong_order = price_lists @ orders</pre>
+<pre class="out">ValueError: matmul: Input operand 1 has a mismatch in its core dimension 0, with gufunc signature (n?,k),(k,m?)-&gt;(n?,m?) (size 3 is different from 2)</pre>
+Say: "Skip to the end of the message: 'size 3 is different from 2'. The inner numbers do not match. Usually the operands are in the wrong order, or one needs flipping on its side."</li>
+  <li><b>Transpose (2m).</b> Say: "<code class="inline">.T</code> swaps rows and columns."
+<pre class="code">units_sold = orders.sum(axis=<span class="s">0</span>)             <span class="c"># total units of each product, shape (3,)</span>
+print(price_lists.T.shape)
+print(price_lists.T @ units_sold)           <span class="c"># revenue under each price list</span></pre>
+<pre class="out">(2, 3)
+[1461.6  1242.41]</pre>
+<code class="inline">(2, 3) @ (3,)</code>: revenue under each price list, two dot products in one step.</li>
+  <li><b>Run the receipt backward: solve (3m).</b> Say: "Three old order slips: quantities and totals, but the prices have faded. Three equations, three unknowns."
+<pre class="code">slip_totals = np.array([<span class="s">756.35</span>, <span class="s">348.95</span>, <span class="s">356.30</span>])
+
+recovered = np.linalg.solve(orders, slip_totals)
+print(recovered)
+print(np.allclose(orders @ recovered, slip_totals))</pre>
+<pre class="out">[299.95  82.95  24.5 ]
+True</pre>
+Say: "Always put the answer back into the original equation." Mention the inverse only if asked: <code class="inline">solve</code> is faster and loses less accuracy.</li>
+  <li><b>Hundreds of noisy equations: build the matrix (3m).</b> Say: "Real data: 726 Boise days, two unknowns, and noise. No pair of numbers fits every day. Which pair comes closest? The model is a line, revenue = intercept + slope × visitors. One row per day, one column per unknown."
+<pre class="code"><span class="k">def</span> load(col, dtype=float):
+    <span class="s">"""Read one column of daily_sales.csv into an array."""</span>
+    <span class="k">return</span> np.genfromtxt(<span class="s">"data/daily_sales.csv"</span>, delimiter=<span class="s">","</span>,
+                         skip_header=<span class="s">1</span>, usecols=col, dtype=dtype)
+
+stores = load(<span class="s">1</span>, dtype=str)
+visitors, revenue, promo = load(<span class="s">2</span>), load(<span class="s">5</span>), load(<span class="s">7</span>)
+
+keep = (stores == <span class="s">"Boise"</span>) &amp; ~np.isnan(revenue)
+x = visitors[keep]
+y = revenue[keep]
+
+A = np.column_stack([np.ones(x.size), x])
+print(A.shape)
+print(A[:<span class="s">3</span>])</pre>
+<pre class="out">(726, 2)
+[[  1. 333.]
+ [  1. 308.]
+ [  1. 290.]]</pre>
+Ask: "What is the column of ones for?" (It multiplies the intercept, so the line is not forced through zero.)</li>
+  <li><b>Least squares (3m).</b> Say: "<code class="inline">lstsq</code> returns four things; the first is the solution." Read the result as a sentence.
+<pre class="code">coef, *_ = np.linalg.lstsq(A, y)        <span class="c"># keep the first result, discard the other three</span>
+intercept, slope = coef
+print(<span class="s">f"revenue = {intercept:.2f} + {slope:.2f} * visitors"</span>)</pre>
+<pre class="out">revenue = -238.85 + 21.39 * visitors</pre>
+Say: "At Boise, each additional visitor goes with about $21 more revenue. You know another route to that number: 23.6% of visitors buy and an average purchase is $88.66, and 0.236 × 88.66 is $20.92. Two routes, nearly the same number." The intercept is not meaningful: no day has zero visitors.</li>
+  <li><b>How good is the line? (2m).</b> Say: "The gap between an actual value and the prediction is a residual. <code class="inline">A @ coef</code> is the prediction for every day: a matrix times a vector."
+<pre class="code">residuals = y - A @ coef
+
+print(<span class="s">f"typical miss (RMSE): ${np.sqrt((residuals ** 2).mean()):,.2f}"</span>)
+r_squared = <span class="s">1</span> - (residuals ** <span class="s">2</span>).sum() / ((y - y.mean()) ** <span class="s">2</span>).sum()
+print(<span class="s">f"R squared: {r_squared:.3f}"</span>)</pre>
+<pre class="out">typical miss (RMSE): $1,344.33
+R squared: 0.869</pre>
+RMSE is the typical miss, in dollars. R squared is the share of the day-to-day variation the line accounts for.</li>
+  <li><b>More features are more columns (2m).</b> Say: "To give the model more information, add a column. Nothing else changes."
+<pre class="code">A2 = np.column_stack([np.ones(x.size), x, promo[keep]])
+coef2, *_ = np.linalg.lstsq(A2, y)
+print(coef2.round(<span class="s">2</span>))
+
+residuals2 = y - A2 @ coef2
+print(<span class="s">f"RMSE with visitors and promo: ${np.sqrt((residuals2 ** 2).mean()):,.2f}"</span>)</pre>
+<pre class="out">[ 189.11   20.34 2502.17]
+RMSE with visitors and promo: $1,279.09</pre>
+Intercept, dollars per visitor, and the extra revenue on a sale day beyond what its visitor count predicts. The typical miss shrank from $1,344 to $1,279: the column earned its place.</li>
+  <li><b>A prediction is one more @ (1m).</b> Say: "Three scenarios, columns in the same order as the matrix."
+<pre class="code">scenarios = np.array([[<span class="s">1</span>, <span class="s">400</span>, <span class="s">0</span>],      <span class="c"># an ordinary day, 400 visitors</span>
+                      [<span class="s">1</span>, <span class="s">700</span>, <span class="s">0</span>],      <span class="c"># a busy Saturday</span>
+                      [<span class="s">1</span>, <span class="s">700</span>, <span class="s">1</span>]])     <span class="c"># the same Saturday in a sale</span>
+print((scenarios @ coef2).round(<span class="s">2</span>))</pre>
+<pre class="out">[ 8325.58 14427.93 16930.1 ]</pre>
+Say: "Quote a forecast with its typical miss: 'about $8,300, give or take $1,300'. And remember what the coefficient is: a description of a pattern across days, not a promise about what one more visitor will do."</li>
+  <li><b>Distance, and why you standardize first (2m).</b> Say: "The norm of a difference is a distance: how alike are two rows? Six tents described by price, weight and how many they sleep. Which is most like the first?"
+<pre class="code">tents = np.array([[<span class="s">299.95</span>, <span class="s">1.34</span>, <span class="s">1</span>],
+                  [<span class="s">324.95</span>, <span class="s">1.07</span>, <span class="s">1</span>],
+                  [<span class="s">217.95</span>, <span class="s">1.79</span>, <span class="s">2</span>],
+                  [<span class="s">434.95</span>, <span class="s">2.09</span>, <span class="s">2</span>],
+                  [<span class="s">294.95</span>, <span class="s">3.27</span>, <span class="s">4</span>],
+                  [<span class="s">511.95</span>, <span class="s">8.37</span>, <span class="s">6</span>]])        <span class="c"># price, weight_kg, sleeps</span>
+
+raw = np.linalg.norm(tents - tents[<span class="s">0</span>], axis=<span class="s">1</span>)
+print(raw.round(<span class="s">2</span>))
+
+z = (tents - tents.mean(axis=<span class="s">0</span>)) / tents.std(axis=<span class="s">0</span>)
+print(np.linalg.norm(z - z[<span class="s">0</span>], axis=<span class="s">1</span>).round(<span class="s">2</span>))</pre>
+<pre class="out">[  0.    25.    82.01 135.01   6.14 212.18]
+[0.   0.28 1.02 1.52 1.84 4.51]</pre>
+On raw numbers the nearest tent (6.14 away) is a four-person model at more than twice the weight: price is in the hundreds and drowned out everything else. After the standardizing step from Lesson 1.3, the nearest (0.28) is the other one-person tent.</li>
+  <li><b>A mistake on purpose: one missing value (1m).</b> Say: "Boise has one day with no revenue recorded. What happens if I forget to filter it out?"
+<pre class="code">boise_all = stores == <span class="s">"Boise"</span>                      <span class="c"># includes the day with no revenue</span>
+A_nan = np.column_stack([np.ones(boise_all.sum()), visitors[boise_all]])
+coef_nan, *_ = np.linalg.lstsq(A_nan, revenue[boise_all])
+print(coef_nan)</pre>
+<pre class="out">[nan nan]</pre>
+Say: "One <code class="inline">nan</code> among 727 values ruins every coefficient. There are no nan-aware versions of <code class="inline">solve</code> or <code class="inline">lstsq</code>. Build one mask and apply it to every array."</li>
+</ol>
+</div>
+<div class="blk warn"><div class="h">Three mistakes to expect, and how to coach each</div>
+<ul class="tick">
+  <li>**<code class="inline">*</code> where <code class="inline">@</code> was meant.** Symptom: no error, and a table where a column of totals or predictions was expected (shape <code class="inline">(7, 4)</code> where <code class="inline">(7,)</code> was wanted). Coach: "Do you want position by position, or multiply and add? Print the shape of what came back." Because the shapes often broadcast, this mistake is silent: it is last session's lesson with a new operator.</li>
+  <li><b>Shapes that do not chain.</b> Symptom: <code class="inline">ValueError: matmul: Input operand 1 has a mismatch in its core dimension 0 ... (size 3 is different from 2)</code>. Coach: "Read the end of the message. Write the two shapes side by side: which numbers are next to each other in the middle?" Then: "Swap the operands, or does one need <code class="inline">.T</code>?" Do not let learners try combinations at random until something runs: a wrong product with the right shape is worse than an error.</li>
+  <li>**Feeding <code class="inline">lstsq</code> unfiltered or incomplete data, and over-reading what comes out.** Symptoms: <code class="inline">[nan nan]</code> for every coefficient (one missing revenue in the data); a slope with no intercept (the column of ones forgotten: it still runs); or a learner announcing that "each staff member adds $1,154 of revenue". Coach the first two with the mask and the matrix: "Print <code class="inline">A[:3]</code>. What is each column for?" Coach the third with a question: "What else is different about days with more staff?" A fitted line describes a pattern. It does not prove a cause.</li>
+</ul>
+</div>
+<div class="blk lab"><div class="h">Guided lab</div>
+<p><b>Lab A (12m, everyone):</b> <code class="inline">labs/module-03/l1_5-linear-algebra/payroll_receipt_starter.py</code>; reference <code class="inline">labs/module-03/l1_5-linear-algebra/payroll_receipt_solution.py</code>. The receipt with payroll on it: a weighted average rating over 234 products (a dot product), a week of staff counts times a daily cost per store (matrix @ vector), the same week under two pay scales (matrix @ matrix), payroll per store, and three hourly rates recovered with <code class="inline">np.linalg.solve</code>. Learners write the shapes in and the shape out in the starter's blanks before each <code class="inline">@</code>.</p>
+<p><b>Expected, Lab A:</b> plain average rating 4.138, weighted 4.146; payroll per day <code class="inline">[3172. 2816. 2820. 2996. 4036. 5276. 4396.]</code>, shape <code class="inline">(7,)</code>; under two pay scales shape <code class="inline">(7, 2)</code>, week totals 25,512 and 27,252; payroll per store <code class="inline">[5880. 5984. 8832. 4816.]</code>; hourly rates <code class="inline">[22. 19. 17.]</code>; check True.</p>
+<p><b>Circulate in Lab A for:</b> <code class="inline">week * day_cost</code> in Part 2 (a <code class="inline">(7, 4)</code> table, no error: "is that seven payroll figures?"); <code class="inline">day_cost @ week</code> (the matmul error: read the end); the weighted average left as <code class="inline">rating @ reviews</code> (the dot product without dividing by the total weight); in Part 5, <code class="inline">payroll @ hours</code> or <code class="inline">hours * rates</code> in the check.</p>
+<p><b>Debrief Lab A (1m):</b> the two averages are nearly equal (4.138 and 4.146). Ask what that says. (Heavily reviewed products are not rated much better or worse than the rest. In the lesson's three-product example the gap was large because one product had almost all the reviews.)</p>
+<p><b>Lab B (12m, pairs):</b> <code class="inline">labs/module-03/l1_5-linear-algebra/basket_model_starter.py</code>; reference <code class="inline">labs/module-03/l1_5-linear-algebra/basket_model_solution.py</code>. The lesson fits revenue against visitors at Boise and Asheville; here it is revenue against transactions at Flagstaff, so the slope is "dollars per purchase", which can be checked by a second route. Then a sale-day column that does <b>not</b> earn its place, and three forecasts with one <code class="inline">@</code>.</p>
+<p><b>Expected, Lab B:</b> 724 days; <code class="inline">revenue = 117.23 + 87.10 * transactions</code>; RMSE $631.35, R squared 0.945; average dollars per purchase by direct division 88.77; with a sale-day column: intercept 89.82, per purchase 87.52, sale day -172.09, RMSE $630.73 (R squared still 0.945); forecasts $5,341.19, $8,842.11 and $13,046.16, each give or take about $631.</p>
+<p><b>Debrief Lab B (2m):</b> "The sale-day column cut the typical miss by 62 cents. Did it earn its place?" (No.) "In the demo the same column was worth $2,500 at Boise. What is different?" (There the other column was visitors: sale-day visitors are more likely to buy, so a sale day brings more revenue than its visitor count predicts. Here the other column is purchases, and a purchase is worth about the same on a sale day as on any other day. Session 2's worked example found the same thing: sale days bring more buyers, not bigger baskets.) A coefficient always means "with the other columns held fixed".</p>
+<p><b>Fast finishers:</b> <code class="inline">labs/module-03/l1_5-linear-algebra/debug_linalg.py</code>: <code class="inline">*</code> for <code class="inline">@</code>, a product that needs <code class="inline">.T</code>, one <code class="inline">nan</code> that ruins a fit, and a missing column of ones.</p>
+</div>
+<div class="blk lab"><div class="h">Start the lesson project</div>
+<p>The lesson project is a first revenue model for the Asheville store: fitted by least squares, scored, used to predict three scenarios, and checked for its biggest misses. In the room, do <b>Steps 1 and 2</b> (15 minutes).</p>
+<p>Step 1 together: one mask for "Asheville and revenue present", applied to every column, plus the weekday from date arithmetic. Done = <code class="inline">726 days</code>, mean visitors 275, mean revenue $5,703.83. Ask: "Why one mask for every array?" (So the arrays stay parallel.)</p>
+<p>Step 2 on their own: the two-column matrix and the fit. Done in the room = <code class="inline">revenue = 4.73 + 20.73 * visitors</code>. Have three learners read the slope aloud as a sentence in dollars per visitor, and ask how it compares with Boise's $21.39.</p>
+<p>Goes home: Step 3 (a <code class="inline">score</code> function: RMSE $902.58, R squared 0.809), Step 4 (four columns: sale day worth about $924, weekend about $130, RMSE $890.88), Step 5 (three scenarios with one <code class="inline">@</code>, each quoted with a "give or take") and Step 6 (the five biggest misses: all days that did far better than predicted, and the errors grow on busy days). Also Exercise 4, the staffing trap, which is the most important exercise of the module: do not let it be skipped.</p>
+</div>
+<div class="blk"><div class="h">Checks for understanding</div>
+<p>Ask these out loud during the demo and the lab (cold-call gently, or think-pair-share):</p>
+<ol class="steps">
+  <li>In one sentence, what is a dot product? <b>Answer:</b> Multiply matching positions and add everything up: a weighted sum.</li>
+  <li><code class="inline">X</code> is <code class="inline">(726, 3)</code> and <code class="inline">coef</code> is <code class="inline">(3,)</code>. What is <code class="inline">X @ coef</code>, in shape and in meaning? <b>Answer:</b> Shape <code class="inline">(726,)</code>: one prediction per day.</li>
+  <li><code class="inline">(4, 2) @ (3, 4)</code>: does it work? What about the other way round? <b>Answer:</b> No: the inner numbers are 2 and 3. <code class="inline">(3, 4) @ (4, 2)</code> works and gives <code class="inline">(3, 2)</code>.</li>
+  <li>When do you reach for <code class="inline">solve</code>, and when for <code class="inline">lstsq</code>? <b>Answer:</b> <code class="inline">solve</code> for as many independent equations as unknowns, exact. <code class="inline">lstsq</code> for more equations than unknowns and noise: the best fit.</li>
+  <li>The slope is 21.39 dollars per visitor. Does that mean bringing one more person in earns $21.39? <b>Answer:</b> No. It describes a pattern across days. It is not a promise about one more visitor, and it says little about days outside the range fitted.</li>
+</ol>
+<p>Workbook self-check, items Q7 to Q12 (learners do them at the end of the block or at home).</p>
+<p style="font-size:.9rem;margin:.2rem 0">Answers: <b>Q7</b> <span data-sc="7">A) <code class="inline">23 [20  0  3]</code></span>; <b>Q8</b> <span data-sc="8">B) <code class="inline">(100,)</code></span>; <b>Q9</b> <span data-sc="9"><code class="inline">[3 7] [1 3]</code></span>; <b>Q10</b> <span data-sc="10">C) <code class="inline">10827.28</code></span>; <b>Q11</b> <span data-sc="11"><code class="inline">10.0 5.0</code></span>; <b>Q12</b> <span data-sc="12">D) Standardize each column (subtract its mean, divide by its standard deviation) before measuring distance</span>. Full set with explanations in the Answer Key.</p>
+</div>
+<div class="blk"><div class="h">Differentiation</div>
+<p><b>Support:</b> Keep the receipt on paper for anyone lost in shapes: three rows of quantities, one row of prices, and have them compute one order total by hand, then find it in the output of <code class="inline">orders @ prices</code>. For least squares, the picture matters more than the algebra: open the lesson's scatter plot with its fitted line and point at one dot, its vertical distance to the line (a residual), and the slope. Pair learners who missed last session's shape questions with a partner for Lab A.</p>
+<p><b>Stretch:</b> <code class="inline">debug_linalg.py</code>; then the lesson's Exercise 4 (the staffing trap: a coefficient of $1,154 per staff member that falls to $78 once visitors are in the model) and the Bonus Challenge (add a visitors-squared column, then compare the two models fairly on a random 80/20 split from Lesson 1.4).</p>
+</div>
+    </div>
+  </section>
+
+  <div class="sec"><h2>Closing</h2><span class="rule"></span></div>
+<div class="blk"><div class="h">Exit ticket (3 questions, no notes, 4 minutes)</div>
+<p>Three questions on the slide, answered on a sticky note or in the workbook's Exit Ticket box. Read question 3 closely afterward: a learner who writes "goes with" and mentions the typical miss has taken the most important idea of the module's last lesson.</p>
+<ol class="steps">
+  <li>You run a cell that draws from <code class="inline">rng</code> twice and get different numbers. Is the code broken? What makes a random result reproducible? <b>Answer:</b> No. The generator moves forward with every draw. Reproducible means the same code, run from the top (from where the seeded generator is created), gives the same result.</li>
+  <li><code class="inline">orders</code> has shape <code class="inline">(3, 3)</code> (orders by products) and <code class="inline">prices</code> has shape <code class="inline">(3,)</code>. What is the difference between <code class="inline">orders * prices</code> and <code class="inline">orders @ prices</code>? <b>Answer:</b> <code class="inline">*</code> multiplies position by position and keeps the shape: a <code class="inline">(3, 3)</code> table of line totals. <code class="inline">@</code> multiplies and adds: three order totals, shape <code class="inline">(3,)</code>.</li>
+  <li>A fit of revenue on visitors gives a slope of 21.39. Write the sentence a manager should hear, and one caution. <b>Answer:</b> Each additional visitor goes with about $21 more revenue. It describes a pattern across days: it is not a promise about one more visitor, and a forecast should be quoted with its typical miss (the RMSE).</li>
+</ol>
+</div>
+<div class="blk"><div class="h">Homework (about 2 to 3 hours)</div>
+<ul class="tick">
+  <li><b>Finish both lesson projects.</b> The month simulation (Steps 3 to 7: middle 90% about $271,698 to $339,193; the chance of a month below $280,000 about 11 or 12%; only 10 of 24 real months inside the simulated range, and a sentence on why) and the Asheville revenue model (Steps 3 to 6: RMSE $902.58 then $890.88; three scenarios with a "give or take"; the five biggest misses).</li>
+  <li><b>Read in full</b> Lesson 1.4's section "Distributions: Shaped Randomness" (the room saw only the binomial).</li>
+  <li><b>Lesson exercises.</b> 1.4: Exercises 1 to 3 (two dice, an audit sample, gift bags on a Saturday); Exercise 4 (a permutation test) is a stretch. 1.5: Exercises 1 to 3 (a packing list, bundles, ticket prices), and <b>Exercise 4, the staffing trap</b>: a stretch on the page, but do it.</li>
+  <li><b>Both Quick Quizzes</b> and <b>both journal entries</b>. The 1.5 prompt asks for one sentence per Module 1 lesson: bring it, Session 4 opens with it.</li>
+  <li><b>Before the Next Lesson (from 1.5):</b> keep the Module 1 notebooks; open <code class="inline">data/daily_sales.csv</code> in a text editor or spreadsheet and read the header row (in Lesson 2.1 those names become the way you refer to columns); skim <code class="inline">first_look.py</code> from Lesson 0.1 and see how much of the pandas code you can now guess the meaning of.</li>
+  <li><b>If a Lab B was not finished in class,</b> finish it: each starter says what to expect.</li>
+</ul>
+</div>
+<div class="note lab"><div class="t">Bring list for Session 4</div>
+<ul class="tick">
+  <li><b>The working environment</b> from Session 1: <code class="inline">check_environment.py</code> still ends with READY. pandas, pyarrow and openpyxl are already installed by <code class="inline">requirements.txt</code> and are first used in earnest next session; there is nothing new to install.</li>
+  <li><b>The unzipped course data:</b> the whole <code class="inline">data/</code> folder inside <code class="inline">pinecrest-analysis</code>, not only <code class="inline">daily_sales.csv</code>. Session 4 opens <code class="inline">orders.csv</code>, <code class="inline">customers.csv</code>, <code class="inline">products.csv</code>, <code class="inline">sales_2025.xlsx</code>, <code class="inline">web_sessions.json</code> and <code class="inline">pinecrest.db</code>. Anyone who deleted files should unzip <code class="inline">pinecrest-data.zip</code> again.</li>
+  <li><b>The finished lesson projects:</b> the Module 1 notebooks (benchmark report, store scorecard, weekday index, month simulation, revenue model) and <code class="inline">first_look.py</code> from Lesson 0.1. Lesson 2.1 revisits that script, and redoing a NumPy project in pandas is how the module pays off.</li>
+  <li>The <code class="inline">labs/</code> folder (Session 4's starters are in <code class="inline">labs/module-04/</code>), the workbook and the journal with its Module 1 review. No servers, no accounts, no internet needed.</li>
+</ul>
+</div>
+
+  <div class="sec"><h2>If You Run Long or Short</h2><span class="rule"></span></div>
+<div class="blk warn"><div class="h">Running long: what to protect and what to cut first</div>
+<ul class="tick">
+  <li><b>Protect:</b> 1.4 demo Step 12 and Lab B of 1.4; 1.5 demo Steps 9 to 13; Lab A of 1.5; the exit ticket.</li>
+  <li><b>Cut first (saves 2m):</b> 1.5 demo Step 14 (distance). Point at the workbook's worked example and the lesson's tent example.</li>
+  <li><b>Cut second (saves 4m):</b> 1.5 demo Steps 2 and 7 (weighted average; transpose). Lab A covers both.</li>
+  <li><b>Cut third (saves 12m):</b> Lab A of 1.4 (<code class="inline">mystery_shopper</code>): assign it as homework. Keep Lab B, which carries the reality check.</li>
+  <li><b>Cut fourth (saves 10m):</b> the 1.4 project start. Give the two check totals ($324,963.33 and $303,054.24), compare them with the guesses on the board, and send all seven steps home.</li>
+  <li><b>Do not cut</b> Step 2 of the 1.5 project: reading a slope aloud as a sentence, in the room, is worth more than any other single minute of the second half.</li>
+</ul>
+</div>
+<div class="blk"><div class="h">Running short: what to add</div>
+<ul class="tick">
+  <li>Run the lesson's Exercise 1 of 1.4 (two dice, 100,000 rolls) live and ask for the most common total before the tally prints.</li>
+  <li>Do the first half of 1.5's Exercise 4 (the staffing trap) together: fit revenue on staff alone and ask the room for the business recommendation. Then add visitors and watch $1,154 become $78. It previews Lesson 4.4.</li>
+  <li>A Module 1 round: each learner names the one idea from the five NumPy lessons they most want to keep. Write them on the board; it is the journal prompt, started together.</li>
+  <li>Run <code class="inline">debug_random.py</code> or <code class="inline">debug_linalg.py</code> as a pairs race, with the first pair explaining each bug at the projector.</li>
+</ul>
+</div>
+
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 3 · Facilitator Guide · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

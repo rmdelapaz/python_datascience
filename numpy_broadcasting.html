@@ -1,1335 +1,1060 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="How NumPy combines arrays of different shapes: the broadcasting rules, newaxis and keepdims, and the silent mistakes to watch for. Python Data Science Lesson 1.3.">
+    <meta name="author" content="Ray de la Paz">
     <title>Broadcasting - Python Data Science</title>
-    <link href="styles/main.css" rel="stylesheet"/>
-    <link href="/styles/enhanced.css" rel="stylesheet"/>
-    <link href="/favicon.png" rel="icon" type="image/png"/>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid: rendered (and re-rendered on theme change) by js/course-enhancements.js -->
     <script type="module">
         import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({ startOnLoad: true });
+        window.__mermaid = mermaid;
+        mermaid.initialize({ startOnLoad: false });
+        document.dispatchEvent(new Event('mermaid-ready'));
     </script>
-    <style>
-        .breadcrumb {
-            background: #f8f9fa;
-            padding: 1rem;
-            border-radius: 5px;
-            margin-bottom: 2rem;
-            font-size: 0.9rem;
-        }
-        
-        .breadcrumb a {
-            color: #667eea;
-            text-decoration: none;
-        }
-        
-        .breadcrumb a:hover {
-            text-decoration: underline;
-        }
-        
-        .navigation-links {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 2rem 0;
-            margin-top: 3rem;
-            border-top: 2px solid #e0e0e0;
-        }
-        
-        .navigation-links a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 500;
-            padding: 0.5rem 1rem;
-            border-radius: 5px;
-            transition: all 0.3s ease;
-        }
-        
-        .navigation-links a:hover {
-            background: #f0f0f0;
-        }
-        
-        .nav-prev, .nav-next {
-            flex: 1;
-        }
-        
-        .nav-next {
-            text-align: right;
-        }
-        
-        .nav-home {
-            text-align: center;
-        }
-        
-        canvas {
-            display: block;
-            margin: 20px auto;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background: white;
-        }
-        
-        .broadcasting-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin: 20px 0;
-        }
-        
-        .broadcasting-example {
-            padding: 15px;
-            border: 2px solid #4ecdc4;
-            border-radius: 8px;
-            background: #f0ffff;
-        }
-        
-        .shape-box {
-            display: inline-block;
-            padding: 5px 10px;
-            background: #667eea;
-            color: white;
-            border-radius: 4px;
-            margin: 2px;
-            font-family: monospace;
-        }
-        
-        .rule-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            margin: 20px 0;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        
-        .rule-card h3 {
-            background: none;
-            color: white;
-            margin: 0 0 10px 0;
-            padding: 0;
-        }
-        
-        .visual-array {
-            display: inline-block;
-            margin: 10px;
-            padding: 10px;
-            border: 2px solid #333;
-            border-radius: 5px;
-            background: #f9f9f9;
-            font-family: monospace;
-        }
-        
-        .broadcast-animation {
-            text-align: center;
-            margin: 20px 0;
-        }
-        
-        .success-badge {
-            background: #51cf66;
-            color: white;
-            padding: 2px 8px;
-            border-radius: 3px;
-            font-size: 12px;
-            margin-left: 5px;
-        }
-        
-        .error-badge {
-            background: #ff6b6b;
-            color: white;
-            padding: 2px 8px;
-            border-radius: 3px;
-            font-size: 12px;
-            margin-left: 5px;
-        }
-    </style>
-    <script src="/js/course-enhancements.js" defer></script>
-    <script src="/js/clipboard.js" defer></script>
-    <link rel="stylesheet" href="styles/standard.css">
 </head>
 <body>
-    <!-- Skip to main content for accessibility -->
     <a href="#main-content" class="skip-to-main">Skip to main content</a>
-    
-    <!-- Progress indicator -->
+
     <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
         <div class="progress-bar"></div>
     </div>
-    <nav class="breadcrumb">
-        <a href="index.html">Home</a> &gt; 
-        <a href="index.html#foundation">Foundation Module</a> &gt; 
-        <a href="index.html#numpy-fundamentals">NumPy Fundamentals</a> &gt;
-        <span>Broadcasting</span>
+
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">📊 Python Data Science</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">☰</button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
     </nav>
 
-
     <main id="main-content">
-    <h1>📡 Broadcasting: NumPy's Magic Trick for Dimension Mismatches</h1>
-
-    <!-- What You'll Learn (learning objectives) -->
-    <div class="card card-info">
-        <h2>📚 What You'll Learn</h2>
-        <p>By the end of this lesson, you will be able to:</p>
-        <ul>
-            <li>Define broadcasting and explain how NumPy virtually "stretches" arrays of different shapes</li>
-            <li>Apply the three broadcasting rules: align shapes from the right, dimensions match when equal or one is 1, and the output takes the max of each dimension</li>
-            <li>Predict whether two shapes are broadcast-compatible and what the result shape will be</li>
-            <li>Reshape arrays deliberately with <code>np.newaxis</code> and <code>keepdims=True</code> to control broadcasting</li>
-            <li>Use broadcasting for real tasks: normalizing columns, adding bias, outer products, and pairwise distances</li>
-            <li>Recognize that broadcasting uses views (not copies) and avoid common pitfalls like unexpected shape matching</li>
-        </ul>
-        <p><strong>⏱️ Estimated Time:</strong> 45–60 minutes</p>
-        <p><strong>🎯 Project:</strong> Standardize every column of a 2D dataset (subtract the mean, divide by the standard deviation) using broadcasting alone — no loops — and verify each column ends with mean ≈ 0 and std ≈ 1.</p>
-    </div>
-
-    <p>Imagine you're a DJ mixing tracks. You have a 3-minute beat and a 10-second sound effect. To mix them, you don't need to extend the sound effect manually to 3 minutes - your mixing board automatically repeats it! That's broadcasting! 🎵 NumPy automatically "stretches" smaller arrays to match larger ones, enabling elegant operations between arrays of different shapes.</p>
-
-    <h2>The Broadcasting Miracle: From Confusion to Clarity 🌟</h2>
-    
-    <p>Broadcasting is what happens when you add a single number to an entire array and it "just works." But it's so much more powerful than that! It's a set of rules that NumPy follows to make arrays with different shapes compatible for element-wise operations. Think of it as NumPy's automatic dimension negotiator.</p>
-
-    <div class="mermaid">
-    graph TB
-        A[Two Arrays] --> B{Same Shape?}
-        B -->|Yes| C[Direct Operation]
-        B -->|No| D{Broadcasting<br/>Compatible?}
-        D -->|Yes| E[Apply Broadcasting Rules]
-        D -->|No| F[Error!]
-        
-        E --> G[Rule 1: Pad with 1s]
-        E --> H[Rule 2: Stretch 1s]
-        E --> I[Rule 3: Check Compatibility]
-        
-        G --> J[Virtual Expansion]
-        H --> J
-        I --> J
-        J --> K[Perform Operation]
-        
-        style A fill:#f9f9f9
-        style E fill:#4ecdc4
-        style K fill:#51cf66
-        style F fill:#ff6b6b
-    </div>
-
-    <h3>The Stadium Wave Analogy 🏟️</h3>
-    
-    <p>Imagine a stadium wave. One person stands up (scalar), then a whole row copies them (1D array), then the entire section joins in (2D array). That's broadcasting! The single action propagates across dimensions without you explicitly telling each person what to do. NumPy does the same with your data.</p>
-
-    <canvas id="broadcastCanvas" width="800" height="400"></canvas>
-    <script>
-        const canvas = document.getElementById('broadcastCanvas');
-        const ctx = canvas.getContext('2d');
-        
-        let animFrame = 0;
-        let wavePosition = 0;
-        
-        function drawBroadcastVisualization() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Title
-            ctx.fillStyle = '#333';
-            ctx.font = 'bold 16px Arial';
-            ctx.fillText('Broadcasting Visualization: Scalar → Vector → Matrix', 200, 30);
-            
-            // Draw scalar (single value)
-            ctx.fillStyle = '#667eea';
-            ctx.fillRect(50, 80, 40, 40);
-            ctx.fillStyle = 'white';
-            ctx.font = '16px Arial';
-            ctx.fillText('5', 65, 105);
-            ctx.fillStyle = '#333';
-            ctx.font = '12px Arial';
-            ctx.fillText('Scalar', 45, 140);
-            
-            // Arrow 1
-            ctx.strokeStyle = '#666';
-            ctx.beginPath();
-            ctx.moveTo(100, 100);
-            ctx.lineTo(140, 100);
-            ctx.stroke();
-            ctx.fillStyle = '#666';
-            ctx.beginPath();
-            ctx.moveTo(140, 100);
-            ctx.lineTo(135, 95);
-            ctx.lineTo(135, 105);
-            ctx.fill();
-            
-            // Draw 1D array (vector)
-            for(let i = 0; i < 5; i++) {
-                let alpha = (i <= wavePosition) ? 1 : 0.3;
-                ctx.fillStyle = `rgba(102, 126, 234, ${alpha})`;
-                ctx.fillRect(150 + i*35, 80, 30, 40);
-                ctx.fillStyle = 'white';
-                ctx.font = '14px Arial';
-                ctx.fillText('5', 160 + i*35, 105);
-            }
-            ctx.fillStyle = '#333';
-            ctx.font = '12px Arial';
-            ctx.fillText('1D Array (broadcast)', 180, 140);
-            
-            // Arrow 2
-            ctx.strokeStyle = '#666';
-            ctx.beginPath();
-            ctx.moveTo(340, 100);
-            ctx.lineTo(380, 100);
-            ctx.stroke();
-            ctx.fillStyle = '#666';
-            ctx.beginPath();
-            ctx.moveTo(380, 100);
-            ctx.lineTo(375, 95);
-            ctx.lineTo(375, 105);
-            ctx.fill();
-            
-            // Draw 2D array (matrix)
-            for(let row = 0; row < 3; row++) {
-                for(let col = 0; col < 5; col++) {
-                    let alpha = (row * 5 + col <= wavePosition) ? 1 : 0.3;
-                    ctx.fillStyle = `rgba(102, 126, 234, ${alpha})`;
-                    ctx.fillRect(390 + col*35, 60 + row*35, 30, 30);
-                    ctx.fillStyle = 'white';
-                    ctx.font = '12px Arial';
-                    ctx.fillText('5', 400 + col*35, 80 + row*35);
-                }
-            }
-            ctx.fillStyle = '#333';
-            ctx.font = '12px Arial';
-            ctx.fillText('2D Array (broadcast)', 450, 170);
-            
-            // Show operation being performed
-            ctx.fillStyle = '#333';
-            ctx.font = '14px Arial';
-            ctx.fillText('Operation: array + 5', 50, 220);
-            
-            // Example arrays
-            ctx.font = '12px Arial';
-            ctx.fillText('Original array:', 50, 250);
-            for(let i = 0; i < 5; i++) {
-                ctx.strokeStyle = '#999';
-                ctx.strokeRect(50 + i*30, 260, 25, 25);
-                ctx.fillStyle = '#333';
-                ctx.fillText(String(i+1), 57 + i*30, 278);
-            }
-            
-            ctx.fillText('After broadcast + 5:', 50, 310);
-            for(let i = 0; i < 5; i++) {
-                ctx.fillStyle = '#51cf66';
-                ctx.fillRect(50 + i*30, 320, 25, 25);
-                ctx.fillStyle = 'white';
-                ctx.fillText(String(i+6), 57 + i*30, 338);
-            }
-            
-            // Show shapes matching
-            ctx.fillStyle = '#4ecdc4';
-            ctx.font = '14px Arial';
-            ctx.fillText('Shape Alignment:', 400, 250);
-            ctx.font = '12px Arial';
-            ctx.fillStyle = '#333';
-            ctx.fillText('Scalar:    ( )', 400, 270);
-            ctx.fillText('1D Array:  (5,)', 400, 290);
-            ctx.fillText('2D Array:  (3, 5)', 400, 310);
-            ctx.fillText('Result:    (3, 5)', 400, 330);
-            
-            // Draw checkmark
-            ctx.strokeStyle = '#51cf66';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(520, 320);
-            ctx.lineTo(530, 330);
-            ctx.lineTo(545, 305);
-            ctx.stroke();
-            ctx.lineWidth = 1;
-            
-            // Broadcasting rules visualization
-            ctx.fillStyle = '#667eea';
-            ctx.font = 'bold 14px Arial';
-            ctx.fillText('Broadcasting Rules Applied:', 50, 380);
-            ctx.font = '11px Arial';
-            ctx.fillStyle = '#666';
-            ctx.fillText('1. Scalar automatically expands to match any shape', 250, 380);
-        }
-        
-        function animateBroadcast() {
-            animFrame++;
-            
-            if(animFrame % 10 === 0) {
-                wavePosition = (wavePosition + 1) % 16;
-            }
-            
-            drawBroadcastVisualization();
-            requestAnimationFrame(animateBroadcast);
-        }
-        
-        animateBroadcast();
-    </script>
-
-    <pre><code>import numpy as np
-
-# Broadcasting Fundamentals: The Magic Revealed! ✨
-
-def demonstrate_broadcasting_basics():
-    """
-    Understanding the core concepts of broadcasting.
-    It's simpler than you think!
-    """
-    print("📡 Broadcasting Basics")
-    print("=" * 60)
-    
-    # Example 1: Scalar with Array (simplest broadcasting)
-    arr = np.array([1, 2, 3, 4, 5])
-    scalar = 10
-    
-    print("Example 1: Scalar + Array")
-    print(f"  Array: {arr}, shape: {arr.shape}")
-    print(f"  Scalar: {scalar}, shape: ()")
-    print(f"  Result: {arr + scalar}")
-    print(f"  💡 NumPy 'broadcasts' 10 to [10, 10, 10, 10, 10]\n")
-    
-    # Example 2: 1D Array with 2D Array
-    matrix = np.array([[1, 2, 3],
-                       [4, 5, 6],
-                       [7, 8, 9]])
-    row_vector = np.array([10, 20, 30])
-    
-    print("Example 2: Row Vector + Matrix")
-    print(f"  Matrix shape: {matrix.shape}")
-    print(f"  Vector shape: {row_vector.shape}")
-    print(f"  Matrix:\n{matrix}")
-    print(f"  Vector: {row_vector}")
-    print(f"  Result:\n{matrix + row_vector}")
-    print(f"  💡 Vector broadcasts to each row of the matrix!\n")
-    
-    # Example 3: Column Vector with Matrix (needs reshaping)
-    col_vector = np.array([100, 200, 300]).reshape(-1, 1)  # Make it (3, 1)
-    
-    print("Example 3: Column Vector + Matrix")
-    print(f"  Matrix shape: {matrix.shape}")
-    print(f"  Column shape: {col_vector.shape}")
-    print(f"  Column:\n{col_vector}")
-    print(f"  Result:\n{matrix + col_vector}")
-    print(f"  💡 Column broadcasts to each column of the matrix!\n")
-    
-    # Example 4: Broadcasting in multiple dimensions
-    # This is where it gets interesting!
-    arr_3d = np.ones((2, 3, 4))  # Shape: (2, 3, 4)
-    arr_2d = np.array([[1], [2], [3]])  # Shape: (3, 1)
-    
-    print("Example 4: Complex Broadcasting (3D with 2D)")
-    print(f"  3D array shape: {arr_3d.shape}")
-    print(f"  2D array shape: {arr_2d.shape}")
-    
-    result = arr_3d + arr_2d
-    print(f"  Result shape: {result.shape}")
-    print(f"  💡 2D array broadcasts across the first and last dimensions!")
-    
-demonstrate_broadcasting_basics()</code></pre>
-
-    <h2>The Three Sacred Rules of Broadcasting 📜</h2>
-    
-    <p>NumPy follows three simple rules to determine if two arrays can be broadcast together. Master these rules, and you'll never be confused by broadcasting again!</p>
-
-    <div class="rule-card">
-        <h3>🎯 Rule 1: Dimension Alignment</h3>
-        <p>NumPy compares shapes element-wise, starting from the rightmost dimension and working left. Dimensions are aligned from the right!</p>
-        <pre style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 5px;">
-Array A:     (8, 1, 6, 1)
-Array B:         (7, 1, 5)
-Alignment:   (8, 1, 6, 1)
-                 (7, 1, 5)
-        </pre>
-    </div>
-
-    <div class="rule-card">
-        <h3>🎯 Rule 2: Compatible Dimensions</h3>
-        <p>Two dimensions are compatible when:
-        <br>• They are equal, OR
-        <br>• One of them is 1</p>
-        <pre style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 5px;">
-Dimension pairs:  (6, 1) → Compatible (one is 1)
-                  (1, 5) → Compatible (one is 1)
-                  (3, 3) → Compatible (equal)
-                  (3, 4) → NOT Compatible ❌
-        </pre>
-    </div>
-
-    <div class="rule-card">
-        <h3>🎯 Rule 3: Output Shape</h3>
-        <p>The output shape is the maximum along each dimension. Where there was a 1, it gets "stretched" to match the other dimension.</p>
-        <pre style="background: rgba(255,255,255,0.1); padding: 10px; border-radius: 5px;">
-Array A:  (8, 1, 6, 1)
-Array B:     (7, 1, 5)
-Result:   (8, 7, 6, 5)  ← Take max of each dimension
-        </pre>
-    </div>
-
-    <pre><code>import numpy as np
-
-class BroadcastingRules:
-    """
-    Master class for understanding broadcasting rules.
-    Let's demystify how NumPy decides what works and what doesn't!
-    """
-    
-    def __init__(self):
-        self.examples = []
-    
-    def check_broadcasting(self, shape1, shape2):
-        """
-        Check if two shapes can be broadcast together.
-        Returns (can_broadcast, result_shape, explanation)
-        """
-        # Convert to lists for easier manipulation
-        s1 = list(shape1)
-        s2 = list(shape2)
-        
-        # Pad the shorter shape with 1s on the left
-        while len(s1) < len(s2):
-            s1 = [1] + s1
-        while len(s2) < len(s1):
-            s2 = [1] + s2
-        
-        # Check compatibility and compute result shape
-        result_shape = []
-        compatible = True
-        incompatible_dims = []
-        
-        for i, (d1, d2) in enumerate(zip(s1, s2)):
-            if d1 == d2:
-                result_shape.append(d1)
-            elif d1 == 1:
-                result_shape.append(d2)
-            elif d2 == 1:
-                result_shape.append(d1)
-            else:
-                compatible = False
-                incompatible_dims.append((i, d1, d2))
-        
-        # Generate explanation
-        if compatible:
-            explanation = "✅ Compatible! Dimensions match or have 1s that can stretch."
-        else:
-            dim_strs = [f"dim {i}: {d1} vs {d2}" for i, d1, d2 in incompatible_dims]
-            explanation = f"❌ Incompatible! Mismatched dimensions: {', '.join(dim_strs)}"
-        
-        return compatible, tuple(result_shape) if compatible else None, explanation
-    
-    def demonstrate_rule_checking(self):
-        """Interactive demonstration of broadcasting rules"""
-        print("🔍 Broadcasting Compatibility Checker")
-        print("=" * 60)
-        
-        test_cases = [
-            ((3, 4), (4,)),          # 2D with 1D
-            ((3, 4), (3, 1)),        # 2D with column vector
-            ((3, 4), (1, 4)),        # 2D with row vector
-            ((3, 4), (3, 4)),        # Same shape
-            ((3, 4), (2, 3, 4)),     # 2D with 3D
-            ((5, 1, 3), (1, 4, 1)),  # Complex case
-            ((3, 4), (5, 4)),        # Incompatible
-            ((2, 3, 4), (3, 5)),     # Incompatible
-        ]
-        
-        for shape1, shape2 in test_cases:
-            can_broadcast, result_shape, explanation = self.check_broadcasting(shape1, shape2)
-            
-            print(f"\nShape 1: {shape1}")
-            print(f"Shape 2: {shape2}")
-            print(f"Result:  {explanation}")
-            if can_broadcast:
-                print(f"Output shape: {result_shape}")
-                
-                # Demonstrate with actual arrays
-                arr1 = np.ones(shape1)
-                arr2 = np.ones(shape2)
-                result = arr1 + arr2
-                print(f"Verified: {result.shape} ✓")
-    
-    def visualize_broadcasting_process(self):
-        """Step-by-step visualization of broadcasting"""
-        print("\n🎬 Broadcasting Process Visualization")
-        print("=" * 60)
-        
-        # Example: (3, 1) broadcasting with (1, 4)
-        a = np.array([[1], [2], [3]])  # Shape: (3, 1)
-        b = np.array([[10, 20, 30, 40]])  # Shape: (1, 4)
-        
-        print("Step-by-step broadcasting of (3,1) + (1,4):")
-        print("\nOriginal arrays:")
-        print(f"A (shape {a.shape}):\n{a}")
-        print(f"B (shape {b.shape}):\n{b}")
-        
-        print("\n📐 Step 1: Align dimensions from the right")
-        print("  A: (3, 1)")
-        print("  B: (1, 4)")
-        
-        print("\n📐 Step 2: Check compatibility")
-        print("  Dimension 0: 3 vs 1 → Compatible (1 can stretch)")
-        print("  Dimension 1: 1 vs 4 → Compatible (1 can stretch)")
-        
-        print("\n📐 Step 3: Compute output shape")
-        print("  Output: (max(3,1), max(1,4)) = (3, 4)")
-        
-        print("\n📐 Step 4: Conceptually stretch arrays")
-        print("  A stretches horizontally:")
-        a_stretched = np.tile(a, (1, 4))
-        print(f"{a_stretched}")
-        
-        print("  B stretches vertically:")
-        b_stretched = np.tile(b, (3, 1))
-        print(f"{b_stretched}")
-        
-        print("\n📐 Step 5: Perform element-wise operation")
-        result = a + b
-        print(f"Result:\n{result}")
-        
-    def common_broadcasting_patterns(self):
-        """Common patterns you'll use every day in data science"""
-        print("\n🎯 Common Broadcasting Patterns")
-        print("=" * 60)
-        
-        # Pattern 1: Normalizing data (subtract mean, divide by std)
-        print("Pattern 1: Normalize each column")
-        data = np.random.randn(100, 5) * 10 + 50
-        
-        # Calculate statistics for each column
-        col_means = data.mean(axis=0)  # Shape: (5,)
-        col_stds = data.std(axis=0)    # Shape: (5,)
-        
-        # Broadcasting happens here!
-        normalized = (data - col_means) / col_stds
-        
-        print(f"  Data shape: {data.shape}")
-        print(f"  Means shape: {col_means.shape}")
-        print(f"  Broadcasting: {data.shape} - {col_means.shape} → {normalized.shape}")
-        print(f"  Result: mean≈0, std≈1 for each column ✓")
-        
-        # Pattern 2: Adding bias to neural network layers
-        print("\nPattern 2: Neural Network Bias Addition")
-        batch_size = 32
-        features = 128
-        activations = np.random.randn(batch_size, features)
-        bias = np.random.randn(features)  # One bias per feature
-        
-        # Broadcasting adds bias to each sample in batch
-        output = activations + bias
-        
-        print(f"  Activations: {activations.shape}")
-        print(f"  Bias: {bias.shape}")
-        print(f"  Output: {output.shape}")
-        
-        # Pattern 3: Outer products
-        print("\nPattern 3: Outer Product via Broadcasting")
-        x = np.array([1, 2, 3])
-        y = np.array([4, 5, 6])
-        
-        # Create outer product using broadcasting
-        outer = x[:, np.newaxis] * y  # Reshape x to (3,1), broadcasts with (3,)
-        
-        print(f"  x shape: {x.shape} → reshaped: (3, 1)")
-        print(f"  y shape: {y.shape}")
-        print(f"  Outer product:\n{outer}")
-        
-        # Pattern 4: Pairwise distances
-        print("\nPattern 4: Pairwise Distance Matrix")
-        points = np.random.randn(5, 2)  # 5 points in 2D
-        
-        # Compute pairwise distances using broadcasting
-        # Reshape for broadcasting: (5,1,2) and (1,5,2)
-        diff = points[:, np.newaxis, :] - points[np.newaxis, :, :]
-        distances = np.sqrt((diff ** 2).sum(axis=2))
-        
-        print(f"  Points shape: {points.shape}")
-        print(f"  Distance matrix shape: {distances.shape}")
-        print(f"  Distance matrix (symmetric):\n{distances.round(2)}")
-
-# Run demonstrations
-rules = BroadcastingRules()
-rules.demonstrate_rule_checking()
-rules.visualize_broadcasting_process()
-rules.common_broadcasting_patterns()</code></pre>
-
-    <h2>Advanced Broadcasting: Real-World Magic 🎩</h2>
-    
-    <p>Let's see how broadcasting transforms complex operations into elegant one-liners. These are the patterns that make data scientists smile!</p>
-
-    <div class="mermaid">
-    graph LR
-        A[Complex Problem] --> B[Identify Patterns]
-        B --> C[Shape Analysis]
-        C --> D[Apply Broadcasting]
-        D --> E[Elegant Solution]
-        
-        F[Examples] --> G[Image Processing]
-        F --> H[Time Series]
-        F --> I[Machine Learning]
-        F --> J[Statistics]
-        
-        G --> D
-        H --> D
-        I --> D
-        J --> D
-        
-        style A fill:#ff6b6b
-        style D fill:#4ecdc4
-        style E fill:#51cf66
-    </div>
-
-    <pre><code>import numpy as np
-import time
-
-class AdvancedBroadcasting:
-    """
-    Advanced broadcasting techniques for real-world data science.
-    These patterns will save you hours of coding!
-    """
-    
-    def __init__(self):
-        np.random.seed(42)
-    
-    def image_color_adjustment(self):
-        """
-        Broadcasting in image processing: adjusting RGB channels
-        """
-        print("🖼️ Image Color Adjustment with Broadcasting")
-        print("=" * 60)
-        
-        # Simulate an RGB image (height, width, channels)
-        image = np.random.randint(0, 256, (100, 150, 3), dtype=np.uint8)
-        
-        print(f"Image shape: {image.shape} (height, width, RGB)")
-        
-        # Color adjustment factors for R, G, B
-        color_factors = np.array([1.2, 0.9, 1.1])  # Shape: (3,)
-        
-        # Broadcasting magic: multiply each pixel's RGB by factors
-        adjusted = np.clip(image * color_factors, 0, 255).astype(np.uint8)
-        
-        print(f"Color factors shape: {color_factors.shape}")
-        print(f"Broadcasting: {image.shape} * {color_factors.shape}")
-        print(f"Result shape: {adjusted.shape}")
-        print(f"✨ Each color channel adjusted independently!")
-        
-        # Advanced: Gradient overlay using broadcasting
-        height, width = 100, 150
-        
-        # Create vertical gradient (height, 1)
-        vertical_gradient = np.linspace(0, 1, height).reshape(-1, 1)
-        
-        # Create horizontal gradient (1, width)
-        horizontal_gradient = np.linspace(0, 1, width).reshape(1, -1)
-        
-        # Combine gradients using broadcasting
-        diagonal_gradient = (vertical_gradient * 0.5 + horizontal_gradient * 0.5)
-        
-        # Apply to image (broadcast gradient to all color channels)
-        gradient_overlay = image * diagonal_gradient[:, :, np.newaxis]
-        
-        print(f"\nGradient overlay:")
-        print(f"  Vertical gradient: {vertical_gradient.shape}")
-        print(f"  Horizontal gradient: {horizontal_gradient.shape}")
-        print(f"  Combined gradient: {diagonal_gradient.shape}")
-        print(f"  Applied to image: {gradient_overlay.shape}")
-    
-    def time_series_analysis(self):
-        """
-        Broadcasting for time series: seasonal decomposition
-        """
-        print("\n📈 Time Series Analysis with Broadcasting")
-        print("=" * 60)
-        
-        # Generate sample time series data
-        days = 365
-        n_stores = 10
-        n_products = 5
-        
-        # Shape: (days, stores, products)
-        sales = np.random.poisson(100, (days, n_stores, n_products))
-        
-        print(f"Sales data shape: {sales.shape}")
-        print("(days, stores, products)")
-        
-        # Calculate weekly seasonality (7-day pattern)
-        weekly_pattern = np.array([0.8, 0.9, 1.0, 1.0, 1.1, 1.3, 1.2])  # Mon-Sun
-        
-        # Broadcast weekly pattern across all days
-        day_of_week = np.arange(days) % 7
-        seasonal_factors = weekly_pattern[day_of_week]  # Shape: (365,)
-        
-        # Apply seasonal factors to all stores and products
-        # Broadcasting: (365,) with (365, 10, 5)
-        deseasonalized = sales / seasonal_factors[:, np.newaxis, np.newaxis]
-        
-        print(f"\nSeasonal adjustment:")
-        print(f"  Weekly pattern: {weekly_pattern.shape}")
-        print(f"  Seasonal factors: {seasonal_factors.shape}")
-        print(f"  Broadcasting: {sales.shape} / {seasonal_factors[:, np.newaxis, np.newaxis].shape}")
-        print(f"  Deseasonalized: {deseasonalized.shape}")
-        
-        # Calculate store-specific trends
-        store_trends = sales.mean(axis=2).mean(axis=0)  # Shape: (10,)
-        
-        # Normalize each store by its average (broadcasting)
-        normalized_sales = sales / store_trends[np.newaxis, :, np.newaxis]
-        
-        print(f"\nStore normalization:")
-        print(f"  Store trends: {store_trends.shape}")
-        print(f"  Broadcasting for normalization: {normalized_sales.shape}")
-        
-        # Moving averages with different windows
-        windows = np.array([7, 14, 30])[:, np.newaxis]  # Shape: (3, 1)
-        
-        # Create weight matrices for each window (simplified)
-        # In practice, use convolution, but this shows broadcasting
-        print(f"\nMultiple moving averages using broadcasting:")
-        print(f"  Window sizes: {windows.flatten()}")
-        print(f"  Can compute all windows simultaneously with broadcasting!")
-    
-    def machine_learning_operations(self):
-        """
-        Broadcasting in ML: batch operations, distance metrics
-        """
-        print("\n🤖 Machine Learning with Broadcasting")
-        print("=" * 60)
-        
-        # Example 1: Batch matrix multiplication with bias
-        batch_size = 32
-        input_dim = 784  # e.g., flattened 28x28 image
-        hidden_dim = 128
-        
-        # Input batch
-        X = np.random.randn(batch_size, input_dim)
-        
-        # Weight matrix and bias
-        W = np.random.randn(input_dim, hidden_dim) * 0.01
-        b = np.random.randn(hidden_dim)
-        
-        # Forward pass with broadcasting
-        # Matrix mult: (32, 784) @ (784, 128) = (32, 128)
-        # Add bias: (32, 128) + (128,) ← Broadcasting!
-        Z = X @ W + b
-        
-        print("Neural Network Layer:")
-        print(f"  Input: {X.shape}")
-        print(f"  Weights: {W.shape}")
-        print(f"  Bias: {b.shape}")
-        print(f"  Output: {Z.shape}")
-        print(f"  ✨ Bias broadcasts to all samples in batch!")
-        
-        # Example 2: Euclidean distance matrix
-        n_samples = 100
-        n_features = 10
-        data = np.random.randn(n_samples, n_features)
-        
-        # Compute all pairwise distances using broadcasting
-        # ||x - y||² = ||x||² - 2x·y + ||y||²
-        
-        # Squared norms
-        sq_norms = (data ** 2).sum(axis=1)  # Shape: (100,)
-        
-        # Dot products
-        dot_products = data @ data.T  # Shape: (100, 100)
-        
-        # Combine using broadcasting
-        # sq_norms[:, np.newaxis] broadcasts to (100, 1)
-        # sq_norms[np.newaxis, :] broadcasts to (1, 100)
-        distances_sq = sq_norms[:, np.newaxis] - 2 * dot_products + sq_norms[np.newaxis, :]
-        distances = np.sqrt(np.maximum(distances_sq, 0))  # Avoid numerical errors
-        
-        print(f"\nEuclidean Distance Matrix:")
-        print(f"  Data: {data.shape}")
-        print(f"  Distance matrix: {distances.shape}")
-        print(f"  Using broadcasting to compute {n_samples*n_samples} distances efficiently!")
-        
-        # Example 3: Softmax with numerical stability
-        logits = np.random.randn(batch_size, 10)  # 10 classes
-        
-        # Numerical stability: subtract max
-        logits_max = logits.max(axis=1, keepdims=True)  # Shape: (32, 1)
-        logits_stable = logits - logits_max  # Broadcasting!
-        
-        # Compute softmax
-        exp_logits = np.exp(logits_stable)
-        sum_exp = exp_logits.sum(axis=1, keepdims=True)  # Shape: (32, 1)
-        softmax = exp_logits / sum_exp  # Broadcasting!
-        
-        print(f"\nSoftmax Computation:")
-        print(f"  Logits: {logits.shape}")
-        print(f"  Max (for stability): {logits_max.shape}")
-        print(f"  Exp sum: {sum_exp.shape}")
-        print(f"  Softmax: {softmax.shape}")
-        print(f"  ✨ Broadcasting handles batch dimension automatically!")
-    
-    def statistical_analysis(self):
-        """
-        Broadcasting in statistics: correlation, covariance, z-scores
-        """
-        print("\n📊 Statistical Analysis with Broadcasting")
-        print("=" * 60)
-        
-        # Generate multivariate data
-        n_samples = 1000
-        n_variables = 5
-        data = np.random.randn(n_samples, n_variables)
-        
-        # Add some correlation
-        data[:, 1] = data[:, 0] * 0.7 + np.random.randn(n_samples) * 0.3
-        data[:, 2] = data[:, 0] * 0.5 + data[:, 1] * 0.3 + np.random.randn(n_samples) * 0.2
-        
-        print(f"Data shape: {data.shape}")
-        
-        # Standardization (z-scores) using broadcasting
-        means = data.mean(axis=0)  # Shape: (5,)
-        stds = data.std(axis=0)    # Shape: (5,)
-        
-        z_scores = (data - means) / stds  # Broadcasting on both operations!
-        
-        print(f"\nZ-score standardization:")
-        print(f"  Means: {means.shape}")
-        print(f"  Stds: {stds.shape}")
-        print(f"  Broadcasting: ({n_samples}, {n_variables}) - ({n_variables},)")
-        print(f"  Z-scores: {z_scores.shape}")
-        print(f"  Verification: mean≈0, std≈1")
-        print(f"    Actual means: {z_scores.mean(axis=0).round(3)}")
-        print(f"    Actual stds: {z_scores.std(axis=0).round(3)}")
-        
-        # Correlation matrix using broadcasting
-        # Center the data
-        centered = data - means  # Broadcasting!
-        
-        # Normalize
-        normalized = centered / stds  # Broadcasting!
-        
-        # Correlation matrix
-        corr_matrix = (normalized.T @ normalized) / n_samples
-        
-        print(f"\nCorrelation Matrix:")
-        print(f"  Shape: {corr_matrix.shape}")
-        print(f"  Sample correlations:")
-        print(f"    Var0-Var1: {corr_matrix[0, 1]:.3f} (strong)")
-        print(f"    Var0-Var2: {corr_matrix[0, 2]:.3f} (moderate)")
-        print(f"    Var3-Var4: {corr_matrix[3, 4]:.3f} (weak)")
-        
-        # Mahalanobis distance using broadcasting
-        # Distance that accounts for correlation structure
-        cov_matrix = np.cov(data.T)
-        cov_inv = np.linalg.inv(cov_matrix)
-        
-        # Compute Mahalanobis distance for each point from mean
-        diff = data - means  # Broadcasting!
-        
-        # Efficient computation using einsum (or manual broadcasting)
-        # d² = (x-μ)ᵀ Σ⁻¹ (x-μ)
-        mahal_dist_sq = np.sum((diff @ cov_inv) * diff, axis=1)
-        mahal_dist = np.sqrt(mahal_dist_sq)
-        
-        print(f"\nMahalanobis Distance:")
-        print(f"  Using broadcasting to compute distances")
-        print(f"  Distance shape: {mahal_dist.shape}")
-        print(f"  Outliers (distance > 3): {(mahal_dist > 3).sum()} samples")
-
-# Run advanced examples
-advanced = AdvancedBroadcasting()
-advanced.image_color_adjustment()
-advanced.time_series_analysis()
-advanced.machine_learning_operations()
-advanced.statistical_analysis()</code></pre>
-
-    <h2>Broadcasting Performance: Speed Meets Elegance 🏎️</h2>
-    
-    <p>Broadcasting isn't just about cleaner code - it's about massive performance gains. Let's benchmark broadcasting against alternative approaches.</p>
-
-    <pre><code>import numpy as np
-import time
-
-class BroadcastingPerformance:
-    """
-    Performance analysis of broadcasting vs alternatives.
-    See why broadcasting is the secret weapon of fast code!
-    """
-    
-    def __init__(self):
-        self.sizes = [100, 1000, 10000]
-    
-    def benchmark_normalization(self):
-        """Compare broadcasting vs loops for data normalization"""
-        print("⚡ Performance: Data Normalization")
-        print("=" * 60)
-        
-        for size in self.sizes:
-            data = np.random.randn(size, 50)  # size samples, 50 features
-            
-            # Method 1: Loop (slow)
-            start = time.perf_counter()
-            result_loop = np.zeros_like(data)
-            for i in range(data.shape[0]):
-                for j in range(data.shape[1]):
-                    col_mean = data[:, j].mean()
-                    col_std = data[:, j].std()
-                    result_loop[i, j] = (data[i, j] - col_mean) / col_std
-            loop_time = time.perf_counter() - start
-            
-            # Method 2: Column-wise loop (medium)
-            start = time.perf_counter()
-            result_col = np.zeros_like(data)
-            for j in range(data.shape[1]):
-                col_mean = data[:, j].mean()
-                col_std = data[:, j].std()
-                result_col[:, j] = (data[:, j] - col_mean) / col_std
-            col_time = time.perf_counter() - start
-            
-            # Method 3: Broadcasting (fast!)
-            start = time.perf_counter()
-            means = data.mean(axis=0)
-            stds = data.std(axis=0)
-            result_broadcast = (data - means) / stds
-            broadcast_time = time.perf_counter() - start
-            
-            print(f"\nSize: {size} × 50")
-            print(f"  Nested loops:    {loop_time*1000:8.3f} ms")
-            print(f"  Column loop:     {col_time*1000:8.3f} ms (Speedup: {loop_time/col_time:.1f}x)")
-            print(f"  Broadcasting:    {broadcast_time*1000:8.3f} ms (Speedup: {loop_time/broadcast_time:.1f}x)")
-    
-    def benchmark_distance_computation(self):
-        """Compare broadcasting vs loops for distance matrices"""
-        print("\n⚡ Performance: Pairwise Distances")
-        print("=" * 60)
-        
-        for n_points in [50, 200, 500]:
-            points = np.random.randn(n_points, 3)  # 3D points
-            
-            # Method 1: Nested loops (very slow)
-            start = time.perf_counter()
-            dist_loop = np.zeros((n_points, n_points))
-            for i in range(n_points):
-                for j in range(n_points):
-                    diff = points[i] - points[j]
-                    dist_loop[i, j] = np.sqrt(np.sum(diff ** 2))
-            loop_time = time.perf_counter() - start
-            
-            # Method 2: Broadcasting (fast!)
-            start = time.perf_counter()
-            diff = points[:, np.newaxis, :] - points[np.newaxis, :, :]
-            dist_broadcast = np.sqrt((diff ** 2).sum(axis=2))
-            broadcast_time = time.perf_counter() - start
-            
-            # Method 3: Optimized broadcasting (fastest!)
-            start = time.perf_counter()
-            # Using the formula: ||x-y||² = ||x||² + ||y||² - 2x·y
-            sq_norms = (points ** 2).sum(axis=1)
-            dot_product = points @ points.T
-            dist_sq = sq_norms[:, np.newaxis] + sq_norms[np.newaxis, :] - 2 * dot_product
-            dist_optimized = np.sqrt(np.maximum(dist_sq, 0))
-            optimized_time = time.perf_counter() - start
-            
-            print(f"\n{n_points} points in 3D:")
-            print(f"  Nested loops:          {loop_time*1000:8.3f} ms")
-            print(f"  Broadcasting:          {broadcast_time*1000:8.3f} ms (Speedup: {loop_time/broadcast_time:.1f}x)")
-            print(f"  Optimized broadcast:   {optimized_time*1000:8.3f} ms (Speedup: {loop_time/optimized_time:.1f}x)")
-    
-    def memory_efficiency(self):
-        """Demonstrate memory efficiency of broadcasting"""
-        print("\n💾 Memory Efficiency of Broadcasting")
-        print("=" * 60)
-        
-        # Large array scenario
-        rows, cols = 10000, 1000
-        
-        print(f"Scenario: Add row vector to {rows}×{cols} matrix")
-        
-        # Without broadcasting (explicit tiling)
-        row_vector = np.random.randn(cols)
-        
-        # Method 1: Tile the vector (uses extra memory)
-        print(f"\nMethod 1: Explicit tiling")
-        print(f"  Original vector: {row_vector.nbytes / 1024:.2f} KB")
-        tiled_vector = np.tile(row_vector, (rows, 1))
-        print(f"  Tiled vector: {tiled_vector.nbytes / 1024 / 1024:.2f} MB")
-        print(f"  Memory multiplier: {tiled_vector.nbytes / row_vector.nbytes:.0f}x")
-        
-        # Method 2: Broadcasting (no extra memory!)
-        print(f"\nMethod 2: Broadcasting")
-        print(f"  Original vector: {row_vector.nbytes / 1024:.2f} KB")
-        print(f"  Memory used: {row_vector.nbytes / 1024:.2f} KB (no copying!)")
-        print(f"  ✨ Broadcasting uses views, not copies!")
-        
-        # Demonstrate with actual operation
-        matrix = np.random.randn(rows, cols)
-        
-        # Time both approaches
-        start = time.perf_counter()
-        result_tiled = matrix + tiled_vector
-        tiled_time = time.perf_counter() - start
-        
-        start = time.perf_counter()
-        result_broadcast = matrix + row_vector
-        broadcast_time = time.perf_counter() - start
-        
-        print(f"\nPerformance comparison:")
-        print(f"  Tiled approach:     {tiled_time*1000:.3f} ms")
-        print(f"  Broadcasting:       {broadcast_time*1000:.3f} ms")
-        print(f"  Results identical:  {np.allclose(result_tiled, result_broadcast)}")
-
-# Run performance benchmarks
-perf = BroadcastingPerformance()
-perf.benchmark_normalization()
-perf.benchmark_distance_computation()
-perf.memory_efficiency()</code></pre>
-
-    <h2>Common Broadcasting Pitfalls and Solutions 🕳️</h2>
-    
-    <p>Even experienced NumPy users stumble on these broadcasting gotchas. Let's learn from common mistakes!</p>
-
-    <pre><code>import numpy as np
-
-print("⚠️ Broadcasting Pitfalls and Solutions")
-print("=" * 60)
-
-# Pitfall 1: Unexpected Broadcasting
-print("\n❌ Pitfall 1: Unexpected Shape Matching")
-print("-" * 40)
-
-# What you might expect vs what happens
-a = np.array([[1, 2, 3]])  # Shape: (1, 3)
-b = np.array([[4], [5], [6]])  # Shape: (3, 1)
-
-# This broadcasts to (3, 3), not element-wise multiplication!
-result = a * b
-print(f"a shape: {a.shape}, b shape: {b.shape}")
-print(f"Result shape: {result.shape} (unexpected?)")
-print(f"Result:\n{result}")
-
-print("\n✅ Solution: Be explicit about desired behavior")
-# If you wanted element-wise on the overlapping dimension:
-a_flat = a.flatten()  # Shape: (3,)
-b_flat = b.flatten()  # Shape: (3,)
-correct = a_flat * b_flat
-print(f"Element-wise result: {correct}")
-
-# Pitfall 2: Broadcasting with assignment
-print("\n❌ Pitfall 2: Assignment Broadcasting Confusion")
-print("-" * 40)
-
-matrix = np.ones((3, 4))
-row = np.array([10, 20, 30, 40])
-
-# This works - broadcasts row to all rows of matrix
-matrix[:] = row
-print(f"Broadcasting assignment successful:")
-print(matrix)
-
-# But this is a common mistake:
-matrix = np.ones((3, 4))
-column = np.array([10, 20, 30])
-# matrix[:] = column  # This would fail! Shape mismatch
-
-print("\n✅ Solution: Reshape for column assignment")
-matrix[:] = column[:, np.newaxis]  # or column.reshape(-1, 1)
-print(f"Column broadcast assignment (reshaped):")
-print(matrix)
-
-# Pitfall 3: Lost dimensions with aggregations
-print("\n❌ Pitfall 3: Dimension Loss in Aggregations")
-print("-" * 40)
-
-data = np.random.randn(10, 5)
-row_means = data.mean(axis=1)  # Shape: (10,) - lost dimension!
-
-# This will fail:
-# normalized = data - row_means  # Shape mismatch!
-
-print(f"Data shape: {data.shape}")
-print(f"Row means shape: {row_means.shape}")
-print("Cannot broadcast (10, 5) with (10,)")
-
-print("\n✅ Solution: Use keepdims=True")
-row_means_kept = data.mean(axis=1, keepdims=True)  # Shape: (10, 1)
-normalized = data - row_means_kept  # Now it works!
-print(f"Row means with keepdims: {row_means_kept.shape}")
-print(f"Broadcasting works: {data.shape} - {row_means_kept.shape}")
-
-# Pitfall 4: Integer division broadcasting
-print("\n❌ Pitfall 4: Type Coercion in Broadcasting")
-print("-" * 40)
-
-int_array = np.array([1, 2, 3, 4, 5])
-float_scalar = 2.5
-
-result = int_array * float_scalar
-print(f"Int array: {int_array.dtype}")
-print(f"Float scalar: {type(float_scalar)}")
-print(f"Result dtype: {result.dtype} (automatically upcasted!)")
-
-# Be careful with integer division
-int_array = np.array([1, 2, 3, 4, 5])
-divisor = 2
-result_int = int_array // divisor  # Integer division
-result_float = int_array / divisor  # Float division
-print(f"\nInteger division: {result_int} (dtype: {result_int.dtype})")
-print(f"Float division: {result_float} (dtype: {result_float.dtype})")
-
-# Pitfall 5: Broadcasting with views vs copies
-print("\n❌ Pitfall 5: Views and Broadcasting Side Effects")
-print("-" * 40)
-
-original = np.array([1, 2, 3, 4, 5])
-view = original[1:4]  # This is a view
-
-# Broadcasting operation on view
-view[:] = view * 10  # Modifies original!
-
-print(f"Original array after modifying view: {original}")
-print("The view modified the original array!")
-
-print("\n✅ Solution: Use .copy() when needed")
-original = np.array([1, 2, 3, 4, 5])
-safe_copy = original[1:4].copy()
-safe_copy[:] = safe_copy * 10
-print(f"Original array is safe: {original}")
-
-# Best Practices Summary
-print("\n📚 Broadcasting Best Practices:")
-print("-" * 40)
-practices = [
-    "1. Always check shapes before operations: print(a.shape, b.shape)",
-    "2. Use keepdims=True for aggregations that will be broadcast",
-    "3. Explicitly reshape with newaxis when needed: arr[:, np.newaxis]",
-    "4. Test with small examples first",
-    "5. Use assertions to verify expected shapes in functions",
-    "6. Remember: broadcasting creates views, not copies",
-    "7. Visualize the operation mentally before coding"
-]
-
-for practice in practices:
-    print(f"  {practice}")</code></pre>
-
-    <h2>Summary: Your Broadcasting Mastery Checklist ✅</h2>
-    
-    <div class="comment-block">
-        <p><strong>🎯 Key Takeaways:</strong></p>
-        <ul>
-            <li><strong>Automatic Expansion:</strong> Broadcasting virtually "stretches" smaller arrays to match larger ones without copying data.</li>
-            <li><strong>Three Rules:</strong> Align from right, check compatibility (equal or 1), output shape is max of each dimension.</li>
-            <li><strong>Memory Efficient:</strong> Broadcasting uses views, not copies - saves memory and time.</li>
-            <li><strong>Common Patterns:</strong> Normalization, adding bias, outer products, pairwise distances.</li>
-            <li><strong>Use keepdims=True:</strong> Preserve dimensions in aggregations for easier broadcasting.</li>
-            <li><strong>Performance Gains:</strong> Often 10-100x faster than explicit loops.</li>
-        </ul>
-    </div>
-
-    <pre><code># Quick Broadcasting Reference Card
-import numpy as np
-
-# BROADCASTING RULES
-# -----------------
-# 1. Align shapes from the right
-# 2. Dimensions compatible if equal or one is 1
-# 3. Output shape = max of each dimension
-
-# COMMON PATTERNS
-# --------------
-
-# Scalar broadcasting
-arr = np.array([1, 2, 3])
-result = arr + 10  # 10 broadcasts to all elements
-
-# Row/Column broadcasting
-matrix = np.ones((3, 4))
-row = np.array([1, 2, 3, 4])      # Shape: (4,)
-col = np.array([1, 2, 3])[:, np.newaxis]  # Shape: (3, 1)
-
-matrix + row  # Adds to each row
-matrix + col  # Adds to each column
-
-# Normalization pattern
-data = np.random.randn(100, 5)
-normalized = (data - data.mean(axis=0)) / data.std(axis=0)
-
-# Outer product pattern
-x = np.array([1, 2, 3])
-y = np.array([4, 5, 6])
-outer = x[:, np.newaxis] * y  # Shape: (3, 1) × (6,) = (3, 6)
-
-# Distance matrix pattern
-points = np.random.randn(10, 3)
-diff = points[:, np.newaxis, :] - points[np.newaxis, :, :]
-distances = np.sqrt((diff ** 2).sum(axis=2))
-
-# TIPS
-# ----
-# • Use keepdims=True in aggregations
-# • Reshape with np.newaxis for clarity
-# • Test shapes before operations
-# • Remember: broadcasting is a view operation
-
-print("📡 You're now a broadcasting expert!")</code></pre>    </main>
-
-
-    <footer>
-        <!-- Learning Journal (REQUIRED per the Courseware Authoring Standard) -->
-        <section id="journal" class="lesson-section">
-            <h2>📓 Learning Journal</h2>
-            <div class="card card-info">
-                <p>Keep a learning journal — digital or physical. After this lesson, take a few minutes to write down:</p>
-                <ul>
-                    <li><strong>Key concepts</strong> you learned</li>
-                    <li><strong>Techniques that clicked</strong> for you</li>
-                    <li><strong>Questions or confusion points</strong> to revisit</li>
-                    <li><strong>Ideas you want to try</strong></li>
-                    <li><strong>Your progress and feelings</strong> about learning this</li>
+        <div class="container">
+            <header>
+                <h1>📡 Lesson 1.3: Broadcasting</h1>
+                <p class="lead">Learn the two short rules that let NumPy combine a table with a row, a column or a single number, and you can compare every store with its own normal in one line.</p>
+
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>State the broadcasting rules and use them to predict the shape of a result, or that an operation will fail</li>
+                        <li>Combine a 2-D table with a row of values and with a column of values</li>
+                        <li>Reshape an array for broadcasting with <code>np.newaxis</code>, <code>reshape</code> and <code>keepdims=True</code></li>
+                        <li>Build a grid of every combination from two 1-D arrays</li>
+                        <li>Recognize the broadcasting mistakes that raise no error, and catch them by checking shapes</li>
+                    </ul>
+                </div>
+
+                <ul class="lesson-meta">
+                    <li><span class="meta-label">⏱️ Time</span> 75 minutes</li>
+                    <li><span class="meta-label">📋 Prerequisites</span> <a href="numpy_vectorized_operations.html">Lesson 1.2: Vectorized Operations</a> (array arithmetic, masks, <code>axis=</code>)</li>
+                    <li><span class="meta-label">🛠️ You will build</span> A weekday index for the four Pinecrest stores that removes store size, plus a list of the days that were unusual for their own store</li>
+                    <li><span class="meta-label">📂 Data</span> <code>data/daily_sales.csv</code></li>
                 </ul>
-                <p><strong>✍️ This lesson's prompt:</strong> Broadcasting replaces explicit loops with shape rules. Describe one calculation you would have written as nested loops before — how does thinking in shapes change the way you approach it?</p>
-            </div>
-        </section>
+            </header>
 
-        <!-- Lesson Summary (full standard block) -->
-        <section id="summary" class="lesson-section">
-            <h2>📝 Lesson Summary</h2>
-            <div class="card card-success">
-                <h3>🎓 Key Takeaways</h3>
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#problem" class="toc-link">The Problem Broadcasting Solves</a></li>
+                        <li><a href="#row" class="toc-link">A Table and a Row</a></li>
+                        <li><a href="#column" class="toc-link">A Table and a Column</a></li>
+                        <li><a href="#rules" class="toc-link">The Rules</a></li>
+                        <li><a href="#reshaping" class="toc-link">Three Ways to Add an Axis</a></li>
+                        <li><a href="#grid" class="toc-link">Column Meets Row: A Grid</a></li>
+                        <li><a href="#standardize" class="toc-link">Putting Columns on One Scale</a></li>
+                        <li><a href="#cost" class="toc-link">What Broadcasting Costs</a></li>
+                        <li><a href="#mistakes" class="toc-link">Common Mistakes</a></li>
+                        <li><a href="#project" class="toc-link">Project: The Weekday Index</a></li>
+                        <li><a href="#exercises" class="toc-link">Hands-on Exercises</a></li>
+                        <li><a href="#quiz" class="toc-link">Quick Quiz</a></li>
+                        <li><a href="#faq" class="toc-link">Common Questions</a></li>
+                        <li><a href="#journal" class="toc-link">Learning Journal</a></li>
+                        <li><a href="#summary" class="toc-link">Lesson Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
+
+            <!-- ============================================================ -->
+            <section id="problem" class="lesson-section">
+                <h2>🧩 The Problem Broadcasting Solves</h2>
+
+                <p>Lesson 1.2 gave you a rule: element-by-element arithmetic needs arrays that line up, and <code>np.arange(7) + np.arange(4)</code> fails. Yet you have been breaking that rule since Lesson 1.1. <code>week * 2</code> combines seven numbers with one. Nobody complained.</p>
+
+                <p>NumPy allowed it because the intent is obvious: use the 2 for every element. <strong>Broadcasting</strong> is the name for that courtesy, and it extends well beyond single numbers. Boise takes in almost twice what Asheville does on a typical day, so comparing their raw revenue tells you only that Boise is bigger. To ask a better question ("was this a good day <em>for this store</em>?") you need to subtract each store's own average from its own column of a table. That is a table combined with a row, and broadcasting makes it one line.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Mental Model: The Rubber Stamp</h4>
+                    <p>Picture a paper form with seven lines, and a rubber stamp that prints one line of four numbers. To apply the stamp to the whole form you press it on line 1, then line 2, and so on down the page. The stamp does not get longer. It is <em>reused</em> wherever it is needed.</p>
+                    <p>Broadcasting is NumPy doing the stamping for you: when one array is missing a dimension, or has length 1 along it, NumPy reuses it along that dimension to match the other array.</p>
+                </div>
+
+                <p>Start a new notebook with the loading helper from Lesson 1.2, and rebuild the first week of revenue as a table of 7 days by 4 stores (Asheville, Bend, Boise, Flagstaff).</p>
+            <pre><code class="language-python">import numpy as np
+
+def load(col, dtype=float):
+    """Read one column of daily_sales.csv into an array."""
+    return np.genfromtxt("data/daily_sales.csv", delimiter=",",
+                         skip_header=1, usecols=col, dtype=dtype)
+
+revenue = load(5)
+week1 = revenue[:28].reshape(7, 4)
+print(week1)
+print(week1.shape)</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[[ 5017.07  4132.92  5962.    3061.66]
+ [ 3605.81  3675.57  6583.13  3575.24]
+ [ 4265.55  6275.05  3866.59  3974.93]
+ [ 4531.48  5487.11  7667.88  4329.55]
+ [ 7359.82  4755.15  9570.46  5606.62]
+ [ 6802.53  7083.36 12388.57  6257.02]
+ [ 4114.59  6719.33  9361.59  5964.  ]]
+(7, 4)</code></pre>
+            </div>
+
+                <p>The simplest broadcast is the one you already know: a table and a single number. The number is stamped onto every cell.</p>
+            <pre><code class="language-python">print((week1 / 1000).round(1))        # revenue in thousands of dollars</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[[ 5.   4.1  6.   3.1]
+ [ 3.6  3.7  6.6  3.6]
+ [ 4.3  6.3  3.9  4. ]
+ [ 4.5  5.5  7.7  4.3]
+ [ 7.4  4.8  9.6  5.6]
+ [ 6.8  7.1 12.4  6.3]
+ [ 4.1  6.7  9.4  6. ]]</code></pre>
+            </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="row" class="lesson-section">
+                <h2>➡️ A Table and a Row</h2>
+
+                <p>Each store's average for the week is one number per column, so four numbers in all.</p>
+            <pre><code class="language-python">store_mean = week1.mean(axis=0)
+print(store_mean.round(2))
+print(store_mean.shape)</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[5099.55 5446.93 7914.32 4681.29]
+(4,)</code></pre>
+            </div>
+
+                <p>Now subtract those four numbers from the 7×4 table.</p>
+            <pre><code class="language-python">diff = week1 - store_mean
+print(diff.round(0))
+print(diff.shape)</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[[  -82. -1314. -1952. -1620.]
+ [-1494. -1771. -1331. -1106.]
+ [ -834.   828. -4048.  -706.]
+ [ -568.    40.  -246.  -352.]
+ [ 2260.  -692.  1656.   925.]
+ [ 1703.  1636.  4474.  1576.]
+ [ -985.  1272.  1447.  1283.]]
+(7, 4)</code></pre>
+            </div>
+
+                <p>NumPy stamped the row of four averages onto each of the seven rows: Asheville's average was subtracted from everything in Asheville's column, Bend's from Bend's, and so on. Every cell now reads "dollars above or below this store's own average". The raw table said Boise's Saturday ($12,389) was far ahead of Bend's ($7,083). This table says both were the best day of the week for their store, and by how much.</p>
+
+                <p>Dividing instead of subtracting gives a ratio, which is often easier to read across stores of different sizes:</p>
+            <pre><code class="language-python">print((week1 / store_mean).round(2))</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[[0.98 0.76 0.75 0.65]
+ [0.71 0.67 0.83 0.76]
+ [0.84 1.15 0.49 0.85]
+ [0.89 1.01 0.97 0.92]
+ [1.44 0.87 1.21 1.2 ]
+ [1.33 1.3  1.57 1.34]
+ [0.81 1.23 1.18 1.27]]</code></pre>
+            </div>
+
+                <p>A value of 1.57 means "57% above this store's weekly average". Every store's best day now stands out on the same scale (Asheville's Friday at 1.44, and Saturday at 1.30 to 1.57 for the other three), which the raw dollars hid.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="column" class="lesson-section">
+                <h2>⬇️ A Table and a Column</h2>
+
+                <p>Next question: of each day's total across the four stores, what share did each store take? That needs every <em>row</em> divided by its own total. The row totals come from <code>axis=1</code>.</p>
+            <pre><code class="language-python">day_total = week1.sum(axis=1)
+print(day_total)
+print(day_total.shape)</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[18173.65 17439.75 18382.12 22016.02 27292.05 32531.48 26159.51]
+(7,)</code></pre>
+            </div>
+
+                <p>Seven totals, one per day. Dividing the table by them looks like it should work the same way as before. It does not:</p>
+            <pre data-raises="ValueError"><code class="language-python">share = week1 / day_total</code></pre>
+
+            <div class="card card-output">
+                <h4>Error</h4>
+                <pre><code>ValueError: operands could not be broadcast together with shapes (7,4) (7,)</code></pre>
+            </div>
+
+                <p>The stamp analogy explains why. <code>day_total</code> is a flat run of seven numbers. NumPy can only treat a flat array as a <em>row</em>, and a row of seven does not fit a table that is four wide. What you need is seven numbers standing as a <strong>column</strong>: shape <code>(7, 1)</code>, seven rows and one column.</p>
+
+                <p>The easiest way to get that is to ask the aggregation to keep the axis it collapsed, with <code>keepdims=True</code>:</p>
+            <pre><code class="language-python">day_total = week1.sum(axis=1, keepdims=True)
+print(day_total)
+print(day_total.shape)</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[[18173.65]
+ [17439.75]
+ [18382.12]
+ [22016.02]
+ [27292.05]
+ [32531.48]
+ [26159.51]]
+(7, 1)</code></pre>
+            </div>
+
+            <pre><code class="language-python">share = week1 / day_total
+print(share.round(3))
+print(share.sum(axis=1))          # every row should add up to 1</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[[0.276 0.227 0.328 0.168]
+ [0.207 0.211 0.377 0.205]
+ [0.232 0.341 0.21  0.216]
+ [0.206 0.249 0.348 0.197]
+ [0.27  0.174 0.351 0.205]
+ [0.209 0.218 0.381 0.192]
+ [0.157 0.257 0.358 0.228]]
+[1. 1. 1. 1. 1. 1. 1.]</code></pre>
+            </div>
+
+                <p>Now the column of totals is stamped <em>across</em> the four columns: each row is divided by its own total. Boise took 32.8% of Monday's revenue and 38.1% of Saturday's. The last line is a check worth making: shares of a whole must sum to 1 (give or take floating-point dust such as <code>0.9999999999999999</code>).</p>
+
+                <div class="card card-success">
+                    <h4>✅ The Pattern to Remember</h4>
+                    <p>To work <strong>column by column</strong> (per store), combine the table with a <strong>row</strong>: <code>table - table.mean(axis=0)</code> just works.</p>
+                    <p>To work <strong>row by row</strong> (per day), combine the table with a <strong>column</strong>: <code>table / table.sum(axis=1, keepdims=True)</code>.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="rules" class="lesson-section">
+                <h2>📜 The Rules</h2>
+
+                <p>You do not have to guess when broadcasting will work. NumPy follows two rules, and you can run them in your head by writing the two shapes one above the other.</p>
+
+                <div class="card card-info">
+                    <h4>💡 The Broadcasting Rules</h4>
+                    <ol>
+                        <li><strong>Line the shapes up from the right.</strong> If one shape is shorter, imagine 1s added on its <em>left</em> until both have the same number of entries.</li>
+                        <li><strong>Compare each pair of lengths.</strong> A pair is compatible if the two lengths are <strong>equal</strong>, or if <strong>one of them is 1</strong>. The array with length 1 is reused along that axis.</li>
+                    </ol>
+                    <p>If every pair is compatible, the operation works, and the result takes the larger length from each pair. If any pair fails, you get the "could not be broadcast together" error.</p>
+                </div>
+
+                <div class="diagram">
+                    <svg viewBox="0 0 440 372" width="440" height="372" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Three worked examples of the broadcasting rules. A 7 by 4 table with an array of 4: the 4 matches and the missing axis is treated as 1, so the result is 7 by 4. A 7 by 4 table with a 7 by 1 column: the 7 matches and the 1 stretches, so the result is 7 by 4. A 7 by 4 table with an array of 7: lined up from the right, 4 meets 7, neither is 1, so it fails.">
+                        <text x="16" y="20" class="svg-text" font-size="13" font-weight="bold">1. Table and row</text>
+                        <text x="16" y="48" class="svg-text svg-mono" font-size="13">week1</text>
+                        <text x="16" y="80" class="svg-text svg-mono" font-size="13">store_mean</text>
+                        <rect x="200" y="30" width="52" height="26" class="svg-box-1"/><text x="226" y="48" text-anchor="middle" class="svg-text svg-mono" font-size="13">7</text>
+                        <rect x="262" y="30" width="52" height="26" class="svg-box-2"/><text x="288" y="48" text-anchor="middle" class="svg-text svg-mono" font-size="13">4</text>
+                        <rect x="200" y="62" width="52" height="26" class="svg-box-3"/><text x="226" y="80" text-anchor="middle" class="svg-muted svg-mono" font-size="13">(1)</text>
+                        <rect x="262" y="62" width="52" height="26" class="svg-box-2"/><text x="288" y="80" text-anchor="middle" class="svg-text svg-mono" font-size="13">4</text>
+                        <text x="330" y="64" class="svg-text" font-size="13">works:</text>
+                        <text x="330" y="82" class="svg-text svg-mono" font-size="13">(7, 4)</text>
+                        <path d="M16,104 L424,104" class="svg-line"/>
+
+                        <text x="16" y="128" class="svg-text" font-size="13" font-weight="bold">2. Table and column</text>
+                        <text x="16" y="156" class="svg-text svg-mono" font-size="13">week1</text>
+                        <text x="16" y="188" class="svg-text svg-mono" font-size="13">day_total, kept</text>
+                        <rect x="200" y="138" width="52" height="26" class="svg-box-2"/><text x="226" y="156" text-anchor="middle" class="svg-text svg-mono" font-size="13">7</text>
+                        <rect x="262" y="138" width="52" height="26" class="svg-box-1"/><text x="288" y="156" text-anchor="middle" class="svg-text svg-mono" font-size="13">4</text>
+                        <rect x="200" y="170" width="52" height="26" class="svg-box-2"/><text x="226" y="188" text-anchor="middle" class="svg-text svg-mono" font-size="13">7</text>
+                        <rect x="262" y="170" width="52" height="26" class="svg-box-3"/><text x="288" y="188" text-anchor="middle" class="svg-text svg-mono" font-size="13">1</text>
+                        <text x="330" y="172" class="svg-text" font-size="13">works:</text>
+                        <text x="330" y="190" class="svg-text svg-mono" font-size="13">(7, 4)</text>
+                        <path d="M16,212 L424,212" class="svg-line"/>
+
+                        <text x="16" y="236" class="svg-text" font-size="13" font-weight="bold">3. Table and a flat array of 7</text>
+                        <text x="16" y="264" class="svg-text svg-mono" font-size="13">week1</text>
+                        <text x="16" y="296" class="svg-text svg-mono" font-size="13">day_total, flat</text>
+                        <rect x="200" y="246" width="52" height="26" class="svg-box-1"/><text x="226" y="264" text-anchor="middle" class="svg-text svg-mono" font-size="13">7</text>
+                        <rect x="262" y="246" width="52" height="26" class="svg-box-4"/><text x="288" y="264" text-anchor="middle" class="svg-text svg-mono" font-size="13">4</text>
+                        <rect x="200" y="278" width="52" height="26" class="svg-box-3"/><text x="226" y="296" text-anchor="middle" class="svg-muted svg-mono" font-size="13">(1)</text>
+                        <rect x="262" y="278" width="52" height="26" class="svg-box-4"/><text x="288" y="296" text-anchor="middle" class="svg-text svg-mono" font-size="13">7</text>
+                        <text x="330" y="280" class="svg-text" font-size="13">fails:</text>
+                        <text x="330" y="298" class="svg-text" font-size="13">4 meets 7</text>
+
+                        <text x="16" y="334" class="svg-muted" font-size="12">Green: equal lengths. Amber: a 1, which is reused. Red: a clash.</text>
+                        <text x="16" y="352" class="svg-muted" font-size="12">(1) is a 1 that NumPy adds on the left for a missing axis.</text>
+                    </svg>
+                </div>
+
+                <p>Example 3 is the error from the previous section, and now you can see exactly why it happened: shapes are matched <strong>from the right</strong>, so the 7 of the flat array was compared with the 4 columns, not with the 7 rows.</p>
+
+                <p>You can ask NumPy to apply the rules without doing any arithmetic. <code>np.broadcast_shapes</code> takes shapes and returns the shape of the result, or raises the same error an operation would.</p>
+            <pre><code class="language-python">print(np.broadcast_shapes((7, 4), (4,)))
+print(np.broadcast_shapes((7, 4), (7, 1)))
+print(np.broadcast_shapes((7, 4), (1,)))
+print(np.broadcast_shapes((3, 1), (1, 5)))</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>(7, 4)
+(7, 4)
+(7, 4)
+(3, 5)</code></pre>
+            </div>
+
+                <p>The last line is new: <em>both</em> arrays have a 1, in different places, and both are stretched. A column of 3 meets a row of 5 and the result is a 3×5 table. You will put that to work in a moment.</p>
+
+                <div class="mermaid">
+            graph TD
+                A["Align shapes on the right"] --> B{"Lengths equal?"}
+                B -->|yes| C["OK: keep the length"]
+                B -->|no| D{"Is one a 1?"}
+                D -->|yes| E["OK: reuse the 1"]
+                D -->|no| F["Error"]
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="reshaping" class="lesson-section">
+                <h2>🔧 Three Ways to Add an Axis</h2>
+
+                <p>Most broadcasting work comes down to one move: turning a flat array of n values into a column of shape <code>(n, 1)</code>. There are three ways to do it, and you will meet all three in other people's code.</p>
+            <pre><code class="language-python">totals = week1.sum(axis=1)                 # flat: shape (7,)
+
+col_a = totals[:, np.newaxis]              # index with a new axis
+col_b = totals.reshape(-1, 1)              # reshape; -1 means "work this out for me"
+col_c = week1.sum(axis=1, keepdims=True)   # never flatten in the first place
+
+print(totals.shape, col_a.shape, col_b.shape, col_c.shape)
+print(np.array_equal(col_a, col_b), np.array_equal(col_b, col_c))</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>(7,) (7, 1) (7, 1) (7, 1)
+True True</code></pre>
+            </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Technique</th><th>Use it when</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>keepdims=True</code></td><td>The array comes from an aggregation (<code>sum</code>, <code>mean</code>, <code>max</code>...). This is the least error-prone choice.</td></tr>
+                            <tr><td><code>arr[:, np.newaxis]</code></td><td>You already have a flat array and want it as a column. <code>arr[np.newaxis, :]</code> makes a row of shape <code>(1, n)</code>.</td></tr>
+                            <tr><td><code>arr.reshape(-1, 1)</code></td><td>Same result as above. Many people find it easier to read.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p><code>np.newaxis</code> is simply another name for <code>None</code>, so <code>totals[:, None]</code> is the same thing, and you will often see it written that way. None of the three copies any data: each is a view with a different shape, as <code>reshape</code> was in Lesson 1.1.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="grid" class="lesson-section">
+                <h2>🔲 Column Meets Row: A Grid</h2>
+
+                <p>When a column of shape <code>(n, 1)</code> meets a row of shape <code>(m,)</code>, <em>both</em> are stretched and you get an n×m table holding every combination. This is the vectorized replacement for a loop inside a loop.</p>
+
+                <p>Pinecrest is planning a sale and wants to see four tent prices under three possible discounts.</p>
+            <pre><code class="language-python">prices = np.array([299.95, 217.95, 449.00, 129.50])     # four products
+discounts = np.array([0.10, 0.15, 0.20])                # three scenarios
+
+sale_price = prices[:, np.newaxis] * (1 - discounts)
+print(sale_price.shape)
+print(sale_price.round(2))</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>(4, 3)
+[[269.96 254.96 239.96]
+ [196.16 185.26 174.36]
+ [404.1  381.65 359.2 ]
+ [116.55 110.08 103.6 ]]</code></pre>
+            </div>
+
+                <p>Rows are products, columns are discount levels. Check the shapes with the rules: <code>(4, 1)</code> against <code>(3,)</code>. From the right, 1 meets 3 (compatible, result 3). Then 4 meets a missing axis (compatible, result 4). Result: <code>(4, 3)</code>.</p>
+
+                <p>Any operator or two-input ufunc builds a grid this way. Here is a table that answers "is product <em>i</em> still above $200 under discount <em>j</em>?", and a multiplication table for good measure.</p>
+            <pre><code class="language-python">print(sale_price &gt; 200)
+
+n = np.arange(1, 6)
+print(n[:, np.newaxis] * n)</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[[ True  True  True]
+ [False False False]
+ [ True  True  True]
+ [False False False]]
+[[ 1  2  3  4  5]
+ [ 2  4  6  8 10]
+ [ 3  6  9 12 15]
+ [ 4  8 12 16 20]
+ [ 5 10 15 20 25]]</code></pre>
+            </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="standardize" class="lesson-section">
+                <h2>📏 Putting Columns on One Scale</h2>
+
+                <p>One of the most common uses of broadcasting in data work is <strong>standardizing</strong>: subtract each column's mean and divide by its standard deviation (a measure of how spread out the values are, which Module 4 explains in full). The result is called a <strong>z-score</strong>. It answers "how many standard deviations above or below its own average is this value?", and that puts columns of very different sizes on a common scale.</p>
+            <pre><code class="language-python">mean = week1.mean(axis=0)
+std = week1.std(axis=0)
+z = (week1 - mean) / std
+
+print(z.round(2))
+print(np.abs(z.mean(axis=0)).round(10))    # each column now averages 0
+print(z.std(axis=0))                       # ...with a standard deviation of 1</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[[-0.06 -1.08 -0.75 -1.39]
+ [-1.13 -1.46 -0.51 -0.95]
+ [-0.63  0.68 -1.56 -0.61]
+ [-0.43  0.03 -0.1  -0.3 ]
+ [ 1.71 -0.57  0.64  0.8 ]
+ [ 1.29  1.35  1.73  1.36]
+ [-0.75  1.05  0.56  1.1 ]]
+[0. 0. 0. 0.]
+[1. 1. 1. 1.]</code></pre>
+            </div>
+
+                <p>Two broadcasts happen in <code>(week1 - mean) / std</code>: the row of four means is stamped down the table, then the row of four standard deviations. On this scale Boise's Saturday is 1.73 standard deviations above Boise's average, and Flagstaff's Saturday is 1.36 above Flagstaff's. You can now compare them directly.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Why This Matters Later</h4>
+                    <p>Standardizing appears throughout statistics and machine learning: z-scores for spotting outliers (Module 4), and putting features on one scale before fitting a model (Lesson 2.9). Each time, it is this one line with <code>axis=0</code>.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="cost" class="lesson-section">
+                <h2>💰 What Broadcasting Costs</h2>
+
+                <p>Does NumPy really build seven copies of the row before subtracting? No. The stamp is reused, not duplicated: the smaller array is read again and again from the same memory. <code>np.broadcast_to</code> lets you see the stretched version, and it turns out to be a view.</p>
+            <pre><code class="language-python">stretched = np.broadcast_to(store_mean, (7, 4))
+print(stretched.shape)
+print(np.shares_memory(stretched, store_mean))
+print(store_mean.nbytes, "bytes of real data behind", stretched.size, "values")</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>(7, 4)
+True
+32 bytes of real data behind 28 values</code></pre>
+            </div>
+
+                <p>So the <em>inputs</em> cost nothing extra. The <em>result</em> is a different matter: it is a real, full-size array. That is fine for a 7×4 table, and it is exactly what you want for a 4×3 price grid. It becomes a problem when a grid is created by accident.</p>
+            <pre><code class="language-python">a = np.arange(20_000)
+col = a[:, np.newaxis]
+
+print(np.broadcast_shapes(a.shape, col.shape))
+print(f"{20_000 * 20_000 * 8 / 1e9:.1f} GB needed for the result")</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>(20000, 20000)
+3.2 GB needed for the result</code></pre>
+            </div>
+
+                <div class="card card-warning">
+                    <h4>⚠️ A Flat Array Plus a Column Is a Grid</h4>
+                    <p>Combining two arrays of 20,000 values, where one happens to be a column, would produce 400 million numbers and ask for 3.2 GB. The code above only <em>asks</em> for the shape, so nothing bad happened. When a simple subtraction is suddenly slow or your computer starts to struggle, print both shapes. The mistake is shown in full in the next section.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="mistakes" class="lesson-section">
+                <h2>⚠️ Common Mistakes</h2>
+
+                <p>Broadcasting has one kind of mistake that announces itself and several that do not. The quiet ones are the reason experienced people print <code>.shape</code> so often.</p>
+
+                <h3>1. A Flat Array Where a Column Was Needed</h3>
+            <pre data-raises="ValueError"><code class="language-python">row_mean = week1.mean(axis=1)
+centered = week1 - row_mean</code></pre>
+
+            <div class="card card-output">
+                <h4>Error</h4>
+                <pre><code>ValueError: operands could not be broadcast together with shapes (7,4) (7,)</code></pre>
+            </div>
+                <p><strong>What it means:</strong> the message lists the two shapes. Read them from the right: 4 meets 7, and neither is 1. <strong>Fix:</strong> keep the axis so the means form a column: <code>week1.mean(axis=1, keepdims=True)</code>.</p>
+
+                <h3>2. The Accidental Grid</h3>
+                <p>You have four actual values and four predictions, and you want the four errors. One of the arrays came out of some other step as a column.</p>
+            <pre><code class="language-python">actual = np.array([100.0, 200.0, 300.0, 400.0])
+predicted = np.array([[110.0], [190.0], [330.0], [380.0]])    # shape (4, 1)
+
+errors = actual - predicted
+print(errors.shape)
+print(errors)
+print(np.abs(errors).mean())      # the average size of an error</code></pre>
+
+            <div class="card card-output">
+                <h4>Output (16 numbers instead of 4, and no error)</h4>
+                <pre><code>(4, 4)
+[[ -10.   90.  190.  290.]
+ [ -90.   10.  110.  210.]
+ [-230. -130.  -30.   70.]
+ [-280. -180.  -80.   20.]]
+126.25</code></pre>
+            </div>
+                <p><strong>What happened:</strong> <code>(4,)</code> against <code>(4, 1)</code> is a row meeting a column, so NumPy built the grid of every actual value minus every prediction. The average of that grid is a plausible-looking number that means nothing. The right errors are -10, 10, -30 and 20, and their average size is 17.5. <strong>Fix:</strong> make the shapes match before combining, for example with <code>predicted.ravel()</code>, which flattens any array to 1-D. And check: four values in should mean four errors out.</p>
+            <pre><code class="language-python">errors = actual - predicted.ravel()
+print(errors.shape, errors, np.abs(errors).mean())</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>(4,) [-10.  10. -30.  20.] 17.5</code></pre>
+            </div>
+
+                <h3>3. The Square Table That Hides a Wrong Axis</h3>
+                <p>Take the first four days only, so the table is 4×4, and try to subtract each <em>day's</em> mean from its row.</p>
+            <pre><code class="language-python">square = week1[:4]                               # 4 days x 4 stores
+wrong = square - square.mean(axis=1)             # flat array of 4 day-means
+right = square - square.mean(axis=1, keepdims=True)
+
+print(np.abs(wrong.sum(axis=1)).round(2))        # should be zeros if the rows were centered
+print(np.abs(right.sum(axis=1)).round(2))</code></pre>
+
+            <div class="card card-output">
+                <h4>Output (the first line should be all zeros and is not)</h4>
+                <pre><code>[ 829.24 1563.14  620.76 3013.13]
+[0. 0. 0. 0.]</code></pre>
+            </div>
+                <p><strong>What happened:</strong> with 7 rows this was the error in mistake 1. With 4 rows and 4 columns, the four day-means happen to fit as a <em>row</em>, so NumPy subtracted day 1's mean from column 1, day 2's mean from column 2, and so on. No error, wrong answer. <strong>Fix:</strong> use <code>keepdims=True</code> whenever you aggregate along <code>axis=1</code> and combine the result with the table. Then the code is right for every shape, square or not.</p>
+
+                <h3>4. Updating in Place with a Larger Result</h3>
+            <pre data-raises="ValueError"><code class="language-python">adjust = np.zeros(4)
+adjust += week1</code></pre>
+
+            <div class="card card-output">
+                <h4>Error</h4>
+                <pre><code>ValueError: non-broadcastable output operand with shape (4,) doesn't match the broadcast shape (7,4)</code></pre>
+            </div>
+                <p><strong>What it means:</strong> <code>adjust + week1</code> is a legal broadcast with a 7×4 result, but <code>+=</code> has to store that result back into <code>adjust</code>, which only has room for 4 values. An array cannot grow. <strong>Fix:</strong> write <code>adjust = adjust + week1</code> if you want the new, larger array, or reverse the roles if you meant to update the table: <code>week1_copy += adjust</code>.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="project" class="lesson-section">
+                <h2>🛠️ Project: The Weekday Index</h2>
+
+                <p>"Saturdays are our best day" is common knowledge at Pinecrest. Your job is to put a number on it, store by store, in a way that is fair to stores of different sizes: a <strong>weekday index</strong> where 1.00 means "an average day for this store". You will then use z-scores to find the days that were unusual for their own store. Work in a new notebook called <code>lesson_1_3_project</code> or a script called <code>weekday_index.py</code>. Allow about 35 minutes.</p>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 1: Build a days-by-stores table <span class="step-time">(6 min)</span></h3>
+                    <p>A reshape only works if no rows are missing. The file has four rows for every date from January 1 until August 11, 2024 (Bend's export failed the next day). That is 224 days, which is exactly 32 weeks, or 896 rows. Check that claim before relying on it.</p>
+            <pre><code class="language-python">import numpy as np
+
+def load(col, dtype=float):
+    return np.genfromtxt("data/daily_sales.csv", delimiter=",",
+                         skip_header=1, usecols=col, dtype=dtype)
+
+dates = load(0, dtype="datetime64[D]")
+stores = load(1, dtype=str)
+revenue = load(5)
+
+n_days = 224
+print(dates[0], "to", dates[n_days * 4 - 1])
+print(stores[:n_days * 4].reshape(n_days, 4)[[0, 100, 223]])    # three rows, to check the order
+
+table = revenue[:n_days * 4].reshape(n_days, 4)
+day = dates[:n_days * 4].reshape(n_days, 4)[:, 0]              # one date per row
+store_names = stores[:4]
+
+print(table.shape, day.shape)
+print(np.isnan(table).sum(axis=0), "missing values per store")</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>2024-01-01 to 2024-08-11
+[['Asheville' 'Bend' 'Boise' 'Flagstaff']
+ ['Asheville' 'Bend' 'Boise' 'Flagstaff']
+ ['Asheville' 'Bend' 'Boise' 'Flagstaff']]
+(224, 4) (224,)
+[1 1 0 1] missing values per store</code></pre>
+            </div>
+                    <p>Every row of the reshaped store names reads Asheville, Bend, Boise, Flagstaff, so each column of <code>table</code> is one store. Three revenues are missing, so use the <code>nan</code>-aware functions from here on.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 2: Each day relative to its store's normal <span class="step-time">(5 min)</span></h3>
+                    <p>Compute each store's mean daily revenue (one number per column), then divide the table by that row. A table and a row: this broadcasts as it stands.</p>
+            <pre><code class="language-python">store_mean = np.nanmean(table, axis=0)
+print(store_names)
+print(store_mean.round(2))
+
+ratio = table / store_mean
+print(ratio.shape)
+print(ratio[:3].round(2))</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>['Asheville' 'Bend' 'Boise' 'Flagstaff']
+[5697.45 6650.89 9108.3  5895.63]
+(224, 4)
+[[0.88 0.62 0.65 0.52]
+ [0.63 0.55 0.72 0.61]
+ [0.75 0.94 0.42 0.67]]</code></pre>
+            </div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 3: The weekday index <span class="step-time">(8 min)</span></h3>
+                    <p>224 days is 32 whole weeks starting on a Monday, so the table can be reshaped again into three dimensions: 32 weeks × 7 weekdays × 4 stores. Averaging over axis 0 (the weeks) leaves a 7×4 table: the typical ratio for each weekday at each store.</p>
+            <pre><code class="language-python">by_week = ratio.reshape(32, 7, 4)            # (week, weekday, store)
+index = np.nanmean(by_week, axis=0)          # collapse the weeks
+print(index.shape)
+
+day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+print(f"{'':&lt;5}" + "".join(f"{s:&gt;11}" for s in store_names))
+for name, row in zip(day_names, index):
+    print(f"{name:&lt;5}" + "".join(f"{v:&gt;11.2f}" for v in row))</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>(7, 4)
+       Asheville       Bend      Boise  Flagstaff
+Mon         0.86       0.84       0.80       0.74
+Tue         0.76       0.76       0.80       0.78
+Wed         0.77       0.80       0.79       0.82
+Thu         0.91       0.84       0.90       0.91
+Fri         0.99       1.08       1.04       1.07
+Sat         1.50       1.47       1.47       1.43
+Sun         1.21       1.22       1.21       1.24</code></pre>
+            </div>
+                    <p>There is the number. A Saturday is worth about one and a half average days at every store, and Monday to Wednesday run at about 80% of average. The four columns are strikingly similar: once size is removed, the stores share one weekly rhythm.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 4: Draw it <span class="step-time">(5 min)</span></h3>
+                    <p>A chart makes the similarity plain. Plotting gets its own module later, so for now type this as given: passing a 7×4 array to <code>ax.plot</code> draws one line per column.</p>
+            <pre><code class="language-python">import matplotlib.pyplot as plt
+
+fig, ax = plt.subplots(figsize=(8, 4), layout="constrained")
+ax.plot(day_names, index, marker="o", label=store_names)
+ax.axhline(1.0, color="gray", linewidth=1, linestyle="--")
+ax.set_ylabel("Revenue relative to the store's average day")
+ax.set_title("Weekday index by store, January to August 2024")
+ax.legend()
+plt.show()</code></pre>
+                    <figure>
+                        <img src="images/numpy_broadcasting_weekday_index.png" alt="Line chart of the weekday revenue index for Asheville, Bend, Boise and Flagstaff. All four lines nearly overlap: about 0.8 from Monday to Wednesday, rising on Thursday and Friday to a peak near 1.5 on Saturday, then about 1.2 on Sunday." width="880" height="440" loading="lazy">
+                        <figcaption>Four stores of very different sizes, one weekly rhythm. Dividing by each store's own mean (a table divided by a row) is what makes the lines comparable.</figcaption>
+                    </figure>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 5: Days that were unusual for their store <span class="step-time">(8 min)</span></h3>
+                    <p>Standardize each column, then look for z-scores above 3: days more than three standard deviations above that store's own mean. <code>np.argwhere</code> returns the row and column of every <code>True</code> in a 2-D mask.</p>
+            <pre><code class="language-python">z = (table - np.nanmean(table, axis=0)) / np.nanstd(table, axis=0)
+
+hits = np.argwhere(z &gt; 3)
+print(len(hits), "store-days with z above 3")
+for r, c in hits:
+    print(day[r], f"{store_names[c]:&lt;10} ${table[r, c]:&gt;10,.2f}   z = {z[r, c]:.1f}")</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>13 store-days with z above 3
+2024-05-24 Boise      $ 19,117.36   z = 3.1
+2024-05-24 Flagstaff  $ 12,887.57   z = 3.2
+2024-05-25 Asheville  $ 14,461.42   z = 4.3
+2024-05-25 Bend       $ 17,442.78   z = 4.5
+2024-05-25 Boise      $ 22,093.08   z = 4.1
+2024-05-25 Flagstaff  $ 14,659.75   z = 4.0
+2024-05-26 Asheville  $ 12,891.16   z = 3.5
+2024-05-26 Bend       $ 14,489.47   z = 3.3
+2024-06-01 Asheville  $ 12,482.27   z = 3.3
+2024-06-22 Boise      $ 18,905.50   z = 3.1
+2024-06-23 Asheville  $ 12,538.90   z = 3.3
+2024-07-06 Bend       $ 14,781.39   z = 3.4
+2024-07-13 Bend       $ 13,794.14   z = 3.0</code></pre>
+            </div>
+                    <p>Eight of the thirteen fall on May 24 to 26, 2024, the Memorial Day sale weekend, and all four stores appear there. The other five are summer weekend days. Notice what the z-score did for you. Asheville's $12,482 on June 1 is less than an <em>average</em> Saturday at Boise, yet it is correctly flagged as extraordinary <em>for Asheville</em>. A single dollar threshold for all four stores could never do that.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 6: Each store's share of the day <span class="step-time">(3 min)</span></h3>
+                    <p>Finish with a table and a column: divide each row by its total. <code>np.nansum</code> accepts <code>keepdims=True</code> like every other aggregation.</p>
+            <pre><code class="language-python">share = table / np.nansum(table, axis=1, keepdims=True)
+print(np.nanmean(share, axis=0).round(3))
+print(np.nanmean(share[:112], axis=0).round(3), "first 16 weeks")
+print(np.nanmean(share[112:], axis=0).round(3), "last 16 weeks")</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[0.21  0.244 0.334 0.215]
+[0.216 0.247 0.331 0.21 ] first 16 weeks
+[0.203 0.242 0.337 0.22 ] last 16 weeks</code></pre>
+            </div>
+                    <p>Boise takes about a third of store revenue. (On the three days with a missing value, the other stores' shares are slightly overstated, because the total is short. With 3 days in 224 the effect is negligible, but it is the kind of thing to note in a real report.)</p>
+                </div>
+
+                <div class="card card-success">
+                    <h3>✅ Project Completion Checklist</h3>
+                    <ul class="checklist">
+                        <li><code>table</code> has shape <code>(224, 4)</code>, and you checked that its columns really are the four stores</li>
+                        <li><code>ratio</code> was made with a table-and-row broadcast and has the same shape as <code>table</code></li>
+                        <li>Your weekday index is a 7×4 table and shows Saturday near 1.5 at every store</li>
+                        <li>Your chart shows four lines that nearly overlap</li>
+                        <li>Your z-score search finds 13 store-days, eight of them on the Memorial Day sale weekend</li>
+                        <li>Your share table was made with <code>keepdims=True</code>, and you can explain why it is needed</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="exercises" class="lesson-section">
+                <h2>🏋️ Hands-on Exercises</h2>
+
+                <p>Before running each one, write the shapes one above the other and predict the shape of the result. That habit is the skill.</p>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 1: Row, Then Column</h3>
+                    <p>Here are the units sold on three days (rows) at four stores (columns). Staff earn a bonus per unit that differs by store: <code>[0.50, 0.40, 0.60, 0.50]</code> dollars. (a) Compute the bonus table. (b) Day 3 was a holiday and pays double: multiply each day by <code>[1, 1, 2]</code>. (c) Print the total bonus per store.</p>
+            <pre data-norun><code class="language-python">units3 = np.array([[110, 105, 148,  69],
+                   [ 88,  84, 152,  82],
+                   [103, 133,  90,  92]])</code></pre>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>The per-store rates have shape <code>(4,)</code> and broadcast as a row. The per-day multipliers have shape <code>(3,)</code>, which would be compared with the 4 columns: they need to become a column of shape <code>(3, 1)</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+            <pre><code class="language-python">units3 = np.array([[110, 105, 148,  69],
+                   [ 88,  84, 152,  82],
+                   [103, 133,  90,  92]])
+rate = np.array([0.50, 0.40, 0.60, 0.50])
+multiplier = np.array([1, 1, 2])
+
+bonus = units3 * rate                            # (3, 4) with (4,)
+bonus = bonus * multiplier[:, np.newaxis]        # (3, 4) with (3, 1)
+print(bonus)
+print(bonus.sum(axis=0))</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[[ 55.   42.   88.8  34.5]
+ [ 44.   33.6  91.2  41. ]
+ [103.  106.4 108.   92. ]]
+[202.  182.  288.  167.5]</code></pre>
+            </div>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 2: Predict the Shape</h3>
+                    <p>For each pair of shapes, predict the result (or that it fails), then check with <code>np.broadcast_shapes</code>: (a) <code>(5, 3)</code> and <code>(3,)</code>, (b) <code>(5, 3)</code> and <code>(5,)</code>, (c) <code>(5, 1)</code> and <code>(1, 3)</code>, (d) <code>(2, 5, 3)</code> and <code>(5, 1)</code>, (e) <code>(6,)</code> and <code>(6, 1)</code>.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Right-align the shapes. For (d), write <code>(5, 1)</code> under the last two entries of <code>(2, 5, 3)</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+            <pre><code class="language-python">pairs = [((5, 3), (3,)), ((5, 3), (5,)), ((5, 1), (1, 3)), ((2, 5, 3), (5, 1)), ((6,), (6, 1))]
+for s1, s2 in pairs:
+    try:
+        print(s1, s2, "gives", np.broadcast_shapes(s1, s2))
+    except ValueError:
+        print(s1, s2, "cannot be broadcast")</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>(5, 3) (3,) gives (5, 3)
+(5, 3) (5,) cannot be broadcast
+(5, 1) (1, 3) gives (5, 3)
+(2, 5, 3) (5, 1) gives (2, 5, 3)
+(6,) (6, 1) gives (6, 6)</code></pre>
+            </div>
+                        <p>(b) fails for the same reason as the flat <code>day_total</code>: the 5 is compared with the 3. (e) is the accidental grid: legal, and rarely what you meant.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 3: Scale Every Store from 0 to 1</h3>
+                    <p>Using the project's <code>table</code> (224 days × 4 stores), rescale each store's column so its smallest day becomes 0 and its largest becomes 1: <code>(value - min) / (max - min)</code>, with the min and max taken per store. Confirm that every column of the result has a minimum of 0 and a maximum of 1. Remember the missing values.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>np.nanmin(table, axis=0)</code> and <code>np.nanmax(table, axis=0)</code> each give a row of four numbers, which broadcast against the table with no reshaping.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+            <pre><code class="language-python">low = np.nanmin(table, axis=0)
+high = np.nanmax(table, axis=0)
+scaled = (table - low) / (high - low)
+
+print(scaled.shape)
+print(np.nanmin(scaled, axis=0), np.nanmax(scaled, axis=0))
+print(scaled[:3].round(3))</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>(224, 4)
+[0. 0. 0. 0.] [1. 1. 1. 1.]
+[[0.218 0.091 0.154 0.077]
+ [0.101 0.06  0.187 0.118]
+ [0.155 0.237 0.045 0.15 ]]</code></pre>
+            </div>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 4: How Alike Are the Stores? (Stretch)</h3>
+                    <p>The project's <code>index</code> is a 7×4 table: one weekly profile per store, in columns. Build a 4×4 table whose cell (i, j) is the mean absolute difference between store i's profile and store j's profile. Which two stores have the most similar weekly rhythm? Do it with broadcasting and no loop.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Add an axis in two different places so that every store is paired with every store: <code>index[:, :, np.newaxis]</code> has shape <code>(7, 4, 1)</code> and <code>index[:, np.newaxis, :]</code> has shape <code>(7, 1, 4)</code>. Their difference has shape <code>(7, 4, 4)</code>. Then collapse the weekday axis.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+            <pre><code class="language-python">gap = index[:, :, np.newaxis] - index[:, np.newaxis, :]     # (7, 4, 1) with (7, 1, 4)
+print(gap.shape)
+
+distance = np.abs(gap).mean(axis=0)                         # collapse the 7 weekdays
+print(store_names)
+print(distance.round(3))
+
+far = np.where(distance == 0, np.inf, distance)             # ignore each store against itself
+i, j = np.unravel_index(far.argmin(), far.shape)
+print("most alike:", store_names[i], "and", store_names[j])</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>(7, 4, 4)
+['Asheville' 'Bend' 'Boise' 'Flagstaff']
+[[0.    0.039 0.031 0.053]
+ [0.039 0.    0.029 0.039]
+ [0.031 0.029 0.    0.03 ]
+ [0.053 0.039 0.03  0.   ]]
+most alike: Bend and Boise</code></pre>
+            </div>
+                        <p>The diagonal is zero (every store is identical to itself) and the table is symmetric. <code>np.unravel_index</code> converts the flat position that <code>argmin</code> returns into a row and a column. Measuring how far apart two rows of numbers are is the idea of a <em>distance</em>, and Lesson 1.5 gives you sharper tools for it.</p>
+                    </details>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="quiz" class="lesson-section">
+                <h2>🎯 Quick Quiz</h2>
+                <div class="card quiz-container">
+                    <h3>🎯 Check Your Understanding</h3>
+            <div class="quiz-question">
+                <p><strong>Question 1:</strong> An array of shape <code>(5, 3)</code> is added to an array of shape <code>(3,)</code>. What is the result?</p>
+                <div class="quiz-options">
+                    <button class="quiz-option" data-correct="false" data-hint="A missing dimension is not a problem. NumPy lines the shapes up from the right and treats a missing axis as length 1. What does 3 meet?">
+                        A) An error, because the arrays have different numbers of dimensions
+                    </button>
+                    <button class="quiz-option" data-correct="true" data-explanation="Lined up from the right, 3 meets 3, and the missing axis is treated as 1 and reused along the 5 rows. The three values are added to every row.">
+                        B) An array of shape <code>(5, 3)</code>
+                    </button>
+                    <button class="quiz-option" data-correct="false" data-hint="Broadcasting never shrinks the larger array. The result takes the larger length from each pair of axes.">
+                        C) An array of shape <code>(5,)</code>
+                    </button>
+                </div>
+                <div class="quiz-feedback"></div>
+            </div>
+
+            <div class="quiz-question">
+                <p><strong>Question 2:</strong> What does this print?</p>
+            <pre><code class="language-python">q2a = np.array([1, 2, 3])
+q2b = np.array([[10], [20]])
+print((q2a + q2b).shape)</code></pre>
+                <div class="quiz-options">
+                    <button class="quiz-option" data-correct="false" data-hint="q2b has shape (2, 1): two rows, one column. Write (3,) under (2, 1), aligned on the right, and take the larger length from each pair.">
+                        A) <code>(3,)</code>
+                    </button>
+                    <button class="quiz-option" data-correct="false" data-hint="Check each pair from the right: 3 meets 1, then a missing axis meets 2. Is a length of 1 ever a clash?">
+                        B) It raises a <code>ValueError</code>
+                    </button>
+                    <button class="quiz-option" data-correct="true" data-explanation="Shapes (3,) and (2, 1): from the right, 3 meets 1 and gives 3, then the missing axis meets 2 and gives 2. A row meeting a column makes a grid.">
+                        C) <code>(2, 3)</code>
+                    </button>
+                </div>
+                <div class="quiz-feedback"></div>
+            </div>
+
+            <div class="quiz-question">
+                <p><strong>Question 3:</strong> <code>t</code> has shape <code>(7, 4)</code>. Which expression divides every row by that row's total?</p>
+                <div class="quiz-options">
+                    <button class="quiz-option" data-correct="true" data-explanation="axis=1 gives one total per row, and keepdims=True keeps them as a column of shape (7, 1), which is reused across the 4 columns.">
+                        A) <code>t / t.sum(axis=1, keepdims=True)</code>
+                    </button>
+                    <button class="quiz-option" data-correct="false" data-hint="The totals here are a flat array of shape (7,). Lined up from the right against (7, 4), which two lengths meet?">
+                        B) <code>t / t.sum(axis=1)</code>
+                    </button>
+                    <button class="quiz-option" data-correct="false" data-hint="This runs without error, but axis=0 gives one total per column, so each value is divided by its column total. Which axis gives row totals?">
+                        C) <code>t / t.sum(axis=0, keepdims=True)</code>
+                    </button>
+                </div>
+                <div class="quiz-feedback"></div>
+            </div>
+
+            <div class="quiz-question">
+                <p><strong>Question 4:</strong> <code>actual</code> has shape <code>(100,)</code> and <code>predicted</code> has shape <code>(100, 1)</code>. What does <code>actual - predicted</code> give?</p>
+                <div class="quiz-options">
+                    <button class="quiz-option" data-correct="true" data-explanation="From the right, 100 meets 1, then a missing axis meets 100. Both are legal, so NumPy builds every actual minus every prediction: 10,000 numbers. Flatten one side first.">
+                        A) An array of shape <code>(100, 100)</code>, with no error
+                    </button>
+                    <button class="quiz-option" data-correct="false" data-hint="That is what was intended, but NumPy follows the rules, not the intent. A flat array behaves as a row. What do a row and a column make together?">
+                        B) An array of shape <code>(100,)</code> holding the 100 errors
+                    </button>
+                    <button class="quiz-option" data-correct="false" data-hint="Different shapes are fine when every pair of lengths is equal or contains a 1. Check the pairs: is there a real clash here?">
+                        C) A <code>ValueError</code>, because the shapes are different
+                    </button>
+                </div>
+                <div class="quiz-feedback"></div>
+            </div>
+
+            <div class="quiz-question">
+                <p><strong>Question 5:</strong> Which pair of shapes can <strong>not</strong> be broadcast together?</p>
+                <div class="quiz-options">
+                    <button class="quiz-option" data-correct="false" data-hint="From the right: 1 meets 5, then 4 meets 1. Each pair contains a 1, so both stretch and the result is (4, 5).">
+                        A) <code>(4, 1)</code> and <code>(1, 5)</code>
+                    </button>
+                    <button class="quiz-option" data-correct="false" data-hint="From the right: 4 meets 4, and the missing axis counts as 1. That is the table and row case.">
+                        B) <code>(3, 4)</code> and <code>(4,)</code>
+                    </button>
+                    <button class="quiz-option" data-correct="true" data-explanation="Lined up from the right, 4 meets 3. They are not equal and neither is 1, so it fails. The 3 would have to be a column of shape (3, 1).">
+                        C) <code>(3, 4)</code> and <code>(3,)</code>
+                    </button>
+                </div>
+                <div class="quiz-feedback"></div>
+            </div>
+
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="faq" class="lesson-section">
+                <h2>❓ Common Questions at This Stage</h2>
+
+                <details>
+                    <summary>Why are shapes matched from the right and not from the left?</summary>
+                    <p>Because the last axis is the innermost one: in a table it is "across a row". A flat array of four values is most naturally one row of the table, so matching on the right makes the common case (a table and one row of per-column values) work with no extra typing. The price is that per-row values need an explicit column shape.</p>
+                </details>
+                <details>
+                    <summary><code>newaxis</code>, <code>reshape(-1, 1)</code> or <code>keepdims</code>: which should I use?</summary>
+                    <p>If the smaller array comes from an aggregation of the larger one, use <code>keepdims=True</code>. It is correct for any shape and it documents your intent. For an array that arrives flat from somewhere else, <code>[:, np.newaxis]</code> and <code>.reshape(-1, 1)</code> are equivalent, so pick whichever you read more easily and be consistent.</p>
+                </details>
+                <details>
+                    <summary>Does broadcasting work with more than two dimensions?</summary>
+                    <p>Yes, with the same two rules applied to every pair of axes. You used it in the project (a 32×7×4 array) and in Exercise 4 (a 7×4×1 array against a 7×1×4 array). Three dimensions are about as far as most tabular data work goes. Images and video use four or five.</p>
+                </details>
+                <details>
+                    <summary>Will pandas broadcast the same way?</summary>
+                    <p>Partly, and the difference matters. pandas lines data up by <strong>labels</strong> (column names and row labels), not by position, which protects you from several of the silent mistakes in this lesson. Subtracting a row of per-column means from a DataFrame works much as it does here. You will see the details in Module 2, and knowing the NumPy rules first makes the pandas behavior easy to understand.</p>
+                </details>
+
+                <div class="card card-accent">
+                    <h3>🌟 Going Further: Bonus Challenge</h3>
+                    <p>The project averaged over all 32 weeks. Go one level deeper with the 3-D array <code>by_week = table.reshape(32, 7, 4)</code> (use the raw revenue this time). Divide each week by <em>that week's</em> store totals, so every value becomes "share of this store's week": you will need <code>np.nansum(by_week, axis=1, keepdims=True)</code>, which has shape <code>(32, 1, 4)</code>. Check that each store's seven shares add up to 1 in every week. Then find the week in which Saturday's share was highest at Boise, and look up its dates. Is there a reason for it in the data?</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="journal" class="lesson-section">
+                <h2>📓 Learning Journal</h2>
+                <div class="card card-accent">
+                    <p>Take five minutes to write in your learning journal (the <code>journal.md</code> file you started in Lesson 0.1, or a paper notebook). Jot down:</p>
+                    <ul>
+                        <li><strong>Key concepts</strong> you learned today</li>
+                        <li><strong>Techniques that clicked</strong> (and the ones that have not, yet)</li>
+                        <li><strong>Questions or confusion</strong> to come back to</li>
+                        <li><strong>Ideas to try</strong> on your own</li>
+                        <li><strong>Progress and feelings</strong>: how did this lesson go for you?</li>
+                    </ul>
+                    <p><strong>✍️ This lesson's prompt:</strong> Write the two broadcasting rules from memory, then check them against the lesson. Next, describe the accidental grid in your own words: what two shapes cause it, why NumPy does not complain, and the one habit that would have caught it. Which of the silent mistakes do you think you are most likely to make?</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="summary" class="lesson-section">
+                <h2>📝 Lesson Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎓 Key Takeaways</h3>
+                    <ul>
+                        <li><strong>Broadcasting</strong> lets NumPy combine arrays of different shapes by reusing the smaller one, like a rubber stamp</li>
+                        <li>Rule 1: line the shapes up <strong>from the right</strong>; a missing axis counts as 1</li>
+                        <li>Rule 2: each pair of lengths must be <strong>equal, or one of them 1</strong>; the result takes the larger</li>
+                        <li>A table with a <strong>row</strong> of per-column values just works: <code>table - table.mean(axis=0)</code></li>
+                        <li>A table with per-row values needs a <strong>column</strong>: <code>keepdims=True</code>, <code>[:, np.newaxis]</code> or <code>.reshape(-1, 1)</code></li>
+                        <li>A column meeting a row builds a <strong>grid</strong> of every combination, wanted or not</li>
+                        <li>Standardizing (<code>(x - mean) / std</code> with <code>axis=0</code>) puts columns on one scale</li>
+                        <li>Broadcasting copies nothing on the way in, but the result is full size</li>
+                        <li>The dangerous mistakes are silent: <strong>check <code>.shape</code></strong> after any operation that mixes shapes</li>
+                    </ul>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🏆 What You've Accomplished</h3>
+                    <ul>
+                        <li>You explained an error message from Lesson 1.2 by reading two shapes from the right</li>
+                        <li>You compared four stores of different sizes fairly, by dividing each by its own average</li>
+                        <li>You built a price-by-discount grid with no nested loop</li>
+                        <li>You reshaped 896 rows into weeks, weekdays and stores and measured the Saturday effect: about 1.5 times an average day</li>
+                        <li>You used z-scores to find the sale weekend without being told where it was</li>
+                        <li>You met three mistakes that raise no error and learned how to catch each one</li>
+                    </ul>
+                </div>
+
+                <h3>🔭 Looking Ahead</h3>
+                <p>So far every number has come from the data. In <a href="numpy_random_generation.html"><strong>Lesson 1.4: Random Number Generation</strong></a> you will make your own: random numbers you can reproduce exactly, random samples and shuffles of real data, and small simulations that answer "what could happen?" questions, such as how much a month's revenue might vary. It is the foundation for the statistics module, where simulation is used to explain ideas that formulas tend to hide.</p>
+
+                <h3>📋 Before the Next Lesson</h3>
                 <ul>
-                    <li>Broadcasting lets NumPy combine arrays of different shapes by virtually stretching size-1 dimensions — no data is copied.</li>
-                    <li>The three rules are: align shapes from the right, dimensions are compatible when equal or one is 1, and the result takes the maximum of each dimension.</li>
-                    <li><code>np.newaxis</code> and <code>keepdims=True</code> give you deliberate control over how arrays line up.</li>
-                    <li>Everyday patterns — normalization, bias addition, outer products, distance matrices — are all broadcasting in disguise, and far faster than loops.</li>
+                    <li>Keep your project notebook. The <code>table</code> of 224 days by 4 stores will be useful again.</li>
+                    <li>Predict, then check with <code>np.broadcast_shapes</code>: what do <code>(8, 1, 3)</code> and <code>(5, 1)</code> give?</li>
+                    <li>Think about this: if you picked 30 days at random from Boise's revenue and added them up, then did it again with a different 30, how different would the two totals be? Write down a guess. You will find out in Lesson 1.4.</li>
                 </ul>
-            </div>
-            <h3>🎉 What You've Accomplished</h3>
-            <p>You can now combine differently shaped arrays with confidence, predicting result shapes from the rules and writing loop-free code that is both shorter and dramatically faster.</p>
-            <h3>❓ Common Questions at This Stage</h3>
-            <details>
-                <summary>Why do I get a shape-mismatch error after taking a mean along an axis?</summary>
-                <p>Aggregations like <code>mean(axis=1)</code> drop the reduced dimension, so the result no longer lines up for broadcasting. Pass <code>keepdims=True</code> to keep that dimension as size 1, and the broadcast will work.</p>
-            </details>
-            <details>
-                <summary>What does np.newaxis actually do?</summary>
-                <p>It inserts a new size-1 dimension into an array's shape, turning, say, a <code>(3,)</code> vector into <code>(3, 1)</code> or <code>(1, 3)</code>. That extra size-1 axis is exactly what broadcasting stretches, letting you control which direction the array expands.</p>
-            </details>
-            <details>
-                <summary>Does broadcasting use a lot of extra memory?</summary>
-                <p>No — that's the beauty of it. Broadcasting works with views and never materializes the stretched array, so adding a small vector to a huge matrix uses only the memory of the originals, unlike <code>np.tile</code>, which physically copies data.</p>
-            </details>
-            <h3>🔭 Looking Ahead</h3>
-            <p>Broadcasting and vectorization are two halves of writing fast NumPy. Next you'll build on them to generate and work with random data — the foundation of simulations, sampling, and machine learning experiments.</p>
-            <h3>✅ Before the Next Lesson</h3>
-            <ul>
-                <li>Predict the result shape of <code>(8, 1, 6, 1)</code> combined with <code>(7, 1, 5)</code>, then verify it with <code>np.ones</code>.</li>
-                <li>Build an outer product two ways — with a loop and with <code>x[:, np.newaxis] * y</code> — and confirm they match.</li>
-                <li>Write your Learning Journal entry for this lesson</li>
-            </ul>
-            <div class="card card-accent" style="text-align: center; padding: 2rem;">
-                <h3>🌟 Encouragement for the Journey</h3>
-                <p>Once broadcasting clicks, whole categories of loops simply vanish from your code. Keep checking shapes, trust the three rules, and elegant NumPy will become second nature.</p>
-            </div>
-        </section>
 
-        <div class="navigation-links">
-            <a class="nav-prev" href="numpy_vectorized_operations.html">← Previous: Vectorized Operations</a>
-            <a class="nav-home" href="index.html">🏠 Course Home</a>
-            <a class="nav-next" href="numpy_random_generation.html">Next: Random Number Generation →</a>
+                <div class="card card-accent">
+                    <h3>🌱 Encouragement for the Journey</h3>
+                    <p>Broadcasting has a reputation for being confusing, and you have just seen that it rests on two rules you can check on paper. If you still need to write the shapes down to be sure, good: so do people who have used NumPy for years. The lesson to carry forward is less a rule than a habit. When shapes differ, look at them before you trust the result. You now know what to look for.</p>
+                </div>
+            </section>
+
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="numpy_vectorized_operations.html" class="prev-lesson">← Previous: Vectorized Operations</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="numpy_random_generation.html" class="next-lesson">Next: Random Number Generation →</a>
+            </nav>
         </div>
-    </footer>
+    </main>
 
-    <!-- Footer -->
     <footer class="site-footer">
         <p>&copy; 2026 Ray de la Paz. Python Data Science. All rights reserved.</p>
         <div class="footer-links">
@@ -1337,6 +1062,10 @@ print("📡 You're now a broadcasting expert!")</code></pre>    </main>
             <a href="https://rays-home.netlify.app/contact">Contact</a>
             <a href="#" id="print-button">Print Page</a>
         </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
     </footer>
+
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
 </body>
 </html>

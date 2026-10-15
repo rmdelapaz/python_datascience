@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facilitator Guide: Session 6</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Instructor copy —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">contains answers &amp; timing · not for students</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Facilitator Guide</div>
+    <h1>Session 6: Merging and Reshaping</h1>
+    <p class="sub">How to teach the session where tables are connected and reshaped. First learners bring customers, orders, order lines and products together by their keys, and learn to notice when a merge quietly loses rows or multiplies them. Then they turn long tables into grids a person can read with <code class="inline">pivot_table</code> and <code class="inline">crosstab</code>, turn grids back into rows with <code class="inline">melt</code>, and learn to read a tidy-looking table with suspicion.</p>
+    <div class="meta-row">
+      <span class="chip"><b>2</b> lessons</span>
+      <span class="chip"><b>3 hrs</b> session</span>
+      <span class="chip">Lessons <b>2.5–2.6</b></span>
+      <span class="chip">Session <b>6</b> of 21</span>
+    </div>
+  </header>
+
+  <div class="sec"><h2>How to Use This Guide</h2><span class="rule"></span></div>
+  <ul class="tick">
+          <li>Each lesson block has four beats: <b>frame</b> (the mental model, said aloud), <b>live demo</b> (you type, they follow), <b>guided lab</b> (new practice from <code class="inline">labs/module-06/</code>) and <b>start the lesson project</b> (the first three steps together). The rest of each project, the lessons' exercises, quizzes and journals are homework.</li>
+          <li>The lessons are timed at 95 and 85 minutes for a solo learner; the room has 75 for each. The demo scripts are compressed paths through the lesson pages on the lessons' own tables, so every number on the projector matches the page (pandas 3.0.6).</li>
+          <li><b>Type, do not paste.</b> In 2.5, ask for three predictions before every merge: the left table, the relationship, the row count. In 2.6, have the room say the four pivot questions as a sentence before every pivot.</li>
+          <li>Keep <code class="inline">pandas_merging_joining.html</code> and <code class="inline">pandas_pivot_tables.html</code> open for the diagrams and reference tables (the map of the four tables, the four joins, the relationships table, the which-tool-when chart, the six questions before you trust a pivot).</li>
+          <li>Starters go to learners; every <code class="inline">*_solution.py</code> stays with you. <code class="inline">debug_merges.py</code> is broken on purpose.</li>
+        </ul>
+  <div class="note warn"><div class="t">The #1 risk of Session 6: a merge or a pivot that runs and is wrong</div><p>Every serious mistake today is silent. A default inner join drops 739 orders. A one-to-many merge turns $4.0 million into $11.0 million. A pivot without <code class="inline">aggfunc</code> shows averages under a title that says revenue. A pivot quietly leaves out $34,228 of sales because their category is missing. Two reconciliation habits cover all four, and you should say them until the room says them back: <b>"Count before, count after"</b> for every merge, and <b>"Does the corner match the source?"</b> for every pivot. The second risk is cognitive load in 2.5: do not teach <code class="inline">merge_asof</code> in the room. One sentence, and point at the lesson.</p></div>
+  <div class="sec"><h2>Before the Session</h2><span class="rule"></span></div>
+  <ul class="tick lab">
+          <li>☐ Copy the <b>starter</b> files and <code class="inline">debug_merges.py</code> from <code class="inline">labs/module-06/</code> to the shared folder or each machine, keeping the folder layout. Keep every <code class="inline">*_solution.py</code> on your machine.</li>
+          <li>☐ From the kit folder run <code class="inline">python3 labs/check_labs.py module-06</code>. All 10 lines should say PASS.</li>
+          <li>☐ No servers to start and no internet needed. Files used today: <code class="inline">orders.csv</code>, <code class="inline">customers.csv</code>, <code class="inline">order_items.csv</code>, <code class="inline">products.csv</code>, <code class="inline">daily_sales.csv</code>, <code class="inline">store_weather.csv</code>, <code class="inline">survey.csv</code>, <code class="inline">sales_2025.xlsx</code>.</li>
+          <li>☐ Environment traps: <code class="inline">read_excel</code> needs <code class="inline">openpyxl</code> (2.6 demo step 10). Learners on an older pandas will see <code class="inline">stack()</code> drop empty cells and accept a <code class="inline">dropna=</code> argument; in the course environment it keeps them. Check <code class="inline">pd.__version__</code> prints 3.0.6 on any machine that behaves differently.</li>
+          <li>☐ Projector: a notebook called <code class="inline">session06</code> opened in the project folder, font at least 18 pt, the display options in the first cell, and the four core tables loaded before the session starts (the load takes a few seconds).</li>
+          <li>☐ Whiteboard, before learners arrive: the map <b>customers → orders → order_items ← products</b> with the key on each arrow; <b>"Count before. Count after."</b>; and, for after the break, <b>rows? columns? values? how to combine?</b></li>
+          <li>☐ Skim the Session 5 homework: the Cleaning Pipeline scorecards (0 wrong, 623 blank) and the Store Scorecard, and each learner's answer to the customer-count question from Lesson 2.4 (3,942 distinct ids in <code class="inline">orders.csv</code>, 4,850 rows in <code class="inline">customers.csv</code>). That question opens the 2.5 block.</li>
+          <li>☐ Sticky notes for the exit ticket. Print the workbook for Session 6.</li>
+        </ul>
+  <div class="sec"><h2>Session 6 Agenda (3 hours)</h2><span class="rule"></span></div>
+  <table class="timing">
+    <thead><tr><th>Clock</th><th>Minutes</th><th>Segment</th><th>What happens</th></tr></thead>
+    <tbody>
+      <tr><td class="t">0:00</td><td class="t">10</td><td>Warm-up</td><td>Five retrieval questions on Session 5 (cleaning, groupby), homework check, the customer-count question.</td></tr>
+      <tr><td class="t">0:10</td><td class="t">10</td><td><b>2.5</b> Frame and mental model</td><td>Why data lives in several tables; the claim ticket; the map of the four tables.</td></tr>
+      <tr><td class="t">0:20</td><td class="t">30</td><td><b>2.5</b> Live demo</td><td>Four joins, the 739 lost orders, <code class="inline">indicator</code>, <code class="inline">validate</code>, rows that multiply, awkward keys, <code class="inline">concat</code> (two quiet mistakes, two loud ones).</td></tr>
+      <tr><td class="t">0:50</td><td class="t">25</td><td><b>2.5</b> Guided lab</td><td><code class="inline">labs/module-06/l2_5-merging-joining/customer_profiles_starter.py</code>: aggregate, then merge.</td></tr>
+      <tr><td class="t">1:15</td><td class="t">10</td><td><b>2.5</b> Start the lesson project</td><td>Revenue by Category, Steps 1 to 3 together; the rest goes home.</td></tr>
+      <tr><td class="t">1:25</td><td class="t">10</td><td>Break</td><td>Leave the <code class="inline">_merge</code> counts on the projector.</td></tr>
+      <tr><td class="t">1:35</td><td class="t">10</td><td><b>2.6</b> Frame and mental model</td><td>The logbook and the scoreboard; the four pivot questions.</td></tr>
+      <tr><td class="t">1:45</td><td class="t">30</td><td><b>2.6</b> Live demo</td><td>First pivot, the default-mean trap, totals and empty cells, <code class="inline">crosstab</code>, <code class="inline">pivot</code> versus <code class="inline">pivot_table</code>, <code class="inline">melt</code>, month order, a total that hides the story.</td></tr>
+      <tr><td class="t">2:15</td><td class="t">25</td><td><b>2.6</b> Guided lab</td><td><code class="inline">labs/module-06/l2_6-pivot-tables/payment_returns_starter.py</code>, then <code class="inline">survey_by_age_starter.py</code>.</td></tr>
+      <tr><td class="t">2:40</td><td class="t">10</td><td><b>2.6</b> Start the lesson project</td><td>The Seasonality Report, Steps 1 to 3 together; the rest goes home.</td></tr>
+      <tr><td class="t">2:50</td><td class="t">10</td><td>Wrap-up</td><td>Exit ticket (3 questions), homework, bring list for Session 7.</td></tr>
+      <tr><td class="t"><b>Total</b></td><td class="t"><b>180</b></td><td></td><td>Ends at 3:00.</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:.9rem;color:var(--ink-2)"><b>In the room:</b> both mental models, both live demos, the guided labs <code class="inline">customer_profiles</code> and <code class="inline">payment_returns</code> for everyone (<code class="inline">survey_by_age</code> for pairs that finish), and the first three steps of each lesson project. <b>Goes home:</b> the rest of both projects (2.5 Steps 4 to 7, 2.6 Steps 4 to 6), the lessons' exercises, both Quick Quizzes and journals, and the labs <code class="inline">orders_weather</code>, <code class="inline">weather_grid</code> and <code class="inline">debug_merges.py</code>: about 2 to 3 hours.</p>
+  <p style="font-size:.9rem;color:var(--ink-2)"><b>Protect:</b> in 2.5 the lost-rows step, <code class="inline">indicator</code>, and the double-counting step; in 2.6 the default-mean trap, <code class="inline">normalize</code> in both directions, <code class="inline">melt</code>, and the footwear table; both guided labs. <b>Cut first if running long:</b> <code class="inline">concat</code> and the <code class="inline">merge_asof</code> sentence in 2.5 (reading), then the margins-of-means step and the reshaping-reveals-holes step in 2.6, then the second lab of the 2.6 block.</p>
+  <div class="sec"><h2>Warm-up</h2><span class="rule"></span></div>
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">0:00</span><h3>Warm-up: Retrieval from Session 5</h3><span class="dur">10 min</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Five retrieval questions (no notes, 5 minutes)</div>
+        <p>Slide 3. Paper only, notebooks closed, then one minute with a neighbor before you take answers.</p>
+        <ol class="steps">
+          <li>In what order do you repair a damaged table? <b>Answer:</b> Structure (headers, stray rows, duplicates), then text, numbers, dates, and last the missing values.</li>
+          <li>What does <code class="inline">pd.to_numeric(s, errors="coerce")</code> do with the value <code class="inline">free</code>, and why is that useful? <b>Answer:</b> It turns it into NaN instead of raising an error, so it works as a detector: values that became NaN but were not empty are the ones to look at.</li>
+          <li><code class="inline">orders.dropna()</code> kept 2,085 of 20,302 rows. Why, and what should you write? <b>Answer:</b> It drops every row with a gap in any column, and most orders have no promo code. Name the columns that matter: <code class="inline">dropna(subset=[...])</code>.</li>
+          <li>You need each order's total next to its store's average order. Which groupby tool gives one value per original row? <b>Answer:</b> <code class="inline">transform</code> (for example <code class="inline">orders.groupby("store")["order_total"].transform("mean")</code>).</li>
+          <li>Grouped by <code class="inline">promo_code</code>, the group sizes add up to 2,148, but there are 20,302 orders. What happened? <b>Answer:</b> Rows whose key is missing are dropped by default. <code class="inline">dropna=False</code> keeps them as a group.</li>
+        </ol>
+      </div>
+      <div class="blk"><div class="h">Homework check (3 minutes)</div>
+        <ul class="tick">
+          <li>Show of hands: whose cleaning scorecard said 0 wrong cells and 623 still blank? Whose Store Scorecard totals $3,624,306.27?</li>
+          <li>Ask for the answer to the question from Lesson 2.4: how many distinct customer ids are in <code class="inline">orders.csv</code> (3,942), and how many rows in <code class="inline">customers.csv</code> (4,850)? Which is larger, and what might that mean?</li>
+          <li>Take two or three guesses about what it means and write them on the board without comment.</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Bridge to today (2 minutes)</div>
+        <p>Say: "4,850 is larger than 3,942, so some account holders never ordered. True. But there is something the two counts cannot tell you: 150 of those 3,942 ids are not in the customers file at all. You can only see that by putting the two tables side by side, key by key. That is a merge, and it is the next 75 minutes."</p>
+      </div>
+    </div>
+  </section>
+  <div class="sec"><h2>Lesson Plans</h2><span class="rule"></span></div>
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">2.5</span><h3>Merging and Joining</h3><span class="dur">75 min</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Objectives (the lesson's own words)</div>
+        <ul class="tick">
+          <li>Combine two tables on a key with <code class="inline">merge()</code> and choose between inner, left, right and outer joins</li>
+          <li>Find the keys that have no match on either side with <code class="inline">indicator=True</code>, and decide what to do about them</li>
+          <li>State the relationship between two tables (one-to-one, many-to-one, many-to-many) and enforce it with <code class="inline">validate=</code></li>
+          <li>Predict and check the row count of a merge, and avoid double counting after a one-to-many merge</li>
+          <li>Merge on differently named or multiple keys, stack tables with <code class="inline">concat()</code>, and recognize when <code class="inline">merge_asof()</code> is the right tool</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Timing inside this block</div>
+        <table class="timing"><tbody>
+          <tr><td class="t">10 min</td><td>Frame: why data lives in several tables; the claim ticket; the map of the four tables</td></tr>
+          <tr><td class="t">30 min</td><td>Live demo: four joins on toy tables, the 739 lost orders, <code class="inline">indicator</code>, <code class="inline">validate</code>, rows that multiply, awkward keys, <code class="inline">concat</code></td></tr>
+          <tr><td class="t">25 min</td><td>Guided lab: <code class="inline">customer_profiles</code> (aggregate, then merge)</td></tr>
+          <tr><td class="t">10 min</td><td>Start the lesson project (Revenue by Category, Steps 1 to 3)</td></tr>
+        </tbody></table>
+      </div>
+      <div class="blk"><div class="h">Mental model to say</div>
+        <p>Say: "Leave skis for tuning at a Pinecrest store and you get a numbered ticket. The same number is tied to the skis. Nobody writes your name on the skis: the number connects the two. A key is that ticket number, a column that appears in both tables. A merge walks down one table and, for each row, finds the rows in the other table holding the same ticket. Two questions decide everything that follows: what if a ticket has no match, and what if a ticket matches more than once?" Draw the map from the lesson on the board and leave it up: <b>customers →(customer_id)→ orders →(order_id)→ order_items ←(sku)← products</b>. Read each arrow as "one row here can match many rows there". Under it write the habit for the block: <b>"Count before. Count after."</b></p>
+      </div>
+      <div class="blk"><div class="h">Live demo (you type, they follow)</div>
+        <p>Type in a notebook called <code class="inline">session06</code> and load the four core tables first (<code class="inline">orders</code>, <code class="inline">customers</code>, <code class="inline">products</code>, <code class="inline">items</code>, as on the lesson page). Before <b>every</b> merge, ask the room three things and wait for answers: which table is on the left, what relationship do you expect, how many rows should come out? Steps 3 and 7 are the quiet kind of mistake (no error, a wrong number); steps 6 and 9 are deliberate mistakes that raise errors.</p>
+        <ol class="steps">
+          <li><b>Two tiny tables you can see whole (3 min).</b> Say: "<code class="inline">left</code> has keys A, B, C. <code class="inline">right</code> has B, C, D. So B and C match, A is only on the left, D only on the right." Run the default merge: only B and C. "By default <code class="inline">merge</code> keeps only keys found in both tables. That default is called an inner join."
+<pre class="code">left = pd.DataFrame({<span class="s">"sku"</span>: [<span class="s">"A"</span>, <span class="s">"B"</span>, <span class="s">"C"</span>], <span class="s">"qty"</span>: [<span class="s">2</span>, <span class="s">1</span>, <span class="s">5</span>]})
+right = pd.DataFrame({<span class="s">"sku"</span>: [<span class="s">"B"</span>, <span class="s">"C"</span>, <span class="s">"D"</span>], <span class="s">"price"</span>: [<span class="s">10.0</span>, <span class="s">20.0</span>, <span class="s">30.0</span>]})
+print(left.merge(right, on=<span class="s">"sku"</span>))</pre>
+<pre class="out">  sku  qty  price
+0   B    1   10.0
+1   C    5   20.0</pre></li>
+          <li><b>how= decides what happens to keys with no match (3 min).</b> Ask the room to call out the keys before each result. Left: A, B, C. Outer: A, B, C, D. "Where a row has no partner, the borrowed columns are NaN. And notice <code class="inline">qty</code> turned into floats in the outer result: an integer column cannot hold a NaN." The working default for analysis is a left join: take my main table and attach some columns.
+<pre class="code">print(left.merge(right, on=<span class="s">"sku"</span>, how=<span class="s">"left"</span>))
+print(left.merge(right, on=<span class="s">"sku"</span>, how=<span class="s">"outer"</span>))</pre>
+<pre class="out">  sku  qty  price
+0   A    2    NaN
+1   B    1   10.0
+2   C    5   20.0
+  sku  qty  price
+0   A  2.0    NaN
+1   B  1.0   10.0
+2   C  5.0   20.0
+3   D  NaN   30.0</pre></li>
+          <li><b>A real merge, and the rows it lost (4 min).</b> Attach each customer's name, state and tier to the orders, with the default settings. Show the head: "It looks perfect." Then: "Now do the one thing you should do after every merge for the rest of your career: count the rows." 739 orders are gone. No error, no warning. Any revenue total computed from <code class="inline">merged</code> would be short, and nothing on screen would say so.
+<pre class="code">slim = customers[[<span class="s">"customer_id"</span>, <span class="s">"first_name"</span>, <span class="s">"state"</span>, <span class="s">"loyalty_tier"</span>]]
+merged = orders.merge(slim, on=<span class="s">"customer_id"</span>)
+print(merged[[<span class="s">"order_id"</span>, <span class="s">"customer_id"</span>, <span class="s">"order_total"</span>, <span class="s">"first_name"</span>, <span class="s">"loyalty_tier"</span>]].head(<span class="s">2</span>))
+print(len(orders), <span class="s">"orders before,"</span>, len(merged), <span class="s">"rows after,"</span>, len(orders) - len(merged), <span class="s">"lost"</span>)</pre>
+<pre class="out">   order_id  customer_id  order_total first_name loyalty_tier
+0    100001        12673        434.9     Xavier       Silver
+1    100002        10034        278.9       Aiko         Gold
+20302 orders before, 19563 rows after, 739 lost</pre></li>
+          <li><b>The repair: a left join (2 min).</b> Say: "With <code class="inline">how=\"left\"</code> all 20,302 orders survive, and the 739 without a customer record have NaN in the borrowed columns: missing matches you can see and count, instead of rows that silently vanish." Then the four kinds on the real tables: inner smallest, outer largest, and the differences are exactly the unmatched rows on each side.
+<pre class="code">with_names = orders.merge(slim, on=<span class="s">"customer_id"</span>, how=<span class="s">"left"</span>)
+print(len(with_names), with_names[<span class="s">"first_name"</span>].isna().sum())
+<span class="k">for</span> how <span class="k">in</span> [<span class="s">"inner"</span>, <span class="s">"left"</span>, <span class="s">"right"</span>, <span class="s">"outer"</span>]:
+    print(how, len(orders.merge(slim, on=<span class="s">"customer_id"</span>, how=how)))</pre>
+<pre class="out">20302 739
+inner 19563
+left 20302
+right 20621
+outer 21360</pre></li>
+          <li><b>indicator=True: unmatched rows are findings (4 min).</b> Say: "<code class="inline">indicator=True</code> adds a column <code class="inline">_merge</code> that says where each row came from. With an outer join it is a complete audit of how two tables overlap." The 739 orphan orders belong to 150 customer ids and are worth $154,274: the README says they are closed accounts whose records were removed. Real sales. And 1,058 people have an account and no order. "Each group of unmatched keys has a cause. Find it, then decide. Never let the default decide for you."
+<pre class="code">audit = orders.merge(slim, on=<span class="s">"customer_id"</span>, how=<span class="s">"outer"</span>, indicator=<span class="k">True</span>)
+print(audit[<span class="s">"_merge"</span>].value_counts())
+orphans = audit[audit[<span class="s">"_merge"</span>] == <span class="s">"left_only"</span>]
+print(len(orphans), orphans[<span class="s">"customer_id"</span>].nunique(), round(orphans[<span class="s">"order_total"</span>].sum(), <span class="s">2</span>))</pre>
+<pre class="out">_merge
+both          19563
+right_only     1058
+left_only       739
+Name: count, dtype: int64
+739 150 154273.8</pre></li>
+          <li><b>Relationships, validate=, and a deliberate mistake (4 min).</b> Ask: "Is <code class="inline">customer_id</code> unique in <code class="inline">customers</code>? In <code class="inline">orders</code>?" From the orders side this is many-to-one: each order finds at most one customer, so the row count cannot grow. "<code class="inline">validate=</code> makes pandas check your belief." It passes. Then state something untrue, <code class="inline">one_to_one</code>, and read the <code class="inline">MergeError</code> aloud: it names the problem. "A few characters that turn a silent wrong answer into a loud error on the day somebody hands you a customers file with a duplicated id."
+<pre class="code">print(customers[<span class="s">"customer_id"</span>].is_unique, orders[<span class="s">"customer_id"</span>].is_unique)
+checked = orders.merge(slim, on=<span class="s">"customer_id"</span>, how=<span class="s">"left"</span>, validate=<span class="s">"many_to_one"</span>)
+print(len(checked))
+orders.merge(slim, on=<span class="s">"customer_id"</span>, how=<span class="s">"left"</span>, validate=<span class="s">"one_to_one"</span>)</pre>
+<pre class="out">True False
+20302
+MergeError: Merge keys are not unique in left dataset; not a one-to-one merge
+Duplicates in left:
+  customer_id
+       12338
+       11061
+       13819
+       12491
+       13352 ...</pre></li>
+          <li><b>One-to-many: correct, and easy to misuse (4 min).</b> Ask for the row count first: one order matches several lines, so the result has one row per line, 45,490. Look at order 100001: its total of 434.90 now appears twice. "Nothing is wrong yet. It goes wrong the moment you add up an order-level column in the merged table." $11.0 million instead of $4.0 million. "The most expensive merge mistake in practice, because the number looks plausible and the code raises nothing."
+<pre class="code">lines = orders[[<span class="s">"order_id"</span>, <span class="s">"status"</span>, <span class="s">"order_total"</span>]].merge(items, on=<span class="s">"order_id"</span>, how=<span class="s">"left"</span>,
+                                                           validate=<span class="s">"one_to_many"</span>)
+print(len(orders), <span class="s">"-&gt;"</span>, len(lines))
+print(lines[lines[<span class="s">"order_id"</span>] == <span class="s">100001</span>])
+print(round(orders[<span class="s">"order_total"</span>].sum(), <span class="s">2</span>), round(lines[<span class="s">"order_total"</span>].sum(), <span class="s">2</span>))</pre>
+<pre class="out">20302 -&gt; 45490
+   order_id     status  order_total  order_item_id       sku  quantity  unit_price
+0    100001  completed        434.9              1  SLP-1021         1      371.95
+1    100001  completed        434.9              2  KIT-1014         1       62.95
+3950701.45 11039208.35</pre></li>
+          <li><b>Two honest ways out (2 min).</b> Say: "After every merge, finish the sentence: one row of this table is one ... If the answer is one order line, then order-level columns are repeated, and summing or averaging them is wrong." Either go back to one row per order before summing an order-level column, or sum a line-level quantity. (The line totals come to a little more than the order totals because order totals include discounts and shipping.)
+<pre class="code">per_order = lines.drop_duplicates(<span class="s">"order_id"</span>)
+print(round(per_order[<span class="s">"order_total"</span>].sum(), <span class="s">2</span>))
+lines[<span class="s">"line_total"</span>] = lines[<span class="s">"quantity"</span>] * lines[<span class="s">"unit_price"</span>]
+print(round(lines[<span class="s">"line_total"</span>].sum(), <span class="s">2</span>))</pre>
+<pre class="out">3950701.45
+3963530.35</pre></li>
+          <li><b>Awkward keys: two columns, different names (4 min).</b> Daily sales and weather describe the same thing, a store on a day, but one says <code class="inline">store</code> and the other <code class="inline">city</code>, and the key is the pair. Type the natural first attempt and read the <code class="inline">KeyError</code>: "<code class="inline">on=</code> needs the same names in both tables." Then <code class="inline">left_on</code> and <code class="inline">right_on</code>, in matching order, validated one-to-one: 2,903 in, 2,903 out. An outer join with an indicator shows what the 21 extra weather rows are: store-days with no sales row.
+<pre class="code">daily = pd.read_csv(<span class="s">"data/daily_sales.csv"</span>, parse_dates=[<span class="s">"date"</span>])
+weather = pd.read_csv(<span class="s">"data/store_weather.csv"</span>, parse_dates=[<span class="s">"date"</span>])
+sw = daily.merge(weather, left_on=[<span class="s">"date"</span>, <span class="s">"store"</span>], right_on=[<span class="s">"date"</span>, <span class="s">"city"</span>],
+                 how=<span class="s">"left"</span>, validate=<span class="s">"one_to_one"</span>)
+print(len(daily), len(weather), len(sw))
+both = daily.merge(weather, left_on=[<span class="s">"date"</span>, <span class="s">"store"</span>], right_on=[<span class="s">"date"</span>, <span class="s">"city"</span>],
+                   how=<span class="s">"outer"</span>, indicator=<span class="k">True</span>)
+print(both[<span class="s">"_merge"</span>].value_counts().to_dict())
+daily.merge(weather, on=[<span class="s">"date"</span>, <span class="s">"store"</span>])</pre>
+<pre class="out">2903 2924 2903
+{'both': 2903, 'right_only': 21, 'left_only': 0}
+KeyError: 'store'</pre></li>
+          <li><b>Stacking with concat, and a word about merge_asof (3 min).</b> Say: "<code class="inline">merge</code> puts tables side by side, matching rows by key. <code class="inline">concat</code> puts tables on top of each other: same columns, more rows. It is what you use when data arrives in pieces, one file per month." <code class="inline">ignore_index=True</code> renumbers the rows. Then one sentence only on <code class="inline">merge_asof</code>: "When there is no equal key, only a nearest earlier one, for example a customer's most recent order before a website visit, <code class="inline">pd.merge_asof</code> is the tool. The lesson has a worked example; you need to recognize the situation, not memorize the call."
+<pre class="code">y2024 = orders[orders[<span class="s">"order_date"</span>].dt.year == <span class="s">2024</span>]
+y2025 = orders[orders[<span class="s">"order_date"</span>].dt.year == <span class="s">2025</span>]
+stacked = pd.concat([y2024, y2025], ignore_index=<span class="k">True</span>)
+print(len(y2024), len(y2025), stacked.shape, stacked.equals(orders))</pre>
+<pre class="out">9519 10783 (20302, 11) True</pre></li>
+        </ol>
+      </div>
+      <div class="blk warn"><div class="h">Three mistakes to expect</div>
+        <ul class="tick">
+          <li><b>An inner join used as an accidental filter.</b> No error. Symptom: a total that is a few percent short (19,563 rows instead of 20,302), found weeks later or never. Coach: "How many rows did your main table have before the merge? How many after? Which rows went, and why?" The cure is two habits: <code class="inline">how="left"</code> when you are adding columns to a main table, and a row count after every merge. Then <code class="inline">indicator=True</code> to look at what did not match.</li>
+          <li><b>Summing or averaging a repeated column after a one-to-many merge.</b> No error. Symptoms: order totals that sum to $11.0 million instead of $4.0 million; an 'average order total' of $242.67 instead of $194.60. Coach: "Finish the sentence: one row of this table is one ___. Is <code class="inline">order_total</code> a fact about a line or about an order?" Have them aggregate each table to the level they need before merging, or total only columns that belong to the row's own level.</li>
+          <li><b>Keys that do not line up.</b> These raise errors, which is the easy kind. <code class="inline">ValueError: You are trying to merge on str and int64 columns</code> (convert one side; ignore the hint about <code class="inline">pd.concat</code>). <code class="inline">KeyError: 'store'</code> (the other table calls it <code class="inline">city</code>: <code class="inline">left_on</code> / <code class="inline">right_on</code>). <code class="inline">MergeError: Merge keys are not unique in left dataset</code> (the <code class="inline">validate=</code> claim names the wrong side). Coach: "Print the dtype and three values of the key on each side." And one quiet relative: missing keys match each other in pandas, so drop or fill NaN keys before merging on a column that has them.</li>
+        </ul>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab</div>
+        <ul class="tick lab">
+          <li><code class="inline">labs/module-06/l2_5-merging-joining/customer_profiles_starter.py</code> (reference: <code class="inline">customer_profiles_solution.py</code>), 25 min: aggregate first, then merge; <code class="inline">how="left"</code>, <code class="inline">validate="one_to_one"</code>, <code class="inline">indicator=True</code>; an honest <code class="inline">fillna(0)</code>; an outer-join audit of both sides.</li>
+          <li><code class="inline">labs/module-06/l2_5-merging-joining/orders_weather_starter.py</code> (reference: <code class="inline">orders_weather_solution.py</code>), 20 min: a two-column key with different names (<code class="inline">left_on</code> / <code class="inline">right_on</code>), choosing the left table so that days with no orders are kept, <code class="inline">validate="one_to_one"</code>, <code class="inline">indicator</code>, then a groupby.</li>
+        </ul>
+        <p>Also in the folder: <code class="inline">labs/module-06/l2_5-merging-joining/debug_merges.py</code>. A deliberately broken handout: three merges that raise errors and two that run and give a wrong number. Not run by <code class="inline">check_labs.py</code>.</p>
+        <ul class="tick lab">
+          <li>Everyone does <code class="inline">customer_profiles</code>. Before TODO 2 make every learner fill in the prediction line in the file: left table, relationship, rows after. Ask three learners to read theirs out before anyone runs it.</li>
+          <li>Circulate at TODO 3. Ask: 'Why is filling with 0 honest here, when filling a missing order total with 0 was wrong in Session 5?' (No orders really is 0 orders and $0 of spend; a missing total is an unknown amount.)</li>
+          <li>At minute 18 ask for the three tier percentages. Then ask why Gold and Silver are exactly 0: it is a property of how tiers are defined, not a discovery.</li>
+          <li>TODO 5 is the audit of the other side. If time is short, run it on the projector: the 150 ids and $154,273.80 connect straight back to the demo.</li>
+          <li><code class="inline">orders_weather</code> and <code class="inline">debug_merges.py</code> are for fast finishers and homework.</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Start the lesson project</div>
+        <ul class="tick">
+          <li>The lesson project is <b>Revenue by Category</b>: three tables joined, every unmatched row accounted for, and a pricing trap (seven steps, about 40 minutes solo).</li>
+          <li>In the room do Step 1 (inspect the keys: 609 item lines with no product, 8 products never sold), Step 2 (lines + orders, many-to-one, <code class="inline">45490 -&gt; 45490</code>) and Step 3 (+ products with an indicator: 609 <code class="inline">left_only</code>).</li>
+          <li>Stop there and ask: 'Those 609 lines are real sales with no category. What would an inner join have done with them?' That question is the homework's Step 4.</li>
+          <li>Steps 4 to 7 go home. Done looks like: completed merchandise revenue of $3,715,829.95, Accessories on top with 16.0%, and one sentence explaining why list-price revenue is 1.7% too high.</li>
+          <li>Ask them to keep <code class="inline">output/order_lines.parquet</code>: it is raw material for the pivots after the break.</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Checks for understanding</div>
+        <ol class="steps">
+          <li>What does the default <code class="inline">merge</code> do with a key that has no match on the other side? <b>Answer:</b> It drops the row (an inner join). No error, no warning.</li>
+          <li>You are adding customer columns to <code class="inline">orders</code>. Which <code class="inline">how=</code>, and what should the row count be afterward? <b>Answer:</b> <code class="inline">how="left"</code>, and still 20,302 rows.</li>
+          <li>What does <code class="inline">validate="many_to_one"</code> check? <b>Answer:</b> That the key is unique in the right-hand table. It does not check that every row finds a match.</li>
+          <li>After <code class="inline">orders.merge(items, on="order_id")</code>, what is one row, and which columns must you not sum? <b>Answer:</b> One order line. Order-level columns such as <code class="inline">order_total</code> are repeated on every line of the order.</li>
+        </ol>
+        <p>Workbook self-check, items Q1 to Q6.</p>
+        <p style="font-size:.9rem;margin:.2rem 0">Answers: <b>Q1</b> <span data-sc="1">C) <code class="inline">3 4 5</code></span>; <b>Q2</b> <span data-sc="2">B) <code class="inline">orders.merge(customers, on="customer_id", how="left", validate="many_to_one")</code></span>; <b>Q3</b> <span data-sc="3"><code class="inline">350 150</code></span>; <b>Q4</b> <span data-sc="4">A) Orders whose <code class="inline">customer_id</code> has no row in <code class="inline">customers</code></span>; <b>Q5</b> <span data-sc="5"><code class="inline">(2, 3) 1</code></span>; <b>Q6</b> <span data-sc="6">D) <code class="inline">daily.merge(weather, left_on=["date", "store"], right_on=["date", "city"], how="left", validate="one_to_one")</code></span>. Full set with explanations in the Answer Key.</p>
+      </div>
+      <div class="blk"><div class="h">Differentiation</div>
+        <p><b>Support:</b> Keep the four-join table from the lesson on the projector during the lab. For learners who are unsure which table goes on the left, give them one sentence to complete: "I want every row of ______ to survive." If someone's merge multiplies rows, have them print <code class="inline">key.is_unique</code> for both tables before touching the merge again.</p>
+        <p><b>Stretch:</b> <code class="inline">orders_weather</code> (the choice of left table changes the answer), then <code class="inline">debug_merges.py</code>. Further: the lesson's Exercise 5 (completed revenue by tier with closed accounts as their own group, reconciling to $3,624,306.27 to the cent).</p>
+      </div>
+    </div>
+  </section>
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">2.6</span><h3>Pivot Tables and Reshaping</h3><span class="dur">75 min</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Objectives (the lesson's own words)</div>
+        <ul class="tick">
+          <li>Build a summary grid with <code class="inline">pivot_table()</code> by choosing its rows, columns, values and aggregation, and add totals with <code class="inline">margins=True</code></li>
+          <li>Count and compare categories with <code class="inline">pd.crosstab()</code>, including row and column percentages</li>
+          <li>Choose between <code class="inline">pivot()</code> and <code class="inline">pivot_table()</code>, and explain the "duplicate entries" error</li>
+          <li>Recognize wide and tidy (long) layouts and convert between them with <code class="inline">melt()</code>, <code class="inline">stack()</code> and <code class="inline">unstack()</code></li>
+          <li>Check a pivot before you trust it: its aggregation, its cell counts, its empty cells and its totals</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Timing inside this block</div>
+        <table class="timing"><tbody>
+          <tr><td class="t">10 min</td><td>Frame: the logbook and the scoreboard; the four pivot questions</td></tr>
+          <tr><td class="t">30 min</td><td>Live demo: first pivot, the default-mean trap, empty cells and totals, <code class="inline">crosstab</code> with <code class="inline">normalize</code>, <code class="inline">pivot</code> versus <code class="inline">pivot_table</code>, <code class="inline">melt</code>, month order, reading a pivot honestly</td></tr>
+          <tr><td class="t">25 min</td><td>Guided lab: <code class="inline">payment_returns</code>, then <code class="inline">survey_by_age</code></td></tr>
+          <tr><td class="t">10 min</td><td>Start the lesson project (The Seasonality Report, Steps 1 to 3)</td></tr>
+        </tbody></table>
+      </div>
+      <div class="blk"><div class="h">Mental model to say</div>
+        <p>Say: "A logbook records one event per line: this order, on this date, at this store, for this amount. It is long and narrow, it grows by adding lines, and it is easy for a program to filter, group and merge. That layout is called long, or tidy. A scoreboard arranges a summary in a grid so a person can compare across a row or down a column at a glance. It is short and wide, and it is what goes into a report. Analysis happens in the logbook. Communication happens on the scoreboard. <code class="inline">pivot_table</code> turns a logbook into a scoreboard, and <code class="inline">melt</code> turns a scoreboard back into a logbook." Write the four pivot questions on the board: <b>rows? columns? values? how to combine?</b> Learners say all four aloud before they write any pivot today.</p>
+      </div>
+      <div class="blk"><div class="h">Live demo (you type, they follow)</div>
+        <p>New section of the notebook; <code class="inline">orders</code> is already loaded. Have the room say the four pivot questions as a sentence before each pivot ("for each store, by year, the sum of order totals"). Step 3 is the quiet mistake of this lesson (a wrong table with no error); step 8 is a deliberate mistake with an error message that is worth reading slowly.</p>
+        <ol class="steps">
+          <li><b>The same ten numbers, as a logbook and as a grid (3 min).</b> Start with what they know: a groupby on two keys gives ten lines, one per store and year. "Correct, and still a logbook: to compare 2024 with 2025 your eyes have to hop between lines." Then the pivot. "Same ten numbers, arranged so each store's two years sit side by side. A pivot table is a groupby whose result has been spread into a grid. Nothing new is being calculated."
+<pre class="code">done = orders[orders[<span class="s">"status"</span>] == <span class="s">"completed"</span>].copy()
+done[<span class="s">"year"</span>] = done[<span class="s">"order_date"</span>].dt.year
+print(done.groupby([<span class="s">"store"</span>, <span class="s">"year"</span>])[<span class="s">"order_total"</span>].sum().head(<span class="s">4</span>))
+table = done.pivot_table(index=<span class="s">"store"</span>, columns=<span class="s">"year"</span>, values=<span class="s">"order_total"</span>, aggfunc=<span class="s">"sum"</span>)
+print(table)</pre>
+<pre class="out">store      year
+Asheville  2024    127336.98
+           2025    110442.39
+Bend       2024    136989.18
+           2025    147586.07
+Name: order_total, dtype: float64
+year             2024        2025
+store                            
+Asheville   127336.98   110442.39
+Bend        136989.18   147586.07
+Boise       212140.12   231246.73
+Flagstaff   129032.48   171547.87
+Online     1077800.75  1280183.70</pre></li>
+          <li><b>The result is an ordinary DataFrame (2 min).</b> Say: "The grid is not a picture. It has an index and columns, and everything you know works on it." With the years side by side, year-over-year change is one line of column arithmetic: that is the reason to go wide. Remind them which table this is: <code class="inline">orders.csv</code> holds account-holder purchases, so Asheville's -13.3% here is -5.0% in the register totals.
+<pre class="code">print(table.loc[<span class="s">"Boise"</span>, <span class="s">2025</span>])
+table[<span class="s">"growth_pct"</span>] = ((table[<span class="s">2025</span>] / table[<span class="s">2024</span>] - <span class="s">1</span>) * <span class="s">100</span>).round(<span class="s">1</span>)
+print(table.sort_values(<span class="s">"growth_pct"</span>, ascending=<span class="k">False</span>))</pre>
+<pre class="out">231246.73
+year             2024        2025  growth_pct
+store                                        
+Flagstaff   129032.48   171547.87        32.9
+Online     1077800.75  1280183.70        18.8
+Boise       212140.12   231246.73         9.0
+Bend        136989.18   147586.07         7.7
+Asheville   127336.98   110442.39       -13.3</pre></li>
+          <li><b>The quiet mistake: leave out aggfunc (3 min).</b> Delete <code class="inline">aggfunc</code> and run it. Ask: "Is this revenue?" No error, and a completely different table: about $170 to $215 per cell. "The default is the mean. This surprises everyone who comes from spreadsheets, where a pivot sums." The habit: always write <code class="inline">aggfunc=</code>, even when you want the mean, and check one cell by hand.
+<pre class="code">print(done.pivot_table(index=<span class="s">"store"</span>, columns=<span class="s">"year"</span>, values=<span class="s">"order_total"</span>).round(<span class="s">2</span>))
+check = done[(done[<span class="s">"store"</span>] == <span class="s">"Boise"</span>) &amp; (done[<span class="s">"year"</span>] == <span class="s">2025</span>)][<span class="s">"order_total"</span>]
+print(round(check.sum(), <span class="s">2</span>), round(check.mean(), <span class="s">2</span>))</pre>
+<pre class="out">year         2024    2025
+store                    
+Asheville  181.13  168.61
+Bend       168.08  176.75
+Boise      179.48  175.19
+Flagstaff  176.76  186.87
+Online     201.01  205.09
+231246.73 175.19</pre></li>
+          <li><b>Empty cells and totals (4 min).</b> How do customers pay at each store? One cell is NaN: nobody hands cash to a website. "A pivot shows NaN wherever a combination never occurs, and that one NaN turned every count into a float." For a count, 'no rows' honestly means zero, so <code class="inline">fill_value=0</code>; and <code class="inline">margins=True</code> adds totals. Point at the corner: 20,302, the number of rows in <code class="inline">orders</code>. "A free sanity check. If the grand total of a count pivot is not the number of rows you started with, rows fell out." Then the caution: <code class="inline">fill_value=0</code> is right for counts and sums and wrong for averages.
+<pre class="code">pay = orders.pivot_table(index=<span class="s">"payment_method"</span>, columns=<span class="s">"store"</span>, values=<span class="s">"order_id"</span>, aggfunc=<span class="s">"count"</span>)
+print(pay)
+pay = orders.pivot_table(index=<span class="s">"payment_method"</span>, columns=<span class="s">"store"</span>, values=<span class="s">"order_id"</span>,
+                         aggfunc=<span class="s">"count"</span>, fill_value=<span class="s">0</span>, margins=<span class="k">True</span>, margins_name=<span class="s">"Total"</span>)
+print(pay)</pre>
+<pre class="out">store           Asheville    Bend   Boise  Flagstaff  Online
+payment_method                                              
+card                835.0  1050.0  1533.0     1021.0  7953.0
+cash                293.0   370.0   577.0      374.0     NaN
+digital_wallet      181.0   203.0   325.0      209.0  3876.0
+gift_card           104.0   102.0   159.0      112.0  1025.0
+store           Asheville  Bend  Boise  Flagstaff  Online  Total
+payment_method                                                  
+card                  835  1050   1533       1021    7953  12392
+cash                  293   370    577        374       0   1614
+digital_wallet        181   203    325        209    3876   4794
+gift_card             104   102    159        112    1025   1502
+Total                1413  1725   2594       1716   12854  20302</pre></li>
+          <li><b>Totals of averages are not averages of totals (2 min).</b> Say: "Margins use the same <code class="inline">aggfunc</code> as the cells, applied to all the underlying rows." The <code class="inline">All</code> corner is the mean of all 18,762 completed orders, 193.17. It is not the average of the five store means above it, 182.07: Online has far more orders and pulls the overall mean toward its own. "pandas gets this right. People reading the table often get it wrong, so it is worth a sentence in your report."
+<pre class="code">aov = done.pivot_table(index=<span class="s">"store"</span>, columns=<span class="s">"year"</span>, values=<span class="s">"order_total"</span>,
+                       aggfunc=<span class="s">"mean"</span>, margins=<span class="k">True</span>).round(<span class="s">2</span>)
+print(aov)
+print(round(done.groupby(<span class="s">"store"</span>)[<span class="s">"order_total"</span>].mean().mean(), <span class="s">2</span>))</pre>
+<pre class="out">year         2024    2025     All
+store                            
+Asheville  181.13  168.61  175.10
+Bend       168.08  176.75  172.47
+Boise      179.48  175.19  177.21
+Flagstaff  176.76  186.87  182.39
+Online     201.01  205.09  203.20
+All        191.46  194.68  193.17
+182.07</pre></li>
+          <li><b>Counting with crosstab, and row percentages (3 min).</b> Say: "'How many of each combination?' is so common it has its own function. <code class="inline">crosstab</code> takes two Series and counts." Raw counts are hard to compare because online has almost twice as many orders. <code class="inline">normalize=\"index\"</code> makes each row add up to 100%: of online orders, 6.9% were returned; of store orders, 3.4%.
+<pre class="code">print(pd.crosstab(orders[<span class="s">"channel"</span>], orders[<span class="s">"status"</span>], margins=<span class="k">True</span>))
+pct = pd.crosstab(orders[<span class="s">"channel"</span>], orders[<span class="s">"status"</span>], normalize=<span class="s">"index"</span>) * <span class="s">100</span>
+print(pct.round(<span class="s">1</span>))</pre>
+<pre class="out">status   cancelled  completed  returned    All
+channel                                       
+online         360      11604       890  12854
+store           37       7158       253   7448
+All            397      18762      1143  20302
+status   cancelled  completed  returned
+channel                                
+online         2.8       90.3       6.9
+store          0.5       96.1       3.4</pre></li>
+          <li><b>The other direction answers a different question (2 min).</b> Run it and read the returned column: "77.9% of returns are online. Dramatic? 63.3% of all orders are online, so most of that number is just size." Row percentages compare like with like. "Of online orders, what share were returned?" and "Of returned orders, what share were online?" are different questions, and mixing them up is one of the commonest ways to misread a table.
+<pre class="code">by_col = pd.crosstab(orders[<span class="s">"channel"</span>], orders[<span class="s">"status"</span>], normalize=<span class="s">"columns"</span>) * <span class="s">100</span>
+print(by_col.round(<span class="s">1</span>))
+print(round((orders[<span class="s">"channel"</span>] == <span class="s">"online"</span>).mean() * <span class="s">100</span>, <span class="s">1</span>))</pre>
+<pre class="out">status   cancelled  completed  returned
+channel                                
+online        90.7       61.8      77.9
+store          9.3       38.2      22.1
+63.3</pre></li>
+          <li><b>pivot only rearranges, and a deliberate mistake (4 min).</b> Say: "<code class="inline">pivot</code>, with no <code class="inline">_table</code>, does no arithmetic. It needs each row-and-column pair to appear at most once." <code class="inline">daily_sales.csv</code> fits: one row per store per day. 2,903 rows become 727 rows and 4 columns, and not one number changed. Then try <code class="inline">pivot</code> on the orders and read the error slowly: "Thousands of orders share a store and a status, and <code class="inline">pivot</code> has no idea which one belongs in the cell. If you believed the pairs were unique, the error has just told you something about your data."
+<pre class="code">daily = pd.read_csv(<span class="s">"data/daily_sales.csv"</span>, parse_dates=[<span class="s">"date"</span>])
+wide = daily.pivot(index=<span class="s">"date"</span>, columns=<span class="s">"store"</span>, values=<span class="s">"revenue"</span>)
+print(wide.shape)
+print(wide.head(<span class="s">3</span>))
+orders.pivot(index=<span class="s">"store"</span>, columns=<span class="s">"status"</span>, values=<span class="s">"order_total"</span>)</pre>
+<pre class="out">(727, 4)
+store       Asheville     Bend    Boise  Flagstaff
+date                                              
+2024-01-01    5017.07  4132.92  5962.00    3061.66
+2024-01-02    3605.81  3675.57  6583.13    3575.24
+2024-01-03    4265.55  6275.05  3866.59    3974.93
+ValueError: Index contains duplicate entries, cannot reshape</pre></li>
+          <li><b>Reshaping reveals holes (2 min).</b> Ask: "The long table has 6 missing revenue values. How many empty cells does the wide table have?" Eleven. The extra five were never NaN in the file: they are store-days with no row at all. "In a logbook a missing line is invisible. On a grid it is an empty square you can see." Session 7 picks up exactly these gaps.
+<pre class="code">print(daily[<span class="s">"revenue"</span>].isna().sum(), wide.isna().sum().to_dict())</pre>
+<pre class="out">6 {'Asheville': 1, 'Bend': 6, 'Boise': 1, 'Flagstaff': 3}</pre></li>
+          <li><b>Wide to tidy with melt (3 min).</b> The finance team's sheet reads nicely, and "total revenue per month" already means naming five columns one by one. "Boise, Bend and the rest are not five variables. They are five values of one variable that have been spread across the header. Test: if a column header is a piece of data, the table is wide." <code class="inline">melt</code>: say which columns identify a row (<code class="inline">id_vars</code>), and the rest are stacked into two new columns. 12 rows times 5 store columns: 60 rows.
+<pre class="code">sheet = pd.read_excel(<span class="s">"data/sales_2025.xlsx"</span>, sheet_name=<span class="s">"Monthly Sales"</span>, skiprows=<span class="s">3</span>)
+print(sheet.head(<span class="s">2</span>))
+tidy = sheet.melt(id_vars=<span class="s">"Month"</span>, var_name=<span class="s">"store"</span>, value_name=<span class="s">"revenue"</span>)
+print(tidy.shape)
+print(tidy.head(<span class="s">2</span>))
+print(tidy.groupby(<span class="s">"store"</span>)[<span class="s">"revenue"</span>].sum().sort_values(ascending=<span class="k">False</span>).head(<span class="s">2</span>))</pre>
+<pre class="out">  Month   Boise    Bend  Flagstaff  Asheville  Online
+0   Jan  242847  169817     160348     147792   86269
+1   Feb  218456  146918     154777     127039   86043
+(60, 3)
+  Month  store  revenue
+0   Jan  Boise   242847
+1   Feb  Boise   218456
+store
+Boise        3846407
+Flagstaff    2717996
+Name: revenue, dtype: int64</pre></li>
+          <li><b>And back again: the month-order trap (2 min).</b> Rebuild the grid with <code class="inline">pivot</code> and look at the row order: Apr, Aug, Dec, Feb. "Both pivot methods sort their labels, and text sorts alphabetically. Month names and weekday names are scrambled by this every time, with no error, and a careless reader sees a trend that is only the alphabet." Fix it with <code class="inline">reindex</code>, or pivot on the month number.
+<pre class="code">back = tidy.pivot(index=<span class="s">"Month"</span>, columns=<span class="s">"store"</span>, values=<span class="s">"revenue"</span>)
+print(back.index.tolist()[:<span class="s">4</span>])
+back = back.reindex(index=sheet[<span class="s">"Month"</span>], columns=[<span class="s">"Boise"</span>, <span class="s">"Bend"</span>, <span class="s">"Flagstaff"</span>, <span class="s">"Asheville"</span>, <span class="s">"Online"</span>])
+print(back.head(<span class="s">2</span>))</pre>
+<pre class="out">['Apr', 'Aug', 'Dec', 'Feb']
+store   Boise    Bend  Flagstaff  Asheville  Online
+Month                                              
+Jan    242847  169817     160348     147792   86269
+Feb    218456  146918     154777     127039   86043</pre></li>
+          <li><b>Reading a pivot honestly: a total that hides the story (3 min).</b> Close with the lesson's best table. Flag the orders that contain footwear, then pivot the return rate. Cover the inside with your hand and read only the <code class="inline">All</code> column: "footwear orders are returned 10.7% of the time against 4.2%". Now uncover it: online, footwear triples the return rate (14.4% against 4.8%); in stores it makes no real difference. "People can try shoes on in a store. The margin averaged two very different situations into one misleading number." Then name the six questions from the lesson page: one row of the source, the aggregation, the count behind each cell, what empty cells mean, whether totals reconcile, whether a total hides a difference.
+<pre class="code">items = pd.read_csv(<span class="s">"data/order_items.csv"</span>)
+footwear_orders = items.loc[items[<span class="s">"sku"</span>].str.startswith(<span class="s">"FTW"</span>), <span class="s">"order_id"</span>].unique()
+orders[<span class="s">"has_footwear"</span>] = orders[<span class="s">"order_id"</span>].isin(footwear_orders)
+orders[<span class="s">"returned"</span>] = orders[<span class="s">"status"</span>] == <span class="s">"returned"</span>
+rate = orders.pivot_table(index=<span class="s">"has_footwear"</span>, columns=<span class="s">"channel"</span>, values=<span class="s">"returned"</span>,
+                          aggfunc=<span class="s">"mean"</span>, margins=<span class="k">True</span>) * <span class="s">100</span>
+print(rate.round(<span class="s">1</span>))</pre>
+<pre class="out">channel       online  store   All
+has_footwear                     
+False            4.8    3.3   4.2
+True            14.4    3.8  10.7
+All              6.9    3.4   5.6</pre></li>
+        </ol>
+      </div>
+      <div class="blk warn"><div class="h">Three mistakes to expect</div>
+        <ul class="tick">
+          <li><b>Forgetting that the default aggregation is the mean.</b> No error. Symptom: a table titled 'Revenue by store' whose cells are around $180. Coach: "Read me your <code class="inline">aggfunc</code>. Now compute one cell by hand with a filter and <code class="inline">.sum()</code>." A relative with an error message: <code class="inline">TypeError: dtype 'str' does not support operation 'mean'</code> when the values column is text; they wanted <code class="inline">aggfunc="count"</code> or <code class="inline">pd.crosstab</code>.</li>
+          <li><b><code class="inline">pivot()</code> on data with repeats, and two-level column labels.</b> Symptoms: <code class="inline">ValueError: Index contains duplicate entries, cannot reshape</code> (several rows per cell: decide how to combine them and use <code class="inline">pivot_table</code>); <code class="inline">KeyError: 2025</code> after <code class="inline">aggfunc=["sum", "mean"]</code> (the year is one level down: <code class="inline">multi[("sum", 2025)]</code>). Coach: "How many rows of the source land in one cell? Print <code class="inline">df.duplicated([row_key, column_key]).sum()</code>." and "Print <code class="inline">result.columns</code>." Also <code class="inline">melt()</code> without <code class="inline">id_vars</code>: every column is melted and no row knows its month.</li>
+          <li><b>Trusting the grid: sorted labels, filled zeros, rows that fell out.</b> No errors here either. Months in alphabetical order (Apr, Aug, Dec, Feb); <code class="inline">fill_value=0</code> on a table of means (an 'average cash order online of $0.00'); a grand total that is smaller than the source because rows with a missing key were dropped. Coach: "Does your corner cell match the source? What does an empty cell mean in this table: zero, not applicable, or missing?" In the project this is Step 3: $34,228.25 of revenue with no category quietly left the pivot.</li>
+        </ul>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab</div>
+        <ul class="tick lab">
+          <li><code class="inline">labs/module-06/l2_6-pivot-tables/payment_returns_starter.py</code> (reference: <code class="inline">payment_returns_solution.py</code>), 15 min: <code class="inline">pivot_table</code> with <code class="inline">fill_value</code> and <code class="inline">margins</code>, a rate as the mean of True/False, the count behind a cell, <code class="inline">crosstab</code> with <code class="inline">normalize="index"</code> and <code class="inline">"columns"</code>, and a total that hides a difference.</li>
+          <li><code class="inline">labs/module-06/l2_6-pivot-tables/survey_by_age_starter.py</code> (reference: <code class="inline">survey_by_age_solution.py</code>), 15 min: <code class="inline">melt</code> with <code class="inline">id_vars</code> and <code class="inline">value_vars</code>, <code class="inline">pivot_table</code> for means and for counts, <code class="inline">idxmin(axis=1)</code>, <code class="inline">stack()</code> back to tidy, saving to <code class="inline">OUTPUT</code>.</li>
+          <li><code class="inline">labs/module-06/l2_6-pivot-tables/weather_grid_starter.py</code> (reference: <code class="inline">weather_grid_solution.py</code>), 15 min: <code class="inline">pivot()</code> when there is one row per cell, <code class="inline">idxmax(axis=1)</code>, <code class="inline">pivot_table</code> on month numbers, the alphabetical-months trap and <code class="inline">reindex</code>, <code class="inline">melt</code> back to tidy.</li>
+        </ul>
+        <ul class="tick lab">
+          <li>Start everyone on <code class="inline">payment_returns</code>. Before each pivot have pairs say the four things aloud to each other: rows, columns, values, how to combine.</li>
+          <li>At TODO 2 ask the room: 'Should the empty cell be filled with 0?' Take a vote, then ask someone who voted no to explain.</li>
+          <li>At minute 12 collect the two sentences from TODO 4 and write them on the board, one under the other. Ask which one a manager who wants to reduce returns should care about.</li>
+          <li>TODO 5 is the payoff: the differences in the <code class="inline">All</code> column mostly vanish inside each channel. Ask: 'So is payment method the cause of anything?'</li>
+          <li><code class="inline">survey_by_age</code> next (it writes one CSV to <code class="inline">output/</code>). <code class="inline">weather_grid</code> is homework or a stretch.</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Start the lesson project</div>
+        <ul class="tick">
+          <li>The lesson project is <b>The Seasonality Report</b>: a category-by-month revenue grid from three files, a silent error caught, percentages, and a tidy copy (six steps, about 30 minutes solo).</li>
+          <li>In the room do Step 1 (build the logbook with two validated merges: 41,788 completed lines, $3,715,829.95), Step 2 (pivot with margins) and Step 3 (find the missing revenue).</li>
+          <li>Step 2 is staged: the pivot's grand total is smaller than the Step 1 total. Do not explain it. Ask the room to find out why, and give them three minutes before Step 3 reveals the 567 lines with no category ($34,228.25, six discontinued SKUs).</li>
+          <li>Steps 4 to 6 go home. Done looks like: month columns 1 to 12 in order, Snow peaking in December and Tents in summer, and <code class="inline">category_seasonality.csv</code> with 108 rows.</li>
+          <li>Ask them to keep <code class="inline">category_seasonality.csv</code>: Module 3 charts it.</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Checks for understanding</div>
+        <ol class="steps">
+          <li>Say the four things every pivot table needs. <b>Answer:</b> What each row is (<code class="inline">index</code>), what each column is (<code class="inline">columns</code>), which number goes in the cells (<code class="inline">values</code>), and how many rows are combined into one cell (<code class="inline">aggfunc</code>).</li>
+          <li>What is in the cells if you leave out <code class="inline">aggfunc</code>? <b>Answer:</b> The mean. Always write <code class="inline">aggfunc=</code>.</li>
+          <li>When does <code class="inline">pivot()</code> work, and when do you need <code class="inline">pivot_table()</code>? <b>Answer:</b> <code class="inline">pivot()</code> only rearranges and needs at most one row per cell; with several rows per cell you must say how to combine them, which is <code class="inline">pivot_table()</code>.</li>
+          <li>How can you tell that a table is wide rather than tidy? <b>Answer:</b> Its column headers are pieces of data (store names, months, years) rather than names of measurements.</li>
+        </ol>
+        <p>Workbook self-check, items Q7 to Q12.</p>
+        <p style="font-size:.9rem;margin:.2rem 0">Answers: <b>Q7</b> <span data-sc="7">A) <code class="inline">20.0 (2, 2)</code></span>; <b>Q8</b> <span data-sc="8"><code class="inline">(6, 3) 21</code></span>; <b>Q9</b> <span data-sc="9">D) Of online orders, 6.9% were returned</span>; <b>Q10</b> <span data-sc="10">C) 609 lines have a missing category (or month), and rows with a missing key are dropped silently</span>; <b>Q11</b> <span data-sc="11"><code class="inline">(2, 2) 3</code></span>; <b>Q12</b> <span data-sc="12">B) Decide how to combine the rows and use <code class="inline">pivot_table(..., aggfunc="sum")</code></span>. Full set with explanations in the Answer Key.</p>
+      </div>
+      <div class="blk"><div class="h">Differentiation</div>
+        <p><b>Support:</b> Give unsure learners the sentence frame on a card: "For each ______ (rows), by ______ (columns), the ______ (how to combine) of ______ (values)." Have them fill it in on paper before typing. For <code class="inline">melt</code>, draw a three-row wide table on the board and melt it by hand with the room, writing the six long rows.</p>
+        <p><b>Stretch:</b> <code class="inline">weather_grid</code>, then the lesson's Exercise 4 (audit the spreadsheet: melt the sheet, compute the same figures from <code class="inline">daily_sales.csv</code>, merge the two tidy tables and find the largest difference, $0.49). It uses both of today's lessons.</p>
+      </div>
+    </div>
+  </section>
+  <div class="sec"><h2>Closing</h2><span class="rule"></span></div>
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">2:50</span><h3>Wrap-up</h3><span class="dur">10 min</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Exit ticket (3 questions, on paper or sticky notes, 5 minutes)</div>
+        <ol class="steps">
+          <li>You merge <code class="inline">orders</code> (20,302 rows) with <code class="inline">customers</code> using the default settings and get 19,563 rows. What happened, and what would you write instead? <b>Answer:</b> The default inner join dropped the 739 orders whose <code class="inline">customer_id</code> has no row in <code class="inline">customers</code>. Write <code class="inline">orders.merge(customers, on="customer_id", how="left", validate="many_to_one")</code> and count the rows.</li>
+          <li>After <code class="inline">orders.merge(items, on="order_id")</code>, the sum of <code class="inline">order_total</code> is $11.0 million instead of $4.0 million. Why? <b>Answer:</b> The result has one row per order line, so each order's total is repeated on every one of its lines and counted several times. Sum order-level columns on the orders table (or after <code class="inline">drop_duplicates("order_id")</code>).</li>
+          <li>A count pivot with <code class="inline">margins=True</code> has a grand total of 44,881, but the source table has 45,490 rows. What does that tell you, and what do you do? <b>Answer:</b> 609 rows have a missing value in the row or column key and were dropped silently. Find them, give them an honest label (for example <code class="inline">fillna("Discontinued")</code>), and pivot again until the corner matches the source.</li>
+        </ol>
+      </div>
+      <div class="blk"><div class="h">Homework (about 2 to 3 hours before Session 7)</div>
+        <ul class="tick">
+          <li>Finish <b>Revenue by Category</b> (2.5, Steps 4 to 7): 45,490 lines kept, $3,715,829.95 of completed merchandise revenue, the pricing trap explained. Keep <code class="inline">output/order_lines.parquet</code>.</li>
+          <li>Finish <b>The Seasonality Report</b> (2.6, Steps 4 to 6): the corner reconciles to the cent, months run 1 to 12, <code class="inline">category_seasonality.csv</code> has 108 rows. Keep that file for Module 3.</li>
+          <li>Each lesson's exercises (2.5: 1 to 4, 5 is a stretch; 2.6: 1 to 3, 4 is a stretch), Quick Quiz and journal entry.</li>
+          <li>Labs not finished in class; <code class="inline">orders_weather</code>, <code class="inline">weather_grid</code> and <code class="inline">debug_merges.py</code> are for home.</li>
+          <li>Lesson 2.6, 'Before the Next Lesson': rebuild <code class="inline">wide</code> (daily revenue, one column per store) from memory, then look at <code class="inline">wide.loc["2024-08-10":"2024-08-16", "Bend"]</code> and write down what you see and what you would want to do about it. Session 7 starts there.</li>
+        </ul>
+      </div>
+      <div class="blk lab"><div class="h">Bring list for Session 7</div>
+        <ul class="tick">
+          <li>Laptop with the course environment. Nothing new to install.</li>
+          <li>The course <code class="inline">data/</code> folder as it is. Session 7 (Time Series and Window Functions) works mainly with <code class="inline">daily_sales.csv</code> and <code class="inline">orders.csv</code>.</li>
+          <li>Your note on what <code class="inline">wide.loc["2024-08-10":"2024-08-16", "Bend"]</code> shows, and the one line of code that builds <code class="inline">wide</code>.</li>
+          <li>Your <code class="inline">category_seasonality.csv</code> stays in your project folder for Module 3; you do not need it next time.</li>
+          <li>This workbook and your notebooks. No servers, accounts or internet connection are needed for Session 7.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+  <div class="sec"><h2>If You Run Long or Short</h2><span class="rule"></span></div>
+    <div class="note warn"><div class="t">Running long: what to protect, what to cut first</div><p>Protect, in this order: 2.5 steps 3 to 5 (the lost rows, the left join, the indicator audit), step 7 (rows multiply), the <code class="inline">customer_profiles</code> lab, 2.6 step 3 (the default mean), steps 6 and 7 (<code class="inline">normalize</code> both ways), step 10 (<code class="inline">melt</code>) and step 12 (the footwear table). Cut first: 2.5 step 10 (<code class="inline">concat</code> and <code class="inline">merge_asof</code>: assign as reading), then 2.6 step 5 (margins of means) and step 9 (holes), then <code class="inline">survey_by_age</code>. If 2.5 overruns by more than ten minutes, start the 2.6 project by doing Step 1 only and telling the room that Step 2's total will not match: finding out why is the homework.</p></div>
+    <div class="note lab"><div class="t">Running short: what to add</div><p>Run <code class="inline">survey_by_age</code> for the whole room and ask two pairs to explain the count grid. Then <code class="inline">debug_merges.py</code> in pairs: bugs 4 and 5 are today's two quiet mistakes and make a good closing discussion. Still time: do Step 4 of Revenue by Category together (recover the category of the 609 discontinued lines from the SKU prefix with <code class="inline">.map()</code>), and ask why that is a repair and not a guess.</p></div>
+
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 6 · Facilitator Guide · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -3,993 +3,1448 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Learn to connect Python to databases using SQLAlchemy, psycopg2, pymongo and more. Master database operations from Python.">
-    <title>Database Connections from Python - Python Data Science Path</title>
+    <meta name="description" content="Connect Python to a SQLite database, write your first SELECT queries, pass values safely with parameters, and move data between SQL and pandas. Python Data Science Lesson 5.1.">
+    <meta name="author" content="Ray de la Paz">
+    <title>Database Connections - Python Data Science</title>
     <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/enhanced.css">
-    <link rel="icon" href="/favicon.png" type="image/png">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid: rendered (and re-rendered on theme change) by js/course-enhancements.js -->
     <script type="module">
-      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-      mermaid.initialize({ startOnLoad: true });
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        window.__mermaid = mermaid;
+        mermaid.initialize({ startOnLoad: false });
+        document.dispatchEvent(new Event('mermaid-ready'));
     </script>
-    <script src="js/course-enhancements.js" defer></script>
-    <link rel="stylesheet" href="styles/standard.css">
 </head>
 <body>
-    <!-- Skip to main content for accessibility -->
     <a href="#main-content" class="skip-to-main">Skip to main content</a>
-    
-    <!-- Progress indicator -->
+
     <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
         <div class="progress-bar"></div>
     </div>
-    
+
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">📊 Python Data Science</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">☰</button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
+    </nav>
+
     <main id="main-content">
-    <header role="banner">
-        <h1>Database Connections from Python</h1>
+        <div class="container">
+            <header>
+                <h1>🔌 Lesson 5.1: Database Connections</h1>
+                <p class="lead">Most of the world's business data lives in databases, not CSV files. Today you connect Python to one, ask it questions in SQL, and bring the answers back into pandas.</p>
 
-    <!-- What You'll Learn (learning objectives) -->
-    <div class="card card-info">
-        <h2>📚 What You'll Learn</h2>
-        <p>By the end of this lesson, you will be able to:</p>
-        <ul>
-            <li>Connect to a SQLite database from Python and run create, insert, query, and update operations with <code>sqlite3</code></li>
-            <li>Connect to PostgreSQL (psycopg2) and MySQL (PyMySQL), managing connections safely with context managers</li>
-            <li>Use SQLAlchemy Core and the ORM to query and write data, and move data to and from pandas DataFrames</li>
-            <li>Configure connection pooling for production workloads</li>
-            <li>Work with MongoDB through PyMongo — inserting documents, querying, and running aggregation pipelines</li>
-            <li>Apply security and reliability best practices: parameterized queries, environment-variable credentials, and error handling with retries</li>
-        </ul>
-        <p><strong>⏱️ Estimated Time:</strong> 45–60 minutes</p>
-        <p><strong>🎯 Project:</strong> Build a small, safe ETL routine that extracts data from one database (e.g. SQLite), transforms it with pandas, and loads it into another using SQLAlchemy — with logging and graceful error handling.</p>
-    </div>
-        <div class="reading-time" aria-label="Estimated reading time"></div>
-    </header>
-    
-    <!-- Breadcrumb Navigation -->
-    <nav class="breadcrumb" aria-label="Breadcrumb">
-        <a href="index.html">Home</a>
-        <span class="separator">›</span>
-        <a href="#">Intermediate Module</a>
-        <span class="separator">›</span>
-        <a href="#">SQL for Data Scientists</a>
-        <span class="separator">›</span>
-        <span class="current">Database Connections from Python</span>
-    </nav>
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Open a SQLite database from Python, run a query through a cursor, and close the connection cleanly</li>
+                        <li>Write <code>SELECT</code> queries that filter, sort, aggregate and group rows, and say which pandas operation each clause matches</li>
+                        <li>Pass values into a query with parameters, and explain why building SQL with f-strings is dangerous</li>
+                        <li>Use a SQLAlchemy engine with <code>text()</code>, and move data both ways with <code>pd.read_sql</code> and <code>DataFrame.to_sql</code></li>
+                        <li>Name the main things that change when the database is PostgreSQL instead of SQLite</li>
+                    </ul>
+                </div>
 
-    <h2>Bridge Python and Databases Seamlessly! 🔌</h2>
-    
-    <blockquote>
-        <p>Databases are the backbone of data science. Whether you're working with traditional SQL databases like PostgreSQL and MySQL, or modern NoSQL solutions like MongoDB, Python provides powerful tools to connect, query, and manipulate your data. Master these connections to unlock the full potential of your data infrastructure!</p>
-    </blockquote>
+                <ul class="lesson-meta">
+                    <li><span class="meta-label">⏱️ Time</span> 100 minutes</li>
+                    <li><span class="meta-label">📋 Prerequisites</span> <a href="pandas_groupby_operations.html">Lesson 2.4: GroupBy Operations</a> and <a href="statistics_eda_workflow.html">Lesson 4.7: An EDA Workflow</a>. No SQL is assumed.</li>
+                    <li><span class="meta-label">🛠️ You will build</span> A store scorecard: one reusable, parameterized report function that reads from the database and saves its result back as a new table</li>
+                    <li><span class="meta-label">📂 Data</span> <code>data/pinecrest.db</code> (you will work on a copy), <code>data/orders.csv</code> for checking</li>
+                </ul>
+            </header>
 
-    <h2>Why Database Connections Matter</h2>
-    <p>Direct database access from Python enables:</p>
-    
-    <ul>
-        <li><strong>🚀 Performance:</strong> Query large datasets without loading everything into memory</li>
-        <li><strong>🔄 Real-time Data:</strong> Access live, up-to-date information</li>
-        <li><strong>🔐 Security:</strong> Leverage database authentication and permissions</li>
-        <li><strong>📊 Scalability:</strong> Work with datasets larger than RAM</li>
-        <li><strong>🤝 Integration:</strong> Connect to existing data infrastructure</li>
-        <li><strong>⚡ Efficiency:</strong> Use database engines for complex operations</li>
-    </ul>
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#why" class="toc-link">Why a Database?</a></li>
+                        <li><a href="#connect" class="toc-link">Connecting with sqlite3</a></li>
+                        <li><a href="#cursors" class="toc-link">Cursors and Rows</a></li>
+                        <li><a href="#select" class="toc-link">SELECT: Choosing, Filtering, Sorting</a></li>
+                        <li><a href="#aggregate" class="toc-link">Aggregating and Grouping</a></li>
+                        <li><a href="#params" class="toc-link">Parameters and SQL Injection</a></li>
+                        <li><a href="#writing" class="toc-link">Writing Data and Transactions</a></li>
+                        <li><a href="#sqlalchemy" class="toc-link">SQLAlchemy: One Interface, Many Databases</a></li>
+                        <li><a href="#pandas" class="toc-link">SQL and pandas Together</a></li>
+                        <li><a href="#postgres" class="toc-link">Where PostgreSQL Differs</a></li>
+                        <li><a href="#mistakes" class="toc-link">Common Mistakes</a></li>
+                        <li><a href="#project" class="toc-link">Project: The Store Scorecard</a></li>
+                        <li><a href="#exercises" class="toc-link">Hands-on Exercises</a></li>
+                        <li><a href="#quiz" class="toc-link">Quick Quiz</a></li>
+                        <li><a href="#faq" class="toc-link">Common Questions</a></li>
+                        <li><a href="#journal" class="toc-link">Learning Journal</a></li>
+                        <li><a href="#summary" class="toc-link">Lesson Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
 
-    <h2>Database Connection Libraries</h2>
-    
-    <div class="mermaid">
-    graph TD
-        A[Python Database Libraries] --> B[Low-Level Drivers]
-        A --> C[ORMs]
-        A --> D[Data Analysis]
-        
-        B --> E[psycopg2 - PostgreSQL]
-        B --> F[PyMySQL - MySQL]
-        B --> G[sqlite3 - SQLite]
-        B --> H[pymongo - MongoDB]
-        
-        C --> I[SQLAlchemy]
-        C --> J[Django ORM]
-        C --> K[Peewee]
-        
-        D --> L[pandas]
-        D --> M[dask]
-        D --> N[polars]
-    </div>
+            <!-- ============================================================ -->
+            <section id="why" class="lesson-section">
+                <h2>🏛️ Why a Database?</h2>
 
-    <h2>SQLite - Getting Started</h2>
-    <p>SQLite is perfect for learning - it's built into Python and requires no server setup:</p>
-    
-    <pre class="language-python"><code>import sqlite3
+                <p>So far, every dataset in this course has arrived as a file that you read whole: <code>pd.read_csv("data/orders.csv")</code> loads all 20,302 orders into memory, and then you filter. That works well until the data has 200 million rows, or changes every second, or is shared by forty people at once. At that point the data lives in a <strong>database</strong>, and your job as an analyst changes from "load the file" to "ask for what you need".</p>
+
+                <div class="card card-info">
+                    <h4>💡 Mental Model: The Binder and the Librarian</h4>
+                    <p>A <strong>CSV file</strong> is a photocopied binder. To find last March's returned orders you carry the whole binder to your desk and flip through every page yourself.</p>
+                    <p>A <strong>database</strong> is a library with a librarian at the desk. You hand over a request slip ("returned orders, March, Boise store, sorted by total") and the librarian brings back only those pages. You never see the shelves. The request slip is written in <strong>SQL</strong>, and the librarian is the <strong>database engine</strong>.</p>
+                </div>
+
+                <p>The librarian does more than fetch. A relational database also:</p>
+                <ul>
+                    <li><strong>Keeps many tables in one place</strong>, with the keys that connect them (an order's <code>customer_id</code> points at a customer).</li>
+                    <li><strong>Enforces rules</strong> as data goes in: a column declared <code>NOT NULL</code> cannot be left empty, and a primary key cannot repeat.</li>
+                    <li><strong>Returns only the rows and columns you ask for</strong>, which matters when the table is far bigger than your computer's memory.</li>
+                    <li><strong>Makes changes all-or-nothing</strong> through transactions, so a half-finished update never becomes visible.</li>
+                </ul>
+
+                <p>SQL (say "sequel" or spell it out, both are fine) has been the language of relational databases for decades, and it is the most widely requested skill in data job postings after spreadsheets. The good news: you already know the ideas. Filtering, sorting, grouping and merging are what you did in Module 2. This module teaches you to say the same things in a second language.</p>
+
+                <h3>The Engine in This Course: SQLite</h3>
+                <p><strong>SQLite</strong> is a complete SQL database engine that lives inside a single file and needs no server, no password and no installation: Python's standard library includes it as the <code>sqlite3</code> module. Pinecrest Outfitters' relational data ships as <code>data/pinecrest.db</code>. Nearly everything you write against it works unchanged on PostgreSQL, MySQL and other server databases; the <a href="#postgres">differences</a> are small and are listed near the end.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="connect" class="lesson-section">
+                <h2>🔌 Connecting with sqlite3</h2>
+
+                <p>Start a new notebook in your project folder. The first step is a habit to keep for this whole module: <strong>work on a copy</strong> of the database. Some lessons create tables and indexes, and you want the original file to stay exactly as documented.</p>
+
+                <pre><code class="language-python">import shutil
+import sqlite3
 import pandas as pd
 
-# Connect to SQLite database (creates file if doesn't exist)
-conn = sqlite3.connect('example.db')  # Use ':memory:' for in-memory DB
-cursor = conn.cursor()
+pd.set_option("display.width", 150)
+pd.set_option("display.max_columns", 20)
 
-# Create a table
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS employees (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        department TEXT,
-        salary REAL,
-        hire_date DATE
-    )
-''')
+shutil.copy("data/pinecrest.db", "pinecrest_work.db")    # a private working copy
 
-# Insert data
-cursor.execute('''
-    INSERT INTO employees (name, department, salary, hire_date)
-    VALUES (?, ?, ?, ?)
-''', ('John Doe', 'Engineering', 75000, '2020-01-15'))
+conn = sqlite3.connect("pinecrest_work.db")
+print(conn)
+print("SQLite library version:", sqlite3.sqlite_version)</code></pre>
+                <div class="card card-output">
+                    <h4>Output (your address and version will differ)</h4>
+                    <pre><code>&lt;sqlite3.Connection object at 0x70cd1bfdaa70&gt;
+SQLite library version: 3.53.1</code></pre>
+                </div>
 
-# Insert multiple rows
-employees = [
-    ('Jane Smith', 'Marketing', 65000, '2019-03-22'),
-    ('Bob Johnson', 'Sales', 70000, '2021-06-10'),
-    ('Alice Brown', 'Engineering', 80000, '2018-11-05')
-]
-cursor.executemany('''
-    INSERT INTO employees (name, department, salary, hire_date)
-    VALUES (?, ?, ?, ?)
-''', employees)
+                <p><code>sqlite3.connect()</code> returns a <strong>connection</strong>: an open line to the database file. Everything you do goes through it. The version printed is the SQLite engine bundled with your Python, which is separate from the Python version.</p>
 
-# Commit changes
-conn.commit()
+                <div class="mermaid">
+graph TD
+    A["Your Python code"] --> B["Connection: an open line"]
+    B --> C["Cursor: runs one statement"]
+    C --> D["SQL text goes to the engine"]
+    D --> E["Engine reads pinecrest_work.db"]
+    E --> F["Rows come back as tuples"]
+                </div>
 
-# Query data
-cursor.execute('SELECT * FROM employees WHERE salary > ?', (70000,))
-results = cursor.fetchall()
+                <h3>What Is in There?</h3>
+                <p>Every SQLite database keeps a catalog of its own contents in a table called <code>sqlite_master</code>. Ask it for the table names:</p>
 
-for row in results:
-    print(row)
+                <pre><code class="language-python">cur = conn.execute("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
+print(cur.fetchall())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>[('customers',), ('employees',), ('inventory',), ('order_items',), ('orders',), ('products',)]</code></pre>
+                </div>
 
-# Using pandas to read SQL
-df = pd.read_sql_query('SELECT * FROM employees', conn)
-print(df)
+                <p>That was your first SQL query. Read it left to right: <em>select the name column, from the sqlite_master table, where type is 'table', ordered by name</em>. Four of the six tables are old friends from the CSV files. <code>employees</code> and <code>inventory</code> exist only in the database.</p>
 
-# Close connection
-conn.close()</code></pre>
+                <p>To see a table's columns, use SQLite's <code>PRAGMA table_info</code> command. Each row describes one column: position, name, declared type, whether it is <code>NOT NULL</code>, its default, and whether it is part of the primary key.</p>
 
-    <h2>PostgreSQL with psycopg2</h2>
-    
-    <h3>Installation and Basic Connection</h3>
-    <pre class="language-python"><code># Install: pip install psycopg2-binary
+                <pre><code class="language-python">for row in conn.execute("PRAGMA table_info(orders)"):
+    print(row)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>(0, 'order_id', 'INTEGER', 0, None, 1)
+(1, 'customer_id', 'INTEGER', 1, None, 0)
+(2, 'order_date', 'TEXT', 1, None, 0)
+(3, 'channel', 'TEXT', 1, None, 0)
+(4, 'store', 'TEXT', 1, None, 0)
+(5, 'status', 'TEXT', 1, None, 0)
+(6, 'payment_method', 'TEXT', 1, None, 0)
+(7, 'promo_code', 'TEXT', 0, None, 0)
+(8, 'discount_pct', 'INTEGER', 1, None, 0)
+(9, 'shipping_cost', 'REAL', 1, None, 0)
+(10, 'order_total', 'REAL', 1, None, 0)</code></pre>
+                </div>
 
-import psycopg2
-from psycopg2 import sql
-import pandas as pd
+                <div class="card card-info">
+                    <h4>💡 SQLite Has Only a Few Storage Types</h4>
+                    <p><code>INTEGER</code>, <code>REAL</code> (float), <code>TEXT</code> and <code>BLOB</code> (raw bytes), plus <code>NULL</code> for "no value". There is no date type, so <code>order_date</code> is stored as text like <code>2024-03-05</code>. Because that format sorts correctly as text, date comparisons still work. Booleans are stored as <code>0</code> and <code>1</code>.</p>
+                </div>
+            </section>
 
-# Connection parameters
-conn_params = {
-    'host': 'localhost',
-    'database': 'mydb',
-    'user': 'username',
-    'password': 'password',
-    'port': 5432
-}
+            <!-- ============================================================ -->
+            <section id="cursors" class="lesson-section">
+                <h2>🖱️ Cursors and Rows</h2>
 
-# Establish connection
-try:
-    conn = psycopg2.connect(**conn_params)
-    cursor = conn.cursor()
-    print("Connected to PostgreSQL!")
-    
-    # Get database version
-    cursor.execute("SELECT version();")
-    version = cursor.fetchone()
-    print(f"PostgreSQL version: {version[0]}")
-    
-except psycopg2.Error as e:
-    print(f"Error connecting to PostgreSQL: {e}")
+                <p>Running a statement gives you a <strong>cursor</strong>: a pointer that walks through the result one row at a time. The rows are not fetched until you ask, which is how a database can answer a query whose result would not fit in memory.</p>
 
-# Create table with PostgreSQL-specific features
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS products (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(100) NOT NULL,
-        price DECIMAL(10, 2),
-        category VARCHAR(50),
-        in_stock BOOLEAN DEFAULT true,
-        tags TEXT[],
-        metadata JSONB,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-''')
+                <pre><code class="language-python">cur = conn.cursor()
+cur.execute("SELECT order_id, store, order_total FROM orders")
 
-# Insert data with RETURNING clause
-cursor.execute('''
-    INSERT INTO products (name, price, category, tags, metadata)
-    VALUES (%s, %s, %s, %s, %s)
-    RETURNING id
-''', (
-    'Laptop',
-    999.99,
-    'Electronics',
-    ['portable', 'computer', 'business'],
-    '{"brand": "TechCorp", "warranty": "2 years"}'
-))
+print(cur.fetchone())        # the next row
+print(cur.fetchone())        # the one after that
+print(cur.fetchmany(3))      # the next three, as a list
+rest = cur.fetchall()        # everything that is left
+print(len(rest))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>(100001, 'Flagstaff', 434.9)
+(100002, 'Asheville', 278.9)
+[(100003, 'Online', 75.9), (100004, 'Online', 399.8), (100005, 'Online', 26.71)]
+20297</code></pre>
+                </div>
 
-new_id = cursor.fetchone()[0]
-print(f"Inserted product with ID: {new_id}")
+                <p>Each row is a plain <strong>tuple</strong>, in the order of the columns you selected. Two rows plus three rows plus 20,297 makes the 20,302 orders: a cursor moves forward only, and once a row is fetched it is gone from the cursor. When the rows run out, <code>fetchone()</code> returns <code>None</code> and <code>fetchall()</code> returns an empty list.</p>
 
-# Commit and close
-conn.commit()
-cursor.close()
-conn.close()</code></pre>
+                <p><code>conn.execute(...)</code>, which you used a moment ago, is a shortcut that creates a cursor, runs the statement and returns the cursor. You will see both styles. A cursor is also iterable, so a <code>for</code> loop is the natural way to read rows:</p>
 
-    <h3>Context Manager for Safe Connections</h3>
-    <pre class="language-python"><code>import psycopg2
-from contextlib import contextmanager
+                <pre><code class="language-python">cur = conn.execute("SELECT order_id, store, order_total FROM orders LIMIT 3")
+print([col[0] for col in cur.description])     # the column names
 
-@contextmanager
-def get_db_connection(**kwargs):
-    """Context manager for database connections"""
-    conn = None
-    try:
-        conn = psycopg2.connect(**kwargs)
-        yield conn
-    except psycopg2.Error as e:
-        if conn:
-            conn.rollback()
-        raise e
-    finally:
-        if conn:
-            conn.close()
+for order_id, store, total in cur:
+    print(order_id, store, total)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>['order_id', 'store', 'order_total']
+100001 Flagstaff 434.9
+100002 Asheville 278.9
+100003 Online 75.9</code></pre>
+                </div>
 
-# Usage
-with get_db_connection(**conn_params) as conn:
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM products WHERE price < %s", (500,))
-    results = cursor.fetchall()
-    conn.commit()</code></pre>
+                <h3>Rows You Can Read by Name</h3>
+                <p>Position-only tuples get confusing with wide tables. Setting the connection's <code>row_factory</code> to <code>sqlite3.Row</code> makes every row answer to column names as well as positions.</p>
 
-    <h2>MySQL with PyMySQL</h2>
-    
-    <pre class="language-python"><code># Install: pip install pymysql
+                <pre><code class="language-python">conn.row_factory = sqlite3.Row
 
-import pymysql
-import pandas as pd
-from datetime import datetime
+row = conn.execute("SELECT order_id, store, order_total FROM orders LIMIT 1").fetchone()
+print(row["store"], row["order_total"])
+print(row[0], row.keys())
+print(dict(row))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>Flagstaff 434.9
+100001 ['order_id', 'store', 'order_total']
+{'order_id': 100001, 'store': 'Flagstaff', 'order_total': 434.9}</code></pre>
+                </div>
 
-# Connect to MySQL
-connection = pymysql.connect(
-    host='localhost',
-    user='root',
-    password='password',
-    database='testdb',
-    charset='utf8mb4',
-    cursorclass=pymysql.cursors.DictCursor  # Return results as dictionaries
+                <p>From here on, reading results by hand would get tedious, and you already own a better display tool. pandas can run a query and hand back a DataFrame. This tiny helper prints one, and it is all you need for the next two sections. (<a href="#pandas">Later in the lesson</a> you will look at <code>pd.read_sql</code> properly.)</p>
+
+                <pre><code class="language-python">def show(sql, params=()):
+    """Run a query and print the result as a table."""
+    print(pd.read_sql(sql, conn, params=params).to_string(index=False))
+
+show("SELECT order_id, order_date, store, status, order_total FROM orders LIMIT 4")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code> order_id order_date     store    status  order_total
+   100001 2024-01-01 Flagstaff completed        434.9
+   100002 2024-01-01 Asheville completed        278.9
+   100003 2024-01-01    Online completed         75.9
+   100004 2024-01-01    Online completed        399.8</code></pre>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="select" class="lesson-section">
+                <h2>🔎 SELECT: Choosing, Filtering, Sorting</h2>
+
+                <p>Almost all analysis in SQL is one statement, <code>SELECT</code>, with a handful of optional clauses that always appear in the same order. You will build it up one clause at a time. SQL keywords are not case sensitive; writing them in capitals is a convention that makes queries easier to scan. Line breaks and indentation mean nothing to the engine, so use them freely.</p>
+
+                <h3>Columns: SELECT ... FROM</h3>
+                <p>List the columns you want, or <code>*</code> for all of them. <code>AS</code> renames a column in the result, and you can compute new ones. <code>LIMIT</code> stops after that many rows, like <code>.head()</code>.</p>
+
+                <pre><code class="language-python">show("""
+    SELECT name,
+           price,
+           cost,
+           ROUND(price - cost, 2) AS margin
+    FROM products
+    LIMIT 4
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>                               name  price   cost  margin
+   Granite Fork Drift 1-Person Tent 299.95 187.74  112.21
+Cedar Notch Ridgeline 2-Person Tent 217.95 131.94   86.01
+   Pinecrest Solstice 3-Person Tent 459.95 301.97  157.98
+    Wrenfield Skyline 4-Person Tent 294.95 149.42  145.53</code></pre>
+                </div>
+
+                <h3>Rows: WHERE</h3>
+                <p><code>WHERE</code> keeps the rows for which a condition is true. It is the boolean mask of SQL. Text values go in <strong>single quotes</strong>, equality is a single <code>=</code>, and conditions combine with <code>AND</code>, <code>OR</code> and <code>NOT</code>.</p>
+
+                <pre><code class="language-python">show("""
+    SELECT name, price, rating
+    FROM products
+    WHERE category = 'Tents'
+      AND price &lt; 250
+      AND rating &gt;= 4.5
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>                              name  price  rating
+          Quillback Wayfinder Tarp 132.95     4.9
+Quillback Alpenglow Tent Footprint  67.95     5.0</code></pre>
+                </div>
+
+                <p>Three more comparison tools cover most everyday filters: <code>IN</code> for "one of these", <code>BETWEEN</code> for an inclusive range, and <code>LIKE</code> for text patterns, where <code>%</code> stands for any run of characters.</p>
+
+                <pre><code class="language-python">show("""
+    SELECT order_id, order_date, store, order_total
+    FROM orders
+    WHERE store IN ('Bend', 'Boise')
+      AND order_date BETWEEN '2025-07-04' AND '2025-07-05'
+      AND order_total &gt; 500
+""")
+
+show("SELECT name, price FROM products WHERE name LIKE '%down%'")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code> order_id order_date store  order_total
+   114621 2025-07-05 Boise       585.95
+   114636 2025-07-05  Bend       559.30
+                              name  price
+     Tallgrass Skyline Down Jacket 325.95
+    Tallgrass Basecamp Down Jacket 225.95
+ Larkspur Ridge Tundra Down Jacket 375.95
+Juniper Vane Trailhead Down Jacket 372.95</code></pre>
+                </div>
+
+                <p>The date filter works on text because <code>YYYY-MM-DD</code> strings sort in calendar order. And notice that <code>'%down%'</code> matched "Down Jacket": in SQLite, <code>LIKE</code> ignores case for the letters A to Z.</p>
+
+                <h3>Order: ORDER BY, and DISTINCT</h3>
+                <p><code>ORDER BY</code> sorts the result, ascending unless you add <code>DESC</code>. Without it, <strong>the order of rows is not guaranteed</strong>, even if it looks stable today. <code>ORDER BY</code> with <code>LIMIT</code> is the SQL way to say "top N".</p>
+
+                <pre><code class="language-python">show("""
+    SELECT order_id, order_date, store, order_total
+    FROM orders
+    WHERE status = 'completed'
+    ORDER BY order_total DESC, order_id
+    LIMIT 5
+""")
+
+show("SELECT DISTINCT payment_method FROM orders ORDER BY payment_method")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code> order_id order_date  store  order_total
+   106479 2024-09-15 Online      4893.00
+   114268 2025-06-24 Online      4184.90
+   113836 2025-06-11 Online      4150.40
+   114962 2025-07-15 Online      4112.10
+   119635 2025-12-13 Online      3779.45
+payment_method
+          card
+          cash
+digital_wallet
+     gift_card</code></pre>
+                </div>
+
+                <p>There is the $4,893.00 bulk order you met in Lesson 0.1, found this time without loading 20,301 other rows. <code>DISTINCT</code> removes duplicate rows from the result, much like <code>.drop_duplicates()</code> or <code>.unique()</code>.</p>
+
+                <div class="card card-success">
+                    <h4>✅ You Already Speak This</h4>
+                    <p>If a query feels foreign, translate it into pandas in your head. <code>WHERE</code> is a boolean mask, <code>ORDER BY</code> is <code>sort_values</code>, <code>LIMIT</code> is <code>head</code>. The ideas are the same ones you practiced for nine lessons. Only the spelling is new, and spelling comes with repetition.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="aggregate" class="lesson-section">
+                <h2>🧮 Aggregating and Grouping</h2>
+
+                <p>An <strong>aggregate function</strong> turns many rows into one value. The five you will use daily are <code>COUNT</code>, <code>SUM</code>, <code>AVG</code>, <code>MIN</code> and <code>MAX</code>.</p>
+
+                <pre><code class="language-python">show("""
+    SELECT COUNT(*)                   AS orders,
+           ROUND(SUM(order_total), 2) AS revenue,
+           ROUND(AVG(order_total), 2) AS avg_order,
+           MIN(order_date)            AS first_day,
+           MAX(order_date)            AS last_day
+    FROM orders
+    WHERE status = 'completed'
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code> orders    revenue  avg_order  first_day   last_day
+  18762 3624306.27     193.17 2024-01-01 2025-12-31</code></pre>
+                </div>
+
+                <p>18,762 completed orders and $3,624,306.27 of revenue: the same totals you have computed with pandas, answered by the engine in one row. <code>COUNT</code> has three forms worth knowing apart:</p>
+
+                <pre><code class="language-python">show("""
+    SELECT COUNT(*)             AS all_rows,
+           COUNT(phone)         AS with_phone,
+           COUNT(DISTINCT city) AS cities
+    FROM customers
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code> all_rows  with_phone  cities
+     4850        4570      35</code></pre>
+                </div>
+
+                <p><code>COUNT(*)</code> counts rows. <code>COUNT(column)</code> counts rows where that column is <strong>not NULL</strong> (280 customers have no phone on file). <code>COUNT(DISTINCT column)</code> counts different values, like <code>.nunique()</code>. All aggregate functions skip <code>NULL</code>, just as pandas skips <code>NaN</code>.</p>
+
+                <h3>GROUP BY: One Row per Group</h3>
+                <p><code>GROUP BY</code> is split-apply-combine, the idea from <a href="pandas_groupby_operations.html">Lesson 2.4</a>: split the rows into groups, apply the aggregates to each group, combine into one row per group.</p>
+
+                <pre><code class="language-python">show("""
+    SELECT store,
+           COUNT(*)                   AS orders,
+           ROUND(SUM(order_total), 2) AS revenue,
+           ROUND(AVG(order_total), 2) AS avg_order
+    FROM orders
+    WHERE status = 'completed'
+    GROUP BY store
+    ORDER BY revenue DESC
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>    store  orders    revenue  avg_order
+   Online   11604 2357984.45     203.20
+    Boise    2502  443386.85     177.21
+Flagstaff    1648  300580.35     182.39
+     Bend    1650  284575.25     172.47
+Asheville    1358  237779.37     175.10</code></pre>
+                </div>
+
+                <p>The pandas version, for comparison, is <code>orders[orders["status"] == "completed"].groupby("store")["order_total"].agg(["count", "sum", "mean"])</code>. The rule to remember for SQL: <strong>every column in the <code>SELECT</code> list must either be in the <code>GROUP BY</code> or be inside an aggregate function.</strong> Anything else has no single value per group.</p>
+
+                <p>You can group by an expression too. SQLite's <code>strftime</code> pulls parts out of a date string, here the year:</p>
+
+                <pre><code class="language-python">show("""
+    SELECT strftime('%Y', order_date) AS year,
+           channel,
+           COUNT(*)                   AS orders,
+           ROUND(SUM(order_total), 2) AS revenue
+    FROM orders
+    WHERE status = 'completed'
+    GROUP BY year, channel
+    ORDER BY year, channel
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>year channel  orders    revenue
+2024  online    5362 1077800.75
+2024   store    3430  605498.76
+2025  online    6242 1280183.70
+2025   store    3728  660823.06</code></pre>
+                </div>
+
+                <h3>HAVING: Filtering the Groups</h3>
+                <p><code>WHERE</code> filters rows <em>before</em> they are grouped, so it cannot mention an aggregate. To filter on a group's result, use <code>HAVING</code>, which runs <em>after</em> grouping.</p>
+
+                <pre><code class="language-python">show("""
+    SELECT category,
+           COUNT(*)             AS products,
+           ROUND(AVG(price), 2) AS avg_price
+    FROM products
+    WHERE stock_status != 'out_of_stock'      -- rows: only products we can sell
+    GROUP BY category
+    HAVING COUNT(*) &gt;= 25                     -- groups: only the larger categories
+    ORDER BY avg_price DESC
+""")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>    category  products  avg_price
+     Apparel        33     101.01
+    Footwear        26      92.95
+Camp Kitchen        28      66.76
+ Accessories        30      55.18</code></pre>
+                </div>
+
+                <p>Two dashes start a comment in SQL. The query has both kinds of filter, each doing its own job.</p>
+
+                <h3>The Order You Write and the Order It Runs</h3>
+                <p>The clauses must be <em>written</em> in a fixed order: <code>SELECT</code>, <code>FROM</code>, <code>WHERE</code>, <code>GROUP BY</code>, <code>HAVING</code>, <code>ORDER BY</code>, <code>LIMIT</code>. The engine <em>thinks</em> about them in a different order, and knowing it explains most beginner errors.</p>
+
+                <div class="mermaid">
+graph TD
+    A["1. FROM: pick the table"] --> B["2. WHERE: keep matching rows"]
+    B --> C["3. GROUP BY: form groups"]
+    C --> D["4. HAVING: keep matching groups"]
+    D --> E["5. SELECT: compute the columns"]
+    E --> F["6. ORDER BY: sort"]
+    F --> G["7. LIMIT: cut off"]
+                </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>SQL clause</th><th>What it does</th><th>pandas equivalent</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="nowrap"><code>SELECT a, b</code></td><td>Choose columns</td><td><code>df[["a", "b"]]</code></td></tr>
+                            <tr><td class="nowrap"><code>WHERE x &gt; 5</code></td><td>Keep rows</td><td><code>df[df["x"] &gt; 5]</code></td></tr>
+                            <tr><td><code>GROUP BY g</code> with aggregates</td><td>One row per group</td><td><code>df.groupby("g").agg(...)</code></td></tr>
+                            <tr><td class="nowrap"><code>HAVING COUNT(*) &gt; 5</code></td><td>Keep groups</td><td>A mask on the aggregated result</td></tr>
+                            <tr><td class="nowrap"><code>ORDER BY x DESC</code></td><td>Sort</td><td><code>df.sort_values("x", ascending=False)</code></td></tr>
+                            <tr><td class="nowrap"><code>LIMIT 10</code></td><td>First rows only</td><td><code>df.head(10)</code></td></tr>
+                            <tr><td class="nowrap"><code>SELECT DISTINCT a</code></td><td>Unique values</td><td><code>df["a"].drop_duplicates()</code></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="params" class="lesson-section">
+                <h2>🛡️ Parameters and SQL Injection</h2>
+
+                <p>Real queries are rarely fixed text. The store name comes from a dropdown, the date from a form, the customer id from a loop. The value has to get into the query somehow, and <strong>how</strong> you do that is the most important safety habit in this module.</p>
+
+                <h3>The Right Way: Placeholders</h3>
+                <p>Write a <code>?</code> where each value belongs and pass the values separately, as a tuple. The engine receives the SQL text and the values through different channels, so a value can never be mistaken for part of the command.</p>
+
+                <pre><code class="language-python">store = "Flagstaff"
+min_total = 1000
+
+cur = conn.execute(
+    "SELECT order_id, order_date, order_total FROM orders WHERE store = ? AND order_total &gt; ? ORDER BY order_total DESC",
+    (store, min_total),
 )
+for row in cur:
+    print(tuple(row))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>(114132, '2025-06-20', 1126.75)
+(114679, '2025-07-06', 1083.7)
+(115617, '2025-08-05', 1043.85)</code></pre>
+                </div>
+
+                <p>With more than two or three values, named placeholders are easier to read. Write <code>:name</code> in the SQL and pass a dictionary.</p>
+
+                <pre><code class="language-python">show(
+    """
+    SELECT status, COUNT(*) AS orders
+    FROM orders
+    WHERE store = :store AND order_date &gt;= :since
+    GROUP BY status
+    """,
+    {"store": "Asheville", "since": "2025-12-01"},
+)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>   status  orders
+cancelled       1
+completed      60
+ returned       4</code></pre>
+                </div>
+
+                <h3>The Wrong Way, Demonstrated Safely</h3>
+                <p>It is tempting to build the query with an f-string. Here is a customer lookup written that way, and what happens when the "last name" is not a last name.</p>
+
+                <pre><code class="language-python">def count_customers_unsafe(last_name):
+    sql = f"SELECT COUNT(*) FROM customers WHERE last_name = '{last_name}'"    # DO NOT do this
+    return conn.execute(sql).fetchone()[0]
+
+def count_customers_safe(last_name):
+    sql = "SELECT COUNT(*) FROM customers WHERE last_name = ?"
+    return conn.execute(sql, (last_name,)).fetchone()[0]
+
+print(count_customers_unsafe("Soto"), count_customers_safe("Soto"))
+
+sneaky = "nobody' OR '1'='1"
+print(count_customers_unsafe(sneaky), count_customers_safe(sneaky))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>45 45
+4850 0</code></pre>
+                </div>
+
+                <p>For an honest name both functions agree. For the crafted input, the unsafe function matched <strong>every one of the 4,850 customers</strong>. Look at the SQL it built:</p>
+
+                <pre><code class="language-sql">SELECT COUNT(*) FROM customers WHERE last_name = 'nobody' OR '1'='1'</code></pre>
+
+                <p>The quote inside the input closed the string early, and the rest of the input became SQL: <code>OR '1'='1'</code> is true for every row. This is <strong>SQL injection</strong>. If that function returned names and emails instead of a count, the visitor would now have the whole customer list. With other inputs an attacker can read other tables or change data. The safe function treated the same input as one odd-looking name and correctly found nobody.</p>
+
+                <div class="card card-danger">
+                    <h4>🛑 The Rule</h4>
+                    <p>Never put a value into SQL with an f-string, <code>.format()</code>, <code>%</code> or <code>+</code>. Always use placeholders. This applies even when the value "comes from your own code": names such as <code>O'Brien</code> break hand-built SQL with no attacker involved, and habits are what protect you on the day the input is not yours.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h4>💡 What Placeholders Cannot Do</h4>
+                    <p>A placeholder stands for a <strong>value</strong>, never for a table name, a column name or a keyword. If the column to sort by comes from a user, check it against a list of allowed names in Python first, and only then put it in the query text: <code>if sort_col not in {"order_total", "order_date"}: raise ValueError(...)</code>.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="writing" class="lesson-section">
+                <h2>✍️ Writing Data and Transactions</h2>
+
+                <p>Analysts mostly read, but you will sometimes save a result table, load a lookup list or stage cleaned data. Three statements change data: <code>INSERT</code>, <code>UPDATE</code> and <code>DELETE</code>, and <code>CREATE TABLE</code> makes a new table. All of this happens in your working copy.</p>
+
+                <pre><code class="language-python">conn.execute("""
+    CREATE TABLE store_targets (
+        store          TEXT NOT NULL,
+        quarter        TEXT NOT NULL,
+        target_revenue REAL NOT NULL,
+        PRIMARY KEY (store, quarter)
+    )
+""")
+
+targets = [
+    ("Boise", "2025-Q1", 720000.0),
+    ("Bend", "2025-Q1", 505000.0),
+    ("Flagstaff", "2025-Q1", 470000.0),
+]
+conn.executemany("INSERT INTO store_targets VALUES (?, ?, ?)", targets)
+conn.commit()
+
+show("SELECT * FROM store_targets")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>    store quarter  target_revenue
+    Boise 2025-Q1        720000.0
+     Bend 2025-Q1        505000.0
+Flagstaff 2025-Q1        470000.0</code></pre>
+                </div>
+
+                <p><code>executemany</code> runs one statement once per tuple in the list, with placeholders, of course. The line that makes it permanent is <code>conn.commit()</code>.</p>
+
+                <h3>Transactions: All or Nothing</h3>
+                <p>When you change data, <code>sqlite3</code> quietly opens a <strong>transaction</strong>. Your changes are visible to your own connection but are not saved to the file until you <code>commit()</code>. If something goes wrong you can <code>rollback()</code> and the database returns to the last commit, as if nothing had happened.</p>
+
+                <p>Python makes this automatic. (You met <code>with</code> for files in Intermediate Python; a connection uses it for a different job.) Used in a <code>with</code> statement, a connection commits if the block finishes and rolls back if it raises.</p>
+
+                <pre data-raises="sqlite3.IntegrityError"><code class="language-python">with conn:
+    conn.execute("INSERT INTO store_targets VALUES (?, ?, ?)", ("Asheville", "2025-Q1", 390000.0))
+    conn.execute("INSERT INTO store_targets VALUES (?, ?, ?)", ("Boise", "2025-Q1", 999999.0))   # duplicate key</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>IntegrityError: UNIQUE constraint failed: store_targets.store, store_targets.quarter</code></pre>
+                </div>
+
+                <pre><code class="language-python">show("SELECT store, quarter FROM store_targets")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>    store quarter
+     Bend 2025-Q1
+    Boise 2025-Q1
+Flagstaff 2025-Q1</code></pre>
+                </div>
+
+                <p>The second insert broke the primary key rule (Boise already has a 2025-Q1 target), so the engine refused it. Because both inserts were in one transaction, the Asheville row was rolled back too. That is the point: a batch of related changes either all happen or none do.</p>
+
+                <div class="card card-warning">
+                    <h4>⚠️ <code>with conn:</code> Does Not Close the Connection</h4>
+                    <p>For files, <code>with open(...)</code> closes the file. For <code>sqlite3</code>, <code>with conn:</code> only ends the <strong>transaction</strong>. The connection stays open, which is convenient in a notebook. To close it as well, call <code>conn.close()</code> when you are done, or wrap it in <code>contextlib.closing</code>:</p>
+                </div>
+
+                <pre><code class="language-python">from contextlib import closing
+
+with closing(sqlite3.connect("pinecrest_work.db")) as tmp_conn:
+    n = tmp_conn.execute("SELECT COUNT(*) FROM store_targets").fetchone()[0]
+print(n)
 
 try:
-    with connection.cursor() as cursor:
-        # Create table
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS orders (
-                order_id INT AUTO_INCREMENT PRIMARY KEY,
-                customer_name VARCHAR(100),
-                product VARCHAR(100),
-                quantity INT,
-                order_date DATETIME,
-                status ENUM('pending', 'processing', 'shipped', 'delivered')
-            )
-        ''')
-        
-        # Insert with prepared statement
-        sql = '''
-            INSERT INTO orders (customer_name, product, quantity, order_date, status)
-            VALUES (%s, %s, %s, %s, %s)
-        '''
-        
-        orders = [
-            ('Alice Johnson', 'Widget A', 5, datetime.now(), 'pending'),
-            ('Bob Smith', 'Gadget B', 2, datetime.now(), 'processing'),
-            ('Charlie Brown', 'Tool C', 1, datetime.now(), 'shipped')
-        ]
-        
-        cursor.executemany(sql, orders)
-        
-        # Query with JOIN (assuming we have a customers table)
-        cursor.execute('''
-            SELECT o.*, c.email
-            FROM orders o
-            LEFT JOIN customers c ON o.customer_name = c.name
-            WHERE o.status != 'delivered'
-        ''')
-        
-        # Fetch results as dictionaries
-        results = cursor.fetchall()
-        for row in results:
-            print(f"Order {row['order_id']}: {row['product']} for {row['customer_name']}")
-    
-    # Commit changes
-    connection.commit()
-    
-finally:
-    connection.close()</code></pre>
+    tmp_conn.execute("SELECT 1")
+except sqlite3.ProgrammingError as e:
+    print("ProgrammingError:", e)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>3
+ProgrammingError: Cannot operate on a closed database.</code></pre>
+                </div>
+            </section>
 
-    <h2>SQLAlchemy - The Power of ORMs</h2>
-    
-    <h3>Core SQLAlchemy</h3>
-    <pre class="language-python"><code># Install: pip install sqlalchemy
+            <!-- ============================================================ -->
+            <section id="sqlalchemy" class="lesson-section">
+                <h2>🧰 SQLAlchemy: One Interface, Many Databases</h2>
 
-from sqlalchemy import create_engine, text, MetaData, Table, Column, Integer, String, Float, DateTime
-from sqlalchemy.sql import select, insert, update, delete
-import pandas as pd
-from datetime import datetime
+                <p><code>sqlite3</code> speaks only to SQLite. Each other database has its own Python driver with its own small differences. <strong>SQLAlchemy</strong> is a library that sits on top of the drivers and gives you one consistent way to connect, run SQL and manage transactions, whatever the engine. It is also what pandas prefers to talk to. You installed it in Lesson 0.1.</p>
 
-# Create engine (connection pool)
-# SQLite
-engine = create_engine('sqlite:///example.db', echo=True)
+                <p>You start by creating an <strong>engine</strong> from a database URL. The engine is a factory for connections; creating it does not connect yet.</p>
 
-# PostgreSQL
-# engine = create_engine('postgresql://user:password@localhost/dbname')
+                <pre><code class="language-python">import sqlalchemy
+from sqlalchemy import create_engine, text, inspect
 
-# MySQL
-# engine = create_engine('mysql+pymysql://user:password@localhost/dbname')
+engine = create_engine("sqlite:///pinecrest_work.db")
+print(sqlalchemy.__version__)
+print(engine.dialect.name)
+print(inspect(engine).get_table_names())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>2.1.4
+sqlite
+['customers', 'employees', 'inventory', 'order_items', 'orders', 'products', 'store_targets']</code></pre>
+                </div>
 
-# SQL Server
-# engine = create_engine('mssql+pyodbc://user:password@server/database?driver=ODBC+Driver+17+for+SQL+Server')
+                <p>The URL reads <em>dialect</em><code>://</code><em>location</em>. For SQLite the location is a file path, so there are three slashes: two for the URL and one that starts a relative path. <code>inspect()</code> is SQLAlchemy's portable way to list tables and columns, so you do not need each engine's own catalog tables.</p>
 
-# Execute raw SQL
-with engine.connect() as conn:
-    result = conn.execute(text("SELECT * FROM employees WHERE salary > :sal"), {"sal": 70000})
+                <p>To run SQL, borrow a connection with <code>with engine.connect()</code> and wrap the SQL in <code>text()</code>. Parameters are always the <code>:name</code> style, passed as a dictionary, on every database.</p>
+
+                <pre><code class="language-python">query = text("""
+    SELECT store, COUNT(*) AS returned
+    FROM orders
+    WHERE status = :status AND order_date &gt;= :since
+    GROUP BY store
+    ORDER BY returned DESC
+""")
+
+with engine.connect() as sa_conn:
+    result = sa_conn.execute(query, {"status": "returned", "since": "2025-01-01"})
+    print(list(result.keys()))
     for row in result:
-        print(row)
+        print(row.store, row.returned)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>['store', 'returned']
+Online 467
+Boise 36
+Bend 34
+Flagstaff 30
+Asheville 30</code></pre>
+                </div>
 
-# Using pandas with SQLAlchemy
-df = pd.read_sql_query("SELECT * FROM employees", engine)
-print(df)
+                <p>Rows from SQLAlchemy behave like named tuples: <code>row.store</code>, <code>row[0]</code>, and <code>row._mapping["store"]</code> all work. Here the <code>with</code> block <em>does</em> close the connection (it returns it to the engine's pool).</p>
 
-# Write DataFrame to database
-new_df = pd.DataFrame({
-    'name': ['New Employee'],
-    'department': ['IT'],
-    'salary': [85000],
-    'hire_date': [datetime.now()]
-})
-new_df.to_sql('employees', engine, if_exists='append', index=False)
+                <p>For changes, use <code>engine.begin()</code> instead: it opens a connection <em>and</em> a transaction, commits at the end of the block, and rolls back on an error.</p>
 
-# Table reflection - work with existing tables
-metadata = MetaData()
-metadata.reflect(bind=engine)
-employees_table = metadata.tables['employees']
-
-# Query using SQLAlchemy core
-with engine.connect() as conn:
-    # Select
-    query = select(employees_table).where(employees_table.c.department == 'Engineering')
-    result = conn.execute(query)
-    
-    # Insert
-    insert_stmt = insert(employees_table).values(
-        name='Sarah Wilson',
-        department='HR',
-        salary=60000,
-        hire_date=datetime.now()
+                <pre><code class="language-python">with engine.begin() as sa_conn:
+    sa_conn.execute(
+        text("INSERT INTO store_targets VALUES (:store, :quarter, :target)"),
+        [
+            {"store": "Asheville", "quarter": "2025-Q1", "target": 390000.0},
+            {"store": "Online", "quarter": "2025-Q1", "target": 600000.0},
+        ],
     )
-    conn.execute(insert_stmt)
-    conn.commit()</code></pre>
 
-    <h3>SQLAlchemy ORM</h3>
-    <pre class="language-python"><code>from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship
-from datetime import datetime
+with engine.connect() as sa_conn:
+    print(sa_conn.execute(text("SELECT COUNT(*) FROM store_targets")).scalar())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>5</code></pre>
+                </div>
 
-# Create base class
-Base = declarative_base()
+                <p>Passing a list of dictionaries runs the statement once per dictionary. <code>.scalar()</code> returns the first column of the first row, which is handy for single-number answers.</p>
 
-# Define models
-class Department(Base):
-    __tablename__ = 'departments'
-    
-    id = Column(Integer, primary_key=True)
-    name = Column(String(50), unique=True, nullable=False)
-    budget = Column(Float)
-    
-    # Relationship
-    employees = relationship("Employee", back_populates="department")
-    
-    def __repr__(self):
-        return f"<Department(name='{self.name}', budget={self.budget})>"
+                <div class="card card-info">
+                    <h4>💡 What About the ORM?</h4>
+                    <p>SQLAlchemy has a second, larger half, the ORM, which maps tables to Python classes. Application developers use it heavily. For analysis you rarely need it: writing SQL with <code>text()</code> and reading results into pandas is the common, well-supported path, and it is the one this course takes.</p>
+                </div>
+            </section>
 
-class Employee(Base):
-    __tablename__ = 'employees_orm'
-    
-    id = Column(Integer, primary_key=True)
-    name = Column(String(100), nullable=False)
-    email = Column(String(100), unique=True)
-    salary = Column(Float)
-    hire_date = Column(DateTime, default=datetime.now)
-    department_id = Column(Integer, ForeignKey('departments.id'))
-    
-    # Relationship
-    department = relationship("Department", back_populates="employees")
-    
-    def __repr__(self):
-        return f"<Employee(name='{self.name}', email='{self.email}')>"
+            <!-- ============================================================ -->
+            <section id="pandas" class="lesson-section">
+                <h2>🐼 SQL and pandas Together</h2>
 
-# Create engine and tables
-engine = create_engine('sqlite:///orm_example.db', echo=True)
-Base.metadata.create_all(engine)
+                <p>The usual division of labor: let the database do the heavy filtering, joining and aggregating, then bring a manageable result into pandas for statistics, reshaping and charts.</p>
 
-# Create session
-Session = sessionmaker(bind=engine)
-session = Session()
+                <h3>Reading: <code>pd.read_sql</code></h3>
+                <p><code>pd.read_sql(sql, connection)</code> runs a query and returns a DataFrame. It accepts a SQLAlchemy connection (the general case) or a plain <code>sqlite3</code> connection.</p>
 
-# Create and add objects
-eng_dept = Department(name='Engineering', budget=1000000)
-mkt_dept = Department(name='Marketing', budget=500000)
+                <pre><code class="language-python">query = text("""
+    SELECT order_id, order_date, store, promo_code, order_total
+    FROM orders
+    WHERE status = :status AND order_total &gt; :min_total
+    ORDER BY order_total DESC
+""")
 
-session.add_all([eng_dept, mkt_dept])
-session.commit()
+with engine.connect() as sa_conn:
+    big = pd.read_sql(query, sa_conn, params={"status": "completed", "min_total": 2000},
+                      parse_dates=["order_date"])
 
-# Add employees
-john = Employee(
-    name='John Doe',
-    email='john@example.com',
-    salary=75000,
-    department=eng_dept
-)
+print(big.shape)
+print(big.head(3))
+print(big.dtypes)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>(12, 5)
+   order_id order_date   store promo_code  order_total
+0    106479 2024-09-15  Online        NaN       4893.0
+1    114268 2025-06-24  Online        NaN       4184.9
+2    113836 2025-06-11  Online        NaN       4150.4
+order_id                int64
+order_date     datetime64[us]
+store                     str
+promo_code                str
+order_total           float64
+dtype: object</code></pre>
+                </div>
 
-jane = Employee(
-    name='Jane Smith',
-    email='jane@example.com',
-    salary=65000,
-    department=mkt_dept
-)
+                <p>Three things to notice. Parameters go in <code>params=</code>, never in the string. SQLite has no date type, so <code>parse_dates=</code> does the conversion, exactly as in <code>read_csv</code>. And a SQL <code>NULL</code> arrives as a missing value (<code>NaN</code>) in pandas: <code>promo_code</code> is empty for most orders.</p>
 
-session.add_all([john, jane])
-session.commit()
+                <p>For a result too large for memory, <code>chunksize=</code> turns <code>read_sql</code> into an iterator of smaller DataFrames, as it does for <code>read_csv</code>.</p>
 
-# Query using ORM
-# Get all employees
-all_employees = session.query(Employee).all()
-for emp in all_employees:
-    print(f"{emp.name} works in {emp.department.name}")
+                <pre><code class="language-python">with engine.connect() as sa_conn:
+    total = 0.0
+    for chunk in pd.read_sql(text("SELECT order_total FROM orders WHERE status = 'completed'"),
+                             sa_conn, chunksize=5000):
+        total += chunk["order_total"].sum()
+        print(len(chunk), end=" ")
+print()
+print(round(total, 2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>5000 5000 5000 3762
+3624306.27</code></pre>
+                </div>
 
-# Filter
-high_earners = session.query(Employee).filter(Employee.salary > 70000).all()
+                <h3>Writing: <code>DataFrame.to_sql</code></h3>
+                <p><code>to_sql</code> saves a DataFrame as a table. The two arguments to set every time are <code>if_exists</code> (<code>"fail"</code> is the default; <code>"replace"</code> drops and recreates the table; <code>"append"</code> adds rows) and <code>index=False</code>, unless you want the index stored as a column.</p>
 
-# Join
-results = session.query(Employee, Department)\
-    .join(Department)\
-    .filter(Department.budget > 600000)\
-    .all()
+                <pre><code class="language-python">with engine.connect() as sa_conn:
+    by_month = pd.read_sql(text("""
+        SELECT strftime('%Y-%m', order_date) AS month,
+               COUNT(*)                      AS orders,
+               ROUND(SUM(order_total), 2)    AS revenue
+        FROM orders
+        WHERE status = 'completed'
+        GROUP BY month
+        ORDER BY month
+    """), sa_conn)
 
-# Aggregation
-from sqlalchemy import func
+by_month["avg_order"] = (by_month["revenue"] / by_month["orders"]).round(2)
 
-dept_stats = session.query(
-    Department.name,
-    func.count(Employee.id).label('employee_count'),
-    func.avg(Employee.salary).label('avg_salary')
-).join(Employee).group_by(Department.name).all()
+rows = by_month.to_sql("monthly_summary", engine, if_exists="replace", index=False)
+print(rows)
 
-for stat in dept_stats:
-    print(f"{stat.name}: {stat.employee_count} employees, avg salary: ${stat.avg_salary:,.2f}")
+show("SELECT * FROM monthly_summary ORDER BY revenue DESC LIMIT 3")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>24
+  month  orders   revenue  avg_order
+2025-06     910 194875.60     214.15
+2025-12    1049 189236.73     180.40
+2025-08     921 186671.93     202.68</code></pre>
+                </div>
 
-# Update
-john.salary = 80000
-session.commit()
+                <p><code>to_sql</code> returns the number of rows written (24 months) and commits for you when you give it an engine. The best month, June 2025 at $194,875.60, matches the figure from earlier lessons. The summary now lives in the database, where a colleague or a dashboard can query it without rerunning your notebook.</p>
 
-# Delete
-session.delete(jane)
-session.commit()
+                <div class="card card-warning">
+                    <h4>⚠️ <code>if_exists="replace"</code> Deletes First</h4>
+                    <p>It drops the existing table and everything in it, then creates a new one from your DataFrame. That is what you want for a summary you regenerate. It is a disaster if you mistype the name of a real table. On a shared database, write only to tables that are yours to replace.</p>
+                </div>
+            </section>
 
-# Close session
-session.close()</code></pre>
+            <!-- ============================================================ -->
+            <section id="postgres" class="lesson-section">
+                <h2>🐘 Where PostgreSQL Differs</h2>
 
-    <h2>Connection Pooling</h2>
-    <p>Efficient connection management for production applications:</p>
-    
-    <pre class="language-python"><code>from sqlalchemy import create_engine
-from sqlalchemy.pool import NullPool, QueuePool
+                <p>At work, the database is more likely to be PostgreSQL (or MySQL, SQL Server, or a cloud warehouse) than SQLite. Every <code>SELECT</code> in this lesson runs on PostgreSQL as written, except the catalog and date-function lines. What changes is mostly around the edges.</p>
 
-# Connection pool configuration
-engine = create_engine(
-    'postgresql://user:pass@localhost/db',
-    poolclass=QueuePool,
-    pool_size=10,           # Number of connections to maintain
-    max_overflow=20,        # Maximum overflow connections
-    pool_pre_ping=True,     # Test connections before using
-    pool_recycle=3600,      # Recycle connections after 1 hour
-    echo_pool=True          # Log pool checkouts/checkins
-)
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Topic</th><th>SQLite</th><th>PostgreSQL</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Where it lives</td><td>One file on your disk, no server</td><td>A server you connect to over the network with a user name and password</td></tr>
+                            <tr><td>Driver</td><td><code>sqlite3</code> (standard library)</td><td><code>psycopg</code> (install it)</td></tr>
+                            <tr><td>SQLAlchemy URL</td><td><code>sqlite:///file.db</code></td><td><code>postgresql+psycopg://user:password@host:5432/dbname</code></td></tr>
+                            <tr><td>Placeholders in the raw driver</td><td><code>?</code> or <code>:name</code></td><td><code>%s</code> or <code>%(name)s</code> (with SQLAlchemy <code>text()</code>: <code>:name</code> on both)</td></tr>
+                            <tr><td>Types</td><td>Flexible: a column accepts values of other types</td><td>Strict, with real <code>DATE</code>, <code>TIMESTAMP</code>, <code>BOOLEAN</code> and <code>NUMERIC</code> types</td></tr>
+                            <tr><td>Dates into pandas</td><td>Text: use <code>parse_dates=</code></td><td>Arrive as dates already</td></tr>
+                            <tr><td>Date parts</td><td><code>strftime('%Y', d)</code></td><td><code>EXTRACT(YEAR FROM d)</code>, <code>to_char(d, 'YYYY')</code>, <code>date_trunc('month', d)</code></td></tr>
+                            <tr><td><code>LIKE</code></td><td>Ignores case for A to Z</td><td>Case sensitive; use <code>ILIKE</code> to ignore case</td></tr>
+                            <tr><td>Listing tables</td><td><code>sqlite_master</code>, <code>PRAGMA table_info</code></td><td><code>information_schema.tables</code> and <code>.columns</code></td></tr>
+                            <tr><td>Many writers at once</td><td>One writer at a time</td><td>Built for many simultaneous users</td></tr>
+                        </tbody>
+                    </table>
+                </div>
 
-# For applications that need fresh connections
-engine = create_engine(
-    'postgresql://user:pass@localhost/db',
-    poolclass=NullPool  # No connection pooling
-)
+                <p>This is what a PostgreSQL connection looks like. It is shown for reference and was <strong>not run</strong> for this lesson, because it needs a server. Note where the password comes from. (An environment variable is a named value set in your terminal that Python reads with <code>os.environ[...]</code>; Lesson 6.4 shows how to set one.)</p>
 
-# Custom pool configuration
-from sqlalchemy.pool import StaticPool
+                <pre data-norun><code class="language-python">import os
+from sqlalchemy import create_engine, text
 
-# For SQLite with threading
-engine = create_engine(
-    'sqlite:///example.db',
-    connect_args={'check_same_thread': False},
-    poolclass=StaticPool
-)</code></pre>
+# The URL holds a password, so it lives in an environment variable, never in your code or notebook.
+pg_engine = create_engine(os.environ["DATABASE_URL"])    # postgresql+psycopg://analyst:...@db.example.com:5432/pinecrest
 
-    <h2>MongoDB with PyMongo</h2>
-    <p>Working with NoSQL databases:</p>
-    
-    <pre class="language-python"><code># Install: pip install pymongo
+with pg_engine.connect() as pg_conn:
+    df = pd.read_sql(text("SELECT store, COUNT(*) AS orders FROM orders WHERE status = :s GROUP BY store"),
+                     pg_conn, params={"s": "completed"})</code></pre>
 
-from pymongo import MongoClient
+                <p>Compare it with the SQLite version above: only the engine URL differs. That is the payoff for learning the SQLAlchemy pattern now.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="mistakes" class="lesson-section">
+                <h2>⚠️ Common Mistakes</h2>
+
+                <p>Everyone who learns SQL from Python meets these. Each message is the engine telling you precisely what it could not do.</p>
+
+                <h3>1. A Typo in the File Name Creates a New, Empty Database</h3>
+                <pre data-raises="sqlite3.OperationalError"><code class="language-python">oops = sqlite3.connect("pinecrest_wrok.db")      # typo: "wrok"
+oops.execute("SELECT COUNT(*) FROM orders")</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>OperationalError: no such table: orders</code></pre>
+                </div>
+                <p><strong>What it means:</strong> <code>sqlite3.connect</code> does not complain about a file that does not exist. It creates an empty database with that name, and the error only appears when you query a table that is not in it. <strong>Fix:</strong> check the path (and delete the stray empty file). To make a missing file an error, open it read-only with a URI: <code>sqlite3.connect("file:pinecrest_work.db?mode=ro", uri=True)</code>.</p>
+
+                <pre><code class="language-python">import os
+oops.close()
+os.remove("pinecrest_wrok.db")      # tidy up the accidental file</code></pre>
+
+                <h3>2. A String Where a Tuple of Parameters Belongs</h3>
+                <pre data-raises="sqlite3.ProgrammingError"><code class="language-python">conn.execute("SELECT COUNT(*) FROM orders WHERE store = ?", "Boise")</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>ProgrammingError: Incorrect number of bindings supplied. The current statement uses 1, and there are 5 supplied.</code></pre>
+                </div>
+                <p><strong>What it means:</strong> the parameters must be a sequence, and a string <em>is</em> a sequence, of five characters. <strong>Fix:</strong> a one-item tuple needs a trailing comma: <code>("Boise",)</code>. A list, <code>["Boise"]</code>, also works.</p>
+
+                <h3>3. An Aggregate in WHERE</h3>
+                <pre data-raises="sqlite3.OperationalError"><code class="language-python">conn.execute("SELECT store, COUNT(*) FROM orders WHERE COUNT(*) &gt; 2000 GROUP BY store")</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>OperationalError: misuse of aggregate: COUNT()</code></pre>
+                </div>
+                <p><strong>What it means:</strong> <code>WHERE</code> runs before the groups exist, so there is nothing to count yet. <strong>Fix:</strong> conditions on aggregates go in <code>HAVING</code>, after <code>GROUP BY</code>.</p>
+
+                <h3>4. Passing a Plain String to SQLAlchemy</h3>
+                <pre data-raises="sqlalchemy.exc.ObjectNotExecutableError"><code class="language-python">with engine.connect() as sa_conn:
+    sa_conn.execute("SELECT COUNT(*) FROM orders")</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>ObjectNotExecutableError: Not an executable object: 'SELECT COUNT(*) FROM orders'</code></pre>
+                </div>
+                <p><strong>What it means:</strong> SQLAlchemy 2 does not run bare strings. <strong>Fix:</strong> wrap the SQL in <code>text("...")</code>. Many older tutorials show the bare-string form, which no longer works.</p>
+
+                <h3>5. Forgetting to Commit</h3>
+                <p>There is no error message for this one, which is what makes it expensive. A second connection stands in for "your colleague" or "your script tomorrow".</p>
+                <pre><code class="language-python">other = sqlite3.connect("pinecrest_work.db")
+count_sql = "SELECT COUNT(*) FROM store_targets"
+
+conn.execute("INSERT INTO store_targets VALUES (?, ?, ?)", ("Bend", "2025-Q2", 560000.0))
+print("mine:", conn.execute(count_sql).fetchone()[0], " theirs:", other.execute(count_sql).fetchone()[0])
+
+conn.commit()
+print("mine:", conn.execute(count_sql).fetchone()[0], " theirs:", other.execute(count_sql).fetchone()[0])
+other.close()</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>mine: 6  theirs: 5
+mine: 6  theirs: 6</code></pre>
+                </div>
+                <p><strong>What happened:</strong> before the commit, only your own connection could see the new row. Had you closed the notebook at that moment, the row would have been lost. <strong>Fix:</strong> do writes inside <code>with conn:</code> (or <code>with engine.begin()</code>), so the commit cannot be forgotten.</p>
+
+                <h3>6. Double Quotes Around Text</h3>
+                <p>In standard SQL, single quotes mean a text value and double quotes mean a <em>name</em> (of a column or table). SQLite is forgiving and often accepts <code>WHERE store = "Boise"</code>, but PostgreSQL will answer <code>column "Boise" does not exist</code>. <strong>Fix:</strong> single quotes for text, always. Wrapping your SQL in Python triple double quotes makes that easy.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="project" class="lesson-section">
+                <h2>🛠️ Project: The Store Scorecard</h2>
+
+                <p>Pinecrest's regional manager wants the same one-page summary for any store and any year, on request. That is a job for a <strong>parameterized report function</strong>: fixed SQL, changing values. You will build it, run it for every store, save the result as a table, and check it against pandas. Work in a new notebook, <code>lesson_5_1_project</code>. Allow about 45 minutes.</p>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 1: Connect to a working copy <span class="step-time">(5 min)</span></h3>
+                    <p>Start clean: a fresh copy of the database and a SQLAlchemy engine. Confirm the six tables are there.</p>
+                    <pre><code class="language-python">import shutil
 import pandas as pd
-from datetime import datetime
+from sqlalchemy import create_engine, text, inspect
 
-# Connect to MongoDB
-client = MongoClient('mongodb://localhost:27017/')
-# Or with authentication
-# client = MongoClient('mongodb://username:password@localhost:27017/')
+shutil.copy("data/pinecrest.db", "scorecard.db")
+engine = create_engine("sqlite:///scorecard.db")
+print(inspect(engine).get_table_names())</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>['customers', 'employees', 'inventory', 'order_items', 'orders', 'products']</code></pre>
+                    </div>
+                </div>
 
-# Select database and collection
-db = client['mydatabase']
-collection = db['users']
+                <div class="card card-info">
+                    <h3>🛠️ Step 2: Headline numbers for one store and year <span class="step-time">(10 min)</span></h3>
+                    <p>Write the query with named placeholders and try it for Boise in 2025. A date range with <code>&gt;=</code> and <code>&lt;</code> is the safe way to say "during this year".</p>
+                    <pre><code class="language-python">HEADLINE_SQL = text("""
+    SELECT COUNT(*)                    AS orders,
+           COUNT(DISTINCT customer_id) AS customers,
+           ROUND(SUM(order_total), 2)  AS revenue,
+           ROUND(AVG(order_total), 2)  AS avg_order,
+           MAX(order_total)            AS largest_order
+    FROM orders
+    WHERE store = :store
+      AND status = 'completed'
+      AND order_date &gt;= :start AND order_date &lt; :end
+""")
 
-# Insert documents
-user = {
-    'name': 'Alice Johnson',
-    'email': 'alice@example.com',
-    'age': 30,
-    'interests': ['python', 'data science', 'machine learning'],
-    'address': {
-        'street': '123 Main St',
-        'city': 'New York',
-        'country': 'USA'
-    },
-    'created_at': datetime.now()
-}
+params = {"store": "Boise", "start": "2025-01-01", "end": "2026-01-01"}
+with engine.connect() as conn2:
+    print(pd.read_sql(HEADLINE_SQL, conn2, params=params))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>   orders  customers    revenue  avg_order  largest_order
+0    1320        672  231246.73     175.19        1676.65</code></pre>
+                    </div>
+                </div>
 
-# Insert one
-result = collection.insert_one(user)
-print(f"Inserted ID: {result.inserted_id}")
+                <div class="card card-info">
+                    <h3>🛠️ Step 3: Add the status mix and the payment mix <span class="step-time">(10 min)</span></h3>
+                    <p>Two grouped queries with the same parameters. The second uses <code>HAVING</code> to leave out payment methods with fewer than 100 orders.</p>
+                    <pre><code class="language-python">STATUS_SQL = text("""
+    SELECT status, COUNT(*) AS orders
+    FROM orders
+    WHERE store = :store AND order_date &gt;= :start AND order_date &lt; :end
+    GROUP BY status
+    ORDER BY orders DESC
+""")
 
-# Insert many
-users = [
-    {'name': 'Bob Smith', 'age': 25, 'email': 'bob@example.com'},
-    {'name': 'Charlie Brown', 'age': 35, 'email': 'charlie@example.com'}
-]
-collection.insert_many(users)
+PAYMENT_SQL = text("""
+    SELECT payment_method,
+           COUNT(*)                   AS orders,
+           ROUND(AVG(order_total), 2) AS avg_order
+    FROM orders
+    WHERE store = :store AND status = 'completed'
+      AND order_date &gt;= :start AND order_date &lt; :end
+    GROUP BY payment_method
+    HAVING COUNT(*) &gt;= 100
+    ORDER BY orders DESC
+""")
 
-# Query documents
-# Find one
-user = collection.find_one({'name': 'Alice Johnson'})
-print(user)
+with engine.connect() as conn2:
+    print(pd.read_sql(STATUS_SQL, conn2, params=params))
+    print(pd.read_sql(PAYMENT_SQL, conn2, params=params))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>      status  orders
+0  completed    1320
+1   returned      36
+2  cancelled       5
+   payment_method  orders  avg_order
+0            card     792     176.66
+1            cash     280     172.79
+2  digital_wallet     164     178.89</code></pre>
+                    </div>
+                </div>
 
-# Find many with filter
-young_users = collection.find({'age': {'$lt': 30}})
-for user in young_users:
-    print(user['name'])
+                <div class="card card-info">
+                    <h3>🛠️ Step 4: Wrap it in a function and run every store <span class="step-time">(10 min)</span></h3>
+                    <p>The function returns one row of headline numbers plus a return rate. The list of stores comes from the database too, so a fifth store would be picked up automatically.</p>
+                    <pre><code class="language-python">def store_scorecard(engine, store, year):
+    """Headline numbers for one store and one calendar year, as a one-row DataFrame."""
+    params = {"store": store, "start": f"{year}-01-01", "end": f"{year + 1}-01-01"}
+    with engine.connect() as c:
+        card = pd.read_sql(HEADLINE_SQL, c, params=params)
+        status = pd.read_sql(STATUS_SQL, c, params=params).set_index("status")["orders"]
+    card.insert(0, "store", store)
+    card.insert(1, "year", year)
+    card["return_rate_pct"] = round(100 * status.get("returned", 0) / status.sum(), 1)
+    return card
 
-# Complex queries
-results = collection.find({
-    '$and': [
-        {'age': {'$gte': 25}},
-        {'interests': {'$in': ['python', 'javascript']}}
-    ]
-})
+with engine.connect() as c:
+    stores = [row.store for row in c.execute(text("SELECT DISTINCT store FROM orders ORDER BY store"))]
+print(stores)
 
-# Aggregation pipeline
-pipeline = [
-    {'$match': {'age': {'$gte': 25}}},
-    {'$group': {'_id': '$city', 'count': {'$sum': 1}}},
-    {'$sort': {'count': -1}}
-]
+scorecard = pd.concat([store_scorecard(engine, s, 2025) for s in stores], ignore_index=True)
+print(scorecard)</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>['Asheville', 'Bend', 'Boise', 'Flagstaff', 'Online']
+       store  year  orders  customers     revenue  avg_order  largest_order  return_rate_pct
+0  Asheville  2025     655        402   110442.39     168.61         953.80              4.4
+1       Bend  2025     835        506   147586.07     176.75        1004.60              3.9
+2      Boise  2025    1320        672   231246.73     175.19        1676.65              2.6
+3  Flagstaff  2025     918        459   171547.87     186.87        1126.75              3.1
+4     Online  2025    6242       2732  1280183.70     205.09        4184.90              6.8</code></pre>
+                    </div>
+                    <p>The f-strings here build <em>parameter values</em> from an integer year, not SQL text, and they still travel through <code>params</code>. That is fine. The online channel's return rate stands out, as it did in your EDA.</p>
+                </div>
 
-agg_results = collection.aggregate(pipeline)
-for result in agg_results:
-    print(result)
+                <div class="card card-info">
+                    <h3>🛠️ Step 5: Save the scorecard and read it back <span class="step-time">(5 min)</span></h3>
+                    <pre><code class="language-python">scorecard.to_sql("scorecard_2025", engine, if_exists="replace", index=False)
 
-# Update documents
-collection.update_one(
-    {'name': 'Alice Johnson'},
-    {'$set': {'age': 31, 'updated_at': datetime.now()}}
-)
+with engine.connect() as c:
+    saved = pd.read_sql(text("SELECT store, revenue, return_rate_pct FROM scorecard_2025 ORDER BY revenue DESC"), c)
+print(saved)</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>       store     revenue  return_rate_pct
+0     Online  1280183.70              6.8
+1      Boise   231246.73              2.6
+2  Flagstaff   171547.87              3.1
+3       Bend   147586.07              3.9
+4  Asheville   110442.39              4.4</code></pre>
+                    </div>
+                </div>
 
-# Update many
-collection.update_many(
-    {'age': {'$lt': 30}},
-    {'$inc': {'age': 1}}  # Increment age by 1
-)
+                <div class="card card-info">
+                    <h3>🛠️ Step 6: Check the database against pandas <span class="step-time">(5 min)</span></h3>
+                    <p>Two independent routes to the same number is the best test you have. Recompute 2025 completed revenue per store from the CSV file and compare.</p>
+                    <pre><code class="language-python">orders = pd.read_csv("data/orders.csv", parse_dates=["order_date"])
+mask = (orders["status"] == "completed") &amp; (orders["order_date"].dt.year == 2025)
+check = orders[mask].groupby("store")["order_total"].sum().round(2)
 
-# Delete documents
-collection.delete_one({'name': 'Bob Smith'})
-collection.delete_many({'age': {'$gt': 40}})
+compare = scorecard.set_index("store")[["revenue"]].join(check.rename("pandas_revenue"))
+compare["match"] = compare["revenue"] == compare["pandas_revenue"]
+print(compare)
+engine.dispose()      # close the engine's connections when you are finished</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>              revenue  pandas_revenue  match
+store
+Asheville   110442.39       110442.39   True
+Bend        147586.07       147586.07   True
+Boise       231246.73       231246.73   True
+Flagstaff   171547.87       171547.87   True
+Online     1280183.70      1280183.70   True</code></pre>
+                    </div>
+                </div>
 
-# Convert to DataFrame
-cursor = collection.find()
-df = pd.DataFrame(list(cursor))
-print(df)
+                <div class="card card-success">
+                    <h3>✅ Project Completion Checklist</h3>
+                    <ul class="checklist">
+                        <li>You worked on <code>scorecard.db</code>, and <code>data/pinecrest.db</code> is untouched</li>
+                        <li>Every value reaches SQL through <code>params</code>; no query text is built with an f-string</li>
+                        <li><code>store_scorecard(engine, "Boise", 2025)</code> returns one row with 1,320 completed orders</li>
+                        <li>The combined scorecard has five rows, one per store, with a return rate column</li>
+                        <li>The table <code>scorecard_2025</code> exists in your working database and reads back correctly</li>
+                        <li>Revenue from SQL matches revenue from pandas for all five stores</li>
+                    </ul>
+                </div>
+            </section>
 
-# Create indexes for better performance
-collection.create_index('email', unique=True)
-collection.create_index([('age', 1), ('name', -1)])  # Compound index
+            <!-- ============================================================ -->
+            <section id="exercises" class="lesson-section">
+                <h2>🏋️ Hands-on Exercises</h2>
 
-# Close connection
-client.close()</code></pre>
+                <p>These use the <code>conn</code> connection and the <code>show()</code> helper from the lesson (your <code>pinecrest_work.db</code> copy). Write the query before you open the solution. A query that fails is information: read the message, change one thing, run it again.</p>
 
-    <h2>Async Database Operations</h2>
-    
-    <h3>Async PostgreSQL with asyncpg</h3>
-    <pre class="language-python"><code># Install: pip install asyncpg asyncio
+                <div class="card">
+                    <h3>🏋️ Exercise 1: Filter and Sort</h3>
+                    <p>List the <code>name</code>, <code>brand</code>, <code>price</code> and <code>rating</code> of products in the <code>Footwear</code> category that cost less than $60 and have a rating of at least 4.0. Sort from the highest rating down, breaking ties by the lower price.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Three conditions joined with <code>AND</code>, then <code>ORDER BY rating DESC, price</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">show("""
+    SELECT name, brand, price, rating
+    FROM products
+    WHERE category = 'Footwear' AND price &lt; 60 AND rating &gt;= 4.0
+    ORDER BY rating DESC, price
+""")</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>                                name          brand  price  rating
+  Tallgrass Backcountry Hiking Socks      Tallgrass  20.95     4.8
+   Tallgrass Switchback Hiking Socks      Tallgrass  19.50     4.7
+Juniper Vane Timberline Hiking Socks   Juniper Vane  22.95     4.4
+      Wrenfield Cascade Hiking Socks      Wrenfield  20.95     4.2
+        Pinecrest Timberline Gaiters      Pinecrest  33.95     4.1
+             Pinecrest Drift Insoles      Pinecrest  55.95     4.1
+        Larkspur Ridge Talus Insoles Larkspur Ridge  39.95     4.0
+          Wrenfield Foothill Gaiters      Wrenfield  55.95     4.0</code></pre>
+                        </div>
+                    </details>
+                </div>
 
-import asyncio
-import asyncpg
-import pandas as pd
+                <div class="card">
+                    <h3>🏋️ Exercise 2: Group and Filter Groups</h3>
+                    <p>Using the <code>customers</code> table, show each <code>state</code> with its number of customers and how many of them are Gold tier, for states with at least 300 customers, largest first. (Hint for the Gold count: <code>SUM</code> of a condition counts the rows where it is true, because true is 1 and false is 0.)</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>SUM(loyalty_tier = 'Gold')</code> in the <code>SELECT</code> list, and <code>HAVING COUNT(*) &gt;= 300</code> after the <code>GROUP BY</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">show("""
+    SELECT state,
+           COUNT(*)                   AS customers,
+           SUM(loyalty_tier = 'Gold') AS gold
+    FROM customers
+    GROUP BY state
+    HAVING COUNT(*) &gt;= 300
+    ORDER BY customers DESC
+""")</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>state  customers  gold
+   ID       1103   149
+   OR        877   114
+   NC        813    88
+   AZ        712   114</code></pre>
+                        </div>
+                        <p>The four states are the ones with a Pinecrest store. Summing a comparison works in SQLite and MySQL; in PostgreSQL write <code>COUNT(*) FILTER (WHERE loyalty_tier = 'Gold')</code>, which SQLite also accepts.</p>
+                    </details>
+                </div>
 
-async def run_queries():
-    # Create connection pool
-    pool = await asyncpg.create_pool(
-        host='localhost',
-        database='testdb',
-        user='user',
-        password='password',
-        min_size=10,
-        max_size=20
-    )
-    
-    async with pool.acquire() as connection:
-        # Execute query
-        rows = await connection.fetch('''
-            SELECT * FROM employees WHERE salary > $1
-        ''', 70000)
-        
-        for row in rows:
-            print(dict(row))
-        
-        # Transaction
-        async with connection.transaction():
-            await connection.execute('''
-                UPDATE employees SET salary = salary * 1.1
-                WHERE department = $1
-            ''', 'Engineering')
-            
-            # This will be rolled back if error occurs
-            await connection.execute('''
-                INSERT INTO audit_log (action, timestamp)
-                VALUES ($1, $2)
-            ''', 'Salary increase', datetime.now())
-    
-    # Close pool
-    await pool.close()
-
-# Run async function
-asyncio.run(run_queries())
-
-# Async with SQLAlchemy
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
-
-async def async_sqlalchemy():
-    # Create async engine
-    engine = create_async_engine(
-        'postgresql+asyncpg://user:password@localhost/db',
-        echo=True
-    )
-    
-    # Create async session
-    async_session = sessionmaker(
-        engine, class_=AsyncSession, expire_on_commit=False
-    )
-    
-    async with async_session() as session:
-        result = await session.execute(
-            select(Employee).where(Employee.salary > 70000)
-        )
-        employees = result.scalars().all()
-        
-    await engine.dispose()
-
-asyncio.run(async_sqlalchemy())</code></pre>
-
-    <h2>Best Practices</h2>
-    
-    <h3>Security</h3>
-    <pre class="language-python"><code>import os
-from dotenv import load_dotenv
-import psycopg2
-
-# Load environment variables
-load_dotenv()
-
-# Never hardcode credentials
-DB_CONFIG = {
-    'host': os.getenv('DB_HOST'),
-    'database': os.getenv('DB_NAME'),
-    'user': os.getenv('DB_USER'),
-    'password': os.getenv('DB_PASSWORD')
-}
-
-# Use parameterized queries to prevent SQL injection
-def safe_query(conn, user_input):
-    cursor = conn.cursor()
-    
-    # NEVER do this - vulnerable to SQL injection
-    # bad_query = f"SELECT * FROM users WHERE name = '{user_input}'"
-    
-    # Do this instead - parameterized query
-    safe_query = "SELECT * FROM users WHERE name = %s"
-    cursor.execute(safe_query, (user_input,))
-    
-    return cursor.fetchall()
-
-# Use connection encryption
-ssl_conn = psycopg2.connect(
-    **DB_CONFIG,
-    sslmode='require',
-    sslcert='client-cert.pem',
-    sslkey='client-key.pem',
-    sslrootcert='ca-cert.pem'
-)</code></pre>
-
-    <h3>Error Handling</h3>
-    <pre class="language-python"><code>import logging
-from sqlalchemy import create_engine
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError, OperationalError
-from retry import retry
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-class DatabaseManager:
-    def __init__(self, connection_string):
-        self.engine = create_engine(connection_string)
-    
-    @retry(tries=3, delay=2, backoff=2)
-    def execute_with_retry(self, query, params=None):
-        """Execute query with automatic retry on failure"""
-        try:
-            with self.engine.connect() as conn:
-                result = conn.execute(query, params or {})
-                conn.commit()
-                return result
-        except OperationalError as e:
-            logger.error(f"Database operational error: {e}")
-            raise
-        except IntegrityError as e:
-            logger.error(f"Data integrity error: {e}")
-            # Don't retry integrity errors
-            raise
-        except SQLAlchemyError as e:
-            logger.error(f"Database error: {e}")
-            raise
-        except Exception as e:
-            logger.error(f"Unexpected error: {e}")
-            raise
-    
-    def health_check(self):
-        """Check database connectivity"""
-        try:
-            with self.engine.connect() as conn:
-                conn.execute("SELECT 1")
-            logger.info("Database connection successful")
-            return True
-        except Exception as e:
-            logger.error(f"Database health check failed: {e}")
-            return False</code></pre>
-
-    <h2>Performance Optimization</h2>
-    
-    <pre class="language-python"><code># Batch operations
-def batch_insert(engine, df, table_name, chunksize=1000):
-    """Insert DataFrame in batches for better performance"""
-    with engine.begin() as conn:
-        df.to_sql(
-            table_name,
-            con=conn,
-            if_exists='append',
-            index=False,
-            chunksize=chunksize,
-            method='multi'  # Use multi-row insert
-        )
-
-# Use COPY for PostgreSQL (fastest method)
-def bulk_copy_postgres(conn, df, table_name):
-    """Use COPY for bulk insert in PostgreSQL"""
-    from io import StringIO
-    
-    output = StringIO()
-    df.to_csv(output, sep='\t', header=False, index=False)
-    output.seek(0)
-    
-    cursor = conn.cursor()
-    cursor.copy_from(output, table_name, columns=df.columns.tolist())
-    conn.commit()
-
-# Query optimization
-def optimized_query(engine):
-    """Demonstrate query optimization techniques"""
-    
-    # Use LIMIT for testing
-    query = """
-    SELECT * FROM large_table
-    LIMIT 1000
+                <div class="card">
+                    <h3>🏋️ Exercise 3: A Safe Search Function</h3>
+                    <p>Write <code>promo_orders(conn, code, min_total)</code> that returns a DataFrame of completed orders that used the given promo code and had a total of at least <code>min_total</code>, with <code>order_date</code> as a real date, newest first. Use parameters. Test it with <code>"SUMMIT20"</code> and <code>400</code>, then with the input <code>"x' OR '1'='1"</code> and confirm you get zero rows.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>pd.read_sql(sql, conn, params=(code, min_total), parse_dates=["order_date"])</code> with two <code>?</code> placeholders.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">def promo_orders(conn, code, min_total):
+    sql = """
+        SELECT order_id, order_date, store, order_total
+        FROM orders
+        WHERE status = 'completed' AND promo_code = ? AND order_total &gt;= ?
+        ORDER BY order_date DESC, order_id
     """
-    
-    # Use indexes
-    create_index = """
-    CREATE INDEX IF NOT EXISTS idx_salary 
-    ON employees(salary)
-    """
-    
-    # Use EXPLAIN to analyze query plan
-    explain_query = """
-    EXPLAIN ANALYZE
-    SELECT e.name, d.name
-    FROM employees e
-    JOIN departments d ON e.dept_id = d.id
-    WHERE e.salary > 70000
-    """
-    
-    with engine.connect() as conn:
-        result = conn.execute(explain_query)
-        for row in result:
-            print(row)</code></pre>
+    return pd.read_sql(sql, conn, params=(code, min_total), parse_dates=["order_date"])
 
-    <h2>Monitoring and Logging</h2>
-    
-    <pre class="language-python"><code>import time
-from contextlib import contextmanager
-import logging
+found = promo_orders(conn, "SUMMIT20", 400)
+print(len(found))
+print(found.head(3))
+print(len(promo_orders(conn, "x' OR '1'='1", 0)))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>5
+   order_id order_date   store  order_total
+0    119005 2025-11-28  Online       532.32
+1    119012 2025-11-28  Online       435.16
+2    119036 2025-11-28  Online       435.00
+0</code></pre>
+                        </div>
+                    </details>
+                </div>
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+                <div class="card">
+                    <h3>🏋️ Exercise 4: Round Trip Through pandas (Stretch)</h3>
+                    <p>Read the whole <code>products</code> table into pandas. Add a column <code>margin_pct</code>: <code>(price - cost) / price × 100</code>, rounded to one decimal. Save <code>sku</code>, <code>category</code> and <code>margin_pct</code> as a new table <code>product_margins</code> in your working database. Then answer <em>in SQL</em>: which three categories have the highest average margin?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>to_sql("product_margins", conn, if_exists="replace", index=False)</code> works with a <code>sqlite3</code> connection as well as an engine. Then <code>GROUP BY category</code>, <code>ORDER BY</code> the average descending, <code>LIMIT 3</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">products = pd.read_sql("SELECT * FROM products", conn)
+products["margin_pct"] = ((products["price"] - products["cost"]) / products["price"] * 100).round(1)
 
-@contextmanager
-def log_query_performance(query_name):
-    """Log query execution time"""
-    start_time = time.time()
-    try:
-        yield
-    finally:
-        execution_time = time.time() - start_time
-        logger.info(f"Query '{query_name}' took {execution_time:.3f} seconds")
+products[["sku", "category", "margin_pct"]].to_sql("product_margins", conn, if_exists="replace", index=False)
+conn.commit()
 
-# Usage
-with log_query_performance("fetch_employees"):
-    df = pd.read_sql("SELECT * FROM employees", engine)
+show("""
+    SELECT category,
+           COUNT(*)                  AS products,
+           ROUND(AVG(margin_pct), 1) AS avg_margin_pct
+    FROM product_margins
+    GROUP BY category
+    ORDER BY avg_margin_pct DESC
+    LIMIT 3
+""")</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>   category  products  avg_margin_pct
+Accessories        32            47.1
+      Packs        24            46.8
+   Climbing        24            46.4</code></pre>
+                        </div>
+                        <p>You could have computed the margin in SQL directly. The point of the exercise is the round trip: database to pandas, a new column, back to the database, and a query on the new table.</p>
+                    </details>
+                </div>
+            </section>
 
-# Connection pool monitoring
-from sqlalchemy import event
+            <!-- ============================================================ -->
+            <section id="quiz" class="lesson-section">
+                <h2>🎯 Quick Quiz</h2>
+                <div class="card quiz-container">
+                    <h3>🎯 Check Your Understanding</h3>
 
-@event.listens_for(engine, "connect")
-def receive_connect(dbapi_conn, connection_record):
-    logger.info("Database connection established")
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> You want stores that have more than 2,000 orders. Which query is correct?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="WHERE is evaluated row by row, before any groups exist. Can a single row know how many rows are in its group?">
+                                A) <code>SELECT store, COUNT(*) FROM orders WHERE COUNT(*) &gt; 2000 GROUP BY store</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="HAVING filters groups after GROUP BY has formed them, so it can use an aggregate such as COUNT. WHERE runs earlier, on single rows.">
+                                B) <code>SELECT store, COUNT(*) FROM orders GROUP BY store HAVING COUNT(*) &gt; 2000</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="The clauses have a fixed written order. Which comes first, GROUP BY or HAVING?">
+                                C) <code>SELECT store, COUNT(*) FROM orders HAVING COUNT(*) &gt; 2000 GROUP BY store</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
 
-@event.listens_for(engine, "checkout")
-def receive_checkout(dbapi_conn, connection_record, connection_proxy):
-    logger.debug("Connection checked out from pool")
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> A web form passes whatever the visitor typed into this function. Why is it dangerous?</p>
+                        <pre><code class="language-python">def find(conn, city):
+    return conn.execute(f"SELECT * FROM customers WHERE city = '{city}'").fetchall()</code></pre>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="fetchall does load every matching row, but that is a memory question. Think about what the f-string does with a quote character typed by the visitor.">
+                                A) <code>fetchall()</code> could return too many rows
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="SELECT * is wasteful but not a security hole in itself. Look at how the value of city gets into the SQL text.">
+                                B) <code>SELECT *</code> exposes every column
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="The value is pasted into the SQL text, so a quote in the input ends the string and the rest is run as SQL. A placeholder with the value passed separately keeps data and command apart.">
+                                C) Text typed by the visitor becomes part of the SQL command itself
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
 
-@event.listens_for(engine, "checkin")
-def receive_checkin(dbapi_conn, connection_record):
-    logger.debug("Connection returned to pool")</code></pre>
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> What does this print? (The table has 4,850 customers, and 280 of them have no phone number.)</p>
+                        <pre><code class="language-python">quiz_row = conn.execute("SELECT COUNT(*), COUNT(phone) FROM customers").fetchone()
+print(quiz_row[0] - quiz_row[1])</code></pre>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="COUNT(*) counts all 4,850 rows and COUNT(phone) counts only the 4,570 rows where phone is not NULL, so the difference is the 280 missing phone numbers.">
+                                A) <code>280</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="That would mean the two counts are equal. Does COUNT(column) include rows where the column is NULL?">
+                                B) <code>0</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="That is COUNT(phone) on its own. The code prints a difference between two counts.">
+                                C) <code>4570</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
 
-    <h2>Practice Exercises</h2>
-    
-    <h3>Exercise 1: Multi-Database ETL Pipeline</h3>
-    <p>Create an ETL pipeline that:</p>
-    <ol>
-        <li>Extracts data from SQLite</li>
-        <li>Transforms it using pandas</li>
-        <li>Loads into PostgreSQL</li>
-        <li>Logs all operations</li>
-        <li>Handles errors gracefully</li>
-    </ol>
+                    <div class="quiz-question">
+                        <p><strong>Question 4:</strong> In a notebook you run an <code>INSERT</code> with <code>conn.execute(...)</code> on a <code>sqlite3</code> connection, see the new row with a <code>SELECT</code>, and then your computer loses power. What is in the database file afterward?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Your own connection could see the row, but seeing is not saving. What step makes a change permanent?">
+                                A) The new row, because the <code>SELECT</code> showed it
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Transactions exist precisely so that an interrupted change cannot leave a table half written.">
+                                B) A damaged table, because the write was interrupted
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="The INSERT was inside an open transaction that was never committed. Uncommitted changes are discarded, so the file is as it was at the last commit.">
+                                C) The table as it was before the <code>INSERT</code>, because nothing was committed
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
 
-    <h3>Exercise 2: Database Migration Tool</h3>
-    <p>Build a tool that:</p>
-    <ol>
-        <li>Connects to source database</li>
-        <li>Reads schema information</li>
-        <li>Creates matching tables in target database</li>
-        <li>Migrates data with progress tracking</li>
-        <li>Validates data integrity</li>
-    </ol>
+                    <div class="quiz-question">
+                        <p><strong>Question 5:</strong> A colleague's query against a PostgreSQL warehouse returns 80 million rows of orders, and their next line is <code>df.groupby("store")["order_total"].sum()</code>. What is the best advice?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Chunks avoid running out of memory, but all 80 million rows still travel over the network to be added up on a laptop. Who could do the adding instead?">
+                                A) Add <code>chunksize=</code> and sum the chunks in a loop
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="The database can group and sum where the data lives and send back five rows instead of 80 million. Do heavy filtering and aggregation in SQL and bring the small result into pandas.">
+                                B) Put the <code>GROUP BY store</code> and <code>SUM</code> in the SQL, so only one row per store comes back
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Exporting moves the same 80 million rows, just by a slower road, and creates a copy that is out of date tomorrow.">
+                                C) Export the table to a CSV file first and use <code>read_csv</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
 
-    <h3>Exercise 3: Real-time Data Sync</h3>
-    <p>Implement a system that:</p>
-    <ol>
-        <li>Monitors changes in source database</li>
-        <li>Syncs to multiple target databases</li>
-        <li>Handles connection failures</li>
-        <li>Provides sync status dashboard</li>
-    </ol>
+            <!-- ============================================================ -->
+            <section id="faq" class="lesson-section">
+                <h2>❓ Common Questions at This Stage</h2>
 
-    <h2>Key Takeaways</h2>
-    <ul>
-        <li>🔌 Multiple connection options from low-level drivers to ORMs</li>
-        <li>🛡️ Always use parameterized queries for security</li>
-        <li>⚡ Connection pooling is essential for production</li>
-        <li>🔄 Async operations for high-performance applications</li>
-        <li>📊 Pandas integration makes data analysis seamless</li>
-        <li>🎯 Choose the right tool: raw SQL, ORM, or NoSQL</li>
-        <li>🔍 Monitor and log database operations</li>
-    </ul>
+                <details>
+                    <summary>If pandas can do all of this, why learn SQL?</summary>
+                    <p>Because the data is usually in a database before it is anywhere else, and often it is too large or too sensitive to copy out whole. SQL lets the database do the work where the data lives. It is also a shared language: analysts, engineers and dashboard tools all read it. In practice you will use both, SQL to fetch and reduce, pandas to analyze and plot.</p>
+                </details>
+                <details>
+                    <summary>Should I use <code>sqlite3</code> or SQLAlchemy?</summary>
+                    <p>For a quick look at a SQLite file, <code>sqlite3</code> is fine and needs nothing installed. For anything you will keep, share, or point at another database later, use a SQLAlchemy engine with <code>text()</code>. The code is nearly the same length, and switching databases becomes a one-line change.</p>
+                </details>
+                <details>
+                    <summary>Is SQLite a "real" database?</summary>
+                    <p>Yes. It is among the most widely deployed software in the world: it is inside phones, browsers and countless applications. Its limits are about concurrency (one writer at a time) and administration (no users or permissions), not about SQL. It is a good choice for analysis files, prototypes and teaching, and a poor one for a busy multi-user application.</p>
+                </details>
+                <details>
+                    <summary>Do I need to close connections in a notebook?</summary>
+                    <p>For a local SQLite file, leaving one connection open while you work is normal; close it (or restart the kernel) when you finish. For a server database, connections are a limited shared resource, so use <code>with engine.connect()</code> blocks, which hand each connection back as soon as the block ends.</p>
+                </details>
+                <details>
+                    <summary>Why did my query return rows in a different order this time?</summary>
+                    <p>Without <code>ORDER BY</code>, a database may return rows in any order it finds convenient, and that can change when the data, an index or the engine version changes. If order matters, say so with <code>ORDER BY</code>, and include a tiebreaker column so the result is fully determined.</p>
+                </details>
 
-    <h2>Further Resources</h2>
-    <ul>
-        <li><a href="https://www.sqlalchemy.org/">SQLAlchemy Documentation</a></li>
-        <li><a href="https://www.psycopg.org/docs/">Psycopg Documentation</a></li>
-        <li><a href="https://pymongo.readthedocs.io/">PyMongo Documentation</a></li>
-        <li><a href="https://docs.python.org/3/library/sqlite3.html">Python SQLite3 Documentation</a></li>
-        <li><a href="https://realpython.com/python-sql-libraries/">Real Python - SQL Libraries</a></li>
-    </ul>
+                <div class="card card-accent">
+                    <h3>🌟 Going Further: Bonus Challenge</h3>
+                    <p>Write a function <code>describe_database(engine)</code> that uses <code>inspect(engine)</code> to loop over every table and returns a DataFrame with one row per column: table name, column name, type, whether it is nullable, and whether it is part of the primary key (look at <code>get_columns()</code> and <code>get_pk_constraint()</code>). Add the row count of each table with a <code>COUNT(*)</code> query. Because a table name cannot be a placeholder, take the names only from <code>get_table_names()</code>, never from user input. You will have written the data dictionary generator that every new analyst wishes existed.</p>
+                </div>
+            </section>
 
-    <!-- Learning Journal (REQUIRED per the Courseware Authoring Standard) -->
-    <section id="journal" class="lesson-section">
-        <h2>📓 Learning Journal</h2>
-        <div class="card card-info">
-            <p>Keep a learning journal — digital or physical. After this lesson, take a few minutes to write down:</p>
-            <ul>
-                <li><strong>Key concepts</strong> you learned</li>
-                <li><strong>Techniques that clicked</strong> for you</li>
-                <li><strong>Questions or confusion points</strong> to revisit</li>
-                <li><strong>Ideas you want to try</strong></li>
-                <li><strong>Your progress and feelings</strong> about learning this</li>
-            </ul>
-            <p><strong>✍️ This lesson's prompt:</strong> You met several ways to reach a database — raw drivers, SQLAlchemy Core, the ORM, and PyMongo. For a project you can imagine building, which would you reach for first, and what trade-off drives that choice?</p>
+            <!-- ============================================================ -->
+            <section id="journal" class="lesson-section">
+                <h2>📓 Learning Journal</h2>
+                <div class="card card-accent">
+                    <p>Take five minutes to write in your learning journal (the <code>journal.md</code> file you started in Lesson 0.1, or a paper notebook). Jot down:</p>
+                    <ul>
+                        <li><strong>Key concepts</strong> you learned today</li>
+                        <li><strong>Techniques that clicked</strong> (and the ones that have not, yet)</li>
+                        <li><strong>Questions or confusion</strong> to come back to</li>
+                        <li><strong>Ideas to try</strong> on your own</li>
+                        <li><strong>Progress and feelings</strong>: how did this lesson go for you?</li>
+                    </ul>
+                    <p><strong>✍️ This lesson's prompt:</strong> Pick one pandas line you wrote in Module 2 or Module 4 (a filter plus a groupby is ideal) and write the SQL that asks the same question. Then explain SQL injection to an imaginary coworker in three sentences, without using the word "injection".</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="summary" class="lesson-section">
+                <h2>📝 Lesson Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎓 Key Takeaways</h3>
+                    <ul>
+                        <li>A database answers questions and returns only what you ask for; SQL is the language of the request</li>
+                        <li><code>sqlite3.connect()</code> gives a connection; statements run through cursors, and rows come back as tuples (or <code>sqlite3.Row</code>)</li>
+                        <li>A query is written <code>SELECT</code>, <code>FROM</code>, <code>WHERE</code>, <code>GROUP BY</code>, <code>HAVING</code>, <code>ORDER BY</code>, <code>LIMIT</code>, and runs starting from <code>FROM</code></li>
+                        <li><code>WHERE</code> filters rows before grouping; <code>HAVING</code> filters groups after it</li>
+                        <li>Values go into SQL through placeholders (<code>?</code> or <code>:name</code>), never through string formatting</li>
+                        <li>Changes are saved only on commit; <code>with conn:</code> and <code>with engine.begin():</code> commit or roll back for you</li>
+                        <li>SQLAlchemy's <code>create_engine</code>, <code>engine.connect()</code> and <code>text()</code> work the same way on every database</li>
+                        <li><code>pd.read_sql</code> brings a query result into a DataFrame; <code>to_sql</code> saves one as a table</li>
+                        <li>Work on a copy of a database you do not own, and let the database do the heavy lifting</li>
+                    </ul>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🏆 What You've Accomplished</h3>
+                    <ul>
+                        <li>You opened a database from Python and explored its tables and columns</li>
+                        <li>You wrote your first SQL: filters, sorts, aggregates, groups and group filters</li>
+                        <li>You watched an injection attack succeed against an f-string and fail against a placeholder</li>
+                        <li>You created a table, inserted rows, and saw a transaction roll back</li>
+                        <li>You built a reusable report function and verified its numbers against pandas</li>
+                    </ul>
+                </div>
+
+                <h3>🔭 Looking Ahead</h3>
+                <p>In <a href="sql_complex_queries.html"><strong>Lesson 5.2: Complex Queries</strong></a> you will combine tables. Joins bring customers, orders, items and products together (including the rows that do not match, which are where the interesting problems hide). You will also nest queries inside queries, name the steps of a long query with <code>WITH</code>, walk the employee reporting tree, and learn the surprising logic of <code>NULL</code>.</p>
+
+                <h3>📋 Before the Next Lesson</h3>
+                <ul>
+                    <li>Keep your notebook. Lesson 5.2 only reads, so it opens the original <code>data/pinecrest.db</code> in read-only mode, and your <code>show()</code> helper comes along.</li>
+                    <li>Run <code>PRAGMA table_info</code> on <code>customers</code>, <code>order_items</code> and <code>employees</code>, and note which column of each one points at another table.</li>
+                    <li>Write one query of your own that uses <code>WHERE</code>, <code>GROUP BY</code>, <code>HAVING</code> and <code>ORDER BY</code> together, and say in a sentence what question it answers.</li>
+                </ul>
+
+                <div class="card card-accent">
+                    <h3>🌱 Encouragement for the Journey</h3>
+                    <p>You started this lesson knowing no SQL and you are ending it with a working, safe, parameterized report against a real database. That is a real threshold: the skills from here on are refinements of what you did today. If the clause order or the commit step still needs a glance at your notes, that is exactly what notes are for. Fluency in a second language comes from saying many small sentences, and you have just said your first thirty.</p>
+                </div>
+            </section>
+
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="statistics_eda_workflow.html" class="prev-lesson">← Previous: An EDA Workflow</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="sql_complex_queries.html" class="next-lesson">Next: Complex Queries →</a>
+            </nav>
         </div>
-    </section>
-
-    <!-- Lesson Summary (full standard block) -->
-    <section id="summary" class="lesson-section">
-        <h2>📝 Lesson Summary</h2>
-        <div class="card card-success">
-            <h3>🎓 Key Takeaways</h3>
-            <ul>
-                <li>Python connects to almost any database — SQLite, PostgreSQL, MySQL, MongoDB — through drivers, ORMs, and pandas.</li>
-                <li>SQLAlchemy gives you a consistent interface (Core or ORM) across engines, and integrates cleanly with <code>pd.read_sql</code> / <code>to_sql</code>.</li>
-                <li>Always use parameterized queries and keep credentials in environment variables, never hardcoded, to stay secure.</li>
-                <li>Connection pooling, context managers, and retry-aware error handling are what make database code production-ready.</li>
-            </ul>
-        </div>
-        <h3>🎉 What You've Accomplished</h3>
-        <p>You can now connect Python to relational and NoSQL databases, run queries and updates safely, move data in and out of pandas, and structure connection code so it holds up in real applications.</p>
-        <h3>❓ Common Questions at This Stage</h3>
-        <details>
-            <summary>Should I use raw SQL, SQLAlchemy Core, or the ORM?</summary>
-            <p>Raw SQL (via a driver or <code>pd.read_sql</code>) is great for analysis and one-off queries. SQLAlchemy Core adds portability across databases. The ORM shines in applications where you work with objects and relationships. Many data-science workflows happily mix raw SQL with pandas.</p>
-        </details>
-        <details>
-            <summary>Why is a parameterized query safer than an f-string?</summary>
-            <p>Building a query with an f-string lets user input become part of the SQL itself — the classic SQL-injection hole. Parameterized queries (<code>%s</code> / <code>:name</code> placeholders) send data separately from the statement, so input can never be executed as code.</p>
-        </details>
-        <details>
-            <summary>What is connection pooling and why do I need it?</summary>
-            <p>Opening a database connection is expensive. A pool keeps a set of connections ready to reuse, so many requests share them instead of each paying the setup cost. It's essential once your code serves concurrent work.</p>
-        </details>
-        <h3>🔭 Looking Ahead</h3>
-        <p>Now that Python can reach your data where it lives, the next step is writing the powerful queries that pull insight out of it — advanced joins, subqueries, and CTEs.</p>
-        <h3>✅ Before the Next Lesson</h3>
-        <ul>
-            <li>Create a SQLite database, insert a few rows, and read them back into a pandas DataFrame with <code>pd.read_sql</code>.</li>
-            <li>Rewrite a query that uses string formatting into a parameterized query, and move any credentials into a <code>.env</code> file.</li>
-            <li>Write your Learning Journal entry for this lesson</li>
-        </ul>
-        <div class="card card-accent" style="text-align: center; padding: 2rem;">
-            <h3>🌟 Encouragement for the Journey</h3>
-            <p>Connecting code to real databases is a milestone — it's the moment your analysis leaves toy CSVs behind and touches the systems businesses actually run on. You're building professional-grade skills now. Keep going!</p>
-        </div>
-    </section>
-
-    <!-- Navigation at the bottom -->
-    <nav class="lesson-nav" aria-label="Lesson navigation">
-        <a href="visualization_streamlit.html" class="prev-lesson" aria-label="Previous lesson">Previous: Dashboard Creation with Streamlit</a>
-        <a href="index.html" class="home-link" aria-label="Course home">Course Home</a>
-        <a href="sql_complex_queries.html" class="next-lesson" aria-label="Next lesson">Next: Complex Queries and Joins</a>
-    </nav>
-    
     </main>
 
-    <!-- Footer -->
     <footer class="site-footer">
         <p>&copy; 2026 Ray de la Paz. Python Data Science. All rights reserved.</p>
         <div class="footer-links">
@@ -997,6 +1452,10 @@ def receive_checkin(dbapi_conn, connection_record):
             <a href="https://rays-home.netlify.app/contact">Contact</a>
             <a href="#" id="print-button">Print Page</a>
         </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
     </footer>
+
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
 </body>
 </html>

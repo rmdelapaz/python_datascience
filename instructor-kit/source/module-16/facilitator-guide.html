@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facilitator Guide: Session 16</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Instructor copy —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">contains answers &amp; timing · not for students</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Facilitator Guide</div>
+    <h1>Session 16: Documents and HTTP</h1>
+    <p class="sub">How to teach the session where the data stops being a file someone prepared. The first half finishes Module 5 with a document database: nested website sessions, queried with dictionaries and aggregation pipelines, and flattened back into pandas. The second half opens Module 6 with the conversation every web page and API is built on: one request, one response, and the habits (rules first, identify yourself, timeout, check the status) that make a program a good guest.</p>
+    <div class="meta-row">
+      <span class="chip"><b>2</b> lessons</span>
+      <span class="chip"><b>3 hrs</b> session</span>
+      <span class="chip">Lessons <b>5.5–6.1</b></span>
+      <span class="chip">Session <b>16</b> of 21</span>
+    </div>
+  </header>
+
+  <div class="sec"><h2>How to Use This Guide</h2><span class="rule"></span></div>
+<ul class="tick">
+  <li>Session 16 closes Module 5 and opens Module 6. Before the break learners query a document database (Lesson 5.5); after it they make their first HTTP requests (Lesson 6.1). The link between the halves is JSON: the nested documents of the first hour are what web APIs send in the second.</li>
+  <li>Same rhythm as every session: <b>frame</b> (the mental model, said aloud) → <b>live demo</b> (you type, they follow) → <b>guided lab</b> (the kit lab) → <b>start the lesson project</b>. Finishing the projects, the lessons' exercises, quizzes and journals is homework.</li>
+  <li>Every code block below was run for this guide: mongomock 4.3 and pandas 3.0.6 on <code class="inline">data/web_sessions.json</code>; requests 2.34.2 against the practice shop and <code class="inline">data/mock_api.py</code>. The output shown is real. Where your room will see something different (dates, the local copy of the shop), the guide says so.</li>
+  <li>Type, do not paste. Ask for a prediction before every line whose output is a number. Two of today's most valuable moments are lines that raise <b>no</b> error and print a wrong answer (a misspelled field in 5.5, a 404 page parsed as data in 6.1).</li>
+  <li>Labs live in <code class="inline">labs/module-16/</code>: starters for learners, solutions for you. Teal blocks are hands-on; amber blocks are watch-outs.</li>
+</ul>
+<div class="note warn"><div class="t">The risk in Session 16: quiet wrong answers</div>
+<p>Both lessons teach tools that are forgiving in the same dangerous way. A collection accepts a query on a field nobody has and answers 0. <code class="inline">requests</code> accepts a 404 and hands you an error page to parse. Learners who have spent five lessons being corrected by SQL's error messages will trust the zero. Say the rule early and repeat it in both halves: <b>"Be suspicious of zero. Look at one real document, or one real response, before you believe a count."</b></p>
+</div>
+
+  <div class="sec"><h2>Before the Session</h2><span class="rule"></span></div>
+<ul class="tick">
+  <li>☐ Run <code class="inline">python3 labs/check_labs.py module-16</code> from the kit folder. Expect <code class="inline">8 passed, 0 failed</code> (four starters, four solutions; the two network labs run from saved responses).</li>
+  <li>☐ Copy the starter files only (<code class="inline">*_starter.py</code>) plus the whole <code class="inline">_fixtures/</code> folder and <code class="inline">labs_paths.py</code> to the shared folder, keeping the folder layout. Keep every <code class="inline">*_solution.py</code> on your machine.</li>
+  <li>☐ <b>MongoDB: nothing to install and no server to start.</b> Lesson 5.5 runs on <code class="inline">mongomock</code>, which was installed with the course environment in Lesson 0.1. Check it on the projector machine: <code class="inline">python -c "import mongomock, pymongo; print(mongomock.__version__, pymongo.version)"</code> (this kit was run with 4.3.0 and 4.18.3). If a learner's import fails: <code class="inline">pip install mongomock pymongo</code> inside the course environment.</li>
+  <li>☐ <b>The practice shop, online.</b> Open <code class="inline">https://rays-python-datascience.netlify.app/practice/shop/</code> in a browser <b>on the venue network</b>, not at home. You should see the Pinecrest Outfitters catalog with a banner that says it is a practice site. Then open <code class="inline">https://rays-python-datascience.netlify.app/practice/robots.txt</code>. If either fails, use the offline copy below for the whole room.</li>
+  <li>☐ <b>The practice shop, offline fallback.</b> In the project folder (the one that holds <code class="inline">data/</code>), in a second terminal: <code class="inline">python -m zipfile -e data/pinecrest-practice-site.zip .</code> and then <code class="inline">python -m http.server 8001</code>. Leave it running. Everyone sets <code class="inline">BASE_URL = "http://127.0.0.1:8001/practice/shop/"</code>. (The lesson writes the first command for a zip downloaded into the project folder; from the course data folder the path is <code class="inline">data/pinecrest-practice-site.zip</code>.) Each learner serves their own copy, or you serve one and give out your machine's address if the venue network allows it.</li>
+  <li>☐ <b>The practice API.</b> In another terminal, from the project folder: <code class="inline">python data/mock_api.py</code>. It prints <code class="inline">Pinecrest mock API on http://127.0.0.1:8000  (limit: 30 requests per 10 s; Ctrl+C to stop)</code>. Lesson 6.1 needs no flags. Check it: <code class="inline">http://127.0.0.1:8000/health</code> in a browser shows <code class="inline">{"status": "ok"}</code>. Start it during the break, not before: a terminal left open for 80 minutes gets closed by accident.</li>
+  <li>☐ Browser tabs: <code class="inline">sql_nosql_mongodb.html</code>, <code class="inline">webscraping_requests.html</code>, the practice shop, and the API's <code class="inline">/health</code> page.</li>
+  <li>☐ Whiteboard, before learners arrive: "<b>Be suspicious of zero.</b>" and, for the second half, "<b>get → raise_for_status() → use the body</b>".</li>
+  <li>☐ Print the workbook chapter for Session 16, or share the HTML. Sticky notes for the exit ticket.</li>
+</ul>
+<div class="blk"><div class="h">What differs on the offline copy (checked for this kit)</div>
+<p>The kit's author unzipped <code class="inline">pinecrest-practice-site.zip</code> in an empty folder and served it with <code class="inline">python -m http.server</code>, exactly as Lesson 6.1 describes. The lesson's code runs unchanged. These printed details differ from the lesson and from this guide:</p>
+<ul class="tick">
+  <li><code class="inline">Content-Type</code> is <code class="inline">text/html</code> with <b>no charset</b>, and the <code class="inline">Server</code> header is <code class="inline">SimpleHTTP/0.6 Python/3.12.x</code> instead of <code class="inline">Netlify</code>.</li>
+  <li>Because no charset is sent, <code class="inline">r.encoding</code> is <code class="inline">ISO-8859-1</code>, and <code class="inline">r.text</code> shows <code class="inline">â˜…</code> where the stars should be: on the front page <code class="inline">r.text.count("★")</code> is 0 until you set <code class="inline">r.encoding = "utf-8"</code> (then 20). The byte count is the same (11,783); the character count is 11,783 before the fix and 11,725 after. This is the lesson's encoding section happening for real: use it.</li>
+  <li>A missing page returns Python's own short 404 page (335 bytes, <code class="inline">text/html;charset=utf-8</code>), not the course site's 404 page (2,514 bytes).</li>
+  <li><code class="inline">robots.txt</code> is at <code class="inline">http://127.0.0.1:8001/practice/robots.txt</code> and is served as <code class="inline">text/plain</code> with no charset. <code class="inline">RobotFileParser</code> gives the same answers (<code class="inline">True</code>, <code class="inline">False</code>, crawl delay 1).</li>
+  <li>A <code class="inline">HEAD</code> request (lesson Exercise 3) returns <code class="inline">text/html</code> instead of <code class="inline">text/html; charset=UTF-8</code>.</li>
+  <li>Both kit labs print the right answers on the offline copy (the labs set the encoding themselves); only the <code class="inline">type</code> column and the size of the 404 body differ.</li>
+</ul>
+</div>
+<div class="blk"><div class="h">Environment variables and Chrome: not today, but set them up now</div>
+<p>Session 18 reads three environment variables, and Session 17 drives Chrome. Neither is needed today. Both fail in ways that eat class time, so check them on the projector machine this week and send learners home with the Chrome check (it is on the bring list).</p>
+<p><b>The three variables (public teaching values for the practice API; Session 18):</b></p>
+<pre class="code"># Windows PowerShell (this terminal only)
+$env:PINECREST_API_KEY = "pinecrest-demo-key"
+$env:PINECREST_USER = "analyst"
+$env:PINECREST_PASSWORD = "trailmix"
+
+# macOS and Linux (this terminal only)
+export PINECREST_API_KEY="pinecrest-demo-key"
+export PINECREST_USER="analyst"
+export PINECREST_PASSWORD="trailmix"</pre>
+<p>Start Jupyter or VS Code <b>from that same terminal</b>, or the notebook will not see them. Lesson 6.4 also teaches the <code class="inline">.env</code> file route.</p>
+<p><b>Chrome and Selenium (Session 17):</b> Google Chrome must be installed; Selenium 4 downloads a matching driver by itself the first time, which needs internet once. The one-minute check is on the Session 17 bring list below. On a locked-down venue machine where Chrome cannot be installed or the driver download is blocked, Session 17 pairs learners up on a machine that works, and Lesson 6.3's JSON route (request the data file the page loads) needs no browser at all.</p>
+</div>
+
+  <div class="sec"><h2>Session 16 Agenda (3 hours)</h2><span class="rule"></span></div>
+  <table class="timing">
+    <thead><tr><th>Clock</th><th>Minutes</th><th>Segment</th><th>What happens</th></tr></thead>
+    <tbody>
+      <tr><td class="t">0:00</td><td class="t">10</td><td>Warm-up</td><td>Five retrieval questions on Session 15 (SQL windows, query plans), no notes. Homework check: who looked inside <code class="inline">web_sessions.json</code>?</td></tr>
+      <tr><td class="t">0:10</td><td class="t">10</td><td><b>5.5</b> Frame and mental model</td><td>The ledger and the folder. One session document on the projector; SQL words mapped to MongoDB words.</td></tr>
+      <tr><td class="t">0:20</td><td class="t">25</td><td><b>5.5</b> Live demo</td><td>mongomock, queries as dictionaries, dot notation, missing versus null, <code class="inline">$elemMatch</code>, two pipelines, two silent mistakes, back to pandas.</td></tr>
+      <tr><td class="t">0:45</td><td class="t">25</td><td><b>5.5</b> Guided lab</td><td><code class="inline">labs/module-16/l5_5-nosql-mongodb/sale_page_audit_starter.py</code>, then <code class="inline">landing_pages_starter.py</code> for those who finish.</td></tr>
+      <tr><td class="t">1:10</td><td class="t">10</td><td><b>5.5</b> Start the lesson project</td><td>The Funnel Report: read the brief together; everyone runs Step 1 and sees 2400.</td></tr>
+      <tr><td class="t">1:20</td><td class="t">10</td><td>Break</td><td>Start <code class="inline">python data/mock_api.py</code> on the projector machine and open the practice shop in a browser tab.</td></tr>
+      <tr><td class="t">1:30</td><td class="t">15</td><td><b>6.1</b> Ground rules and mental model</td><td>First 2 minutes: the six ground rules for Module 6, read aloud. Then the order counter: request, response, status, headers, body.</td></tr>
+      <tr><td class="t">1:45</td><td class="t">25</td><td><b>6.1</b> Live demo</td><td><code class="inline">robots.txt</code> first, a page and its envelope, a 404 that is not an exception, encoding, the practice API, timeouts, <code class="inline">fetch()</code>.</td></tr>
+      <tr><td class="t">2:10</td><td class="t">25</td><td><b>6.1</b> Guided lab</td><td><code class="inline">labs/module-16/l6_1-http-requests/category_check_starter.py</code>, then <code class="inline">api_price_check_starter.py</code>.</td></tr>
+      <tr><td class="t">2:35</td><td class="t">15</td><td><b>6.1</b> Start the lesson project</td><td>The Polite Snapshot: Steps 1 and 2 in the room (<code class="inline">polite_get()</code> refuses the staff page).</td></tr>
+      <tr><td class="t">2:50</td><td class="t">10</td><td>Wrap-up</td><td>Exit ticket (3 questions), homework, bring list for Session 17 (Chrome check).</td></tr>
+      <tr><td class="t"><b>Total</b></td><td class="t"><b>180</b></td><td></td><td>Ends at 3:00.</td></tr>
+    </tbody>
+  </table>
+<p><b>In the room:</b> both mental models, both live demos, the four kit labs (two are finish-if-fast), Step 1 of the Funnel Report and Steps 1 and 2 of the Polite Snapshot. <b>At home (about 2 to 3 hours):</b> the rest of both lesson projects, each lesson's four exercises, the two five-question lesson quizzes and the journals. The lesson pages estimate 95 + 90 = 185 minutes for a solo learner; the room has 160 after the warm-up and wrap-up, so the projects are started here and finished at home by design.</p>
+<p><b>Protect:</b> in 5.5, demo steps 6, 7 and 11 (missing versus null, <code class="inline">$elemMatch</code>, the two silent mistakes) and the first lab; in 6.1, the ground rules, demo steps 6 and 7 (the 404 that is not an exception) and the first lab. <b>Cut first if long:</b> demo step 13 of 5.5 (updates: point to the lesson), then the second lab of each lesson (they become homework), then demo step 14 of 6.1 (sessions and saving: the project teaches it).</p>
+
+  <div class="sec"><h2>Warm-up</h2><span class="rule"></span></div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">0:00</span><h3>Warm-up: Retrieval from Session 15</h3><span class="dur">10 min</span></div>
+    <div class="lesson-body">
+<p>Five questions on the projector, answered on paper with notes closed (4 minutes), then answers aloud (3 minutes). Retrieval practice works because it is effortful: do not let it turn into a re-teach. Anything more than half the room misses goes on the board as a note for the break.</p>
+<ol class="steps">
+  <li>How does a window function differ from <code class="inline">GROUP BY</code>? <b>Answer:</b> A window function computes over a set of related rows and <b>keeps every row</b>; <code class="inline">GROUP BY</code> collapses each group to one row.</li>
+  <li>Three orders tie for first place. What do <code class="inline">ROW_NUMBER</code>, <code class="inline">RANK</code> and <code class="inline">DENSE_RANK</code> give the fourth row? <b>Answer:</b> <code class="inline">ROW_NUMBER</code> 4, <code class="inline">RANK</code> 4, <code class="inline">DENSE_RANK</code> 2. They differ only in how they treat ties.</li>
+  <li>You want the top 3 products per category. Why does <code class="inline">WHERE rn &lt;= 3</code> fail in the same query, and what is the fix? <b>Answer:</b> <code class="inline">WHERE</code> runs before window functions are computed. Number the rows in a CTE, then filter in the outer query.</li>
+  <li>In <code class="inline">EXPLAIN QUERY PLAN</code>, what is the difference between <code class="inline">SCAN</code> and <code class="inline">SEARCH</code>? <b>Answer:</b> <code class="inline">SCAN</code> reads the whole table; <code class="inline">SEARCH</code> jumps to the rows it needs through a primary key or an index.</li>
+  <li>Name one situation in which an index does not help. <b>Answer:</b> Any one of: the column is wrapped in a function, the <code class="inline">LIKE</code> pattern starts with a wildcard, most rows match, the table is small.</li>
+</ol>
+<p><b>Homework check (3 minutes).</b> Lesson 5.4 asked everyone to open <code class="inline">data/web_sessions.json</code> in a text editor and decide which parts would be awkward to store in one flat table. Take two answers (the list of pages; the cart's items; the <code class="inline">utm</code> block that is sometimes missing). That is the bridge: "Today that file stops being awkward." Ask who finished the 5.4 tuning report; note names of anyone who did not start it and check in at the break.</p>
+    </div>
+  </section>
+
+  <div class="sec"><h2>Lesson Plans</h2><span class="rule"></span></div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">5.5</span><h3>NoSQL with MongoDB</h3><span class="dur">70 min</span></div>
+    <div class="lesson-body">
+<div class="blk"><div class="h">Objectives (from the lesson)</div>
+<ul class="tick">
+  <li>Explain how a document differs from a row, and judge when a document store fits a dataset better than relational tables</li>
+  <li>Insert, find, update and delete documents with pymongo</li>
+  <li>Write queries with operators, dot notation and array conditions, and choose the fields returned with a projection</li>
+  <li>Build an aggregation pipeline with <code class="inline">$match</code>, <code class="inline">$group</code>, <code class="inline">$sort</code>, <code class="inline">$unwind</code> and <code class="inline">$addFields</code>, and relate each stage to SQL and pandas</li>
+  <li>Create indexes on a collection and flatten nested results into a tidy DataFrame</li>
+</ul>
+</div>
+<div class="blk"><div class="h">Timing (70 minutes)</div>
+<table class="timing"><tbody>
+<tr><td class="t">10m</td><td>Frame: the ledger and the folder; the SQL-to-MongoDB word table</td></tr>
+<tr><td class="t">25m</td><td>Live demo, steps 1 to 13</td></tr>
+<tr><td class="t">25m</td><td>Guided lab: the sale page audit (then landing pages)</td></tr>
+<tr><td class="t">10m</td><td>Start the Funnel Report: Step 1 runs for everyone</td></tr>
+</tbody></table>
+</div>
+<div class="blk"><div class="h">Mental model to say</div>
+<p>"A relational database is a set of <b>ledgers</b>. Each ledger has fixed columns, every entry fills the same columns, and the facts about one website visit are spread over several ledgers that point at each other by number. A document database is a filing cabinet of <b>folders</b>. Each folder holds everything about one thing, in whatever shape that thing has: one visit's pages, cart and all. Pull one folder and you have the whole story, with no assembly. And two folders need not contain the same sheets."</p>
+<p>Put the lesson's comparison table on the projector and read it as a translation exercise: table → collection, row → document, column → field, primary key → <code class="inline">_id</code>, a join to a child table → an embedded list. Then the honest caveat, in one sentence: "Neither is better. Orders, customers and products point at each other constantly, so they live in <code class="inline">pinecrest.db</code>. Web sessions are self-contained, nested and irregular, so they suit documents."</p>
+<p>One sentence on tooling, so nobody goes looking for a server: "We use <code class="inline">mongomock</code>, which imitates MongoDB inside Python. Every line you write is real pymongo code; only the line that connects would change."</p>
+</div>
+<div class="blk"><div class="h">Live demo (you type, they follow)</div>
+<p>One notebook, <code class="inline">session16_mongo</code>, started in the project folder so that <code class="inline">data/web_sessions.json</code> resolves. Thirteen short steps; the minutes are in the timing table above.</p>
+<ol class="steps">
+  <li><b>One session is not a row.</b> Say: "This is one visit to the website, exactly as it is stored. Count the levels with me: a device object, a list of pages, a cart with a list inside it. Which three tables would this be in SQL?"
+<pre class="code"><span class="k">import</span> json
+<span class="k">from</span> pprint <span class="k">import</span> pprint
+
+<span class="k">with</span> open(<span class="s">"data/web_sessions.json"</span>, encoding=<span class="s">"utf-8"</span>) <span class="k">as</span> f:
+    sessions = json.load(f)[<span class="s">"sessions"</span>]
+
+print(len(sessions), <span class="s">"sessions"</span>)
+pprint(sessions[<span class="s">2</span>], sort_dicts=<span class="k">False</span>, width=<span class="s">100</span>, depth=<span class="s">2</span>)</pre>
+<pre class="out">2400 sessions
+{'session_id': 'S00003',
+ 'customer_id': 11550,
+ 'started_at': '2025-11-01T07:07:11',
+ 'device': {'type': 'desktop', 'os': 'Windows', 'browser': 'Edge'},
+ 'pages': [{...}, {...}, {...}, {...}, {...}, {...}, {...}],
+ 'cart': {'items': [...], 'value': 122.9},
+ 'converted': True,
+ 'order_id': 118263}</pre>
+</li>
+  <li><b>Two folders, different sheets.</b> Say: "Same collection, different keys. The second one has no <code class="inline">utm</code> at all: the visitor typed the address. In a table that is NULL in three columns. Here the field is simply not there. Remember this; it comes back in five minutes."
+<pre class="code">print(sorted(set(sessions[<span class="s">1</span>]) - set(sessions[<span class="s">0</span>])))
+print(sum(<span class="s">"utm"</span> <span class="k">not</span> <span class="k">in</span> s <span class="k">for</span> s <span class="k">in</span> sessions), <span class="s">"sessions have no utm key"</span>)</pre>
+<pre class="out">['utm']
+916 sessions have no utm key</pre>
+</li>
+  <li><b>A database in one line.</b> Say: "<code class="inline">mongomock</code> imitates a MongoDB server inside Python: no install, no server, same methods as pymongo. Nothing is created until we insert. On a real server only the first line changes." Point at the count going from 0 to 2400.
+<pre class="code"><span class="k">import</span> mongomock
+<span class="k">import</span> pandas <span class="k">as</span> pd
+
+client = mongomock.MongoClient()      <span class="c"># real server: pymongo.MongoClient(uri)</span>
+coll = client[<span class="s">"pinecrest"</span>][<span class="s">"sessions"</span>]
+print(coll.count_documents({}))
+
+result = coll.insert_many(sessions)
+print(len(result.inserted_ids), <span class="s">"inserted;"</span>,
+      coll.count_documents({}), <span class="s">"in the collection"</span>)</pre>
+<pre class="out">0
+2400 inserted; 2400 in the collection</pre>
+</li>
+  <li><b>A query is a dictionary.</b> Say: "This replaces WHERE. Field, value. Two pairs in one dictionary mean AND. To reach inside the device object, join the names with a dot, in quotes." Ask before running the third line: "More or fewer than 1,326?"
+<pre class="code">print(coll.count_documents({<span class="s">"converted"</span>: <span class="k">True</span>}))
+print(coll.count_documents({<span class="s">"device.type"</span>: <span class="s">"mobile"</span>}))
+print(coll.count_documents({<span class="s">"device.type"</span>: <span class="s">"mobile"</span>, <span class="s">"converted"</span>: <span class="k">True</span>}))</pre>
+<pre class="out">230
+1326
+130</pre>
+</li>
+  <li><b>Operators start with a dollar sign.</b> Say: "Anything that is not 'equals' becomes a small dictionary with an operator. Read <code class="inline">$gte</code> as 'greater than or equal'. <code class="inline">$in</code> is SQL's IN." Have learners type the second line themselves and call out the number.
+<pre class="code">print(coll.count_documents({<span class="s">"cart.value"</span>: {<span class="s">"$gte"</span>: <span class="s">500</span>}}))
+print(coll.count_documents({<span class="s">"device.os"</span>: {<span class="s">"$in"</span>: [<span class="s">"iOS"</span>, <span class="s">"iPadOS"</span>]},
+                            <span class="s">"cart.value"</span>: {<span class="s">"$gte"</span>: <span class="s">500</span>}}))
+print(sorted(coll.distinct(<span class="s">"device.os"</span>)))</pre>
+<pre class="out">73
+32
+['Android', 'Linux', 'Windows', 'iOS', 'iPadOS', 'macOS']</pre>
+</li>
+  <li><b>Missing is not the same as null.</b> Say: "Predict each line before I run it. <code class="inline">customer_id</code> is always present and is null for anonymous visitors. <code class="inline">utm</code> is absent for direct visits." After the output: "<code class="inline">None</code> in a query matches null AND missing. <code class="inline">$exists</code> is the precise tool."
+<pre class="code">n = coll.count_documents
+print(<span class="s">"customer_id is null :"</span>, n({<span class="s">"customer_id"</span>: <span class="k">None</span>}))
+print(<span class="s">"customer_id missing :"</span>, n({<span class="s">"customer_id"</span>: {<span class="s">"$exists"</span>: <span class="k">False</span>}}))
+print(<span class="s">"utm missing         :"</span>, n({<span class="s">"utm"</span>: {<span class="s">"$exists"</span>: <span class="k">False</span>}}))
+print(<span class="s">"utm equals None     :"</span>, n({<span class="s">"utm"</span>: <span class="k">None</span>}))</pre>
+<pre class="out">customer_id is null : 1547
+customer_id missing : 0
+utm missing         : 916
+utm equals None     : 916</pre>
+</li>
+  <li><b>Asking inside a list.</b> Say: "<code class="inline">pages</code> is a list of objects. <code class="inline">pages.path</code> means 'the path of ANY page in the list'. Now the trap: I want visits that spent ninety seconds or more ON the cart page. Which of these two is that question?" Let the room vote, then run.
+<pre class="code">print(<span class="s">"saw the cart page:"</span>, coll.count_documents({<span class="s">"pages.path"</span>: <span class="s">"/cart"</span>}))
+
+any_page = {<span class="s">"pages.path"</span>: <span class="s">"/cart"</span>, <span class="s">"pages.seconds"</span>: {<span class="s">"$gte"</span>: <span class="s">90</span>}}
+same_page = {<span class="s">"pages"</span>: {<span class="s">"$elemMatch"</span>: {<span class="s">"path"</span>: <span class="s">"/cart"</span>,
+                                      <span class="s">"seconds"</span>: {<span class="s">"$gte"</span>: <span class="s">90</span>}}}}
+print(<span class="s">"without $elemMatch:"</span>, coll.count_documents(any_page))
+print(<span class="s">"with $elemMatch   :"</span>, coll.count_documents(same_page))</pre>
+<pre class="out">saw the cart page: 543
+without $elemMatch: 304
+with $elemMatch   : 122</pre>
+</li>
+  <li><b>Choose the fields, sort, limit.</b> Say: "The second argument of <code class="inline">find</code> is the projection: the SELECT list. <code class="inline">1</code> keeps a field, <code class="inline">_id</code> comes along unless you switch it off. <code class="inline">sort</code> takes -1 for descending. This is ORDER BY ... DESC LIMIT 3."
+<pre class="code">cursor = (coll.find({<span class="s">"device.type"</span>: <span class="s">"tablet"</span>},
+                    {<span class="s">"_id"</span>: <span class="s">0</span>, <span class="s">"session_id"</span>: <span class="s">1</span>, <span class="s">"device.os"</span>: <span class="s">1</span>,
+                     <span class="s">"cart.value"</span>: <span class="s">1</span>})
+          .sort(<span class="s">"cart.value"</span>, -<span class="s">1</span>)
+          .limit(<span class="s">3</span>))
+<span class="k">for</span> doc <span class="k">in</span> cursor:
+    print(doc)</pre>
+<pre class="out">{'session_id': 'S01248', 'device': {'os': 'iPadOS'}, 'cart': {'value': 1293.8}}
+{'session_id': 'S02140', 'device': {'os': 'iPadOS'}, 'cart': {'value': 1007.85}}
+{'session_id': 'S00727', 'device': {'os': 'iPadOS'}, 'cart': {'value': 743.9}}</pre>
+</li>
+  <li><b>The first pipeline: group and count.</b> Say: "<code class="inline">find</code> returns documents. To group and summarize we send a list of stages. Read <code class="inline">$group</code> slowly: <code class="inline">_id</code> is the key; a string that starts with a dollar sign means 'the value of this field'; <code class="inline">{'$sum': 1}</code> adds one per document, which is how you count." Write the SQL next to it on the board: <code class="inline">SELECT os, COUNT(*), AVG(cart_value) ... GROUP BY os ORDER BY 2 DESC</code>.
+<pre class="code">pipeline = [
+    {<span class="s">"$group"</span>: {<span class="s">"_id"</span>: <span class="s">"$device.os"</span>,
+                <span class="s">"sessions"</span>: {<span class="s">"$sum"</span>: <span class="s">1</span>},
+                <span class="s">"avg_cart"</span>: {<span class="s">"$avg"</span>: <span class="s">"$cart.value"</span>}}},
+    {<span class="s">"$sort"</span>: {<span class="s">"sessions"</span>: -<span class="s">1</span>}},
+]
+by_os = pd.DataFrame(list(coll.aggregate(pipeline)))
+print(by_os[[<span class="s">"_id"</span>, <span class="s">"sessions"</span>, <span class="s">"avg_cart"</span>]].round(<span class="s">2</span>).to_string(index=<span class="k">False</span>))</pre>
+<pre class="out">    _id  sessions  avg_cart
+    iOS       749     62.25
+Android       609     51.32
+Windows       574     53.64
+  macOS       272     50.12
+ iPadOS       127     73.86
+  Linux        69     56.99</pre>
+</li>
+  <li><b>Match, unwind, group, match again.</b> Say: "Which product pages do desktop visitors look at most? The page views are inside lists, so <code class="inline">$unwind</code> makes one document per page view first: pandas calls this <code class="inline">explode</code>. <code class="inline">$match</code> appears twice. Before the group it is WHERE; after the group it is HAVING. Position gives a stage its meaning."
+<pre class="code">pipeline = [
+    {<span class="s">"$match"</span>: {<span class="s">"device.type"</span>: <span class="s">"desktop"</span>}},
+    {<span class="s">"$unwind"</span>: <span class="s">"$pages"</span>},
+    {<span class="s">"$match"</span>: {<span class="s">"pages.path"</span>: {<span class="s">"$regex"</span>: <span class="s">"^/product/"</span>}}},
+    {<span class="s">"$group"</span>: {<span class="s">"_id"</span>: <span class="s">"$pages.path"</span>, <span class="s">"views"</span>: {<span class="s">"$sum"</span>: <span class="s">1</span>},
+                <span class="s">"avg_seconds"</span>: {<span class="s">"$avg"</span>: <span class="s">"$pages.seconds"</span>}}},
+    {<span class="s">"$match"</span>: {<span class="s">"views"</span>: {<span class="s">"$gte"</span>: <span class="s">9</span>}}},
+    {<span class="s">"$sort"</span>: {<span class="s">"views"</span>: -<span class="s">1</span>, <span class="s">"_id"</span>: <span class="s">1</span>}},
+    {<span class="s">"$limit"</span>: <span class="s">4</span>},
+]
+top = pd.DataFrame(list(coll.aggregate(pipeline)))
+print(top[[<span class="s">"_id"</span>, <span class="s">"views"</span>, <span class="s">"avg_seconds"</span>]].round(<span class="s">1</span>).to_string(index=<span class="k">False</span>))</pre>
+<pre class="out">              _id  views  avg_seconds
+/product/CLM-1019     12         43.3
+/product/APL-1017     10         60.6
+/product/KIT-1027     10         40.7
+/product/ACC-1004      9         49.2</pre>
+</li>
+  <li><b>Two mistakes that raise no error.</b> Say: "I am going to make two typos on purpose. Watch for the error message." There is none. "SQL would say 'no such column'. A collection has no list of valid fields, so the answer to a question about a field nobody has is zero. And without the dollar sign, <code class="inline">device.type</code> is just a piece of text, the same for every document: one group." Write on the board: <b>Be suspicious of zero.</b>
+<pre class="code">print(coll.count_documents({<span class="s">"device.typ"</span>: <span class="s">"mobile"</span>}))
+wrong = coll.aggregate([{<span class="s">"$group"</span>: {<span class="s">"_id"</span>: <span class="s">"device.type"</span>,
+                                    <span class="s">"sessions"</span>: {<span class="s">"$sum"</span>: <span class="s">1</span>}}}])
+print(list(wrong))</pre>
+<pre class="out">0
+[{'sessions': 2400, '_id': 'device.type'}]</pre>
+</li>
+  <li><b>Back to a DataFrame.</b> Say: "Every source in this course ends in the same place. <code class="inline">json_normalize</code> spreads nested objects into dotted columns; sessions with no <code class="inline">utm</code> get NaN there. From this line on it is ordinary pandas." Ask: "Why did I leave <code class="inline">pages</code> and <code class="inline">cart.items</code> out of the projection?" (They are lists: they need one row per element, which is <code class="inline">record_path</code>.)
+<pre class="code">docs = list(coll.find({}, {<span class="s">"_id"</span>: <span class="s">0</span>, <span class="s">"pages"</span>: <span class="s">0</span>, <span class="s">"cart.items"</span>: <span class="s">0</span>}))
+flat = pd.json_normalize(docs)
+print(flat.shape)
+print(list(flat.columns)[<span class="s">5</span>:])
+with_cart = flat[flat[<span class="s">"cart.value"</span>] &gt; <span class="s">0</span>]
+print(with_cart.groupby(<span class="s">"device.type"</span>)[<span class="s">"cart.value"</span>].median().to_string())
+print(flat[<span class="s">"utm.medium"</span>].isna().sum(), <span class="s">"rows have no utm.medium"</span>)</pre>
+<pre class="out">(2400, 12)
+['device.type', 'device.os', 'device.browser', 'cart.value', 'utm.source', 'utm.medium', 'utm.campaign']
+device.type
+desktop    171.90
+mobile     161.90
+tablet     210.85
+916 rows have no utm.medium</pre>
+</li>
+  <li><b>Count before you change anything.</b> Say: "An update takes two dictionaries: which documents, and what to do, written with an operator such as <code class="inline">$set</code>. The habit: run <code class="inline">count_documents</code> with the same query first, then compare with <code class="inline">matched_count</code>. Then I put the collection back with <code class="inline">$unset</code>." If time is short, show this step without typing it.
+<pre class="code">big = {<span class="s">"cart.value"</span>: {<span class="s">"$gte"</span>: <span class="s">1000</span>}}
+expected = coll.count_documents(big)
+r = coll.update_many(big, {<span class="s">"$set"</span>: {<span class="s">"vip_cart"</span>: <span class="k">True</span>}})
+print(expected, r.matched_count, r.modified_count)
+
+r = coll.update_many({}, {<span class="s">"$unset"</span>: {<span class="s">"vip_cart"</span>: <span class="s">""</span>}})
+print(coll.count_documents({<span class="s">"vip_cart"</span>: {<span class="s">"$exists"</span>: <span class="k">True</span>}}))</pre>
+<pre class="out">17 17 17
+0</pre>
+</li>
+</ol>
+</div>
+<div class="blk warn"><div class="h">Three mistakes to expect</div>
+<ul class="tick">
+  <li><b>A misspelled field or a value in the wrong case returns 0, and they report the 0.</b> <code class="inline">{"device.typ": "mobile"}</code> and <code class="inline">{"device.type": "Mobile"}</code> both count nothing. Coach: "What does one real document look like? Run <code class="inline">coll.find_one({}, {"_id": 0, "device": 1})</code>. Now which values exist? <code class="inline">coll.distinct("device.type")</code>." Do not point at the typo; let the document show it.</li>
+  <li><b>The dollar sign in the wrong place.</b> In a query or <code class="inline">$match</code> the field name is the key, with no dollar: <code class="inline">{"device.type": "mobile"}</code>. Inside <code class="inline">$group</code>, <code class="inline">$addFields</code> or <code class="inline">$project</code> a field's <b>value</b> is written <code class="inline">"$device.type"</code>. Learners write <code class="inline">"_id": "device.type"</code> and get one group of 2,400. Coach: "How many groups did you expect? How many did you get? What is the <code class="inline">_id</code> of the one you got?"</li>
+  <li><b>Two list conditions without <code class="inline">$elemMatch</code>.</b> In the lab the loose query counts 218 and the strict one 81. Learners who skip the strict version report 218 for "a minute or more on the sale page". Coach: "Read your query aloud as a sentence. Does it say the minute was spent on /sale, or on some page?"</li>
+</ul>
+<p>Also common: <code class="inline">list(cursor)</code> twice (the second is empty: a cursor reads once), and <code class="inline">update_one(query, {"reviewed": True})</code> without <code class="inline">$set</code> (<code class="inline">ValueError: update only works with $ operators</code>, which is a kindness).</p>
+</div>
+<div class="blk lab"><div class="h">Guided lab (25 minutes)</div>
+<p><b>Lab 5.5-A, everyone:</b> <code class="inline">labs/module-16/l5_5-nosql-mongodb/sale_page_audit_starter.py</code> (reference: <code class="inline">sale_page_audit_solution.py</code>). Question: who looks at the /sale page, do they stay, and do they buy more often than everyone else? Five TODOs, each one query.</p>
+<ul class="tick lab">
+  <li>Minutes 0 to 5: everyone runs the starter as shipped. It prints the field list and a row of <code class="inline">None</code>s. Have them read the field list: that habit is the cure for mistake 1.</li>
+  <li>Minutes 5 to 18: TODOs 1 to 5 in pairs. Walk the room during TODO 3; that is where the thinking is.</li>
+  <li>Minutes 18 to 22: results on the projector. Reference answers: 290 sessions saw /sale; 37 of them ordered; 20 were on mobile with a cart of $200 or more; loose 218 versus strict 81; 92 arrived with no <code class="inline">utm</code>; biggest carts S00039 ($1,265.85), S01848 ($1,202.85), S00806 ($1,023.90); order rate 12.8% of /sale visitors versus 9.6% of all sessions.</li>
+  <li>Minutes 22 to 25: the discussion that matters. "12.8% against 9.6%. Should marketing conclude that the sale page causes orders?" (No: people who browse more pages are more likely to see /sale and more likely to buy. Module 4's lesson, in a new costume.)</li>
+</ul>
+<p><b>Lab 5.5-B, for pairs who finish (or homework):</b> <code class="inline">labs/module-16/l5_5-nosql-mongodb/landing_pages_starter.py</code>. Two pipelines and a pandas check: landing pages with at least 80 sessions (most visits start at <code class="inline">/</code>, 1,301 sessions, 9.6% order rate; the highest rate is <code class="inline">/category/apparel</code>, 11.8%, 10 orders of 85) and the five SKUs with the most units in carts (SNW-1016 leads with 16 units in 8 carts). The check with <code class="inline">json_normalize(record_path=["cart", "items"])</code> gives 734 lines, 1,106 units and 543 sessions with a cart.</p>
+</div>
+<div class="blk"><div class="h">Start the lesson project (10 minutes)</div>
+<p>Open the lesson at "Project: The Funnel Report". Read the brief aloud: where do visitors drop out between arriving and ordering, and does it differ by device? Everyone creates <code class="inline">lesson_5_5_project</code>, types Step 1 and sees <code class="inline">2400</code>. Then read the <code class="inline">STEPS</code> dictionary of Step 2 together without running it and ask: "Which of these five queries uses something you have not typed today?" (<code class="inline">"cart.items.0": {"$exists": True}</code>: element 0 of the list exists, so the cart is not empty.) Steps 2 to 6 are homework; the checklist numbers to aim for are 2,400 → 1,610 → 543 → 230 → 230 and 313 abandoned carts.</p>
+</div>
+<div class="blk"><div class="h">Checks for understanding</div>
+<p>Workbook self-check, Q1 to Q6. Use Q5 as a hinge question before the lab: if fewer than two thirds of hands choose the right letter, redo demo step 7 with the two tiny documents from Q5 on the board.</p>
+<p style="font-size:.9rem;margin:.2rem 0">Answers: <b>Q1</b> <span data-sc="1">B) <code class="inline">{"utm": {"$exists": False}}</code></span>; <b>Q2</b> <span data-sc="2">D) <code class="inline">2 1</code></span>; <b>Q3</b> <span data-sc="3"><code class="inline">[('Bend', 6), ('Boise', 5)]</code></span>; <b>Q4</b> <span data-sc="4">A) <code class="inline">$unwind</code></span>; <b>Q5</b> <span data-sc="5">C) <code class="inline">2 1</code></span>; <b>Q6</b> <span data-sc="6">B) <code class="inline">[{'n': 3, '_id': 'store'}]</code></span>. Full set with explanations in the Answer Key.</p></div>
+<div class="blk"><div class="h">Differentiation</div>
+<p><b>Support:</b> pair on TODO 3 and give the sentence frame "one page that is ___ and lasted ___". Hand out the SQL-to-MongoDB table from the workbook; let them write the SQL first and translate. Skip Lab B entirely.</p>
+<p><b>Stretch:</b> in Lab B, add a third pipeline: abandoned-cart value by landing page. Or the lesson's bonus challenge: write the three relational tables with <code class="inline">to_sql</code> and answer one question both ways.</p>
+</div>
+    </div>
+  </section>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">6.1</span><h3>HTTP with Requests</h3><span class="dur">80 min</span></div>
+    <div class="lesson-body">
+<div class="blk"><div class="h">Objectives (from the lesson)</div>
+<ul class="tick">
+  <li>Describe an HTTP request and response (method, URL, headers, status code, body) and read each part from Python</li>
+  <li>Check a site's <code class="inline">robots.txt</code> and decide whether, and how fast, your program may fetch a page</li>
+  <li>Fetch HTML and JSON with <code class="inline">requests.get()</code>, sending a User-Agent that identifies you, query parameters and a timeout</li>
+  <li>Tell success from failure with status codes and <code class="inline">raise_for_status()</code>, and handle timeouts and HTTP errors without crashing</li>
+  <li>Reuse settings with a Session, fix a wrong text encoding, and save raw responses to disk</li>
+</ul>
+</div>
+<div class="blk"><div class="h">Timing (80 minutes)</div>
+<table class="timing"><tbody>
+<tr><td class="t">2m</td><td>Ground rules for Module 6, read aloud</td></tr>
+<tr><td class="t">13m</td><td>Frame: the order counter; the three-part shape; status code ranges</td></tr>
+<tr><td class="t">25m</td><td>Live demo, steps 1 to 14</td></tr>
+<tr><td class="t">25m</td><td>Guided lab: three category pages (then the API price check)</td></tr>
+<tr><td class="t">15m</td><td>Start the Polite Snapshot: Steps 1 and 2</td></tr>
+</tbody></table>
+</div>
+<div class="blk warn"><div class="h">Ground rules: the 2-minute opener for every Module 6 session</div>
+<p>Before any fetching code, put these six on the projector and read them aloud, one learner per rule. Say why first: "A program can do in a minute what would take a person a week. A website is somebody's property, runs on somebody's bill, and often holds information about real people."</p>
+<ol class="steps">
+  <li><b>Read <code class="inline">robots.txt</code> and obey it.</b> It is the owner's published request to programs: where they may go and how fast.</li>
+  <li><b>Read the terms of use.</b> If they forbid automated collection, the answer is no, however easy the code would be.</li>
+  <li><b>Prefer an API or a download</b> when one exists. It is the front door.</li>
+  <li><b>Go slowly and say who you are.</b> Pause between requests; send a User-Agent with a way to contact you.</li>
+  <li><b>Never go around a login, a paywall or a block.</b> If you are asked to stop, stop.</li>
+  <li><b>Do not collect personal data.</b> Names, emails, profiles and photos of real people are protected by law in many places.</li>
+</ol>
+<p>Then the reassurance: "Every request in this module goes to the practice shop or to the practice API on your own computer. You have the owner's permission, nothing on them is real, and you cannot break anything. We practice the polite habits here so they are automatic everywhere else." This is not legal advice, and the lesson says so; if someone asks "is scraping legal?", the lesson's FAQ has the careful answer.</p>
+</div>
+<div class="blk"><div class="h">Mental model to say</div>
+<p>"Think of the counter at a deli. You hand over a <b>slip</b>: what you want, plus a few notes about yourself. A moment later a <b>tray</b> comes back. On top is a ticket with a number that says how it went: order filled, we are out of that, you may not order that, the kitchen is on fire. Under the ticket is the food, if there is any. That is the whole of HTTP. The slip is a request, the tray is a response. The server never calls you; it only answers. And it does not remember your last order unless you remind it."</p>
+<p>Draw the three-part shape twice on the board, side by side: first line (method and URL | status code), headers (who is asking | what the answer is), body (usually empty for GET | the page or the JSON). Then the status ranges as "whose move is it": 2xx use it, 3xx nothing to do, 4xx fix <b>your</b> request, 5xx wait and try later.</p>
+</div>
+<div class="blk"><div class="h">Live demo (you type, they follow)</div>
+<p>A new notebook, <code class="inline">session16_http</code>. The practice API must be running in a second terminal from step 9 on. The outputs below were produced against a local copy of the practice shop that sends the same headers as the course website; on the public site only the <code class="inline">Date</code> header differs. If your room uses the offline copy, read "What differs on the offline copy" above before step 4.</p>
+<ol class="steps">
+  <li><b>One address, defined once.</b> Say: "Every request this module makes goes to one of two places built for this course: the practice shop and the practice API. Put your own email in the User-Agent. In about ten minutes you will see who reads it."
+<pre class="code"><span class="k">import</span> requests
+<span class="k">from</span> urllib.parse <span class="k">import</span> urljoin
+
+BASE_URL = <span class="s">"https://rays-python-datascience.netlify.app/practice/shop/"</span>
+USER_AGENT = <span class="s">"pinecrest-course-bot/1.0 (learning project; contact: you@example.com)"</span>
+HEADERS = {<span class="s">"User-Agent"</span>: USER_AGENT}
+print(requests.__version__)</pre>
+<pre class="out">2.34.2</pre>
+</li>
+  <li><b>The first page a polite program asks for.</b> Say: "Before the catalog, the rule book. <code class="inline">urljoin</code> resolves <code class="inline">../robots.txt</code> the way a browser resolves a link." Read the file aloud: who it applies to, where not to go, how fast. "That was a complete HTTP conversation: one request out, one response back. 200 means 'here you go'."
+<pre class="code">robots_url = urljoin(BASE_URL, <span class="s">"../robots.txt"</span>)
+r = requests.get(robots_url, headers=HEADERS, timeout=<span class="s">10</span>)
+print(r.status_code, robots_url)
+print(r.text)</pre>
+<pre class="out">200 https://rays-python-datascience.netlify.app/practice/robots.txt
+# Practice rules for the Python Data Science course (fictional shop).
+# A real robots.txt lives at the root of a site; this one is a teaching copy
+# that the lessons read with urllib.robotparser.
+User-agent: *
+Disallow: /practice/shop/staff/
+Crawl-delay: 1
+
+User-agent: BadBot
+Disallow: /</pre>
+</li>
+  <li><b>Let the standard library read the rules.</b> Say: "You do not interpret the file by eye. Two questions matter: may I fetch this, and how long do I wait?" Ask before running: "What will line two say?" Then: "Nothing in the software stops you from fetching the staff page. Honoring the file is your job."
+<pre class="code"><span class="k">from</span> urllib.robotparser <span class="k">import</span> RobotFileParser
+
+robots = RobotFileParser()
+robots.parse(r.text.splitlines())
+print(robots.can_fetch(USER_AGENT, urljoin(BASE_URL, <span class="s">"category-tents.html"</span>)))
+print(robots.can_fetch(USER_AGENT, urljoin(BASE_URL, <span class="s">"staff/"</span>)))
+print(robots.crawl_delay(USER_AGENT))</pre>
+<pre class="out">True
+False
+1</pre>
+</li>
+  <li><b>A page, and the envelope it came in.</b> Say: "Status line, headers, body: the same three parts every time. <code class="inline">r.ok</code> is True for anything below 400. <code class="inline">Content-Type</code> tells you what the body is and how its text is encoded." Open the same URL in the browser next to the notebook so learners connect the two.
+<pre class="code">url = urljoin(BASE_URL, <span class="s">"category-tents.html"</span>)
+r = requests.get(url, headers=HEADERS, timeout=<span class="s">10</span>)
+print(r.status_code, r.reason, r.ok)
+print(r.headers[<span class="s">"Content-Type"</span>])
+cards = r.text.count(<span class="s">'class="product-card"'</span>)
+print(len(r.content), <span class="s">"bytes;"</span>, cards, <span class="s">"product cards"</span>)</pre>
+<pre class="out">200 OK True
+text/html; charset=UTF-8
+12997 bytes; 24 product cards</pre>
+</li>
+  <li><b>What did we send?.</b> Say: "The response keeps a copy of the request. We wrote one header; requests added the rest. Without ours, the server log would say only <code class="inline">python-requests</code>: an anonymous script. With it, the owner can write to you before reaching for the block button."
+<pre class="code">print(r.request.method, r.request.url)
+<span class="k">for</span> name, value <span class="k">in</span> r.request.headers.items():
+    print(<span class="s">f"{name}: {value}"</span>)</pre>
+<pre class="out">GET https://rays-python-datascience.netlify.app/practice/shop/category-tents.html
+User-Agent: pinecrest-course-bot/1.0 (learning project; contact: you@example.com)
+Accept-Encoding: gzip, deflate
+Accept: */*
+Connection: keep-alive</pre>
+</li>
+  <li><b>A 404 is not an exception.</b> Say: "Predict: does this line crash?" It does not. "From requests' point of view the conversation went perfectly: it asked, the server answered 'not found' and sent a friendly error page. If you count products in that body you get zero, and nothing tells you why."
+<pre class="code">url = urljoin(BASE_URL, <span class="s">"category-golf.html"</span>)
+missing = requests.get(url, headers=HEADERS, timeout=<span class="s">10</span>)
+print(missing.status_code, missing.reason, missing.ok)
+print(len(missing.content), <span class="s">"bytes of"</span>, missing.headers[<span class="s">"Content-Type"</span>])
+print(missing.text.count(<span class="s">'class="product-card"'</span>), <span class="s">"product cards"</span>)</pre>
+<pre class="out">404 Not Found False
+2514 bytes of text/html; charset=utf-8
+0 product cards</pre>
+</li>
+  <li><b>The one-line check.</b> Say: "Make it a reflex: get, then <code class="inline">raise_for_status()</code>, then use the body. A loud failure here is far cheaper than a quiet zero three steps later." Have everyone type this and read the error message aloud: it names the status and the URL.
+<pre class="code">missing.raise_for_status()</pre>
+<pre class="out">HTTPError: 404 Client Error: Not Found for url: https://rays-python-datascience.netlify.app/practice/shop/category-golf.html</pre>
+</li>
+  <li><b>Bytes, text and the wrong table.</b> Say: "Computers send bytes. <code class="inline">r.text</code> is those bytes decoded with the encoding named in the header. Watch what happens to the rating stars when I decode with the wrong table." Name it: mojibake. "If text ever looks like this, print <code class="inline">r.encoding</code> and the Content-Type header first."
+<pre class="code">print(r.encoding, <span class="s">"|"</span>, len(r.content), <span class="s">"bytes -&gt;"</span>, len(r.text), <span class="s">"characters"</span>)
+r.encoding = <span class="s">"cp1252"</span>
+print(r.text.count(<span class="s">"★"</span>), <span class="s">"stars;"</span>, r.text.count(<span class="s">"â˜…"</span>), <span class="s">"pieces of junk"</span>)
+r.encoding = <span class="s">"utf-8"</span>
+print(r.text.count(<span class="s">"★"</span>), <span class="s">"stars;"</span>, r.text.count(<span class="s">"â˜…"</span>), <span class="s">"pieces of junk"</span>)</pre>
+<pre class="out">UTF-8 | 12997 bytes -&gt; 12945 characters
+0 stars; 24 pieces of junk
+24 stars; 0 pieces of junk</pre>
+</li>
+  <li><b>An API: parameters in, JSON out.</b> Say: "HTML is written for people. An API is the front door for programs. Start the practice API in a second terminal first: <code class="inline">python data/mock_api.py</code>. I pass the parameters as a dictionary and let requests build the URL: look at what it did with the space."
+<pre class="code">API = <span class="s">"http://127.0.0.1:8000"</span>
+
+r = requests.get(<span class="s">f"{API}/products"</span>,
+                 params={<span class="s">"category"</span>: <span class="s">"Camp Kitchen"</span>, <span class="s">"per_page"</span>: <span class="s">3</span>},
+                 headers=HEADERS, timeout=<span class="s">10</span>)
+r.raise_for_status()
+print(r.url)
+print(r.headers[<span class="s">"Content-Type"</span>])
+data = r.json()
+print(list(data))
+print(data[<span class="s">"total"</span>], <span class="s">"in the category;"</span>, len(data[<span class="s">"items"</span>]), <span class="s">"on this page"</span>)</pre>
+<pre class="out">http://127.0.0.1:8000/products?category=Camp+Kitchen&amp;per_page=3
+application/json; charset=utf-8
+['page', 'per_page', 'total', 'total_pages', 'next', 'items']
+29 in the category; 3 on this page</pre>
+</li>
+  <li><b>From JSON to a DataFrame.</b> Say: "A list of flat dictionaries is exactly what <code class="inline">pd.DataFrame</code> wants. Three lines from a URL to a table, and the numbers arrive as numbers. That is why ground rule three says: prefer the API."
+<pre class="code"><span class="k">import</span> pandas <span class="k">as</span> pd
+
+kitchen = pd.DataFrame(data[<span class="s">"items"</span>])
+print(kitchen[[<span class="s">"sku"</span>, <span class="s">"name"</span>, <span class="s">"price"</span>, <span class="s">"stock_status"</span>]].to_string(index=<span class="k">False</span>))</pre>
+<pre class="out">     sku                                       name  price stock_status
+KIT-1001 Larkspur Ridge Headwater Backpacking Stove 154.95     in_stock
+KIT-1002                Pinecrest Wayfinder Cookset  40.95     in_stock
+KIT-1003         Quillback Timberline Insulated Mug  24.95     in_stock</pre>
+</li>
+  <li><b>Errors speak JSON too.</b> Say: "A well-made API explains its errors in the body. The status code tells your program what happened; the message tells you."
+<pre class="code">r = requests.get(<span class="s">f"{API}/products/KIT-9999"</span>, headers=HEADERS, timeout=<span class="s">10</span>)
+print(r.status_code, r.ok)
+print(r.json())</pre>
+<pre class="out">404 False
+{'error': {'code': 'not_found', 'message': "No product with SKU 'KIT-9999'."}}</pre>
+</li>
+  <li><b>Timeouts, always.</b> Say: "A fact that surprises people: with no timeout, requests waits forever. <code class="inline">/slow</code> answers late on purpose. I ask it to take three seconds and I am willing to wait one." After the error: "That is the behavior you want: a clear error, at a moment you chose."
+<pre class="code">requests.get(<span class="s">f"{API}/slow"</span>, params={<span class="s">"seconds"</span>: <span class="s">3</span>}, headers=HEADERS, timeout=<span class="s">1</span>)</pre>
+<pre class="out">ReadTimeout: HTTPConnectionPool(host='127.0.0.1', port=8000): Read timed out. (read timeout=1)</pre>
+</li>
+  <li><b>One function that does it right.</b> Say: "Four habits: say who you are, set a timeout, check the status, expect failure. Typing all four on every call is how they get skipped, so they go in one function. Specific exceptions first, the general one last." Type it together; this is the function Session 17 builds on.
+<pre class="code"><span class="k">def</span> fetch(url, **kwargs):
+    <span class="s">"""GET a URL politely. Return the response, or None after saying why."""</span>
+    kwargs.setdefault(<span class="s">"headers"</span>, HEADERS)
+    kwargs.setdefault(<span class="s">"timeout"</span>, <span class="s">10</span>)
+    <span class="k">try</span>:
+        resp = requests.get(url, **kwargs)
+        resp.raise_for_status()
+    <span class="k">except</span> requests.exceptions.Timeout:
+        print(<span class="s">f"TIMEOUT   {url}"</span>)
+    <span class="k">except</span> requests.exceptions.HTTPError <span class="k">as</span> err:
+        print(<span class="s">f"HTTP {err.response.status_code}  {url}"</span>)
+    <span class="k">except</span> requests.exceptions.RequestException <span class="k">as</span> err:
+        print(<span class="s">f"FAILED    {url} ({type(err).__name__})"</span>)
+    <span class="k">else</span>:
+        <span class="k">return</span> resp
+    <span class="k">return</span> <span class="k">None</span>
+
+print(fetch(urljoin(BASE_URL, <span class="s">"category-tents.html"</span>)))
+print(fetch(urljoin(BASE_URL, <span class="s">"category-golf.html"</span>)))
+print(fetch(<span class="s">f"{API}/slow"</span>, params={<span class="s">"seconds"</span>: <span class="s">3</span>}, timeout=<span class="s">1</span>))</pre>
+<pre class="out">&lt;Response [200]&gt;
+HTTP 404  https://rays-python-datascience.netlify.app/practice/shop/category-golf.html
+None
+TIMEOUT   http://127.0.0.1:8000/slow
+None</pre>
+</li>
+  <li><b>A session, a pause, and the raw bytes on disk.</b> Say: "A Session keeps the connection open and remembers the headers. It does NOT remember a timeout. <code class="inline">time.sleep(1)</code> is the crawl delay we read at the start. And we save <code class="inline">resp.content</code>, the bytes, so every parsing experiment next session runs without a new request."
+<pre class="code"><span class="k">import</span> time
+<span class="k">from</span> pathlib <span class="k">import</span> Path
+
+raw = Path(<span class="s">"raw"</span>)
+raw.mkdir(exist_ok=<span class="k">True</span>)
+
+<span class="k">with</span> requests.Session() <span class="k">as</span> session:
+    session.headers.update(HEADERS)
+    <span class="k">for</span> name <span class="k">in</span> [<span class="s">"category-tents.html"</span>, <span class="s">"category-packs.html"</span>]:
+        resp = session.get(urljoin(BASE_URL, name), timeout=<span class="s">10</span>)
+        resp.raise_for_status()
+        (raw / name).write_bytes(resp.content)
+        print(name, resp.status_code, len(resp.content), <span class="s">"bytes saved"</span>)
+        time.sleep(<span class="s">1</span>)
+
+print(sorted(p.name <span class="k">for</span> p <span class="k">in</span> raw.iterdir()))</pre>
+<pre class="out">category-tents.html 200 12997 bytes saved
+category-packs.html 200 12863 bytes saved
+['category-packs.html', 'category-tents.html']</pre>
+</li>
+</ol>
+</div>
+<div class="blk warn"><div class="h">Three mistakes to expect</div>
+<ul class="tick">
+  <li><b>Parsing an error page as if it were data.</b> A loop over <code class="inline">page-12.html</code> to <code class="inline">page-15.html</code> reports 20, 2, 0, 0 products and nobody notices that the zeros are 404s. Coach: "What was the status of that response? Where in your loop would you find out?" The fix is one line after every <code class="inline">get</code>.</li>
+  <li><b>No timeout, or <code class="inline">ConnectionError</code> because the API is not running.</b> A cell that says "running" for a minute has a call with no <code class="inline">timeout=</code>. A long red message ending in <code class="inline">Connection refused</code> means the second terminal was closed. Coach: "Is the API's terminal still open? What does <code class="inline">http://127.0.0.1:8000/health</code> show in your browser?"</li>
+  <li><b>Building the query string by hand, or calling <code class="inline">.json()</code> on HTML.</b> <code class="inline">f"{API}/products?category=Camp Kitchen"</code> breaks on the space; <code class="inline">r.json()</code> on a page gives <code class="inline">JSONDecodeError: Expecting value: line 1 column 1 (char 0)</code>. Coach: "Print <code class="inline">r.url</code>. Print <code class="inline">r.headers["Content-Type"]</code>. Print <code class="inline">r.text[:200]</code>. What did you really receive?"</li>
+</ul>
+<p>Also common: leaving off <code class="inline">https://</code> (<code class="inline">MissingSchema</code>), and on the offline copy, stars that print as <code class="inline">â˜…</code> (set <code class="inline">r.encoding = "utf-8"</code>).</p>
+</div>
+<div class="blk lab"><div class="h">Guided lab (25 minutes)</div>
+<p><b>Lab 6.1-A, everyone:</b> <code class="inline">labs/module-16/l6_1-http-requests/category_check_starter.py</code> (reference: <code class="inline">category_check_solution.py</code>). Question: how many products do the Footwear, Snow and Skis category pages list, and how many show a rating star? One of the three pages does not exist.</p>
+<ul class="tick lab">
+  <li><b>How the lab reaches the network.</b> One function, <code class="inline">get()</code>, hides the choice. Normally it sends a real request to <code class="inline">BASE_URL</code> and pauses one second. With <code class="inline">LABS_OFFLINE=1</code> in the environment it rebuilds real <code class="inline">Response</code> objects from <code class="inline">labs/module-16/_fixtures/</code> and touches nothing. Teaching with no network at all: <code class="inline">LABS_OFFLINE=1 python category_check_starter.py</code> (PowerShell: <code class="inline">$env:LABS_OFFLINE = "1"; python category_check_starter.py</code>). Teaching from the unzipped copy: change the <code class="inline">BASE_URL</code> line, or set <code class="inline">PINECREST_BASE_URL</code>.</li>
+  <li>Minutes 0 to 4: run the starter as shipped. It already fetches; the report shows status 200, 200, 404 and <code class="inline">TODO 2: status not checked yet</code>.</li>
+  <li>Minutes 4 to 18: TODO 1 (ask <code class="inline">robots.txt</code>), TODO 2 (check the status before counting), TODO 4 (decode with the wrong table, then the right one).</li>
+  <li>Minutes 18 to 25: results. Reference answers: <code class="inline">robots.txt</code> allows the three category pages and refuses <code class="inline">staff/</code>, crawl delay 1; Footwear 28 products, 25 with a star, 3 not rated yet; Snow 22 and 22; Skis is a 404 whose body (2,514 bytes of HTML) contains 0 product cards. Under cp1252 the Snow page has 0 stars and 22 pieces of <code class="inline">â˜…</code>; under utf-8, 22 stars. 11,987 bytes became 11,939 characters.</li>
+  <li>Ask: "Step 3 counted zero product cards on the Skis page. Is 'Skis: 0 products' a true statement?" (No. There is no such page. Zero and 'no answer' are different results, and only the status code tells them apart.)</li>
+</ul>
+<p><b>Lab 6.1-B, for pairs who finish (or homework):</b> <code class="inline">labs/module-16/l6_1-http-requests/api_price_check_starter.py</code>, which needs the practice API running (or <code class="inline">LABS_OFFLINE=1</code>). Reference answers: the URL is <code class="inline">http://127.0.0.1:8000/products?category=Camp+Kitchen&amp;per_page=100</code>; 75 products in three categories; median price Tents $298.45 (24 products), Snow $78.45 (22), Camp Kitchen $39.95 (29); category <code class="inline">Skis</code> answers 200 with total 0; product <code class="inline">TNT-9999</code> answers 404 with the message <code class="inline">No product with SKU 'TNT-9999'.</code> The point of steps 3 and 4: an empty result is not an error, and a real error explains itself in the body.</p>
+</div>
+<div class="blk"><div class="h">Start the lesson project (15 minutes)</div>
+<p>Open the lesson at "Project: The Polite Snapshot". Learners type Step 1 (session, <code class="inline">robots.txt</code>, crawl delay) and Step 2 (<code class="inline">polite_get()</code>), and run the last two lines of Step 2: the staff URL comes back as <code class="inline">skipped: robots.txt</code> <b>without a request being sent</b>. Stop there and ask: "Where in the function does the robots check sit, and why there?" (Before the network is touched: the only place it does any good.) Steps 3 to 5 are homework. Step 5 needs the practice API; remind them how to start it at home.</p>
+</div>
+<div class="blk"><div class="h">Checks for understanding</div>
+<p>Workbook self-check, Q7 to Q12. Q7 is the hinge question for this lesson: ask it by show of hands right after demo step 6, before you run step 7.</p>
+<p style="font-size:.9rem;margin:.2rem 0">Answers: <b>Q7</b> <span data-sc="7">D) A normal response comes back; <code class="inline">r.ok</code> is <code class="inline">False</code> and nothing is raised</span>; <b>Q8</b> <span data-sc="8"><code class="inline">1 3 False</code></span>; <b>Q9</b> <span data-sc="9">A) <code class="inline">r.encoding</code> and the <code class="inline">Content-Type</code> header</span>; <b>Q10</b> <span data-sc="10"><code class="inline">http://127.0.0.1:8000/orders?status=returned&amp;since=2025-12-01</code></span>; <b>Q11</b> <span data-sc="11">C) Skip the staff page, and wait at least one second between its other requests</span>; <b>Q12</b> <span data-sc="12">B) <code class="inline">False</code> then <code class="inline">caught</code></span>. Full set with explanations in the Answer Key.</p></div>
+<div class="blk"><div class="h">Differentiation</div>
+<p><b>Support:</b> give the three-line pattern on a card: <code class="inline">r = requests.get(url, headers=HEADERS, timeout=10)</code> / <code class="inline">r.raise_for_status()</code> / use <code class="inline">r.text</code> or <code class="inline">r.json()</code>. In Lab A, TODO 2 is already written in comments: uncommenting and indenting it is a legitimate way through.</p>
+<p><b>Stretch:</b> lesson Exercise 4 (<code class="inline">get_json()</code> that returns <code class="inline">(data, problem)</code>), or the bonus challenge: turn <code class="inline">polite_get()</code> into a cache that reads <code class="inline">raw/</code> before it touches the network.</p>
+</div>
+    </div>
+  </section>
+
+  <div class="sec"><h2>Closing</h2><span class="rule"></span></div>
+<div class="blk"><div class="h">Exit ticket (3 questions, on a sticky note; answers)</div>
+<ol class="steps">
+  <li>In a pymongo query, what does <code class="inline">{"utm": None}</code> match, and which operator asks the precise question? <b>Answer:</b> Documents where <code class="inline">utm</code> is null <b>and</b> documents where it is missing. <code class="inline">$exists</code> tells the two apart.</li>
+  <li><code class="inline">requests.get()</code> comes back with status 404. What has happened in your program, and which one line makes the failure loud? <b>Answer:</b> Nothing was raised; you hold a normal response whose body is an error page. <code class="inline">r.raise_for_status()</code>.</li>
+  <li>Name any two of the six ground rules. <b>Answer:</b> Any two of: obey <code class="inline">robots.txt</code>; read the terms; prefer an API; go slowly and identify yourself; never go around a login or block; no personal data.</li>
+</ol>
+<p>Read the notes before Session 17. If more than a third miss question 2, open Session 17 by parsing a 404 page on purpose.</p>
+</div>
+<div class="blk"><div class="h">Homework (about 2 to 3 hours)</div>
+<ul class="tick">
+  <li>Lesson 5.5: finish the Funnel Report (Steps 2 to 6), do the four exercises, the quiz and the journal prompt.</li>
+  <li>Lesson 6.1: finish the Polite Snapshot (Steps 3 to 5), do the four exercises, the quiz and the journal prompt.</li>
+  <li>Kit labs not finished in the room: <code class="inline">landing_pages_starter.py</code> and <code class="inline">api_price_check_starter.py</code>.</li>
+  <li>Put your real contact address in <code class="inline">USER_AGENT</code>.</li>
+</ul>
+</div>
+<div class="note"><div class="t">Bring list for Session 17 (Scraping Static and Dynamic Pages)</div>
+<ul class="tick">
+  <li>Your Lesson 6.1 notebook and the <code class="inline">raw/</code> folder. Lesson 6.2 reuses <code class="inline">BASE_URL</code>, the User-Agent header and the idea behind <code class="inline">fetch()</code>.</li>
+  <li><b>Google Chrome, installed and up to date.</b> Session 17 drives it with Selenium. Nothing else to install: <code class="inline">beautifulsoup4</code> and <code class="inline">selenium</code> came with the course environment in Lesson 0.1.</li>
+  <li><b>Run the one-minute Chrome check at home, while you have internet</b> (the first run downloads a driver):</li>
+</ul>
+<pre class="code"><span class="k">from</span> selenium <span class="k">import</span> webdriver
+
+options = webdriver.ChromeOptions()
+options.add_argument(<span class="s">"--headless=new"</span>)
+driver = webdriver.Chrome(options=options)
+driver.get(<span class="s">"https://rays-python-datascience.netlify.app/practice/shop/"</span>)
+print(driver.title)
+driver.quit()</pre>
+<p>It should print the shop's page title and return within about ten seconds. If it raises an error, bring the exact message: Session 17 has a plan for machines where Chrome cannot run (pairing, and a route that needs no browser).</p>
+<ul class="tick">
+  <li><code class="inline">data/pinecrest-practice-site.zip</code> in your project folder, in case the venue network is down.</li>
+  <li>Before the session, open the practice shop in a browser, right-click a product name and choose Inspect. You do not need to understand the HTML yet.</li>
+  <li>Accounts: none needed. Servers: none to start for Session 17 unless you work offline.</li>
+</ul>
+</div>
+
+  <div class="sec"><h2>If You Run Long or Short</h2><span class="rule"></span></div>
+<p><b>Running long.</b> At 1:10 you should be starting the Funnel Report; if you are still in the lab, skip the project start (assign Step 1 as homework: it is five lines) and take the break on time. In the second half the fixed points are the ground rules, demo steps 6 and 7, and Lab A. Demo steps 10, 11 and 14 can be shown from the lesson page instead of typed. If the practice API will not start in the room, do steps 9 to 12 from the guide's printed output and move Lab B to homework; Lab A does not need the API.</p>
+<p><b>Running short.</b> Run Lab 5.5-B in the room and compare the pipeline with the pandas check. In 6.1, do lesson Exercise 2 together (count products per category by asking for <code class="inline">per_page=1</code> and reading <code class="inline">total</code>: Tents 24, Snow 22, Footwear 28), then Exercise 3 (a <code class="inline">HEAD</code> request: status 200 and 0 bytes of body). Or take the lesson's "Common Questions" as a five-minute discussion: "pandas can read a URL directly; why not just use <code class="inline">pd.read_csv(url)</code>?"</p>
+
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 16 · Facilitator Guide · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

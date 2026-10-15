@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facilitator Guide: Session 17</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Instructor copy —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">contains answers &amp; timing · not for students</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Facilitator Guide</div>
+    <h1>Session 17: Scraping Static and Dynamic Pages</h1>
+    <p class="sub">How to teach the scraping session. The first half turns static HTML into a tidy, checked DataFrame with Beautiful Soup: labels over positions, one block one dictionary, missing values on purpose, pagination without counting. The second half meets pages that JavaScript fills in, teaches learners to look for the data file first, and drives headless Chrome with explicit waits when nothing else will do.</p>
+    <div class="meta-row">
+      <span class="chip"><b>2</b> lessons</span>
+      <span class="chip"><b>3 hrs</b> session</span>
+      <span class="chip">Lessons <b>6.2–6.3</b></span>
+      <span class="chip">Session <b>17</b> of 21</span>
+    </div>
+  </header>
+
+  <div class="sec"><h2>How to Use This Guide</h2><span class="rule"></span></div>
+<ul class="tick">
+  <li>Session 17 is the scraping session. Before the break learners turn static HTML into a checked DataFrame with Beautiful Soup (Lesson 6.2); after it they meet pages that JavaScript fills in, learn to look for the data file first, and drive headless Chrome with Selenium when they must (Lesson 6.3).</li>
+  <li>Same rhythm as every session: <b>frame</b> → <b>live demo</b> (you type, they follow) → <b>guided lab</b> → <b>start the lesson project</b>. Finishing the projects, the exercises, quizzes and journals is homework.</li>
+  <li>Every code block below was run for this guide: Beautiful Soup 4.15, pandas 3.0.6, requests 2.34.2 and Selenium 4.51 with headless Chromium, against a local copy of the practice shop that sends the course website's headers. The output is real; on the public site only the addresses you see are different, and they are shown as the public ones.</li>
+  <li>The single most useful moment in the first half is a crash: <code class="inline">parse_card()</code> works on the first cards and raises <code class="inline">KeyError: 'data-rating'</code> on the Packs page. Let it happen live. The most useful idea in the second half is the order of the routes: data file first, browser last.</li>
+  <li>Labs live in <code class="inline">labs/module-17/</code>. The Selenium labs fall back to saved finished pages when Chrome cannot start, so nobody is left without a lab.</li>
+</ul>
+<div class="note warn"><div class="t">The risk in Session 17: the browser as a hammer</div>
+<p>Selenium is exciting, and learners who have just watched it click buttons will want to use it for everything, with <code class="inline">time.sleep()</code> sprinkled in until it works. Both habits are expensive. Keep two sentences on the board all afternoon: <b>"Is the data in the HTML? Is it in a file the page loads? Only then a browser."</b> and <b>"Never sleep: wait for something by name."</b></p>
+</div>
+
+  <div class="sec"><h2>Before the Session</h2><span class="rule"></span></div>
+<ul class="tick">
+  <li>☐ Run <code class="inline">python3 labs/check_labs.py module-17</code> from the kit folder. Expect <code class="inline">8 passed, 0 failed</code> (offline: the Selenium labs read saved finished pages and start no browser).</li>
+  <li>☐ Copy the starters, <code class="inline">_fixtures/</code> and <code class="inline">labs_paths.py</code> to the shared folder, keeping the layout. Keep the <code class="inline">*_solution.py</code> files on your machine.</li>
+  <li>☐ <b>The practice shop, online.</b> Open <code class="inline">https://rays-python-datascience.netlify.app/practice/shop/</code> and its Deals page <b>on the venue network</b>. The Deals page should show 8 deals after a second or two. If the shop does not load, use the offline copy for the whole room.</li>
+  <li>☐ <b>The practice shop, offline fallback.</b> In the project folder: <code class="inline">python -m zipfile -e data/pinecrest-practice-site.zip .</code> then <code class="inline">python -m http.server 8001</code> (leave it running). Everyone sets <code class="inline">BASE_URL = "http://127.0.0.1:8001/practice/shop/"</code>; for the kit labs, set <code class="inline">PINECREST_BASE_URL</code> to the same address or edit the <code class="inline">BASE_URL</code> line. Selenium loads local pages the same way, and the deals and search pages work offline because their data files are in the zip.</li>
+  <li>☐ <b>The practice API is not needed today.</b> Neither 6.2 nor 6.3 uses it. (Session 18 starts it with flags: <code class="inline">python data/mock_api.py --token-ttl 5</code> for Lesson 6.4 and <code class="inline">python data/mock_api.py --rate 10 --per 5</code> for Lesson 6.5.)</li>
+  <li>☐ <b>Chrome and Selenium on the projector machine.</b> Run the one-minute check from the Session 16 bring list (below). The first run downloads a driver, so do it on the venue network before learners arrive. Keep the printed page title on screen as proof.</li>
+  <li>☐ <b>MongoDB:</b> nothing needed (Session 16 ran on mongomock, no server).</li>
+  <li>☐ Browser tabs: <code class="inline">webscraping_beautifulsoup.html</code>, <code class="inline">webscraping_selenium.html</code>, the shop's Packs category page and Deals page, and the Deals page with developer tools open on the Network tab (Fetch/XHR filter).</li>
+  <li>☐ Whiteboard: "<b>Is the data in the HTML? In a file the page loads? Only then a browser.</b>" and "<b>Never sleep: wait for something by name.</b>"</li>
+</ul>
+<div class="blk"><div class="h">The Chrome check (from the Session 16 bring list)</div>
+<pre class="code"><span class="k">from</span> selenium <span class="k">import</span> webdriver
+
+options = webdriver.ChromeOptions()
+options.add_argument(<span class="s">"--headless=new"</span>)
+driver = webdriver.Chrome(options=options)
+driver.get(<span class="s">"https://rays-python-datascience.netlify.app/practice/shop/"</span>)
+print(driver.title)
+driver.quit()</pre>
+<p>It prints <code class="inline">All products, page 1 | Pinecrest Outfitters (practice site)</code> within about ten seconds. What the failures mean:</p>
+<ul class="tick">
+  <li><code class="inline">NoSuchDriverException</code> or "unable to obtain driver": Selenium Manager could not download the driver (blocked network or proxy) or could not find Chrome. Run it once on an open network, or install Chrome.</li>
+  <li>"cannot find Chrome binary": Chrome is not installed, or is installed somewhere unusual. The kit labs accept <code class="inline">PINECREST_CHROME</code> = the path of a Chrome or Chromium program.</li>
+  <li>It hangs for a minute, then fails: a corporate machine blocking automation. Treat it as locked down.</li>
+</ul>
+</div>
+<div class="blk"><div class="h">A locked-down venue machine: the plan</div>
+<ul class="tick">
+  <li><b>Pair up.</b> Seat learners whose Chrome failed with a neighbor whose check worked; the driver types, the navigator reads the lab aloud, and they swap at TODO 3.</li>
+  <li><b>Use the JSON route.</b> Lesson 6.3 teaches it first for a reason: <code class="inline">deals.json</code> and <code class="inline">products.json</code> hold the same data the browser shows, and need nothing but <code class="inline">requests</code>. Learners without a browser do the lesson's first section, Exercise 4 and lab step 6 of <code class="inline">budget_search</code> in full.</li>
+  <li><b>The kit labs never strand anyone.</b> If Chrome cannot start, they print <code class="inline">[no browser] Chrome could not be started (...)</code> and continue with the saved finished page. Everything after the browser step still runs.</li>
+  <li><b>Nothing to install on the spot.</b> If a learner can install Chrome, do it at the break, not during the demo.</li>
+</ul>
+</div>
+<div class="blk"><div class="h">What differs on the offline copy (checked for this kit)</div>
+<ul class="tick">
+  <li>Python's server sends <code class="inline">text/html</code> with no charset, so <code class="inline">resp.text</code> shows <code class="inline">â˜…</code> for stars. Lesson 6.2 passes <code class="inline">resp.content</code> to Beautiful Soup, which reads the page's <code class="inline">&lt;meta charset&gt;</code>, so every parsed value is identical. Only learners who use <code class="inline">resp.text</code> see junk: a live reminder of why the lesson does it this way.</li>
+  <li><code class="inline">pd.read_html(io.BytesIO(resp.content), encoding="utf-8")</code> gives the same two tables.</li>
+  <li>A missing page is Python's own 335-byte 404 page, not the site's. <code class="inline">raise_for_status()</code> behaves the same.</li>
+  <li>Selenium: the deals appear after the same 1.5 seconds and the search form produces the same URLs with <code class="inline">127.0.0.1:8001</code> in front. Links read with <code class="inline">get_attribute("href")</code> start with the local address.</li>
+  <li>All four kit labs give the same answers on the offline copy (checked against both servers).</li>
+</ul>
+</div>
+<div class="blk"><div class="h">Environment variables: set them up now, used next time</div>
+<p>Session 18 reads three environment variables (the practice API's public demo values). Show the commands at the end of today so nobody meets them for the first time under checkpoint time pressure.</p>
+<pre class="code"># Windows PowerShell (this terminal only)
+$env:PINECREST_API_KEY = "pinecrest-demo-key"
+$env:PINECREST_USER = "analyst"
+$env:PINECREST_PASSWORD = "trailmix"
+
+# macOS and Linux (this terminal only)
+export PINECREST_API_KEY="pinecrest-demo-key"
+export PINECREST_USER="analyst"
+export PINECREST_PASSWORD="trailmix"</pre>
+<p>Start Jupyter or VS Code from that same terminal, or the notebook will not see them.</p>
+</div>
+
+  <div class="sec"><h2>Session 17 Agenda (3 hours)</h2><span class="rule"></span></div>
+  <table class="timing">
+    <thead><tr><th>Clock</th><th>Minutes</th><th>Segment</th><th>What happens</th></tr></thead>
+    <tbody>
+      <tr><td class="t">0:00</td><td class="t">10</td><td>Warm-up</td><td>Five retrieval questions on Session 16 (MongoDB, HTTP), no notes. Homework check: funnel numbers, the <code class="inline">raw/</code> folder, and the Chrome check (who could not run it?).</td></tr>
+      <tr><td class="t">0:10</td><td class="t">2</td><td>Ground rules opener</td><td>The six Module 6 rules, read aloud by six learners.</td></tr>
+      <tr><td class="t">0:12</td><td class="t">13</td><td><b>6.2</b> Frame and mental model</td><td>A page is a tree; scraping is reading the labels on a filing cabinet. Inspect one product card together in the browser.</td></tr>
+      <tr><td class="t">0:25</td><td class="t">25</td><td><b>6.2</b> Live demo</td><td><code class="inline">get_soup()</code>, find and select, sturdy selectors, one card one dictionary, the crash that teaches, pagination, checks, <code class="inline">read_html</code>.</td></tr>
+      <tr><td class="t">0:50</td><td class="t">25</td><td><b>6.2</b> Guided lab</td><td><code class="inline">labs/module-17/l6_2-beautifulsoup/sleeping_bag_shortlist_starter.py</code>, then <code class="inline">price_list_tables_starter.py</code>.</td></tr>
+      <tr><td class="t">1:15</td><td class="t">10</td><td><b>6.2</b> Start the lesson project</td><td>Category Price Report: Steps 1 and 2 (discover the nine category URLs; look before you loop).</td></tr>
+      <tr><td class="t">1:25</td><td class="t">10</td><td>Break</td><td>Projector machine: run the Chrome check once more; pair anyone whose Chrome failed with a neighbor whose worked.</td></tr>
+      <tr><td class="t">1:35</td><td class="t">12</td><td><b>6.3</b> Frame and mental model</td><td>Flat-pack furniture: the page that comes back empty, and the order of the two honest routes.</td></tr>
+      <tr><td class="t">1:47</td><td class="t">25</td><td><b>6.3</b> Live demo</td><td>Look for the data first; headless Chrome; explicit waits; <code class="inline">page_source</code> to Beautiful Soup; a click loop; a form; quit in <code class="inline">finally</code>.</td></tr>
+      <tr><td class="t">2:12</td><td class="t">25</td><td><b>6.3</b> Guided lab</td><td><code class="inline">labs/module-17/l6_3-selenium/budget_search_starter.py</code>, then <code class="inline">page_triage_starter.py</code>.</td></tr>
+      <tr><td class="t">2:37</td><td class="t">13</td><td><b>6.3</b> Start the lesson project</td><td>Deals Watch: Steps 1 and 2 (the answer key first, then <code class="inline">collect_deals()</code>).</td></tr>
+      <tr><td class="t">2:50</td><td class="t">10</td><td>Wrap-up</td><td>Exit ticket (3 questions), homework, bring list for Session 18 (API flags, three environment variables, Checkpoint 2).</td></tr>
+      <tr><td class="t"><b>Total</b></td><td class="t"><b>180</b></td><td></td><td>Ends at 3:00.</td></tr>
+    </tbody>
+  </table>
+<p><b>In the room:</b> the ground rules, both mental models, both demos, Lab 6.2-A and Lab 6.3-A (the B labs if a pair finishes early), Steps 1 and 2 of each lesson project. <b>At home (about 2 to 3 hours):</b> the rest of both projects, each lesson's four exercises, the two quizzes, the journals and the B labs. The lessons estimate 95 + 90 = 185 minutes solo; the room has 158 after the warm-up, opener and wrap-up.</p>
+<p><b>Protect:</b> 6.2 demo steps 7 to 9 (the crash and the decision about missing values) and Lab A; 6.3 demo steps 1 to 5 (empty page, data file first, the wait) and step 12 (<code class="inline">quit()</code> in <code class="inline">finally</code>), and Lab A. <b>Cut first if long:</b> 6.2 step 12 (<code class="inline">read_html</code>: Lab B covers it), then 6.3 steps 9 and 10 (the form: Lab B covers it), then the project starts (assign Step 1 of each as homework).</p>
+
+  <div class="sec"><h2>Warm-up</h2><span class="rule"></span></div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">0:00</span><h3>Warm-up: Retrieval from Session 16</h3><span class="dur">10 min</span></div>
+    <div class="lesson-body">
+<p>Five questions on the projector, answered on paper, notes closed (4 minutes), then aloud (3 minutes).</p>
+<ol class="steps">
+  <li>In a pymongo query, what does <code class="inline">{"utm": None}</code> match? <b>Answer:</b> Documents where <code class="inline">utm</code> is null <b>and</b> documents where it is missing. <code class="inline">$exists</code> tells the two apart.</li>
+  <li>Which aggregation stage does what pandas <code class="inline">explode</code> does? <b>Answer:</b> <code class="inline">$unwind</code>: one document per element of a list.</li>
+  <li><code class="inline">requests.get()</code> comes back with status 404. Has an exception been raised? <b>Answer:</b> No. You hold a normal response with <code class="inline">.ok</code> False; <code class="inline">r.raise_for_status()</code> makes it loud.</li>
+  <li>Why does every request in this course carry <code class="inline">timeout=</code>? <b>Answer:</b> Without it <code class="inline">requests</code> waits forever for a server that has gone quiet.</li>
+  <li>You see <code class="inline">â˜…</code> where a star should be. What happened, and what is one fix? <b>Answer:</b> UTF-8 bytes were decoded with the wrong table (no charset sent). Set <code class="inline">r.encoding = "utf-8"</code>, or hand <code class="inline">r.content</code> to a parser that reads the page's <code class="inline">&lt;meta charset&gt;</code>.</li>
+</ol>
+<p><b>Homework check (3 minutes).</b> Funnel Report: hands up if your funnel read 2,400 → 1,610 → 543 → 230 → 230. Polite Snapshot: four files in <code class="inline">raw/</code> and a six-row manifest. <b>Chrome check:</b> "Who saw the page title print? Who got an error?" Write the names of anyone with an error on a sticky note: they are your pairing list for the second half.</p>
+    </div>
+  </section>
+
+  <div class="sec"><h2>Ground Rules Opener (2 minutes)</h2><span class="rule"></span></div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">0:10</span><h3>The Six Ground Rules for Module 6</h3><span class="dur">2 min</span></div>
+    <div class="lesson-body">
+<p>Every Module 6 session opens here. Six learners read one rule each, aloud. Add one sentence for today: "A browser is a heavier guest than <code class="inline">requests</code>: it downloads every script, style and image. That is one more reason to reach for it last."</p>
+<ol class="steps">
+  <li><b>Read <code class="inline">robots.txt</code> and obey it.</b> It is the owner's published request to programs: where they may go and how fast.</li>
+  <li><b>Read the terms of use.</b> If they forbid automated collection, the answer is no, however easy the code would be.</li>
+  <li><b>Prefer an API or a download</b> when one exists. It is the front door.</li>
+  <li><b>Go slowly and say who you are.</b> Pause between requests; send a User-Agent with a way to contact you.</li>
+  <li><b>Never go around a login, a paywall or a block.</b> If you are asked to stop, stop.</li>
+  <li><b>Do not collect personal data.</b> Names, emails, profiles and photos of real people are protected by law in many places.</li>
+</ol>
+    </div>
+  </section>
+
+  <div class="sec"><h2>Lesson Plans</h2><span class="rule"></span></div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">6.2</span><h3>Parsing HTML with Beautiful Soup</h3><span class="dur">73 min</span></div>
+    <div class="lesson-body">
+<div class="blk"><div class="h">Objectives (from the lesson)</div>
+<ul class="tick">
+  <li>Read a page's HTML as a tree and locate the elements that hold the data you want</li>
+  <li>Select elements with <code class="inline">find()</code>, <code class="inline">find_all()</code> and CSS selectors, and choose selectors that survive small changes to a page</li>
+  <li>Write a function that turns one repeated block of HTML into a dictionary, including when optional pieces are missing</li>
+  <li>Follow "next" links to the last page of a paginated listing, politely, and visit detail pages for extra fields</li>
+  <li>Read HTML tables with <code class="inline">pandas.read_html()</code>, validate what you scraped, and save a tidy DataFrame</li>
+</ul>
+</div>
+<div class="blk"><div class="h">Timing (73 minutes)</div>
+<table class="timing"><tbody>
+<tr><td class="t">13m</td><td>Frame: the filing cabinet; Inspect one card in the browser</td></tr>
+<tr><td class="t">25m</td><td>Live demo, steps 1 to 13</td></tr>
+<tr><td class="t">25m</td><td>Guided lab: the sleeping bag shortlist (then the price list tables)</td></tr>
+<tr><td class="t">10m</td><td>Start the Category Price Report: Steps 1 and 2</td></tr>
+</tbody></table>
+</div>
+<div class="blk"><div class="h">Mental model to say</div>
+<p>"A page is a <b>filing cabinet</b>. Drawers hold folders, folders hold sheets, and nearly everything has a label on it: a class such as <code class="inline">price</code>, a <code class="inline">data-sku</code> such as <code class="inline">TNT-1001</code>. You do not find a document by counting 'third drawer, second folder, fifth sheet'. You read the labels: 'the sheet labeled price inside the folder labeled product-card'. Scraping well is mostly the skill of choosing good labels."</p>
+<p>Then the whole job in one line on the board: <b>fetch → parse → select the repeated block → one dictionary per block → DataFrame → check it.</b> Open the Packs category page, right-click a product name, Inspect, and walk up to the <code class="inline">li.product-card</code>. Read its labels aloud.</p>
+</div>
+<div class="blk"><div class="h">Live demo (you type, they follow)</div>
+<p>Notebook <code class="inline">session17_soup</code>. Thirteen steps; each runs in seconds except step 10, which pauses one second between three requests.</p>
+<ol class="steps">
+  <li><b>Same polite setup, one new helper.</b> Say: "Everything from Session 16 stays: one address, an honest User-Agent, a timeout, raise_for_status. The new line is the last one in the function: we hand the BYTES to Beautiful Soup, which reads the page's own charset tag." Run it and point at the title.
+<pre class="code"><span class="k">import</span> re
+<span class="k">import</span> time
+<span class="k">from</span> urllib.parse <span class="k">import</span> urljoin
+
+<span class="k">import</span> pandas <span class="k">as</span> pd
+<span class="k">import</span> requests
+<span class="k">from</span> bs4 <span class="k">import</span> BeautifulSoup
+
+BASE_URL = <span class="s">"https://rays-python-datascience.netlify.app/practice/shop/"</span>
+HEADERS = {<span class="s">"User-Agent"</span>: <span class="s">"pinecrest-course-bot/1.0 (learning project; contact: you@example.com)"</span>}
+DELAY = <span class="s">1</span>        <span class="c"># the Crawl-delay in robots.txt</span>
+
+
+<span class="k">def</span> get_soup(url):
+    <span class="s">"""Fetch one page politely and return it as a parsed tree."""</span>
+    resp = requests.get(url, headers=HEADERS, timeout=<span class="s">10</span>)
+    resp.raise_for_status()
+    <span class="k">return</span> BeautifulSoup(resp.content, <span class="s">"html.parser"</span>)
+
+
+packs = get_soup(urljoin(BASE_URL, <span class="s">"category-packs.html"</span>))
+print(packs.title.string)</pre>
+<pre class="out">Packs | Pinecrest Outfitters (practice site)</pre>
+</li>
+  <li><b>An element: a name, attributes, text.</b> Say: "Predict: is the first <code class="inline">li</code> on the page a product?" It is not: it is the breadcrumb. "That is why we search by LABEL, not by tag name alone. Attributes behave like a dictionary; class is a LIST, because an element can have several."
+<pre class="code">print(repr(packs.find(<span class="s">"li"</span>).get_text(strip=<span class="k">True</span>)))
+card = packs.find(<span class="s">"li"</span>, class_=<span class="s">"product-card"</span>)
+print(card.attrs)
+print(card[<span class="s">"data-sku"</span>])
+print(card.get_text(<span class="s">" | "</span>, strip=<span class="k">True</span>))</pre>
+<pre class="out">'Shop'
+{'class': ['product-card'], 'data-sku': 'PCK-1001'}
+PCK-1001
+Wrenfield Canyon 22L Daypack | Packs | $136.95 | ★ 4.7 | (200 reviews) | In stock</pre>
+</li>
+  <li><b>find, find_all, and the underscore.</b> Say: "<code class="inline">find</code> gives the first match or None. <code class="inline">find_all</code> gives a list, maybe empty. <code class="inline">class_</code> has an underscore because <code class="inline">class</code> is a Python keyword. And notice the key move: once we hold one card, we search INSIDE it."
+<pre class="code">cards = packs.find_all(<span class="s">"li"</span>, class_=<span class="s">"product-card"</span>)
+print(len(cards))
+link = cards[<span class="s">0</span>].find(<span class="s">"a"</span>)
+print(link.get_text(), <span class="s">"-&gt;"</span>, link[<span class="s">"href"</span>])
+print(cards[<span class="s">0</span>].find(<span class="s">"p"</span>, class_=<span class="s">"price"</span>).get_text())</pre>
+<pre class="out">24
+Wrenfield Canyon 22L Daypack -&gt; products/PCK-1001.html
+$136.95</pre>
+</li>
+  <li><b>CSS selectors: the labels on the drawers.</b> Say: "<code class="inline">select</code> returns a list, <code class="inline">select_one</code> the first match or None. Read each selector aloud as a sentence: 'the price paragraph inside the card whose data-sku is PCK-1003'."
+<pre class="code">print(len(packs.select(<span class="s">"li.product-card"</span>)))
+print(packs.select_one(<span class="s">"p.result-count"</span>).get_text())
+print(len(packs.select(<span class="s">"p.stock.out-of-stock"</span>)), <span class="s">"out of stock on this page"</span>)
+print(packs.select_one(<span class="s">'li[data-sku="PCK-1003"] p.price'</span>).get_text())</pre>
+<pre class="out">24
+24 products
+3 out of stock on this page
+$182.95</pre>
+</li>
+  <li><b>Fragile and sturdy.</b> Say: "Both lines find the same price today. The first is directions by position: it breaks silently the day the shop adds a badge or reorders the list. The second reads the labels. Choose meaning over position, and keep it short."
+<pre class="code">fragile = packs.select_one(<span class="s">"main &gt; ul &gt; li:nth-of-type(3) &gt; p:nth-of-type(2)"</span>)
+sturdy = packs.select_one(<span class="s">'li[data-sku="PCK-1003"] p.price'</span>)
+print(fragile.get_text(), sturdy.get_text())</pre>
+<pre class="out">$182.95 $182.95</pre>
+</li>
+  <li><b>Take the machine-readable value.</b> Say: "The text is for people; the data- attribute is for the site's own scripts. Either way, HTML gives you strings: converting is your job."
+<pre class="code">price = cards[<span class="s">0</span>].select_one(<span class="s">"p.price"</span>)
+print(repr(price.get_text()), repr(price[<span class="s">"data-price"</span>]))
+print(float(price[<span class="s">"data-price"</span>]) * <span class="s">2</span>)</pre>
+<pre class="out">'$136.95' '136.95'
+273.9</pre>
+</li>
+  <li><b>One card, one dictionary (first version).</b> Say: "This is the function that makes scraping manageable: it knows the HTML so the rest of the code does not have to. Predict: will it work on all 24 packs?" Let them vote, then run.
+<pre class="code"><span class="k">def</span> parse_card(card):
+    <span class="s">"""Turn one product card into a flat dictionary. First version."""</span>
+    link = card.select_one(<span class="s">"h2.product-name a"</span>)
+    <span class="k">return</span> {
+        <span class="s">"sku"</span>: card[<span class="s">"data-sku"</span>],
+        <span class="s">"name"</span>: link.get_text(strip=<span class="k">True</span>),
+        <span class="s">"price"</span>: float(card.select_one(<span class="s">"p.price"</span>)[<span class="s">"data-price"</span>]),
+        <span class="s">"rating"</span>: float(card.select_one(<span class="s">"p.rating"</span>)[<span class="s">"data-rating"</span>]),
+    }
+
+
+rows = [parse_card(c) <span class="k">for</span> c <span class="k">in</span> packs.select(<span class="s">"li.product-card"</span>)]</pre>
+<pre class="out">KeyError: 'data-rating'</pre>
+</li>
+  <li><b>Ask the page, do not guess.</b> Say: "A KeyError on an attribute. Which card? Don't guess: ask." After the output: "Two packs have no reviews yet, so the shop writes different HTML for them. Real sites are full of this. The crash was the process working."
+<pre class="code"><span class="k">for</span> c <span class="k">in</span> packs.select(<span class="s">"li.product-card"</span>):
+    tag = c.select_one(<span class="s">"p.rating"</span>)
+    <span class="k">if</span> <span class="s">"data-rating"</span> <span class="k">not</span> <span class="k">in</span> tag.attrs:
+        print(c[<span class="s">"data-sku"</span>], tag)</pre>
+<pre class="out">PCK-1002 &lt;p class="rating no-rating"&gt;No reviews yet&lt;/p&gt;
+PCK-1009 &lt;p class="rating no-rating"&gt;No reviews yet&lt;/p&gt;</pre>
+</li>
+  <li><b>Decide what missing means, field by field.</b> Say: "<code class="inline">.get()</code> returns None for a missing attribute instead of raising. A product without a rating is normal: record missing. A product without a price is NOT normal: keep the square brackets so that one crashes loudly."
+<pre class="code"><span class="k">def</span> parse_card(card):
+    <span class="s">"""Turn one product card into a flat dictionary."""</span>
+    link = card.select_one(<span class="s">"h2.product-name a"</span>)
+    rating = card.select_one(<span class="s">"p.rating"</span>).get(<span class="s">"data-rating"</span>)     <span class="c"># None if unrated</span>
+    <span class="k">return</span> {
+        <span class="s">"sku"</span>: card[<span class="s">"data-sku"</span>],
+        <span class="s">"name"</span>: link.get_text(strip=<span class="k">True</span>),
+        <span class="s">"price"</span>: float(card.select_one(<span class="s">"p.price"</span>)[<span class="s">"data-price"</span>]),
+        <span class="s">"rating"</span>: float(rating) <span class="k">if</span> rating <span class="k">else</span> <span class="k">None</span>,
+        <span class="s">"stock"</span>: card.select_one(<span class="s">"p.stock"</span>)[<span class="s">"class"</span>][<span class="s">1</span>],
+    }
+
+
+packs_df = pd.DataFrame([parse_card(c) <span class="k">for</span> c <span class="k">in</span> packs.select(<span class="s">"li.product-card"</span>)])
+print(packs_df.shape)
+print(packs_df.loc[packs_df[<span class="s">"rating"</span>].isna(), [<span class="s">"sku"</span>, <span class="s">"name"</span>, <span class="s">"rating"</span>]])
+print(packs_df[<span class="s">"stock"</span>].value_counts().to_dict())</pre>
+<pre class="out">(24, 5)
+        sku                               name  rating
+1  PCK-1002    Pinecrest Headwater 30L Daypack     NaN
+8  PCK-1009  Juniper Vane Sawtooth 30L Daypack     NaN
+{'in-stock': 20, 'out-of-stock': 3, 'low-stock': 1}</pre>
+</li>
+  <li><b>Follow "next" until there is none.</b> Say: "The catalog is paginated. We never count pages by hand: we follow the next link until a page has none. <code class="inline">max_pages</code> is a seat belt. I start at page 11 so the demo sends three requests, not thirteen."
+<pre class="code"><span class="k">def</span> scrape(start_url, max_pages=<span class="s">50</span>):
+    <span class="s">"""Follow 'next' links from start_url. Returns (rows, pages_fetched)."""</span>
+    rows, url, pages = [], start_url, <span class="s">0</span>
+    <span class="k">while</span> url <span class="k">and</span> pages &lt; max_pages:
+        soup = get_soup(url)
+        rows.extend(parse_card(c) <span class="k">for</span> c <span class="k">in</span> soup.select(<span class="s">"li.product-card"</span>))
+        pages += <span class="s">1</span>
+        nxt = soup.select_one(<span class="s">"nav.pagination a.next"</span>)
+        url = urljoin(url, nxt[<span class="s">"href"</span>]) <span class="k">if</span> nxt <span class="k">else</span> <span class="k">None</span>
+        time.sleep(DELAY)
+    <span class="k">return</span> rows, pages
+
+
+rows, pages = scrape(urljoin(BASE_URL, <span class="s">"page-11.html"</span>))
+print(pages, <span class="s">"pages,"</span>, len(rows), <span class="s">"products"</span>)
+print(rows[-<span class="s">1</span>][<span class="s">"sku"</span>], rows[-<span class="s">1</span>][<span class="s">"name"</span>])</pre>
+<pre class="out">3 pages, 42 products
+ACC-1032 Larkspur Ridge Mesa Multitool</pre>
+</li>
+  <li><b>Check before you trust.</b> Say: "Scraped data deserves more suspicion than a file someone handed you. Three questions: does the count match what the page claims, is the key unique, do the values look plausible?"
+<pre class="code">claimed = int(re.search(<span class="s">r"\d+"</span>, packs.select_one(<span class="s">"p.result-count"</span>).get_text()).group())
+print(<span class="s">"claimed"</span>, claimed, <span class="s">"| scraped"</span>, len(packs_df), <span class="s">"| match"</span>, claimed == len(packs_df))
+print(<span class="s">"unique SKUs:"</span>, packs_df[<span class="s">"sku"</span>].is_unique)
+print(packs_df[<span class="s">"price"</span>].describe().round(<span class="s">2</span>)[[<span class="s">"min"</span>, <span class="s">"50%"</span>, <span class="s">"max"</span>]].to_dict())</pre>
+<pre class="out">claimed 24 | scraped 24 | match True
+unique SKUs: True
+{'min': 20.95, '50%': 118.95, 'max': 335.95}</pre>
+</li>
+  <li><b>A real table? read_html.</b> Say: "When the data is already a <code class="inline">&lt;table&gt;</code>, skip the selectors. Fetch it yourself so your User-Agent and timeout apply, wrap the bytes, and pick the table by its id, not its position."
+<pre class="code"><span class="k">import</span> io
+
+resp = requests.get(urljoin(BASE_URL, <span class="s">"price-list.html"</span>), headers=HEADERS, timeout=<span class="s">10</span>)
+resp.raise_for_status()
+hours = pd.read_html(io.BytesIO(resp.content), encoding=<span class="s">"utf-8"</span>,
+                     attrs={<span class="s">"id"</span>: <span class="s">"store-hours"</span>})[<span class="s">0</span>]
+print(hours)</pre>
+<pre class="out">        City State     Open daily           Phone
+0      Boise    ID   9 am to 8 pm  (208) 555-0142
+1       Bend    OR   9 am to 7 pm  (541) 555-0118
+2  Flagstaff    AZ  10 am to 7 pm  (928) 555-0167
+3  Asheville    NC  10 am to 8 pm  (828) 555-0193</pre>
+</li>
+  <li><b>Two errors you will see today.</b> Say: "Read the type in the message. NoneType means your search found nothing. ResultSet means you have a LIST and treated it as one element: Beautiful Soup even tells you which method you probably meant."
+<pre class="code"><span class="k">for</span> code <span class="k">in</span> [<span class="s">'packs.select_one("p.sale-price").get_text()'</span>,
+             <span class="s">'packs.select("p.price").get_text()'</span>]:
+    <span class="k">try</span>:
+        eval(code)
+    <span class="k">except</span> AttributeError <span class="k">as</span> err:
+        print(str(err).split(<span class="s">". "</span>)[<span class="s">0</span>])</pre>
+<pre class="out">'NoneType' object has no attribute 'get_text'
+ResultSet object has no attribute "get_text"</pre>
+</li>
+</ol>
+</div>
+<div class="blk warn"><div class="h">Three mistakes to expect</div>
+<ul class="tick">
+  <li><b><code class="inline">AttributeError: 'NoneType' object has no attribute 'get_text'</code>.</b> The selector found nothing (usually a typo in a class name, or a class that the card does not have). Coach: "How many does <code class="inline">len(soup.select(your_selector))</code> find? Now Inspect the page: what is the class really called?"</li>
+  <li><b>A list treated as one element</b>, <code class="inline">soup.select("p.price").get_text()</code>. Beautiful Soup's own message says "You're probably treating a list of elements like a single element". Coach: "Do you want one, or all of them? One: <code class="inline">select_one</code>. All: a loop."</li>
+  <li><b><code class="inline">KeyError</code> on an optional attribute, "fixed" with <code class="inline">try/except: pass</code>.</b> That hides the product. Coach: "What should a missing rating MEAN in your table?" Then <code class="inline">.get()</code> and <code class="inline">None</code>. Keep square brackets for fields that must exist (SKU, price) so those crash loudly.</li>
+</ul>
+<p>Also common: <code class="inline">class=</code> instead of <code class="inline">class_=</code> (a <code class="inline">SyntaxError</code>), and requesting a relative <code class="inline">href</code> (<code class="inline">MissingSchema</code>: use <code class="inline">urljoin</code>).</p>
+</div>
+<div class="blk lab"><div class="h">Guided lab (25 minutes)</div>
+<p><b>Lab 6.2-A, everyone:</b> <code class="inline">labs/module-17/l6_2-beautifulsoup/sleeping_bag_shortlist_starter.py</code> (reference: <code class="inline">sleeping_bag_shortlist_solution.py</code>). Question: a customer wants a sleeping bag for $260 or less that can be bought today, as light as possible. Which bag, and what do we not know?</p>
+<ul class="tick lab">
+  <li>Minutes 0 to 3: run it as shipped. The listing prints with <code class="inline">None</code> for price, rating and stock: that is TODO 2.</li>
+  <li>Minutes 3 to 15: TODO 2 (finish <code class="inline">parse_card()</code>: <code class="inline">data-price</code>, <code class="inline">.get("data-rating")</code>, the second stock class) and TODO 3 (the shortlist).</li>
+  <li>Minutes 15 to 22: TODO 4 (the specs table as a dictionary) and TODO 5 (clean weight and temperature). The lab fetches only the shortlisted detail pages: 6, not 24. Ask why that matters.</li>
+  <li>Minutes 22 to 25: results. 24 cards (the page claims 24); 12 sleeping bags, 6 at $260 or less and available; lightest SLP-1002 Juniper Vane Foothill 30F, 0.81 kg, $132.95; SLP-1019 shows <code class="inline">Not listed</code> for weight.</li>
+  <li>Ask: "Is SLP-1019 the heaviest bag?" (We do not know. Missing is 'unknown', not 'zero' and not 'heaviest'. <code class="inline">sort_values</code> puts NaN last, which is not the same as saying it is heavy.)</li>
+</ul>
+<p><b>Lab 6.2-B, for pairs who finish (or homework):</b> <code class="inline">labs/module-17/l6_2-beautifulsoup/price_list_tables_starter.py</code>. <code class="inline">read_html</code> on bytes, both tables chosen by id, availability by category (Packs has the most out of stock: 3), the 8 unrated products, store hours (Boise open longest, 11 hours) and a card-by-card cross-check of the Accessories rows (32 rows, 32 cards, prices and ratings agree).</p>
+</div>
+<div class="blk"><div class="h">Start the lesson project (10 minutes)</div>
+<p>Open the lesson at "Project: Category Price Report". Read the brief, then type Steps 1 and 2: the nine category URLs come from the front page's links (no typed list), and one category page is inspected before looping (24 cards, a different count line, no pagination). Stop there and ask: "Why does Step 2 matter before Step 3?" (The count line has a different wording, which would break the check.) Steps 3 to 5 are homework; the target is a nine-row <code class="inline">category_report.csv</code> sorted by median price, Tents first at $298.45.</p>
+</div>
+<div class="blk"><div class="h">Checks for understanding</div>
+<p>Workbook self-check, Q1 to Q6. Q1 is the hinge question: ask it right after demo step 13.</p>
+<p style="font-size:.9rem;margin:.2rem 0">Answers: <b>Q1</b> <span data-sc="1">C) <code class="inline">soup.select_one("p.sale-price")</code></span>; <b>Q2</b> <span data-sc="2"><code class="inline">['A1', None]</code></span>; <b>Q3</b> <span data-sc="3">A) On the last page "Next" is a plain <code class="inline">span</code>, so <code class="inline">select_one("nav.pagination a.next")</code> returns <code class="inline">None</code></span>; <b>Q4</b> <span data-sc="4">D) <code class="inline">['stock', 'low-stock'] low_stock</code></span>; <b>Q5</b> <span data-sc="5">B) So that your User-Agent, your timeout and <code class="inline">raise_for_status()</code> apply, and pandas reads the exact bytes you checked</span>; <b>Q6</b> <span data-sc="6"><code class="inline">str 1299.0</code></span>. Full set with explanations in the Answer Key.</p></div>
+<div class="blk"><div class="h">Differentiation</div>
+<p><b>Support:</b> hand out the selector table from the workbook and the five-line <code class="inline">parse_card()</code> skeleton; in Lab A, TODO 2 has one line per field. Pair a learner who is lost in HTML with one who is comfortable in the browser's Inspect panel.</p>
+<p><b>Stretch:</b> lesson Exercise 4 (the <code class="inline">application/ld+json</code> block) or the bonus challenge (a <code class="inline">get_soup()</code> that caches pages in <code class="inline">raw/</code>, reusing Session 16's folder).</p>
+</div>
+    </div>
+  </section>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">6.3</span><h3>Dynamic Pages with Selenium</h3><span class="dur">75 min</span></div>
+    <div class="lesson-body">
+<div class="blk"><div class="h">Objectives (from the lesson)</div>
+<ul class="tick">
+  <li>Tell a static page from one that JavaScript fills in, and explain why <code class="inline">requests</code> sees no data on the second kind</li>
+  <li>Find the JSON a dynamic page loads and use it directly when you can</li>
+  <li>Start headless Chrome with Selenium 4, open a page, and locate elements with <code class="inline">By</code> locators</li>
+  <li>Wait for content with <code class="inline">WebDriverWait</code> and expected conditions instead of <code class="inline">time.sleep()</code></li>
+  <li>Click buttons, fill in a form, take a screenshot, and always quit the browser, even after an error</li>
+</ul>
+</div>
+<div class="blk"><div class="h">Timing (75 minutes)</div>
+<table class="timing"><tbody>
+<tr><td class="t">12m</td><td>Frame: flat-pack furniture; the order of the routes</td></tr>
+<tr><td class="t">25m</td><td>Live demo, steps 1 to 12</td></tr>
+<tr><td class="t">25m</td><td>Guided lab: the budget shelf (then page triage)</td></tr>
+<tr><td class="t">13m</td><td>Start Deals Watch: Steps 1 and 2</td></tr>
+</tbody></table>
+</div>
+<div class="blk"><div class="h">Mental model to say</div>
+<p>"A static page arrives like a <b>finished bookcase</b>: what comes off the truck is what you see. A dynamic page arrives <b>flat-packed</b>: a nearly empty frame (the HTML), a bag of parts to be fetched (data files), and an instruction sheet (JavaScript). Your browser does the assembly after delivery. <code class="inline">requests</code> is a delivery driver, not a carpenter: it hands you the box exactly as shipped and never opens the instructions."</p>
+<p>Then draw the decision on the board: <b>visible in the browser → in the raw HTML? Beautiful Soup. → No: does the page load a data file? Request it. → No: drive a browser.</b> "We will collect the deals both ways today, because you will check the browser's answer against the file."</p>
+</div>
+<div class="blk"><div class="h">Live demo (you type, they follow)</div>
+<p>Notebook <code class="inline">session17_selenium</code>. One browser stays open from step 3 to step 12; if the demo is interrupted, run <code class="inline">driver.quit()</code> before anything else. On your projector machine Chrome is found automatically; this kit's run used a Chromium program set with two extra options that learners do not need.</p>
+<ol class="steps">
+  <li><b>The page that comes back empty.</b> Say: "In the browser the Deals page shows eight offers. Watch what requests receives." After the output: "The request worked. The list is there. It is empty, next to a message saying the deals are loading. They never will, in this program."
+<pre class="code"><span class="k">import</span> re
+<span class="k">import</span> time
+<span class="k">from</span> urllib.parse <span class="k">import</span> urlencode, urljoin
+
+<span class="k">import</span> pandas <span class="k">as</span> pd
+<span class="k">import</span> requests
+<span class="k">from</span> bs4 <span class="k">import</span> BeautifulSoup
+
+BASE_URL = <span class="s">"https://rays-python-datascience.netlify.app/practice/shop/"</span>
+USER_AGENT = <span class="s">"pinecrest-course-bot/1.0 (learning project; contact: you@example.com)"</span>
+HEADERS = {<span class="s">"User-Agent"</span>: USER_AGENT}
+DEALS_URL = urljoin(BASE_URL, <span class="s">"deals.html"</span>)
+
+resp = requests.get(DEALS_URL, headers=HEADERS, timeout=<span class="s">10</span>)
+resp.raise_for_status()
+soup = BeautifulSoup(resp.content, <span class="s">"html.parser"</span>)
+print(len(soup.select(<span class="s">"li.deal"</span>)), <span class="s">"deals in the HTML"</span>)
+print(soup.select_one(<span class="s">"#loading"</span>).get_text())
+print(soup.select_one(<span class="s">"#deal-list"</span>))</pre>
+<pre class="out">0 deals in the HTML
+Loading deals…
+&lt;ul class="product-grid" id="deal-list"&gt;&lt;/ul&gt;</pre>
+</li>
+  <li><b>Look for the data first.</b> Say: "Flat-pack furniture: the HTML is the frame, the data is a bag of parts, the JavaScript is the instruction sheet. Before automating a browser, find out what the page loads. In Chrome: F12, Network, Fetch/XHR, reload. In Python: read the script."
+<pre class="code">script = requests.get(urljoin(BASE_URL, <span class="s">"shop.js"</span>), headers=HEADERS, timeout=<span class="s">10</span>)
+script.raise_for_status()
+print(re.findall(<span class="s">r"fetch\('(.+?)'\)"</span>, script.text))
+
+resp = requests.get(urljoin(BASE_URL, <span class="s">"deals.json"</span>), headers=HEADERS, timeout=<span class="s">10</span>)
+resp.raise_for_status()
+deals_json = pd.DataFrame(resp.json()[<span class="s">"deals"</span>])
+print(deals_json.shape)</pre>
+<pre class="out">['deals.json', 'products.json']
+(24, 6)</pre>
+</li>
+  <li><b>Start a browser from Python.</b> Say: "Selenium drives a real Chrome. Selenium Manager finds Chrome and fetches the driver the first time (half a minute, once). Headless means no window; a fixed window size means the same layout every run; and the browser says who it is, like our requests code does."
+<pre class="code"><span class="k">from</span> selenium <span class="k">import</span> webdriver
+<span class="k">from</span> selenium.webdriver.chrome.options <span class="k">import</span> Options
+<span class="k">from</span> selenium.webdriver.common.by <span class="k">import</span> By
+
+options = Options()
+options.add_argument(<span class="s">"--headless=new"</span>)
+options.add_argument(<span class="s">"--window-size=1000,800"</span>)
+options.add_argument(<span class="s">f"--user-agent={USER_AGENT}"</span>)
+driver = webdriver.Chrome(options=options)
+print(driver.name)</pre>
+<pre class="out">chrome</pre>
+</li>
+  <li><b>Ask too early.</b> Say: "<code class="inline">get()</code> returns when the page's files are loaded. The deals arrive a second and a half later. We are in a race with the page." Point at the zero.
+<pre class="code">driver.get(DEALS_URL)
+print(driver.title)
+print(len(driver.find_elements(By.CSS_SELECTOR, <span class="s">"li.deal"</span>)), <span class="s">"deals right after get()"</span>)</pre>
+<pre class="out">Deals | Pinecrest Outfitters (practice site)
+0 deals right after get()</pre>
+</li>
+  <li><b>Wait for the thing you need, by name.</b> Say: "Never sleep. Say what you are waiting for and how long you will give it. Selenium checks twice a second and continues the moment it is true." Write the double parentheses on the board: the locator is ONE tuple.
+<pre class="code"><span class="k">from</span> selenium.webdriver.support <span class="k">import</span> expected_conditions <span class="k">as</span> EC
+<span class="k">from</span> selenium.webdriver.support.ui <span class="k">import</span> WebDriverWait
+
+wait = WebDriverWait(driver, <span class="s">10</span>)
+first = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, <span class="s">"#deal-list li.deal"</span>)))
+print(len(driver.find_elements(By.CSS_SELECTOR, <span class="s">"li.deal"</span>)), <span class="s">"deals now"</span>)
+print(driver.find_element(By.ID, <span class="s">"deal-status"</span>).text)</pre>
+<pre class="out">8 deals now
+Showing 8 of 24 deals</pre>
+</li>
+  <li><b>Reading a live element.</b> Say: "A WebElement is a handle on a live element. <code class="inline">.text</code> is what a person sees; <code class="inline">get_attribute</code> reads an attribute. The browser has already resolved the link to a full URL."
+<pre class="code">print(first.get_attribute(<span class="s">"data-sku"</span>))
+link = first.find_element(By.CSS_SELECTOR, <span class="s">".product-name a"</span>)
+print(link.text)
+print(link.get_attribute(<span class="s">"href"</span>))</pre>
+<pre class="out">FTW-1013
+Juniper Vane Talus Hiking Boots
+https://rays-python-datascience.netlify.app/practice/shop/products/FTW-1013.html</pre>
+</li>
+  <li><b>Let the browser render, let Beautiful Soup parse.</b> Say: "Each find_element is a round trip to the browser. Division of labor: Selenium does what only a browser can, then we take the finished HTML and use the tool we already know."
+<pre class="code"><span class="k">def</span> parse_deals(html):
+    <span class="s">"""Parse the deal cards in a rendered deals page into a DataFrame."""</span>
+    soup = BeautifulSoup(html, <span class="s">"html.parser"</span>)
+    <span class="k">return</span> pd.DataFrame([{
+        <span class="s">"sku"</span>: li[<span class="s">"data-sku"</span>],
+        <span class="s">"price"</span>: float(li.select_one(<span class="s">"s.was"</span>).get_text().lstrip(<span class="s">"$"</span>)),
+        <span class="s">"deal_price"</span>: float(li.select_one(<span class="s">"span.deal-price"</span>).get_text().lstrip(<span class="s">"$"</span>)),
+    } <span class="k">for</span> li <span class="k">in</span> soup.select(<span class="s">"#deal-list li.deal"</span>)])
+
+
+print(parse_deals(driver.page_source).head(<span class="s">3</span>))</pre>
+<pre class="out">        sku   price  deal_price
+0  FTW-1013  155.95      132.56
+1  ACC-1017   14.50       11.60
+2  KIT-1003   24.95       18.71</pre>
+</li>
+  <li><b>Clicking, one wait per click.</b> Say: "A person would click Load more until it disappears. After each click we wait until there are MORE deals than before: a custom condition, a tiny function that receives the driver."
+<pre class="code">load_more = driver.find_element(By.ID, <span class="s">"load-more"</span>)
+<span class="k">while</span> load_more.is_displayed():
+    shown = len(driver.find_elements(By.CSS_SELECTOR, <span class="s">"li.deal"</span>))
+    load_more.click()
+    wait.until(<span class="k">lambda</span> d: len(d.find_elements(By.CSS_SELECTOR, <span class="s">"li.deal"</span>)) &gt; shown)
+    print(driver.find_element(By.ID, <span class="s">"deal-status"</span>).text)
+
+all_deals = parse_deals(driver.page_source)
+print(all_deals.shape, <span class="s">"| same SKUs as deals.json:"</span>,
+      all_deals[<span class="s">"sku"</span>].tolist() == deals_json[<span class="s">"sku"</span>].tolist())</pre>
+<pre class="out">Showing 16 of 24 deals
+Showing 24 of 24 deals
+(24, 3) | same SKUs as deals.json: True</pre>
+</li>
+  <li><b>Filling in a form.</b> Say: "Form fields are easiest to find by their name. <code class="inline">Select</code> wraps a drop-down. Submitting loads a NEW page, so two waits: the address changes, then the new results finish (the page marks its list with data-loaded)."
+<pre class="code"><span class="k">from</span> selenium.webdriver.support.ui <span class="k">import</span> Select
+
+ready = EC.presence_of_element_located(
+    (By.CSS_SELECTOR, <span class="s">'#search-results[data-loaded="true"]'</span>))
+driver.get(urljoin(BASE_URL, <span class="s">"search.html"</span>))
+wait.until(ready)
+Select(driver.find_element(By.NAME, <span class="s">"category"</span>)).select_by_visible_text(<span class="s">"Packs"</span>)
+driver.find_element(By.NAME, <span class="s">"max_price"</span>).send_keys(<span class="s">"100"</span>)
+driver.find_element(By.CSS_SELECTOR, <span class="s">"#search-form button[type='submit']"</span>).click()
+wait.until(EC.url_contains(<span class="s">"category=Packs"</span>))
+wait.until(ready)
+print(driver.current_url.split(<span class="s">"?"</span>)[<span class="s">1</span>])
+print(driver.find_element(By.ID, <span class="s">"search-count"</span>).text)</pre>
+<pre class="out">q=&amp;category=Packs&amp;max_price=100
+11 products found</pre>
+</li>
+  <li><b>The address bar is telling you something.</b> Say: "The form uses GET, so filling it in is a slow way of building a URL. Build it yourself." Ask: "And where does this page get its data?" (products.json: no browser needed at all.)
+<pre class="code">query = urlencode({<span class="s">"q"</span>: <span class="s">"stove"</span>, <span class="s">"in_stock"</span>: <span class="s">1</span>})
+driver.get(urljoin(BASE_URL, <span class="s">"search.html"</span>) + <span class="s">"?"</span> + query)
+wait.until(ready)
+print(driver.find_element(By.ID, <span class="s">"search-count"</span>).text)
+print([li.get_attribute(<span class="s">"data-sku"</span>)
+       <span class="k">for</span> li <span class="k">in</span> driver.find_elements(By.CSS_SELECTOR, <span class="s">"#search-results li"</span>)])</pre>
+<pre class="out">4 products found
+['KIT-1001', 'KIT-1009', 'KIT-1017', 'KIT-1025']</pre>
+</li>
+  <li><b>Two errors to read on purpose.</b> Say: "Selenium's tracebacks are long; read the first line. NoSuchElement right after get(): not YET. A TimeoutException: the thing never came, often a typo. Give every wait a message so the error says what you were waiting for."
+<pre class="code"><span class="k">from</span> selenium.common.exceptions <span class="k">import</span> NoSuchElementException, TimeoutException
+
+driver.get(DEALS_URL)
+<span class="k">try</span>:
+    driver.find_element(By.CSS_SELECTOR, <span class="s">"li.deal"</span>)
+<span class="k">except</span> NoSuchElementException <span class="k">as</span> err:
+    print(type(err).__name__, <span class="s">"|"</span>, err.msg.split(<span class="s">":"</span>)[<span class="s">0</span>])
+<span class="k">try</span>:
+    WebDriverWait(driver, <span class="s">3</span>).until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, <span class="s">"li.deals"</span>)),
+        message=<span class="s">"no li.deals after 3 seconds"</span>)
+<span class="k">except</span> TimeoutException <span class="k">as</span> err:
+    print(type(err).__name__, <span class="s">"|"</span>, err.msg)</pre>
+<pre class="out">NoSuchElementException | no such element
+TimeoutException | no li.deals after 3 seconds</pre>
+</li>
+  <li><b>You own a running program: quit it.</b> Say: "driver is a real Chrome process. It runs until you quit it, even after your script crashes. So: one function that starts it, and try/finally around the work, every time."
+<pre class="code">driver.quit()
+
+
+<span class="k">def</span> make_driver():
+    <span class="s">"""Start Chrome with this course's settings. Whoever calls this must quit it."""</span>
+    options = Options()
+    options.add_argument(<span class="s">"--headless=new"</span>)
+    options.add_argument(<span class="s">"--window-size=1000,800"</span>)
+    options.add_argument(<span class="s">f"--user-agent={USER_AGENT}"</span>)
+    <span class="k">return</span> webdriver.Chrome(options=options)
+
+
+driver = make_driver()
+<span class="k">try</span>:
+    driver.get(DEALS_URL)
+    WebDriverWait(driver, <span class="s">10</span>).until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, <span class="s">"li.deal"</span>)))
+    print(driver.find_element(By.ID, <span class="s">"deal-status"</span>).text)
+<span class="k">finally</span>:
+    driver.quit()
+    print(<span class="s">"browser closed"</span>)</pre>
+<pre class="out">Showing 8 of 24 deals
+browser closed</pre>
+</li>
+</ol>
+</div>
+<div class="blk warn"><div class="h">Three mistakes to expect</div>
+<ul class="tick">
+  <li><b><code class="inline">time.sleep()</code> to make it work.</b> It passes in class and fails at home on a slow connection. Coach: "What exactly are you waiting for? Name it, and wait for that."</li>
+  <li><b>Missing the inner parentheses</b> in <code class="inline">EC.presence_of_element_located((By.ID, "x"))</code>. The error is a <code class="inline">TypeError</code> about arguments. Coach: point at the board: the locator is ONE tuple.</li>
+  <li><b>Orphaned browsers.</b> A crash before <code class="inline">quit()</code> leaves Chrome running; after a few runs the laptop is slow. Coach: "Where is your <code class="inline">finally</code>?" On Windows, Task Manager shows them; on macOS and Linux, Activity Monitor or <code class="inline">ps</code>.</li>
+</ul>
+<p>Also common: <code class="inline">NoSuchElementException</code> right after <code class="inline">get()</code> (not yet: wait), a <code class="inline">TimeoutException</code> caused by a selector typo (give every wait a <code class="inline">message=</code>), <code class="inline">StaleElementReferenceException</code> after a reload, and old tutorials' <code class="inline">find_element_by_id</code> (removed in Selenium 4).</p>
+</div>
+<div class="blk lab"><div class="h">Guided lab (25 minutes)</div>
+<p><b>Lab 6.3-A, everyone (pairs where a Chrome failed):</b> <code class="inline">labs/module-17/l6_3-selenium/budget_search_starter.py</code> (reference: <code class="inline">budget_search_solution.py</code>). Question: marketing wants a "Gear under $50" shelf. Which products cost $50 or less and can be bought today, by category?</p>
+<ul class="tick lab">
+  <li><b>How it reaches a browser.</b> One function, <code class="inline">rendered()</code>, runs your browser steps and always quits Chrome. With <code class="inline">LABS_OFFLINE=1</code>, or when Chrome cannot start, it prints a clear line and parses the saved finished page from <code class="inline">_fixtures/</code> instead, so the rest of the lab works for everyone.</li>
+  <li>Minutes 0 to 15: TODO 1 (the query string with <code class="inline">urlencode</code>), TODO 2 (the wait: no sleep), TODO 3 and 4 (parse the price text, read the count line).</li>
+  <li>Minutes 15 to 25: TODO 5 (the same search in <code class="inline">products.json</code> with pandas), then the comparison. Reference answers: through <code class="inline">requests</code> the page has 0 results and says <code class="inline">Loading…</code>; the finished page shows 60 rows but its count line says <b>73 products found</b>; <code class="inline">products.json</code> has 73 products at $50 or less and available; the 13 not shown are all Accessories.</li>
+  <li>The discussion: "The page shows only the first 60 matches. Who would have reported 60?" The page's own count line is what caught it, and the data file is what answered the question.</li>
+</ul>
+<p><b>Lab 6.3-B (finish-if-fast, or homework):</b> <code class="inline">labs/module-17/l6_3-selenium/page_triage_starter.py</code>. Three pages, raw HTML versus finished page: Climbing category 24 / 24 (static), Deals 0 / 8 and Search 0 / 24 (dynamic: request the data file first); the Climbing search done through the form returns the same 24 SKUs as the category page.</p>
+</div>
+<div class="blk"><div class="h">Start the lesson project (13 minutes)</div>
+<p>Open "Project: Deals Watch". Step 1 fetches <code class="inline">deals.json</code> first and keeps it as the answer key (24 rows). Step 2 writes <code class="inline">collect_deals()</code>: wait, click Load more with a limit, screenshot, parse, and quit in <code class="inline">finally</code>. Learners without a working browser do Step 1, then read Step 2 with their partner. Steps 3 to 5 (verify, the business question, the comparison of the two routes) are homework.</p>
+</div>
+<div class="blk"><div class="h">Checks for understanding</div>
+<p>Workbook self-check, Q7 to Q12. Q9 is the hinge question: show the three wait lines on the projector and vote.</p>
+<p style="font-size:.9rem;margin:.2rem 0">Answers: <b>Q7</b> <span data-sc="7">B) Find the data file the page loads (Network tab, or read its script) and, if you may, request it directly</span>; <b>Q8</b> <span data-sc="8"><code class="inline">q=&amp;category=Snow&amp;max_price=&amp;in_stock=1</code></span>; <b>Q9</b> <span data-sc="9">C) <code class="inline">WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "deal-status")))</code></span>; <b>Q10</b> <span data-sc="10">D) The OLD page's results are already marked loaded, so the second wait alone could pass instantly, before the new page arrives</span>; <b>Q11</b> <span data-sc="11">A) The handle pointed at an element in the page that was replaced; find the element again after anything changes the page</span>; <b>Q12</b> <span data-sc="12">D) The page's HTML as it is now, after its scripts ran: all 24 deals are in it</span>. Full set with explanations in the Answer Key.</p></div>
+<div class="blk"><div class="h">Differentiation</div>
+<p><b>Support:</b> the browser parts of Lab A are three lines; let a struggling pair do the <code class="inline">products.json</code> route (TODO 5) first, so they have the answer before they automate anything.</p>
+<p><b>Stretch:</b> the lesson's bonus challenge (save <code class="inline">failure.png</code> and <code class="inline">failure.html</code> when a wait times out), or lesson Exercise 3 (the form, the human way).</p>
+</div>
+    </div>
+  </section>
+
+  <div class="sec"><h2>Closing</h2><span class="rule"></span></div>
+<div class="blk"><div class="h">Exit ticket (3 questions, on a sticky note; answers)</div>
+<ol class="steps">
+  <li>Which Beautiful Soup method returns <code class="inline">None</code> when nothing matches, and which returns an empty list? <b>Answer:</b> <code class="inline">select_one()</code> (and <code class="inline">find()</code>) return <code class="inline">None</code>; <code class="inline">select()</code> (and <code class="inline">find_all()</code>) return a list, empty if nothing matches.</li>
+  <li>Why is <code class="inline">WebDriverWait(...).until(...)</code> better than <code class="inline">time.sleep(5)</code>? <b>Answer:</b> It continues the moment the condition is true and raises a clear <code class="inline">TimeoutException</code> if it never is. A sleep is always too short or too long.</li>
+  <li>Before you start a browser for a page that JavaScript fills in, what do you look for first? <b>Answer:</b> The data file or API the page loads (Network tab, or the page's script). If you may request it, do that instead.</li>
+</ol>
+<p>If more than a third miss question 3, open Session 18 with the decision drawn on the board again: it is the same question APIs answer.</p>
+</div>
+<div class="blk"><div class="h">Homework (about 2 to 3 hours)</div>
+<ul class="tick">
+  <li>Lesson 6.2: finish the Category Price Report (Steps 3 to 5), the four exercises, the quiz and the journal.</li>
+  <li>Lesson 6.3: finish Deals Watch (Steps 3 to 5), the four exercises, the quiz and the journal.</li>
+  <li>Kit labs not finished in the room: <code class="inline">price_list_tables_starter.py</code> and <code class="inline">page_triage_starter.py</code>.</li>
+  <li>Check that no stray browsers are running.</li>
+</ul>
+</div>
+<div class="note"><div class="t">Bring list for Session 18 (APIs: Keys, Tokens and Polite Clients)</div>
+<ul class="tick">
+  <li><b>The practice API, with flags.</b> From the project folder: <code class="inline">python data/mock_api.py --token-ttl 5</code> (Lesson 6.4: tokens expire after five seconds so you can watch one expire). Lesson 6.5 restarts it as <code class="inline">python data/mock_api.py --rate 10 --per 5</code>. Check that it starts at home: <code class="inline">http://127.0.0.1:8000/health</code> shows <code class="inline">{"status": "ok"}</code>.</li>
+  <li><b>The three environment variables</b> (<code class="inline">PINECREST_API_KEY</code>, <code class="inline">PINECREST_USER</code>, <code class="inline">PINECREST_PASSWORD</code>), set with the commands your instructor showed, in the terminal you start Jupyter or VS Code from.</li>
+  <li><b>Checkpoint 2 (15 minutes, open notes) is in Session 18:</b> one SQL query against <code class="inline">data/pinecrest.db</code> and one authenticated, paginated pull from the practice API into a DataFrame, answering one small question. Review Lesson 5.1 (opening the database read-only, <code class="inline">pd.read_sql_query</code>) and Lesson 6.1 (<code class="inline">params</code>, <code class="inline">raise_for_status</code>).</li>
+  <li>Your 6.2 and 6.3 notebooks. Nothing new to install. Accounts: none.</li>
+</ul>
+</div>
+
+  <div class="sec"><h2>If You Run Long or Short</h2><span class="rule"></span></div>
+<p><b>Running long.</b> By 1:15 you should be starting the 6.2 project; if not, skip it (Step 1 is three lines of homework) and take the break on time. In 6.3, steps 9 and 10 can be shown from the guide's printed output; Lab B becomes homework. Never cut step 12 (<code class="inline">quit()</code> in <code class="inline">finally</code>). If the venue network blocks the driver download, move the whole second half to the JSON route and the labs' saved pages, and demo the browser from your own machine.</p>
+<p><b>Running short.</b> Run Lab 6.2-B in the room and compare the price-list total (29,475.90) with the card scrape. In 6.3, do lesson Exercise 4 together (the search without a browser: 9 tents) and discuss "which would you rather maintain?" Or open a real public website's Network tab together (look only, no scraping) and count how much of the page arrives as JSON.</p>
+
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 17 · Facilitator Guide · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

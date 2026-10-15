@@ -3,623 +3,1403 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Data Loading with Pandas - Python Data Science Path</title>
-    <link rel="icon" href="/favicon.png" type="image/png">
+    <meta name="description" content="Read CSV, Excel, nested JSON and SQL results into pandas with the right dtypes and dates, handle large files in chunks, and write results out as CSV, Excel, JSON and Parquet. Python Data Science Lesson 2.2.">
+    <meta name="author" content="Ray de la Paz">
+    <title>Loading Data - Python Data Science</title>
     <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/enhanced.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid: rendered (and re-rendered on theme change) by js/course-enhancements.js -->
     <script type="module">
         import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({ startOnLoad: true });
+        window.__mermaid = mermaid;
+        mermaid.initialize({ startOnLoad: false });
+        document.dispatchEvent(new Event('mermaid-ready'));
     </script>
-    <style>
-        :root {
-            --primary-color: #2563eb;
-            --secondary-color: #1e40af;
-            --accent-color: #10b981;
-            --bg-dark: #1e293b;
-            --bg-light: #f8fafc;
-            --text-dark: #0f172a;
-            --text-light: #64748b;
-            --border-color: #e2e8f0;
-            --code-bg: #f1f5f9;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.6;
-            color: var(--text-dark);
-            background: linear-gradient(135deg, var(--bg-light) 0%, #e0f2fe 100%);
-            min-height: 100vh;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 1rem;
-        }
-
-        header {
-            background: white;
-            border-radius: 1rem;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            border-left: 5px solid var(--accent-color);
-        }
-
-        h1 {
-            color: var(--primary-color);
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .breadcrumb {
-            color: var(--text-light);
-            font-size: 0.9rem;
-            margin-bottom: 1rem;
-        }
-
-        .breadcrumb a {
-            color: var(--primary-color);
-            text-decoration: none;
-            transition: color 0.3s ease;
-        }
-
-        .breadcrumb a:hover {
-            color: var(--secondary-color);
-            text-decoration: underline;
-        }
-
-        .intro {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 2rem;
-            border-radius: 1rem;
-            margin-bottom: 2rem;
-            animation: slideIn 0.6s ease;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .concept-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .concept-card {
-            background: white;
-            border-radius: 1rem;
-            padding: 1.5rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            border-top: 4px solid var(--accent-color);
-        }
-
-        .concept-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-        }
-
-        .concept-card h3 {
-            color: var(--primary-color);
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .file-format-demo {
-            background: linear-gradient(135deg, #667eea20, #764ba220);
-            border-radius: 0.5rem;
-            padding: 1rem;
-            margin: 1rem 0;
-            border-left: 4px solid var(--accent-color);
-        }
-
-        .loading-visualization {
-            background: white;
-            border-radius: 1rem;
-            padding: 2rem;
-            margin: 2rem 0;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .code-example {
-            background: var(--code-bg);
-            border-radius: 0.5rem;
-            padding: 1rem;
-            margin: 1rem 0;
-            border-left: 4px solid var(--primary-color);
-            overflow-x: auto;
-        }
-
-        pre {
-            margin: 0;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 0.9rem;
-        }
-
-        code {
-            background: var(--code-bg);
-            padding: 0.2rem 0.4rem;
-            border-radius: 0.25rem;
-            font-family: 'Courier New', Courier, monospace;
-            color: var(--secondary-color);
-        }
-
-        .interactive-demo {
-            background: white;
-            border-radius: 1rem;
-            padding: 2rem;
-            margin: 2rem 0;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        canvas {
-            border: 2px solid var(--border-color);
-            border-radius: 0.5rem;
-            margin: 1rem 0;
-            display: block;
-        }
-
-        .tip-box {
-            background: linear-gradient(135deg, #10b98120, #06b67420);
-            border-left: 4px solid var(--accent-color);
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin: 1rem 0;
-        }
-
-        .warning-box {
-            background: linear-gradient(135deg, #f5922020, #ef444420);
-            border-left: 4px solid #ef4444;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin: 1rem 0;
-        }
-
-        .navigation {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 3rem;
-            padding: 1rem;
-            background: white;
-            border-radius: 1rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .nav-button {
-            padding: 0.75rem 1.5rem;
-            background: var(--primary-color);
-            color: white;
-            text-decoration: none;
-            border-radius: 0.5rem;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .nav-button:hover {
-            background: var(--secondary-color);
-            transform: translateX(5px);
-        }
-
-        .nav-button.prev:hover {
-            transform: translateX(-5px);
-        }
-
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 1.8rem;
-            }
-
-            .concept-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .navigation {
-                flex-direction: column;
-                gap: 1rem;
-            }
-
-            .nav-button {
-                width: 100%;
-                justify-content: center;
-            }
-        }
-    </style>
-    <script src="/js/course-enhancements.js" defer></script>
-    <script src="/js/clipboard.js" defer></script>
-    <link rel="stylesheet" href="styles/standard.css">
 </head>
 <body>
-    <!-- Skip to main content for accessibility -->
     <a href="#main-content" class="skip-to-main">Skip to main content</a>
-    
-    <!-- Progress indicator -->
+
     <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
         <div class="progress-bar"></div>
     </div>
-    <div class="container">
-        <header>
-            <div class="breadcrumb">
-                <a href="index.html">Home</a> / 
-                <a href="foundation.html">Foundation Module</a> / 
-                <a href="pandas_essentials.html">Pandas Essentials</a> / 
-                Data Loading
-            </div>
-            <h1>📂 Data Loading with Pandas</h1>
 
-    <!-- What You'll Learn (learning objectives) -->
-    <div class="card card-info">
-        <h2>📚 What You'll Learn</h2>
-        <p>By the end of this lesson, you will be able to:</p>
-        <ul>
-            <li>Load CSV files with <code>pd.read_csv</code> and control parsing through key parameters (<code>sep</code>, <code>encoding</code>, <code>parse_dates</code>, <code>index_col</code>)</li>
-            <li>Read Excel workbooks, including selecting a single sheet or loading every sheet at once</li>
-            <li>Parse JSON data and flatten nested structures with <code>pd.json_normalize</code></li>
-            <li>Query relational databases into DataFrames using SQLAlchemy engines and <code>pd.read_sql</code></li>
-            <li>Handle files too large for memory using chunking and explicit <code>dtype</code> optimization</li>
-            <li>Inspect data right after loading and sidestep common pitfalls with encoding, dates, and missing values</li>
-        </ul>
-        <p><strong>⏱️ Estimated Time:</strong> 45–60 minutes</p>
-        <p><strong>🎯 Project:</strong> Build a "morning data pipeline" that pulls a product catalog from Excel, daily orders from CSV, customers from a SQL database, and shipping status from a JSON API, then combines them into one dataset.</p>
-    </div>
-            <p>Master the art of importing data from various sources into pandas DataFrames</p>
-        </header>
-
-        <div class="intro">
-            <h2>🌟 Your Gateway to Data</h2>
-            <p>Think of pandas as a universal translator for data formats. Just like a skilled interpreter who can understand multiple languages and convert between them seamlessly, pandas can read data from virtually any source - CSV files, Excel spreadsheets, JSON documents, SQL databases, and more!</p>
-            <p>In the real world, data rarely comes in a single, perfect format. You might receive sales data in Excel, customer feedback in CSV, API responses in JSON, and transaction records in a SQL database. Pandas is your Swiss Army knife for bringing all this data together.</p>
-        </div>
-
-        <div class="loading-visualization">
-            <h2>🗂️ Data Loading Pipeline</h2>
-            <div class="mermaid">
-                graph LR
-                    A[Data Sources] --> B{Pandas Read Functions}
-                    B --> C[DataFrame]
-                    
-                    D[CSV Files] --> E[pd.read_csv]
-                    F[Excel Files] --> G[pd.read_excel]
-                    H[JSON Files] --> I[pd.read_json]
-                    J[SQL Database] --> K[pd.read_sql]
-                    L[HTML Tables] --> M[pd.read_html]
-                    N[Clipboard] --> O[pd.read_clipboard]
-                    
-                    E --> C
-                    G --> C
-                    I --> C
-                    K --> C
-                    M --> C
-                    O --> C
-                    
-                    style A fill:#f9f,stroke:#333,stroke-width:2px
-                    style C fill:#9f9,stroke:#333,stroke-width:2px
-                    style B fill:#99f,stroke:#333,stroke-width:2px
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">📊 Python Data Science</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">☰</button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
             </div>
         </div>
+    </nav>
 
-        <div class="concept-grid">
-            <div class="concept-card">
-                <h3>📄 CSV Files</h3>
-                <p>The bread and butter of data exchange - simple, universal, and human-readable</p>
-                <div class="file-format-demo">
-                    <strong>Real-world example:</strong> Sales reports, sensor data logs, export from spreadsheets
+    <main id="main-content">
+        <div class="container">
+            <header>
+                <h1>📂 Lesson 2.2: Loading Data</h1>
+                <p class="lead">Get data out of CSV files, spreadsheets, nested JSON and databases and into a DataFrame with the right types, then save your results so the next person (or the next you) can trust them.</p>
+
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Read a CSV file with the options that matter: columns, dtypes, dates, missing-value markers, separators and header position</li>
+                        <li>Read a sheet from an Excel workbook whose header is not on the first row</li>
+                        <li>Flatten nested JSON into tables with <code>pd.json_normalize()</code></li>
+                        <li>Process a file in chunks and shrink its memory use with <code>usecols</code> and <code>dtype</code></li>
+                        <li>Write a DataFrame to CSV, Excel, JSON and Parquet, and explain what each format keeps and loses</li>
+                    </ul>
                 </div>
-                <div class="code-example">
-                    <pre><code># Basic CSV loading
-df = pd.read_csv('sales_data.csv')
 
-# With custom settings
-df = pd.read_csv('data.csv',
-    sep=';',           # European CSV with semicolon
-    encoding='utf-8',  # Handle special characters
-    parse_dates=['date_column'],  # Auto-parse dates
-    index_col='id'     # Use 'id' column as index
-)</code></pre>
-                </div>
-            </div>
-
-            <div class="concept-card">
-                <h3>📊 Excel Files</h3>
-                <p>Corporate data's favorite format - multiple sheets, formatting, and formulas</p>
-                <div class="file-format-demo">
-                    <strong>Real-world example:</strong> Financial reports, inventory sheets, budget planning
-                </div>
-                <div class="code-example">
-                    <pre><code># Read specific sheet
-df = pd.read_excel('report.xlsx', sheet_name='Q1_Sales')
-
-# Read multiple sheets
-all_sheets = pd.read_excel('report.xlsx', sheet_name=None)
-# Returns dictionary: {'Sheet1': df1, 'Sheet2': df2, ...}
-
-# Skip rows and use specific columns
-df = pd.read_excel('data.xlsx',
-    skiprows=2,         # Skip header rows
-    usecols='A:E',      # Only columns A to E
-    na_values=['N/A', 'Missing']  # Custom NA values
-)</code></pre>
-                </div>
-            </div>
-
-            <div class="concept-card">
-                <h3>🔗 JSON Files</h3>
-                <p>The language of web APIs - nested, hierarchical, and flexible</p>
-                <div class="file-format-demo">
-                    <strong>Real-world example:</strong> API responses, NoSQL exports, configuration files
-                </div>
-                <div class="code-example">
-                    <pre><code># Simple JSON
-df = pd.read_json('api_response.json')
-
-# Nested JSON with normalization
-import json
-with open('nested_data.json') as f:
-    data = json.load(f)
-df = pd.json_normalize(data, 
-    record_path=['results'],  # Path to records
-    meta=['timestamp', 'version']  # Include metadata
-)
-
-# From API endpoint
-df = pd.read_json('https://api.example.com/data')</code></pre>
-                </div>
-            </div>
-
-            <div class="concept-card">
-                <h3>🗄️ SQL Databases</h3>
-                <p>Enterprise data warehouses - structured, relational, and massive</p>
-                <div class="file-format-demo">
-                    <strong>Real-world example:</strong> Customer databases, transaction systems, data warehouses
-                </div>
-                <div class="code-example">
-                    <pre><code># Using SQLAlchemy
-from sqlalchemy import create_engine
-
-# Connect to database
-engine = create_engine('sqlite:///database.db')
-# Or: 'postgresql://user:pass@host/db'
-# Or: 'mysql://user:pass@host/db'
-
-# Read entire table
-df = pd.read_sql_table('customers', engine)
-
-# Custom SQL query
-query = """
-    SELECT customer_id, order_date, total
-    FROM orders
-    WHERE order_date &gt;= '2024-01-01'
-    ORDER BY total DESC
-"""
-df = pd.read_sql_query(query, engine)</code></pre>
-                </div>
-            </div>
-        </div>
-
-        <div class="interactive-demo">
-            <h2>🎮 Interactive Data Loading Simulator</h2>
-            <p>Watch how different file formats are loaded and processed:</p>
-            <canvas id="loaderCanvas" width="800" height="400"></canvas>
-            <button onclick="simulateDataLoading()" style="padding: 0.5rem 1rem; background: var(--accent-color); color: white; border: none; border-radius: 0.5rem; cursor: pointer; margin-top: 1rem;">Simulate Data Loading</button>
-        </div>
-
-        <div class="loading-visualization">
-            <h2>🔍 Advanced Loading Techniques</h2>
-            
-            <div class="tip-box">
-                <h3>💡 Memory Optimization</h3>
-                <p>When dealing with large files, use these techniques to manage memory:</p>
-                <div class="code-example">
-                    <pre><code># Read in chunks
-chunk_size = 10000
-for chunk in pd.read_csv('huge_file.csv', chunksize=chunk_size):
-    # Process each chunk
-    processed = chunk.groupby('category').sum()
-    # Save or aggregate results
-
-# Specify data types to reduce memory
-dtypes = {
-    'product_id': 'category',  # Categorical for repeated values
-    'quantity': 'int32',        # Smaller integer type
-    'price': 'float32'          # Single precision float
-}
-df = pd.read_csv('data.csv', dtype=dtypes)
-
-# Only load specific columns
-df = pd.read_csv('data.csv', usecols=['col1', 'col2', 'col3'])</code></pre>
-                </div>
-            </div>
-
-            <div class="warning-box">
-                <h3>⚠️ Common Pitfalls</h3>
-                <ul>
-                    <li><strong>Encoding Issues:</strong> Use <code>encoding='utf-8'</code> or <code>'latin-1'</code> for special characters</li>
-                    <li><strong>Date Parsing:</strong> Specify date columns explicitly with <code>parse_dates</code></li>
-                    <li><strong>Missing Values:</strong> Define custom NA values with <code>na_values</code></li>
-                    <li><strong>Large Files:</strong> Use chunking or Dask for files that don't fit in memory</li>
+                <ul class="lesson-meta">
+                    <li><span class="meta-label">⏱️ Time</span> 85 minutes</li>
+                    <li><span class="meta-label">📋 Prerequisites</span> <a href="pandas_dataframes_series.html">Lesson 2.1: DataFrames and Series</a></li>
+                    <li><span class="meta-label">🛠️ You will build</span> A typed Parquet snapshot of seven Pinecrest tables loaded from CSV, Excel and JSON</li>
+                    <li><span class="meta-label">📂 Data</span> <code>data/orders.csv</code>, <code>data/customers.csv</code>, <code>data/order_items.csv</code>, <code>data/sales_2025.xlsx</code>, <code>data/web_sessions.json</code>, <code>data/pinecrest.db</code></li>
                 </ul>
-            </div>
-        </div>
+            </header>
 
-        <div class="concept-card" style="background: linear-gradient(135deg, #667eea20, #764ba220);">
-            <h3>🌍 Real-World Scenario: E-commerce Data Pipeline</h3>
-            <p>Imagine you're a data analyst at an e-commerce company. You need to combine data from multiple sources:</p>
-            
-            <div class="code-example">
-                <pre><code># Morning routine: Load yesterday's data from various sources
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#why" class="toc-link">Loading Is Translation</a></li>
+                        <li><a href="#csv" class="toc-link">CSV: The Options That Matter</a></li>
+                        <li><a href="#types" class="toc-link">Dtypes and Dates on Load</a></li>
+                        <li><a href="#awkward" class="toc-link">Awkward Text Files</a></li>
+                        <li><a href="#excel" class="toc-link">Excel Workbooks</a></li>
+                        <li><a href="#json" class="toc-link">Nested JSON</a></li>
+                        <li><a href="#sql" class="toc-link">A Preview: SQL Databases</a></li>
+                        <li><a href="#large" class="toc-link">Large Files</a></li>
+                        <li><a href="#writing" class="toc-link">Writing Data Out</a></li>
+                        <li><a href="#mistakes" class="toc-link">Common Mistakes</a></li>
+                        <li><a href="#project" class="toc-link">Project: The Pinecrest Snapshot</a></li>
+                        <li><a href="#exercises" class="toc-link">Hands-on Exercises</a></li>
+                        <li><a href="#quiz" class="toc-link">Quick Quiz</a></li>
+                        <li><a href="#faq" class="toc-link">Common Questions</a></li>
+                        <li><a href="#journal" class="toc-link">Learning Journal</a></li>
+                        <li><a href="#summary" class="toc-link">Lesson Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
+
+            <!-- ============================================================ -->
+            <section id="why" class="lesson-section">
+                <h2>🌉 Loading Is Translation</h2>
+
+                <p>Every analysis starts with the same step: getting someone else's data into your DataFrame. It sounds like a formality, and it is where a surprising share of wrong answers begin. A date that loads as text cannot be grouped by month. An id that loads as a decimal number will not match the same id in another table. A header that sits on row 4 turns the whole sheet into nonsense.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Mental Model: The Interpreter at the Border</h4>
+                    <p>A file is a message written in another language. A CSV says "2024-01-01", and it is only characters: nothing in the file says "this is a date". <code>pd.read_csv()</code> is an interpreter who makes a reasonable guess about what each column means. Good interpreters can be briefed: "column three is a date, the missing-value marker is <code>n/a</code>, ignore the two lines of notes at the top". The options in this lesson are that briefing. And like any careful traveler, you check the translation before you rely on it.</p>
+                </div>
+
+                <div class="mermaid">
+            graph TD
+                A["A file: CSV, Excel, JSON, database"] --> B["A reader: pd.read_..."]
+                B --> C["Options: columns, dtypes, dates"]
+                C --> D["A DataFrame"]
+                D --> E{"Check: shape, dtypes, head"}
+                E -->|"something is off"| C
+                E -->|"looks right"| F["Analyze"]
+                F --> G["A writer: df.to_..."]
+                </div>
+
+                <p>pandas has a family of matching readers and writers. You will use all of these today.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Format</th><th>Read</th><th>Write</th><th>Keeps dtypes?</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>CSV (text)</td><td class="nowrap"><code>pd.read_csv()</code></td><td class="nowrap"><code>df.to_csv()</code></td><td>No: everything is text in the file</td></tr>
+                            <tr><td>Excel</td><td class="nowrap"><code>pd.read_excel()</code></td><td class="nowrap"><code>df.to_excel()</code></td><td>Mostly: numbers and dates</td></tr>
+                            <tr><td>JSON</td><td><code>json.load()</code> + <code>pd.json_normalize()</code>, or <code>pd.read_json()</code></td><td class="nowrap"><code>df.to_json()</code></td><td>Numbers, text, true/false; dates are text</td></tr>
+                            <tr><td>SQL database</td><td class="nowrap"><code>pd.read_sql()</code></td><td class="nowrap"><code>df.to_sql()</code></td><td>Depends on the database</td></tr>
+                            <tr><td>Parquet</td><td class="nowrap"><code>pd.read_parquet()</code></td><td class="nowrap"><code>df.to_parquet()</code></td><td><strong>Yes</strong>, all of them</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="csv" class="lesson-section">
+                <h2>📄 CSV: The Options That Matter</h2>
+
+                <p>Start a notebook called <code>lesson_2_2</code>. CSV ("comma-separated values") is the most common exchange format there is, because it is nothing but text. Look at the raw file before pandas touches it.</p>
+
+                <pre><code class="language-python">import numpy as np
+import pandas as pd
+
+pd.set_option("display.width", 150)
+pd.set_option("display.max_columns", 20)</code></pre>
+
+                <pre><code class="language-python">with open("data/orders.csv", encoding="utf-8") as f:
+    for _ in range(3):
+        print(f.readline().rstrip())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>order_id,customer_id,order_date,channel,store,status,payment_method,promo_code,discount_pct,shipping_cost,order_total
+100001,12673,2024-01-01,store,Flagstaff,completed,cash,,0,0.0,434.9
+100002,10034,2024-01-01,store,Asheville,completed,card,,0,0.0,278.9</code></pre>
+                </div>
+
+                <p>A header line, then one line per order, values separated by commas, an empty spot (<code>,,</code>) where a value is missing. Here is what pandas makes of it with no instructions:</p>
+
+                <pre><code class="language-python">orders = pd.read_csv("data/orders.csv")
+print(orders.dtypes)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>order_id            int64
+customer_id         int64
+order_date            str
+channel               str
+store                 str
+status                str
+payment_method        str
+promo_code            str
+discount_pct        int64
+shipping_cost     float64
+order_total       float64
+dtype: object</code></pre>
+                </div>
+
+                <p>Numbers were recognized. Text became <code>str</code>. And <code>order_date</code> is <code>str</code> too: pandas does not guess dates, because guessing wrong is worse than not guessing. <code>read_csv()</code> has dozens of parameters. These are the ones you will actually use.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Option</th><th>What it does</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="nowrap"><code>parse_dates=["col"]</code></td><td>Convert these columns to real dates</td></tr>
+                            <tr><td class="nowrap"><code>usecols=[...]</code></td><td>Load only these columns (faster, less memory)</td></tr>
+                            <tr><td class="nowrap"><code>dtype={"col": type}</code></td><td>Set a column's dtype instead of letting pandas infer it</td></tr>
+                            <tr><td class="nowrap"><code>index_col="col"</code></td><td>Use this column as the index</td></tr>
+                            <tr><td class="nowrap"><code>nrows=5</code></td><td>Read only the first rows: a quick peek at a big file</td></tr>
+                            <tr><td class="nowrap"><code>na_values=[...]</code></td><td>Extra spellings that mean "missing"</td></tr>
+                            <tr><td class="nowrap"><code>sep=";"</code></td><td>The separator, when it is not a comma (<code>"\t"</code> for tabs)</td></tr>
+                            <tr><td class="nowrap"><code>skiprows=2</code> / <code>header=2</code></td><td>Skip notes above the header / say which row the header is on</td></tr>
+                            <tr><td class="nowrap"><code>encoding="latin-1"</code></td><td>The file's character encoding, when it is not UTF-8</td></tr>
+                            <tr><td class="nowrap"><code>chunksize=10_000</code></td><td>Read the file a piece at a time (see <a href="#large">Large Files</a>)</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>Dates</h3>
+
+                <pre><code class="language-python">orders = pd.read_csv("data/orders.csv", parse_dates=["order_date"])
+print(orders["order_date"].dtype)
+print(orders["order_date"].min(), "to", orders["order_date"].max())
+print(orders["order_date"].dt.day_name().value_counts().head(3))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>datetime64[us]
+2024-01-01 00:00:00 to 2025-12-31 00:00:00
+order_date
+Sunday      3336
+Saturday    3276
+Monday      2897
+Name: count, dtype: int64</code></pre>
+                </div>
+
+                <p>With <code>parse_dates</code> the column is <code>datetime64[us]</code>: real timestamps, stored to the microsecond. Now it has a minimum and a maximum that mean something, and the <code>.dt</code> accessor can pull out the weekday, month or year. (Sunday and Saturday are the busiest days for Pinecrest.) <a href="pandas_time_series.html">Lesson 2.7</a> is devoted to working with dates; your job today is to make sure they arrive as dates.</p>
+
+                <h3>Only the Columns You Need</h3>
+
+                <pre><code class="language-python">slim = pd.read_csv(
+    "data/orders.csv",
+    usecols=["order_id", "order_date", "store", "status", "order_total"],
+    parse_dates=["order_date"],
+    index_col="order_id",
+)
+print(slim.shape)
+print(slim.head(3))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>(20302, 4)
+         order_date      store     status  order_total
+order_id
+100001   2024-01-01  Flagstaff  completed        434.9
+100002   2024-01-01  Asheville  completed        278.9
+100003   2024-01-01     Online  completed         75.9</code></pre>
+                </div>
+
+                <p>Four data columns instead of eleven, with <code>order_id</code> as the index. On a small file this is tidiness. On a file with 200 columns, of which you need six, it is the difference between a load that takes a second and one that fills your memory.</p>
+
+                <h3>A Quick Peek</h3>
+
+                <pre><code class="language-python">peek = pd.read_csv("data/order_items.csv", nrows=5)
+print(peek)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>   order_item_id  order_id       sku  quantity  unit_price
+0              1    100001  SLP-1021         1      371.95
+1              2    100001  KIT-1014         1       62.95
+2              3    100002  CLM-1012         1       32.95
+3              4    100002  SNW-1022         1      245.95
+4              5    100003  PCK-1015         1       60.95</code></pre>
+                </div>
+
+                <p><code>nrows=5</code> reads the header and five rows and stops. Use it on any file you have not seen before, however large: you learn the column names and can plan the real load.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="types" class="lesson-section">
+                <h2>🏷️ Dtypes and Dates on Load</h2>
+
+                <p>pandas infers each column's dtype by reading its values. The inference is sensible, and there are three situations where you should overrule it.</p>
+
+                <pre><code class="language-python">customers = pd.read_csv("data/customers.csv")
+print(customers[["customer_id", "phone", "birth_year", "loyalty_tier"]].dtypes)
+print(customers["birth_year"].head(3).tolist())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>customer_id       int64
+phone               str
+birth_year      float64
+loyalty_tier        str
+dtype: object
+[nan, 1989.0, 1995.0]</code></pre>
+                </div>
+
+                <p><code>birth_year</code> is a year, a whole number, but it loaded as <code>float64</code> and prints as <code>1989.0</code>. The reason is the <code>nan</code> at the top: 442 customers gave no birth year, and NumPy's <code>int64</code> has no way to say "missing", so pandas fell back to floats. And <code>loyalty_tier</code> holds only three distinct values repeated 4,850 times, stored as full text each time.</p>
+
+                <pre><code class="language-python">customers = pd.read_csv(
+    "data/customers.csv",
+    dtype={"birth_year": "Int64", "loyalty_tier": "category", "acquisition_channel": "category"},
+    parse_dates=["signup_date"],
+)
+print(customers[["birth_year", "loyalty_tier", "signup_date"]].dtypes)
+print(customers["birth_year"].head(3).tolist())
+print(customers["birth_year"].isna().sum())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>birth_year               Int64
+loyalty_tier          category
+signup_date     datetime64[us]
+dtype: object
+[&lt;NA&gt;, 1989, 1995]
+442</code></pre>
+                </div>
+
+                <ul>
+                    <li><strong><code>"Int64"</code> with a capital I</strong> is pandas's <em>nullable</em> integer. It stores whole numbers and marks missing ones as <code>&lt;NA&gt;</code>. Use it for ids, years and counts that have gaps. The capital letter matters: lowercase <code>"int64"</code> is the NumPy type and cannot hold a missing value.</li>
+                    <li><strong><code>"category"</code></strong> stores each distinct value once and then a small integer code per row. For a column with few distinct values this saves a lot of memory, and you will see how much in <a href="#large">Large Files</a>.</li>
+                    <li><strong><code>parse_dates</code></strong> handles the date, as before.</li>
+                </ul>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Ids That Look Like Numbers</h4>
+                    <p>Codes such as ZIP codes, phone numbers or account numbers with leading zeros (<code>02134</code>) are text that happens to be written with digits. Read as numbers, they lose their zeros and can never be recovered. Protect them on load with <code>dtype={"zip": "str"}</code>. A good test: would it make sense to add two of them together? If not, it is text.</p>
+                </div>
+
+                <p>If a file has already been loaded, the same conversions are available afterward: <code>pd.to_datetime(df["col"])</code> for dates and <code>df["col"].astype("Int64")</code> for types. You will use both in a moment. Doing it in <code>read_csv</code> is tidier because the table is right from its first line.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="awkward" class="lesson-section">
+                <h2>🧩 Awkward Text Files</h2>
+
+                <p>Pinecrest's own files are well behaved. Exports from other systems often are not. So that you can see several options at once, here is a small export typed straight into the notebook. <code>io.StringIO</code> wraps a string so that it can stand in for a file; <code>read_csv</code> accepts either.</p>
+
+                <pre><code class="language-python">import io
+
+export = io.StringIO("""Pinecrest regional export
+generated by the till system
+store;week;revenue;returns
+Boise;2024-W01;55.400,22;n/a
+Bend;2024-W01;38.128,49;3
+Flagstaff;2024-W01;32.769,02;--
+Asheville;2024-W01;35.696,85;1
+""")
+
+regional = pd.read_csv(
+    export,
+    sep=";",                    # the separator is a semicolon, not a comma
+    skiprows=2,                 # two lines of notes above the header
+    decimal=",",                # 55.400,22 uses a decimal comma...
+    thousands=".",              # ...and a dot for thousands
+    na_values=["n/a", "--"],    # extra spellings of "missing"
+)
+print(regional)
+print(regional.dtypes)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>       store      week   revenue  returns
+0      Boise  2024-W01  55400.22      NaN
+1       Bend  2024-W01  38128.49      3.0
+2  Flagstaff  2024-W01  32769.02      NaN
+3  Asheville  2024-W01  35696.85      1.0
+store          str
+week           str
+revenue    float64
+returns    float64
+dtype: object</code></pre>
+                </div>
+
+                <p>Five options, each fixing one thing you can see in the text: semicolons, two lines of notes, numbers written the continental European way (<code>55.400,22</code>), and two different ways of writing "nothing here". The result has a numeric <code>revenue</code> and proper <code>NaN</code>s. Without <code>na_values</code>, the <code>returns</code> column would have loaded as text because of <code>n/a</code> and <code>--</code>. pandas already recognizes common markers such as an empty cell, <code>NA</code>, <code>N/A</code>, <code>NaN</code> and <code>null</code>; <code>na_values</code> adds your file's local dialect.</p>
+
+                <h3>Dates in Another Format</h3>
+
+                <p>Is <code>03/04/2025</code> the 4th of March or the 3rd of April? It depends on who wrote the file. Do not let pandas guess. Tell it with <code>date_format</code>, using the same codes as Python's <code>strftime</code> (<code>%m</code> month, <code>%d</code> day, <code>%Y</code> four-digit year).</p>
+
+                <pre><code class="language-python">us_dates = io.StringIO("order_id,order_date\n1,03/04/2025\n2,12/25/2025\n")
+parsed = pd.read_csv(us_dates, parse_dates=["order_date"], date_format="%m/%d/%Y")
+print(parsed)
+print(parsed["order_date"].dt.month.tolist())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>   order_id order_date
+0         1 2025-03-04
+1         2 2025-12-25
+[3, 12]</code></pre>
+                </div>
+
+                <div class="card card-info">
+                    <h4>💡 Encodings in One Paragraph</h4>
+                    <p>Text files store characters as bytes, and the mapping is called an encoding. pandas assumes UTF-8, today's standard. If a load fails with <code>UnicodeDecodeError</code>, or names come out as <code>JosÃ©</code> instead of <code>José</code>, the file was written in another encoding: try <code>encoding="latin-1"</code> or <code>encoding="cp1252"</code>, the usual culprits for files exported by older Windows software. Files saved from Excel as "CSV UTF-8" start with an invisible marker, and <code>encoding="utf-8-sig"</code> removes it.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="excel" class="lesson-section">
+                <h2>📊 Excel Workbooks</h2>
+
+                <p>Spreadsheets are made for people to read, not programs. They have titles, notes, blank rows and several sheets. <code>data/sales_2025.xlsx</code> is a realistic example. Read it with no options and see what goes wrong. (<code>read_excel</code> needs the <code>openpyxl</code> package, which you installed in Lesson 0.1.)</p>
+
+                <pre><code class="language-python">raw = pd.read_excel("data/sales_2025.xlsx")
+print(raw.head(5))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>  Pinecrest Outfitters - 2025 revenue by month (USD) Unnamed: 1 Unnamed: 2 Unnamed: 3 Unnamed: 4 Unnamed: 5
+0  Stores: point-of-sale totals. Online: complete...        NaN        NaN        NaN        NaN        NaN
+1                                                NaN        NaN        NaN        NaN        NaN        NaN
+2                                              Month      Boise       Bend  Flagstaff  Asheville     Online
+3                                                Jan     242847     169817     160348     147792      86269
+4                                                Feb     218456     146918     154777     127039      86043</code></pre>
+                </div>
+
+                <p>pandas took the first row as the header, and the first row is a title. So the title became a column name, the other columns have no names at all (<code>Unnamed: 1</code>…), and the real header, "Month, Boise, Bend…", is sitting in the data as row 2. When you see <code>Unnamed</code> columns, the header is not where pandas looked.</p>
+
+                <p>The sheet has a title in row 1, a note in row 2, a blank row 3 and the header in row 4. So: skip three rows.</p>
+
+                <pre><code class="language-python">book = pd.ExcelFile("data/sales_2025.xlsx")
+print(book.sheet_names)
+
+monthly = pd.read_excel("data/sales_2025.xlsx", sheet_name="Monthly Sales", skiprows=3)
+print(monthly.shape)
+print(monthly.head(3))
+print(monthly.dtypes)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>['Monthly Sales', 'Targets']
+(12, 6)
+  Month   Boise    Bend  Flagstaff  Asheville  Online
+0   Jan  242847  169817     160348     147792   86269
+1   Feb  218456  146918     154777     127039   86043
+2   Mar  273191  177576     192909     153370   96183
+Month          str
+Boise        int64
+Bend         int64
+Flagstaff    int64
+Asheville    int64
+Online       int64
+dtype: object</code></pre>
+                </div>
+
+                <p>Twelve months, six properly named columns, whole-dollar integers. <code>pd.ExcelFile(...).sheet_names</code> lists the sheets without loading them, and <code>sheet_name=</code> picks one by name (or by position, starting at 0). <code>header=3</code> is another way to say the same thing as <code>skiprows=3</code>: "the header is the row at position 3".</p>
+
+                <pre><code class="language-python">targets = pd.read_excel("data/sales_2025.xlsx", sheet_name="Targets")
+print(targets.head(4))
+
+sheets = pd.read_excel("data/sales_2025.xlsx", sheet_name=None)
+print(type(sheets), list(sheets))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>   store quarter  target_revenue
+0  Boise      Q1          757000
+1  Boise      Q2         1001000
+2  Boise      Q3         1138000
+3  Boise      Q4         1067000
+&lt;class 'dict'&gt; ['Monthly Sales', 'Targets']</code></pre>
+                </div>
+
+                <p>The <code>Targets</code> sheet is tidy and needs no options. Passing <code>sheet_name=None</code> loads <em>every</em> sheet and returns a dictionary of DataFrames keyed by sheet name, though here the two sheets need different options, so loading them separately is better.</p>
+
+                <div class="card card-success">
+                    <h4>✅ Look Before You Load</h4>
+                    <p>If you have a spreadsheet program, open the workbook and look at it for ten seconds: which sheet, which row has the header, where does the data stop? If you do not, <code>pd.read_excel(path, header=None, nrows=8)</code> shows you the top of the sheet exactly as it is. Either way, you are deciding the options from evidence.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="json" class="lesson-section">
+                <h2>🌳 Nested JSON</h2>
+
+                <p>CSV and Excel are tables: rows and columns. <strong>JSON</strong> is a tree: values inside objects inside lists inside objects. It is the language of web APIs (Module 6) and of document databases (Lesson 5.5), and it maps directly onto Python dictionaries and lists. The work is turning the tree into a table.</p>
+
+                <p><code>data/web_sessions.json</code> holds a month of visits to Pinecrest's website. Load it first with the standard library's <code>json</code> module, so you can see its shape before pandas is involved.</p>
+
+                <pre><code class="language-python">import json
+
+with open("data/web_sessions.json", encoding="utf-8") as f:
+    data = json.load(f)
+
+print(type(data), list(data))
+print(data["site"], data["period"])
+print(len(data["sessions"]))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>&lt;class 'dict'&gt; ['site', 'period', 'note', 'sessions']
+pinecrest-outfitters.example {'start': '2025-11-01', 'end': '2025-11-30'}
+2400</code></pre>
+                </div>
+
+                <p>The file is one dictionary with four keys. Three are information <em>about</em> the data, and the fourth, <code>sessions</code>, is a list of 2,400 visits. That is typical: the records you want are one level down. Look at one.</p>
+
+                <pre><code class="language-python">one = data["sessions"][1]
+print(list(one))
+print(one["device"])
+print(one["utm"]["medium"], "/", one["utm"]["campaign"])
+print(one["pages"][:2])
+print(one["cart"]["value"], len(one["cart"]["items"]), "items")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>['session_id', 'customer_id', 'started_at', 'device', 'utm', 'pages', 'cart', 'converted', 'order_id']
+{'type': 'desktop', 'os': 'macOS', 'browser': 'Safari'}
+email / november_trail_notes
+[{'path': '/', 'seconds': 18, 'at': '2025-11-01T06:48:03'}, {'path': '/product/TNT-1003', 'seconds': 38, 'at': '2025-11-01T06:48:21'}]
+1005.85 2 items</code></pre>
+                </div>
+
+                <p>A session has simple values (<code>session_id</code>, <code>converted</code>), nested dictionaries (<code>device</code>, <code>utm</code>, which records how the visitor arrived, and <code>cart</code>), and a nested <em>list</em> of pages viewed. Handing this straight to <code>pd.DataFrame</code> gives one column per top-level key, with whole dictionaries stuffed into cells:</p>
+
+                <pre><code class="language-python">naive = pd.DataFrame(data["sessions"])
+print(naive[["session_id", "device", "utm"]].head(3))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>  session_id                                             device                                                utm
+0     S00001  {'type': 'mobile', 'os': 'iOS', 'browser': 'Sa...                                                NaN
+1     S00002  {'type': 'desktop', 'os': 'macOS', 'browser': ...  {'source': 'newsletter', 'medium': 'email', 'c...
+2     S00003  {'type': 'desktop', 'os': 'Windows', 'browser'...                                                NaN</code></pre>
+                </div>
+
+                <p>You cannot filter on "device type" when the device is a dictionary in a cell. <code>pd.json_normalize()</code> is the tool for this: it walks into nested dictionaries and gives each inner key its own column, named with a dot.</p>
+
+                <pre><code class="language-python">sessions = pd.json_normalize(data["sessions"])
+print(sessions.shape)
+print(sessions.dtypes)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>(2400, 14)
+session_id            str
+customer_id       float64
+started_at            str
+pages              object
+converted            bool
+order_id          float64
+device.type           str
+device.os             str
+device.browser        str
+cart.items         object
+cart.value        float64
+utm.source            str
+utm.medium            str
+utm.campaign          str
+dtype: object</code></pre>
+                </div>
+
+                <p>Fourteen columns. <code>device</code> became <code>device.type</code>, <code>device.os</code> and <code>device.browser</code>; <code>utm</code> and <code>cart</code> were flattened the same way. Two columns are still <code>object</code>: <code>pages</code> and <code>cart.items</code> are lists, and a list does not fit in a flat table. You will deal with them next.</p>
+
+                <pre><code class="language-python">print(sessions[["session_id", "device.type", "utm.medium", "utm.campaign", "cart.value", "converted"]].head(4))
+print(sessions["utm.medium"].isna().sum(), sessions["utm.campaign"].isna().sum())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>  session_id device.type utm.medium          utm.campaign  cart.value  converted
+0     S00001      mobile        NaN                   NaN        0.00      False
+1     S00002     desktop      email  november_trail_notes     1005.85      False
+2     S00003     desktop        NaN                   NaN      122.90       True
+3     S00004      mobile     social         winter_layers      141.90      False
+916 1653</code></pre>
+                </div>
+
+                <p>Here is a detail that matters. Session S00001 has no <code>utm</code> key at all: the visitor typed the address directly. <code>json_normalize</code> did not fail and did not drop the row. It filled the missing pieces with <code>NaN</code>: 916 sessions have no <code>utm</code>, and 1,653 have no campaign. In JSON, a key that is simply absent is a normal way of saying "missing".</p>
+
+                <p>Types need the same attention as with CSV. JSON has no date type, and the ids turned into floats because some are <code>null</code>.</p>
+
+                <pre><code class="language-python">sessions["started_at"] = pd.to_datetime(sessions["started_at"])
+sessions["customer_id"] = sessions["customer_id"].astype("Int64")
+sessions["order_id"] = sessions["order_id"].astype("Int64")
+print(sessions[["started_at", "customer_id", "order_id"]].dtypes)
+print(sessions["converted"].mean().round(3))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>started_at     datetime64[us]
+customer_id             Int64
+order_id                Int64
+dtype: object
+0.096</code></pre>
+                </div>
+
+                <p>About 9.6% of sessions ended in an order.</p>
+
+                <h3>Lists Inside Records: record_path</h3>
+
+                <p>Each session has a list of pages. To get a table with <strong>one row per page view</strong>, tell <code>json_normalize</code> which key holds the list (<code>record_path</code>) and which fields of the parent to copy onto every row (<code>meta</code>).</p>
+
+                <pre><code class="language-python">pages = pd.json_normalize(data["sessions"], record_path="pages", meta=["session_id", "converted"])
+print(pages.shape)
+print(pages.head(4))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>(9348, 5)
+                 path  seconds                   at session_id converted
+0                   /       45  2025-11-01T06:31:45     S00001     False
+1  /category/sleeping       13  2025-11-01T06:32:30     S00001     False
+2                   /       18  2025-11-01T06:48:03     S00002     False
+3   /product/TNT-1003       38  2025-11-01T06:48:21     S00002     False</code></pre>
+                </div>
+
+                <p>2,400 sessions became 9,348 page views, and each row carries its <code>session_id</code> so the two tables can be connected again. That is the general pattern for nested data: <strong>one table per level of nesting, linked by a key</strong>. Joining such tables back together is the subject of <a href="pandas_merging_joining.html">Lesson 2.5</a>.</p>
+
+                <div class="card card-info">
+                    <h4>💡 When Is pd.read_json() Enough?</h4>
+                    <p><code>pd.read_json(path)</code> reads JSON that is already table-shaped: a list of flat records. It cannot handle a file like this one, with a wrapper object around nested records (you will see its error in <a href="#mistakes">Common Mistakes</a>). For anything nested, <code>json.load</code> and <code>json_normalize</code> are the reliable pair.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="sql" class="lesson-section">
+                <h2>🗄️ A Preview: SQL Databases</h2>
+
+                <p>Much business data lives in databases. pandas reads the result of a SQL query straight into a DataFrame with <code>pd.read_sql()</code>. Here it is with <code>data/pinecrest.db</code>, a SQLite database, which Python can open with no extra software.</p>
+
+                <pre><code class="language-python">import sqlite3
+
+conn = sqlite3.connect("data/pinecrest.db")
+staff = pd.read_sql(
+    "SELECT first_name, last_name, title, location FROM employees WHERE department = ? LIMIT 4",
+    conn,
+    params=("E-commerce",),
+)
+conn.close()
+print(staff)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>  first_name last_name             title location
+0      Arjun     Silva  VP of E-commerce       HQ
+1      Chidi       Sen       Web Manager       HQ
+2      Isaac    Nakata     Web Developer       HQ
+3       Zane   Pacheco     Web Developer       HQ</code></pre>
+                </div>
+
+                <p>Three ingredients: a query, an open connection, and (always) parameters passed separately with <code>params</code> instead of pasted into the query text. That is all you need to recognize for now. Writing SQL, connecting to other databases, and why parameters matter for security are the whole of Module 5, starting with <a href="sql_database_connections.html">Lesson 5.1: Database Connections</a>.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="large" class="lesson-section">
+                <h2>🐘 Large Files</h2>
+
+                <p>A DataFrame lives in memory. A CSV of 5 GB will not load on a laptop with 8 GB of RAM, and long before that point everything gets slow. The course files are small, so you will practice the techniques on <code>order_items.csv</code> (45,490 rows) and trust that they scale. They do: these are exactly the moves used on files a thousand times larger.</p>
+
+                <h3>Step One: Measure</h3>
+
+                <pre><code class="language-python">items = pd.read_csv("data/order_items.csv")
+print(items.shape)
+print(items.memory_usage(deep=True))
+print(round(items.memory_usage(deep=True).sum() / 1024**2, 2), "MB")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>(45490, 5)
+Index               132
+order_item_id    363920
+order_id         363920
+sku              727840
+quantity         363920
+unit_price       363920
+dtype: int64
+2.08 MB</code></pre>
+                </div>
+
+                <p><code>memory_usage(deep=True)</code> reports bytes per column (<code>deep=True</code> makes it count the text properly). Each number column costs 8 bytes a row. The <code>sku</code> text column costs twice that, though it holds only 240 distinct values.</p>
+
+                <h3>Step Two: Load Less, and Smaller</h3>
+
+                <pre><code class="language-python">lean = pd.read_csv(
+    "data/order_items.csv",
+    usecols=["order_id", "sku", "quantity", "unit_price"],
+    dtype={"order_id": "int32", "quantity": "int16", "sku": "category", "unit_price": "float32"},
+)
+print(lean.dtypes)
+print(round(lean.memory_usage(deep=True).sum() / 1024**2, 2), "MB")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>order_id         int32
+sku           category
+quantity         int16
+unit_price     float32
+dtype: object
+0.53 MB</code></pre>
+                </div>
+
+                <p>A quarter of the memory, with the same information. Dropping a column you do not need is free. <code>category</code> shrinks repetitive text dramatically. The smaller number types (<code>int32</code>, <code>int16</code>, <code>float32</code>) halve or quarter a column, with the caution from Lesson 1.1: check that your values fit. One new caution: <code>float32</code> keeps only about 7 significant digits (<code>float64</code> keeps 15 to 17), which is fine for a price and wrong for a large total.</p>
+
+                <h3>Step Three: Read in Chunks</h3>
+
+                <p>When even the slimmed-down table will not fit, do not load it all. <code>chunksize</code> turns <code>read_csv</code> into something you loop over: each turn of the loop hands you the next piece as an ordinary DataFrame. Keep a running result, and let each chunk go.</p>
+
+                <pre><code class="language-python">total_units = 0
+total_revenue = 0.0
+n_chunks = 0
+
+for chunk in pd.read_csv("data/order_items.csv", chunksize=10_000):
+    total_units += chunk["quantity"].sum()
+    total_revenue += (chunk["quantity"] * chunk["unit_price"]).sum()
+    n_chunks += 1
+
+print(n_chunks, "chunks")
+print(total_units, round(total_revenue, 2))
+print(items["quantity"].sum(), round((items["quantity"] * items["unit_price"]).sum(), 2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>5 chunks
+65104 3963530.35
+65104 3963530.35</code></pre>
+                </div>
+
+                <p>Five chunks of up to 10,000 rows, and the totals match the whole-file answer exactly: 65,104 units and $3,963,530.35 of merchandise. At no point did more than 10,000 rows have to be in memory. Sums and counts combine across chunks easily. A mean needs a little care (keep a sum and a count, divide at the end), and a median cannot be done this way at all.</p>
+
+                <div class="card card-info">
+                    <h4>💡 The Order to Try Things In</h4>
+                    <p>(1) <code>nrows</code> to peek. (2) <code>usecols</code> to load only what you need. (3) <code>dtype</code> to make it smaller. (4) <code>chunksize</code> when it still does not fit. (5) Convert the file to Parquet once and read that from then on. Beyond that, the data belongs in a database, which is where Module 5 picks up.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="writing" class="lesson-section">
+                <h2>💾 Writing Data Out</h2>
+
+                <p>Analysis produces tables that somebody else needs: a cleaned file, a summary for a colleague, a snapshot for tomorrow. Every reader has a matching writer. Keep outputs in their own folder so they never overwrite the original data.</p>
+
+                <h3>CSV</h3>
+
+                <pre><code class="language-python">from pathlib import Path
+
+out = Path("output")
+out.mkdir(exist_ok=True)
+
+completed = orders[orders["status"] == "completed"]
+completed.to_csv(out / "completed_orders.csv", index=False)
+
+back = pd.read_csv(out / "completed_orders.csv")
+print(back.shape)
+print(back["order_date"].dtype)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>(18762, 11)
+str</code></pre>
+                </div>
+
+                <p>The row and column counts survived. The date did not: it is <code>str</code> again, because a CSV file is only text and carries no types. Whoever reads this file will need <code>parse_dates</code> again. That is the price of CSV's universality.</p>
+
+                <p>Notice <code>index=False</code>. Leave it out and pandas writes the index as an extra, unnamed first column, which comes back as a column called <code>Unnamed: 0</code>:</p>
+
+                <pre><code class="language-python">completed.head(3).to_csv(out / "oops.csv")
+print(pd.read_csv(out / "oops.csv").columns.tolist()[:3])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>['Unnamed: 0', 'order_id', 'customer_id']</code></pre>
+                </div>
+
+                <div class="card card-success">
+                    <h4>✅ A Habit Worth Having</h4>
+                    <p>Write <code>index=False</code> every time you call <code>to_csv</code> or <code>to_excel</code>, unless the index holds real information (dates, or a key you set on purpose).</p>
+                </div>
+
+                <h3>Parquet: A File That Remembers Its Types</h3>
+
+                <p><strong>Parquet</strong> is a file format designed for data tables. It stores the data column by column, compressed, <em>together with each column's dtype</em>. It needs the <code>pyarrow</code> package, installed in Lesson 0.1.</p>
+
+                <pre><code class="language-python">completed.to_parquet(out / "completed_orders.parquet")
+back_pq = pd.read_parquet(out / "completed_orders.parquet")
+
+print(back_pq["order_date"].dtype)
+print(back_pq.equals(completed))
+for name in ["completed_orders.csv", "completed_orders.parquet"]:
+    print(f"{name:&lt;28}{(out / name).stat().st_size / 1024:&gt;8,.0f} KB")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>datetime64[us]
+True
+completed_orders.csv           1,280 KB
+completed_orders.parquet         354 KB</code></pre>
+                </div>
+
+                <p>The date came back as a date. <code>.equals()</code> confirms the table read from Parquet is identical to the one written, values and dtypes alike. And the file is under a third of the size of the CSV. Because the data is stored by column, you can also read just the columns you want without scanning the rest:</p>
+
+                <pre><code class="language-python">only = pd.read_parquet(out / "completed_orders.parquet", columns=["order_id", "order_total"])
+print(only.shape)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>(18762, 2)</code></pre>
+                </div>
+
+                <p>The trade-off: a Parquet file is binary. You cannot open it in a text editor or a spreadsheet program. Use CSV to hand data to people and other tools; use Parquet to hand data to your future self and to other data tools.</p>
+
+                <h3>Excel and JSON</h3>
+
+                <pre><code class="language-python">monthly.to_excel(out / "monthly_clean.xlsx", sheet_name="Monthly", index=False)
+targets.head(2).to_json(out / "targets.json", orient="records", indent=2)
+print((out / "targets.json").read_text())
+print(pd.read_json(out / "targets.json"))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>[
+  {
+    "store":"Boise",
+    "quarter":"Q1",
+    "target_revenue":757000
+  },
+  {
+    "store":"Boise",
+    "quarter":"Q2",
+    "target_revenue":1001000
+  }
+]
+   store quarter  target_revenue
+0  Boise      Q1          757000
+1  Boise      Q2         1001000</code></pre>
+                </div>
+
+                <p><code>to_excel</code> writes a workbook a colleague can open. For JSON, <code>orient="records"</code> gives the list-of-records layout that web applications expect, and that flat layout is exactly what <code>pd.read_json</code> can read back.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="mistakes" class="lesson-section">
+                <h2>⚠️ Common Mistakes</h2>
+
+                <p>Loading errors are some of the friendliest in pandas: the message nearly always names the file, the column or the row. Here are the ones you are most likely to meet.</p>
+
+                <h3>1. The File Is Not Where Python Is Looking</h3>
+                <pre data-raises="FileNotFoundError"><code class="language-python">pd.read_csv("orders.csv")</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>FileNotFoundError: [Errno 2] No such file or directory: 'orders.csv'</code></pre>
+                </div>
+                <p><strong>What it means:</strong> the path is relative to the folder Python is working in, and there is no <code>orders.csv</code> there. <strong>Fix:</strong> the file is in the <code>data</code> folder: <code>"data/orders.csv"</code>. If that fails too, print <code>Path.cwd()</code>, as in Lesson 0.1.</p>
+
+                <h3>2. Treating Text as a Date</h3>
+                <pre data-raises="AttributeError"><code class="language-python">plain = pd.read_csv("data/orders.csv")
+plain["order_date"].dt.year</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>AttributeError: Can only use .dt accessor with datetimelike values</code></pre>
+                </div>
+                <p><strong>What it means:</strong> the column is <code>str</code>, and <code>.dt</code> exists only for real datetimes. <strong>Fix:</strong> <code>parse_dates</code> when loading, or convert afterward.</p>
+                <pre><code class="language-python">plain["order_date"] = pd.to_datetime(plain["order_date"])
+print(plain["order_date"].dt.year.value_counts())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>order_date
+2025    10783
+2024     9519
+Name: count, dtype: int64</code></pre>
+                </div>
+
+                <h3>3. Asking for Plain Integers in a Column with Gaps</h3>
+                <pre data-raises="ValueError"><code class="language-python">pd.read_csv("data/customers.csv", dtype={"birth_year": "int64"})</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>ValueError: Integer column has NA values in column 8</code></pre>
+                </div>
+                <p><strong>What it means:</strong> "column 8" (counting from 0) is <code>birth_year</code>, it has missing values, and NumPy's <code>int64</code> cannot represent them. <strong>Fix:</strong> the nullable <code>"Int64"</code>, capital I.</p>
+
+                <h3>4. A Column Name That Is Not in the File</h3>
+                <pre data-raises="ValueError"><code class="language-python">pd.read_csv("data/orders.csv", usecols=["order_id", "total"])</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>ValueError: Usecols do not match columns, columns expected but not found: ['total']</code></pre>
+                </div>
+                <p><strong>What it means:</strong> exactly what it says: the file has <code>order_total</code>, not <code>total</code>. <strong>Fix:</strong> peek at the header with <code>nrows=0</code> or <code>nrows=5</code> and copy the names.</p>
+
+                <h3>5. read_json on a Nested File</h3>
+                <pre data-raises="ValueError"><code class="language-python">pd.read_json("data/web_sessions.json")</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>ValueError: Mixing dicts with non-Series may lead to ambiguous ordering.</code></pre>
+                </div>
+                <p><strong>What it means:</strong> the file's top level mixes single values (<code>site</code>) with a dictionary and a long list, and pandas cannot make one table out of that. <strong>Fix:</strong> <code>json.load()</code> the file, find the list of records, and pass it to <code>pd.json_normalize()</code>.</p>
+
+                <h3>6. The Header Is Not on the First Row</h3>
+                <pre><code class="language-python">wrong = pd.read_excel("data/sales_2025.xlsx", sheet_name="Monthly Sales")
+print(wrong.columns.tolist())
+print(wrong.shape)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>['Pinecrest Outfitters - 2025 revenue by month (USD)', 'Unnamed: 1', 'Unnamed: 2', 'Unnamed: 3', 'Unnamed: 4', 'Unnamed: 5']
+(15, 6)</code></pre>
+                </div>
+                <p><strong>What happened:</strong> no error at all. You got 15 rows instead of 12 and columns called <code>Unnamed</code>. This is the dangerous kind of mistake, because the code runs. <strong>Fix:</strong> <code>skiprows=3</code>, and the habit of printing <code>.shape</code> and <code>.head()</code> after every load.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="project" class="lesson-section">
+                <h2>🛠️ Project: The Pinecrest Snapshot</h2>
+
+                <p>Analysts rarely load raw files more than once. They write a loading script that gets every type right, save the result in a format that remembers those types, and start every later session from that snapshot. You will build one: seven tables from three file formats, saved as Parquet and verified. Use a new notebook, <code>lesson_2_2_project</code>, or a script, <code>make_snapshot.py</code>. Allow about 30 minutes.</p>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 1: Orders, fully typed <span class="step-time">(5 min)</span></h3>
+                    <p>Dates as dates, and the five low-variety text columns as categories. <code>Path</code> objects let you build file paths with <code>/</code>.</p>
+                    <pre><code class="language-python">import json
+from pathlib import Path
 
 import pandas as pd
-from datetime import datetime, timedelta
-from sqlalchemy import create_engine
 
-# 1. Load product catalog from Excel (updated weekly)
-products = pd.read_excel('product_catalog.xlsx', 
-                         sheet_name='Active_Products')
+pd.set_option("display.width", 150)
+pd.set_option("display.max_columns", 20)
 
-# 2. Load customer orders from CSV (daily export from order system)
-yesterday = (datetime.now() - timedelta(1)).strftime('%Y%m%d')
-orders = pd.read_csv(f'orders_{yesterday}.csv',
-                     parse_dates=['order_timestamp'],
-                     dtype={'customer_id': str})  # Keep as string to preserve leading zeros
+DATA = Path("data")
+SNAP = Path("snapshot")
+SNAP.mkdir(exist_ok=True)
 
-# 3. Load customer data from SQL database
-engine = create_engine('postgresql://analyst:pass@datawarehouse/ecommerce')
-customers = pd.read_sql_query("""
-    SELECT customer_id, segment, lifetime_value, registration_date
-    FROM customers
-    WHERE status = 'active'
-""", engine)
+orders = pd.read_csv(
+    DATA / "orders.csv",
+    parse_dates=["order_date"],
+    dtype={"channel": "category", "store": "category", "status": "category",
+           "payment_method": "category", "promo_code": "category"},
+)
+print(orders.dtypes)</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>order_id                   int64
+customer_id                int64
+order_date        datetime64[us]
+channel                 category
+store                   category
+status                  category
+payment_method          category
+promo_code              category
+discount_pct               int64
+shipping_cost            float64
+order_total              float64
+dtype: object</code></pre>
+                    </div>
+                </div>
 
-# 4. Load shipping data from JSON API response
-shipping = pd.read_json('https://api.shipping.com/tracking/bulk')
+                <div class="card card-info">
+                    <h3>🛠️ Step 2: Customers and products <span class="step-time">(5 min)</span></h3>
+                    <p>Give <code>birth_year</code> the nullable integer type and parse both date columns.</p>
+                    <pre><code class="language-python">customers = pd.read_csv(
+    DATA / "customers.csv",
+    parse_dates=["signup_date"],
+    dtype={"birth_year": "Int64", "state": "category",
+           "acquisition_channel": "category", "loyalty_tier": "category"},
+)
+products = pd.read_csv(DATA / "products.csv", parse_dates=["launch_date"])
 
-# 5. Combine all data sources
-# Merge orders with products
-order_details = orders.merge(products, on='product_id', how='left')
+print(customers.shape, products.shape)
+print(customers["birth_year"].dtype, customers["signup_date"].dtype, products["launch_date"].dtype)</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>(4850, 12) (242, 13)
+Int64 datetime64[us] datetime64[us]</code></pre>
+                    </div>
+                </div>
 
-# Add customer information
-full_data = order_details.merge(customers, on='customer_id', how='left')
+                <div class="card card-info">
+                    <h3>🛠️ Step 3: The two Excel sheets <span class="step-time">(5 min)</span></h3>
+                    <p>Load each sheet with its own options. Then add a <code>Total</code> column: <code>.sum(axis=1)</code> adds across the columns of each row, the same <code>axis</code> idea as in NumPy.</p>
+                    <pre><code class="language-python">monthly = pd.read_excel(DATA / "sales_2025.xlsx", sheet_name="Monthly Sales", skiprows=3)
+targets = pd.read_excel(DATA / "sales_2025.xlsx", sheet_name="Targets")
 
-# Add shipping status
-final_dataset = full_data.merge(shipping, on='order_id', how='left')
+monthly["Total"] = monthly[["Boise", "Bend", "Flagstaff", "Asheville", "Online"]].sum(axis=1)
+print(monthly[["Month", "Online", "Total"]].head(3))
+print(f"2025 total: ${monthly['Total'].sum():,}")
+print(f"2025 store targets: ${targets['target_revenue'].sum():,}")</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>  Month  Online   Total
+0   Jan   86269  807073
+1   Feb   86043  733233
+2   Mar   96183  893229
+2025 total: $12,431,635
+2025 store targets: $11,359,000</code></pre>
+                    </div>
+                    <p>Total 2025 revenue across the four stores and the online shop was about $12.4 million. (The targets cover the four stores only.)</p>
+                </div>
 
-print(f"Combined dataset: {final_dataset.shape[0]} rows, {final_dataset.shape[1]} columns")
-print(f"Data sources integrated successfully!")</code></pre>
-            </div>
+                <div class="card card-info">
+                    <h3>🛠️ Step 4: Two tables from the JSON <span class="step-time">(5 min)</span></h3>
+                    <p>One row per session, with the list columns dropped and the dots in the column names replaced by underscores (dots are awkward in some tools). And one row per page view.</p>
+                    <pre><code class="language-python">with open(DATA / "web_sessions.json", encoding="utf-8") as f:
+    web = json.load(f)
+
+sessions = pd.json_normalize(web["sessions"]).drop(columns=["pages", "cart.items"])
+sessions.columns = sessions.columns.str.replace(".", "_")
+sessions["started_at"] = pd.to_datetime(sessions["started_at"])
+sessions["customer_id"] = sessions["customer_id"].astype("Int64")
+sessions["order_id"] = sessions["order_id"].astype("Int64")
+
+page_views = pd.json_normalize(web["sessions"], record_path="pages", meta=["session_id"])
+page_views["at"] = pd.to_datetime(page_views["at"])
+
+print(sessions.columns.tolist())
+print(sessions.shape, page_views.shape)</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>['session_id', 'customer_id', 'started_at', 'converted', 'order_id', 'device_type', 'device_os', 'device_browser', 'cart_value', 'utm_source', 'utm_medium', 'utm_campaign']
+(2400, 12) (9348, 4)</code></pre>
+                    </div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 5: Save everything as Parquet <span class="step-time">(5 min)</span></h3>
+                    <p>A dictionary of name to table makes the saving loop three lines long.</p>
+                    <pre><code class="language-python">tables = {"orders": orders, "customers": customers, "products": products, "monthly_sales": monthly,
+          "targets": targets, "sessions": sessions, "page_views": page_views}
+
+for name, table in tables.items():
+    table.to_parquet(SNAP / f"{name}.parquet")
+
+print(sorted(p.name for p in SNAP.iterdir()))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>['customers.parquet', 'monthly_sales.parquet', 'orders.parquet', 'page_views.parquet', 'products.parquet', 'sessions.parquet', 'targets.parquet']</code></pre>
+                    </div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 6: Verify the snapshot <span class="step-time">(5 min)</span></h3>
+                    <p>Never trust a file you have not read back. Reload each table and compare it with the original using <code>.equals()</code>, and print a small inventory while you are there.</p>
+                    <pre><code class="language-python">print(f"{'table':&lt;15}{'rows':&gt;8}{'cols':&gt;6}{'memory KB':&gt;11}{'file KB':&gt;9}  same?")
+for name, table in tables.items():
+    path = SNAP / f"{name}.parquet"
+    again = pd.read_parquet(path)
+    print(f"{name:&lt;15}{len(again):&gt;8,}{again.shape[1]:&gt;6}"
+          f"{table.memory_usage(deep=True).sum() / 1024:&gt;11,.0f}{path.stat().st_size / 1024:&gt;9,.0f}"
+          f"  {again.equals(table)}")</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>table              rows  cols  memory KB  file KB  same?
+orders           20,302    11      1,052      267  True
+customers         4,850    12        595      143  True
+products            242    13         45       20  True
+monthly_sales        12     7          1        5  True
+targets              16     3          1        3  True
+sessions          2,400    12        301       55  True
+page_views        9,348     4        465      122  True</code></pre>
+                    </div>
+                    <p>Every table reads back identical, dtypes included. From now on, <code>pd.read_parquet("snapshot/orders.parquet")</code> gives you a correctly typed orders table in one line.</p>
+                </div>
+
+                <div class="card card-success">
+                    <h3>✅ Project Completion Checklist</h3>
+                    <ul class="checklist">
+                        <li><code>orders["order_date"]</code>, <code>customers["signup_date"]</code> and <code>products["launch_date"]</code> are all <code>datetime64</code></li>
+                        <li><code>customers["birth_year"]</code> is <code>Int64</code> and still has its 442 missing values</li>
+                        <li><code>monthly</code> has 12 rows and no <code>Unnamed</code> columns</li>
+                        <li><code>sessions</code> has 2,400 rows and 12 columns with no dots in the names; <code>page_views</code> has 9,348 rows</li>
+                        <li>The <code>snapshot</code> folder holds seven <code>.parquet</code> files</li>
+                        <li>Your verification table says <code>True</code> for every table</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="exercises" class="lesson-section">
+                <h2>🏋️ Hands-on Exercises</h2>
+
+                <p>Each exercise is a small loading job. Check <code>.shape</code> and <code>.dtypes</code> after every load: that is the skill being practiced.</p>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 1: A Slim, Typed Load</h3>
+                    <p>Load only <code>date</code>, <code>store</code>, <code>visitors</code> and <code>revenue</code> from <code>data/daily_sales.csv</code>, with <code>date</code> as a real date. Print the dtypes and the first and last date. How many revenue values are missing, and on which rows?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>usecols</code> and <code>parse_dates</code> together. <code>.isna()</code> gives a mask you can both sum and filter with.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">daily = pd.read_csv(
+    "data/daily_sales.csv",
+    usecols=["date", "store", "visitors", "revenue"],
+    parse_dates=["date"],
+)
+print(daily.dtypes)
+print(daily["date"].min().date(), daily["date"].max().date())
+print(daily["revenue"].isna().sum())
+print(daily[daily["revenue"].isna()].head(3))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>date        datetime64[us]
+store                  str
+visitors             int64
+revenue            float64
+dtype: object
+2024-01-01 2025-12-31
+6
+          date      store  visitors  revenue
+165 2024-02-11       Bend       289      NaN
+184 2024-02-16  Asheville       260      NaN
+567 2024-05-21  Flagstaff       279      NaN</code></pre>
+                        </div>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 2: Both Sheets</h3>
+                    <p>From <code>data/sales_2025.xlsx</code>: (a) load <code>Targets</code> and compute Boise's total target for the year; (b) load <code>Monthly Sales</code> using <code>header=</code> instead of <code>skiprows=</code>, with <code>Month</code> as the index, then print December's row and Boise's total for the year. Did Boise beat its target?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>header</code> counts rows from 0, so the fourth row is <code>header=3</code>. With <code>Month</code> as the index, <code>.loc["Dec"]</code> selects a row by label.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">t = pd.read_excel("data/sales_2025.xlsx", sheet_name="Targets")
+print(t.shape)
+print(t[t["store"] == "Boise"])
+print(t.loc[t["store"] == "Boise", "target_revenue"].sum())
+
+m = pd.read_excel("data/sales_2025.xlsx", sheet_name="Monthly Sales", header=3, index_col="Month")
+print(m.loc["Dec"])
+print(m["Boise"].sum())</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>(16, 3)
+   store quarter  target_revenue
+0  Boise      Q1          757000
+1  Boise      Q2         1001000
+2  Boise      Q3         1138000
+3  Boise      Q4         1067000
+3963000
+Boise        387449
+Bend         255359
+Flagstaff    286876
+Asheville    201331
+Online       130155
+Name: Dec, dtype: int64
+3846407</code></pre>
+                        </div>
+                        <p>Boise sold $3,846,407 against a target of $3,963,000: about 97%, just short.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 3: Questions for the JSON</h3>
+                    <p>Using <code>data/web_sessions.json</code>: (a) how many sessions came from each device type? (b) count the values of <code>utm.medium</code>, including the missing ones; (c) build the page-view table and find the average number of pages per session and the three most viewed paths.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>value_counts(dropna=False)</code> keeps the missing values in the count. Pages per session is one table's length divided by the other's.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">with open("data/web_sessions.json", encoding="utf-8") as f:
+    web = json.load(f)
+
+s = pd.json_normalize(web["sessions"])
+print(s["device.type"].value_counts())
+print(s["utm.medium"].value_counts(dropna=False))
+
+pv = pd.json_normalize(web["sessions"], record_path="pages", meta=["session_id"])
+print(len(pv), round(len(pv) / len(s), 2))
+print(pv["path"].value_counts().head(3))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>device.type
+mobile     1326
+desktop     915
+tablet      159
+Name: count, dtype: int64
+utm.medium
+NaN         916
+organic     601
+cpc         314
+email       224
+social      209
+referral    136
+Name: count, dtype: int64
+9348 3.9
+path
+/           1301
+/cart        543
+/account     362
+Name: count, dtype: int64</code></pre>
+                        </div>
+                        <p>The 916 sessions with no <code>utm</code> information are the largest single group: direct visits. Dropping missing values without looking would have hidden the most common way people arrive.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 4: Counting in Chunks</h3>
+                    <p>Count the orders in each <code>status</code> in <code>data/orders.csv</code> by reading it 5,000 rows at a time, loading only the columns you need. Check your answer against a whole-file <code>value_counts()</code>.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Each chunk's <code>value_counts()</code> is a Series. Two Series add by label, and <code>.add(other, fill_value=0)</code> treats a label missing on one side as 0 instead of producing <code>NaN</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">counts = pd.Series(dtype="int64")
+for chunk in pd.read_csv("data/orders.csv", usecols=["status", "order_total"], chunksize=5_000):
+    counts = counts.add(chunk["status"].value_counts(), fill_value=0)
+
+counts = counts.astype("int64").sort_values(ascending=False)
+print(counts)
+print(pd.read_csv("data/orders.csv")["status"].value_counts())</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>status
+completed    18762
+returned      1143
+cancelled      397
+dtype: int64
+status
+completed    18762
+returned      1143
+cancelled      397
+Name: count, dtype: int64</code></pre>
+                        </div>
+                        <p>This is label alignment from Lesson 2.1 doing useful work: each chunk's counts line up with the running total by status name, whatever order they come in.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 5: What Does a Round Trip Lose? (Stretch)</h3>
+                    <p>Load the first 200 customers with <code>signup_date</code> parsed, <code>birth_year</code> as <code>Int64</code> and <code>loyalty_tier</code> as <code>category</code>. Write them to a CSV and to a Parquet file, read both back with no options, and build a small DataFrame that lists the columns whose dtype changed. Which format returned a table equal to the original?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>df.dtypes.astype(str)</code> is a Series of dtype names indexed by column. Put three of those in a DataFrame and filter the rows where two columns differ.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">sample = pd.read_csv("data/customers.csv", parse_dates=["signup_date"],
+                     dtype={"birth_year": "Int64", "loyalty_tier": "category"}).head(200)
+
+sample.to_csv("roundtrip.csv", index=False)
+sample.to_parquet("roundtrip.parquet")
+
+from_csv = pd.read_csv("roundtrip.csv")
+from_pq = pd.read_parquet("roundtrip.parquet")
+
+compare = pd.DataFrame({"original": sample.dtypes.astype(str),
+                        "after_csv": from_csv.dtypes.astype(str),
+                        "after_parquet": from_pq.dtypes.astype(str)})
+print(compare[compare["original"] != compare["after_csv"]])
+print(from_pq.equals(sample), from_csv.equals(sample))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>                    original after_csv   after_parquet
+signup_date   datetime64[us]       str  datetime64[us]
+birth_year             Int64   float64           Int64
+loyalty_tier        category       str        category
+True False</code></pre>
+                        </div>
+                        <p>CSV lost all three deliberate types. Parquet lost nothing.</p>
+                    </details>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="quiz" class="lesson-section">
+                <h2>🎯 Quick Quiz</h2>
+                <div class="card quiz-container">
+                    <h3>🎯 Check Your Understanding</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> The second row of this small file has an empty <code>amount</code>. What does the code print?</p>
+                        <pre><code class="language-python">qtext = io.StringIO("id,amount\n1,10\n2,\n3,30\n")
+qdf = pd.read_csv(qtext)
+print(qdf["amount"].dtype)</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>float64</code></pre>
+                        </div>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="The values present are whole numbers, but one cell is empty. Can the default integer type store a missing value?">
+                                A) <code>int64</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="The empty cell becomes NaN, and NumPy int64 cannot hold NaN, so pandas reads the column as float64. Asking for the nullable Int64 dtype keeps it as whole numbers.">
+                                B) <code>float64</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="An empty cell is read as a missing value, not as text, so the column stays numeric. Which numeric type can hold NaN?">
+                                C) <code>str</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> A worksheet has a title in row 1, a note in row 2, a blank row 3, and the column names in row 4. Which call reads it correctly?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="nrows limits how many data rows are read. It does not change where pandas looks for the header.">
+                                A) <code>pd.read_excel(path, nrows=4)</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="header counts from 0, so header=4 is the fifth row of the sheet. That would turn the first month of data into column names.">
+                                B) <code>pd.read_excel(path, header=4)</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Skipping the first three rows makes row 4 the first row pandas sees, and it uses that row as the header. header=3 would do the same.">
+                                C) <code>pd.read_excel(path, skiprows=3)</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> In a list of JSON records, some records have a <code>utm</code> dictionary and others have no <code>utm</code> key at all. What does <code>pd.json_normalize(records)</code> do with the records that lack it?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="json_normalize builds the columns from every key it finds in any record and fills NaN where a record does not have that key. In this lesson 916 sessions had NaN in the utm columns.">
+                                A) Keeps them, with <code>NaN</code> in the <code>utm.*</code> columns
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Count the rows in the lesson: 2,400 sessions went in and 2,400 rows came out, although 916 had no utm key.">
+                                B) Drops those records from the result
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="An absent key is a normal way to say missing in JSON, and the function is built to cope with it. What did the output show for session S00001?">
+                                C) Raises a <code>KeyError</code> for the first record without the key
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 4:</strong> You save a table with <code>df.to_csv("out.csv")</code>. A colleague reads it and finds an extra first column named <code>Unnamed: 0</code>. What happened?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="The data columns are intact and correctly named. The extra column holds 0, 1, 2 and so on. Where do those numbers come from?">
+                                A) The file's header row was written twice
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="to_csv writes the index as the first column unless told not to, and the default index has no name. Reading the file back turns it into a column called Unnamed: 0. Write with index=False.">
+                                B) The index was written as a column; <code>index=False</code> prevents it
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Encoding problems garble characters inside values. They do not add a column of row numbers.">
+                                C) The file was saved in the wrong encoding
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 5:</strong> A table with a datetime column and a category column is written to CSV and to Parquet. Read back with no options, only the Parquet version still has those dtypes. Why?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Parquet files are compressed, and that explains their size. It does not explain how the reader knows a column is a date.">
+                                A) Parquet compresses the data, and CSV does not
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="read_csv does infer numbers, but it deliberately does not guess dates or categories. The difference is in what each file contains.">
+                                B) <code>read_parquet</code> is better at guessing types from the values
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="A Parquet file stores a schema, the type of every column, alongside the values, so nothing has to be guessed. A CSV file is plain text and every type must be inferred or supplied again on each load.">
+                                C) A Parquet file stores each column's type with the data; a CSV is only text
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="faq" class="lesson-section">
+                <h2>❓ Common Questions at This Stage</h2>
+
+                <details>
+                    <summary>Can <code>read_csv</code> load a file straight from a web address?</summary>
+                    <p>Yes: pass a URL instead of a path and pandas downloads it, and it reads compressed files (<code>.csv.gz</code>, <code>.zip</code> with one file inside) without unpacking. For anything beyond a public file at a plain URL, such as an API that needs a key or returns JSON in pages, you will want the <code>requests</code> library and the techniques of Module 6.</p>
+                </details>
+                <details>
+                    <summary>Should I use <code>category</code> for every text column?</summary>
+                    <p>No. It pays off when a column has few distinct values relative to its length: status, store, tier. For a column where nearly every value is different (names, email addresses, ids) it saves nothing and can use more memory. A category column also behaves a little differently when you group by it, which <a href="pandas_groupby_operations.html">Lesson 2.4</a> explains. A reasonable rule: load as plain text first, and convert the columns that <code>nunique()</code> shows are repetitive.</p>
+                </details>
+                <details>
+                    <summary>My CSV loads, but one number column is <code>str</code>. How do I find out why?</summary>
+                    <p>One or more values are not numbers: a currency symbol, a thousands separator, a word such as <code>free</code>. <code>pd.to_numeric(df["col"], errors="coerce")</code> converts what it can and turns the rest into <code>NaN</code>, so <code>df[pd.to_numeric(df["col"], errors="coerce").isna()]</code> shows you the offending rows. Fixing them is cleaning, and that is exactly what <a href="pandas_data_cleaning.html">Lesson 2.3</a> is about.</p>
+                </details>
+                <details>
+                    <summary>Is Parquet always better than CSV?</summary>
+                    <p>For your own working files, usually: smaller, faster, and types survive. CSV wins when a person needs to open the file, when another program expects it, or when you want to see changes line by line in version control. Many analysts keep the original CSV exactly as received and work from a Parquet copy.</p>
+                </details>
+
+                <div class="card card-accent">
+                    <h3>🌟 Going Further: Bonus Challenge</h3>
+                    <p>The <code>cart.items</code> column you dropped in the project is a list of dictionaries (<code>sku</code>, <code>qty</code>, <code>unit_price</code>) inside the <code>cart</code> dictionary. Build a table with one row per cart line. <code>record_path</code> accepts a list of keys for a nested path: try <code>record_path=["cart", "items"]</code> with <code>meta=["session_id"]</code>. How many cart lines are there, across how many distinct sessions? Compute <code>qty * unit_price</code> per line and compare one session's total with its <code>cart.value</code>. Then add the result to your snapshot as an eighth Parquet file.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="journal" class="lesson-section">
+                <h2>📓 Learning Journal</h2>
+                <div class="card card-accent">
+                    <p>Take five minutes to write in your learning journal (the <code>journal.md</code> file you started in Lesson 0.1, or a paper notebook). Jot down:</p>
+                    <ul>
+                        <li><strong>Key concepts</strong> you learned today</li>
+                        <li><strong>Techniques that clicked</strong> (and the ones that have not, yet)</li>
+                        <li><strong>Questions or confusion</strong> to come back to</li>
+                        <li><strong>Ideas to try</strong> on your own</li>
+                        <li><strong>Progress and feelings</strong>: how did this lesson go for you?</li>
+                    </ul>
+                    <p><strong>✍️ This lesson's prompt:</strong> Think of a data file you have met in your own life or work (a bank export, a fitness log, a class roster). Which of today's options would it need: a header that is not on the first row, odd dates, a strange separator, text standing in for "missing"? Write the <code>read_...</code> call you would try first.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="summary" class="lesson-section">
+                <h2>📝 Lesson Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎓 Key Takeaways</h3>
+                    <ul>
+                        <li>Loading is translation: a text file carries no types, so you brief the reader and <strong>check the result</strong> (<code>shape</code>, <code>dtypes</code>, <code>head()</code>) every time</li>
+                        <li>The <code>read_csv</code> options that earn their keep: <code>parse_dates</code>, <code>usecols</code>, <code>dtype</code>, <code>index_col</code>, <code>nrows</code>, <code>na_values</code>, <code>sep</code>, <code>skiprows</code>, <code>encoding</code></li>
+                        <li>Dates stay text unless you parse them; <code>"Int64"</code> keeps whole numbers whole when some are missing; <code>"category"</code> shrinks repetitive text</li>
+                        <li><code>Unnamed</code> columns mean the header is not where pandas looked: use <code>skiprows</code> or <code>header</code></li>
+                        <li>Nested JSON: <code>json.load</code>, find the list of records, <code>pd.json_normalize</code>; use <code>record_path</code> and <code>meta</code> for lists inside records; absent keys become <code>NaN</code></li>
+                        <li>For big files: peek, load fewer columns, use smaller dtypes, then <code>chunksize</code></li>
+                        <li>Write with <code>index=False</code>; CSV forgets types, <strong>Parquet remembers them</strong></li>
+                    </ul>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🏆 What You've Accomplished</h3>
+                    <ul>
+                        <li>You loaded the same orders file four different ways and can say what each option bought you</li>
+                        <li>You rescued a spreadsheet whose header was on row 4</li>
+                        <li>You turned a nested JSON file into two linked tables</li>
+                        <li>You cut a table's memory use by three quarters and processed a file in chunks</li>
+                        <li>You built and verified a typed snapshot of seven tables from three formats</li>
+                    </ul>
+                </div>
+
+                <h3>🔭 Looking Ahead</h3>
+                <p>In <a href="pandas_data_cleaning.html"><strong>Lesson 2.3: Cleaning Data</strong></a> the file fights back. <code>orders_messy.csv</code> has untidy headers, duplicate rows, dates in three formats, misspelled store names and totals written as <code>$1,249.00</code>. You will audit it, fix it step by step, and prove with a before-and-after report that the result is right.</p>
+
+                <h3>📋 Before the Next Lesson</h3>
+                <ul>
+                    <li>Keep your <code>snapshot</code> folder. It is a convenient way to start any later analysis of your own.</li>
+                    <li>Peek at the next lesson's file: <code>pd.read_csv("data/orders_messy.csv", nrows=8)</code>. Print <code>.columns.tolist()</code> and look closely at the names. What do you notice?</li>
+                    <li>Print its <code>.dtypes</code> too. Which columns should be numbers but are not?</li>
+                </ul>
+
+                <div class="card card-accent">
+                    <h3>🌱 Encouragement for the Journey</h3>
+                    <p>Loading is unglamorous, and you just gave it your full attention anyway. That is a professional instinct. People who check their dtypes after every load make fewer mistakes for the rest of their careers than people who do not, and nobody ever sees the bugs that never happened. You do not need to memorize the options: you need to remember that they exist, and you now do.</p>
+                </div>
+            </section>
+
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="pandas_dataframes_series.html" class="prev-lesson">← Previous: DataFrames and Series</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="pandas_data_cleaning.html" class="next-lesson">Next: Cleaning Data →</a>
+            </nav>
         </div>
+    </main>
 
-        <div class="loading-visualization">
-            <h2>📚 Quick Reference Guide</h2>
-            <div class="mermaid">
-                graph TD
-                    A[Choose Read Function] --> B{File Type?}
-                    
-                    B -->|Text/CSV| C[pd.read_csv]
-                    B -->|Excel| D[pd.read_excel]
-                    B -->|JSON| E[pd.read_json]
-                    B -->|SQL| F[pd.read_sql]
-                    B -->|HTML| G[pd.read_html]
-                    
-                    C --> H[Common Parameters]
-                    D --> H
-                    E --> H
-                    F --> H
-                    G --> H
-                    
-                    H --> I[sep/delimiter]
-                    H --> J[header/names]
-                    H --> K[index_col]
-                    H --> L[usecols]
-                    H --> M[dtype]
-                    H --> N[parse_dates]
-                    H --> O[na_values]
-                    H --> P[encoding]
-                    
-                    style A fill:#f9f,stroke:#333,stroke-width:2px
-                    style B fill:#99f,stroke:#333,stroke-width:2px
-                    style H fill:#9f9,stroke:#333,stroke-width:2px
-            </div>
-        </div>
-
-        <div class="tip-box">
-            <h3>🚀 Pro Tips</h3>
-            <ul>
-                <li><strong>Always inspect your data after loading:</strong> Use <code>df.head()</code>, <code>df.info()</code>, and <code>df.describe()</code></li>
-                <li><strong>Set index wisely:</strong> Choose a unique identifier as index for faster operations</li>
-                <li><strong>Handle dates early:</strong> Parse dates during loading, not after</li>
-                <li><strong>Use compression:</strong> Pandas can read compressed files directly (<code>.gz</code>, <code>.zip</code>, <code>.bz2</code>)</li>
-                <li><strong>Profile your loading:</strong> Use <code>%%time</code> in Jupyter to measure loading performance</li>
-            </ul>
-        </div>
-
-    <!-- Learning Journal (REQUIRED per the Courseware Authoring Standard) -->
-    <section id="journal" class="lesson-section">
-        <h2>📓 Learning Journal</h2>
-        <div class="card card-info">
-            <p>Keep a learning journal — digital or physical. After this lesson, take a few minutes to write down:</p>
-            <ul>
-                <li><strong>Key concepts</strong> you learned</li>
-                <li><strong>Techniques that clicked</strong> for you</li>
-                <li><strong>Questions or confusion points</strong> to revisit</li>
-                <li><strong>Ideas you want to try</strong></li>
-                <li><strong>Your progress and feelings</strong> about learning this</li>
-            </ul>
-            <p><strong>✍️ This lesson's prompt:</strong> Data rarely arrives in one tidy format. Which source type (CSV, Excel, JSON, or SQL) do you expect to work with most, and what one parameter or option from this lesson do you most want to remember when you load it?</p>
-        </div>
-    </section>
-
-    <!-- Lesson Summary (full standard block) -->
-    <section id="summary" class="lesson-section">
-        <h2>📝 Lesson Summary</h2>
-        <div class="card card-success">
-            <h3>🎓 Key Takeaways</h3>
-            <ul>
-                <li>Pandas offers a dedicated <code>read_*</code> function for each format — <code>read_csv</code>, <code>read_excel</code>, <code>read_json</code>, <code>read_sql</code>, <code>read_html</code> — that all return a DataFrame.</li>
-                <li>The right parameters at load time (dates, dtypes, index, encoding) save you cleaning work later.</li>
-                <li>Large files don't require huge memory — read them in chunks or downcast dtypes as you go.</li>
-                <li>Always inspect with <code>head()</code>, <code>info()</code>, and <code>describe()</code> immediately after loading.</li>
-            </ul>
-        </div>
-        <h3>🎉 What You've Accomplished</h3>
-        <p>You can now pull data into pandas from CSV, Excel, JSON, and SQL sources, tune how it's parsed, and combine several sources into a single working dataset — the essential first step of every analysis.</p>
-        <h3>❓ Common Questions at This Stage</h3>
-        <details>
-            <summary>My CSV shows garbled characters — what went wrong?</summary>
-            <p>That's almost always an encoding mismatch. Try <code>encoding='utf-8'</code>, and if that fails, <code>encoding='latin-1'</code>. Files exported from Excel on Windows sometimes need <code>encoding='cp1252'</code>.</p>
-        </details>
-        <details>
-            <summary>Why do my leading zeros disappear from IDs like "00123"?</summary>
-            <p>Pandas infers those columns as integers and drops the zeros. Force them to stay as text with <code>dtype={'id_column': str}</code> when you read the file.</p>
-        </details>
-        <details>
-            <summary>The file is too big to fit in memory. What do I do?</summary>
-            <p>Read it in pieces with <code>chunksize</code> and aggregate each chunk, load only the columns you need with <code>usecols</code>, or downcast numeric columns to smaller dtypes. For truly massive data, tools like Dask extend the pandas API.</p>
-        </details>
-        <h3>🔭 Looking Ahead</h3>
-        <p>Loading is only step one — real datasets arrive messy. Next you'll learn to detect and fix missing values, duplicates, wrong types, and outliers so your data is ready for analysis.</p>
-        <h3>✅ Before the Next Lesson</h3>
-        <ul>
-            <li>Load the same dataset from two different formats (e.g. export a CSV as Excel) and confirm you get an identical DataFrame.</li>
-            <li>Practice reading one file with <code>parse_dates</code> and a custom <code>dtype</code> map, then check the result with <code>df.info()</code>.</li>
-            <li>Write your Learning Journal entry for this lesson</li>
-        </ul>
-        <div class="card card-accent" style="text-align: center; padding: 2rem;">
-            <h3>🌟 Encouragement for the Journey</h3>
-            <p>Every great analysis starts with getting the data in the door. You now hold the keys to almost any data source you'll meet — that's a genuinely powerful skill. Onward!</p>
-        </div>
-    </section>
-
-        <div class="navigation">
-            <a href="pandas_dataframes_series.html" class="nav-button prev">← DataFrames and Series</a>
-            <a href="pandas_data_cleaning.html" class="nav-button">Data Cleaning and Preprocessing →</a>
-        </div>
-    </div>
-
-    <!-- Footer -->
     <footer class="site-footer">
         <p>&copy; 2026 Ray de la Paz. Python Data Science. All rights reserved.</p>
         <div class="footer-links">
@@ -627,107 +1407,10 @@ print(f"Data sources integrated successfully!")</code></pre>
             <a href="https://rays-home.netlify.app/contact">Contact</a>
             <a href="#" id="print-button">Print Page</a>
         </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
     </footer>
 
-    <script>
-        function simulateDataLoading() {
-            const canvas = document.getElementById('loaderCanvas');
-            const ctx = canvas.getContext('2d');
-            
-            // Clear canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Data sources
-            const sources = [
-                { name: 'CSV', color: '#10b981', icon: '📄', time: 1000 },
-                { name: 'Excel', color: '#3b82f6', icon: '📊', time: 1500 },
-                { name: 'JSON', color: '#f59e0b', icon: '🔗', time: 800 },
-                { name: 'SQL', color: '#8b5cf6', icon: '🗄️', time: 2000 }
-            ];
-            
-            let currentSource = 0;
-            const startX = 100;
-            const startY = 200;
-            const endX = 600;
-            
-            function animateSource(index) {
-                if (index >= sources.length) {
-                    // Show completion message
-                    ctx.fillStyle = '#10b981';
-                    ctx.font = 'bold 24px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.fillText('✅ All Data Loaded Successfully!', canvas.width / 2, 350);
-                    return;
-                }
-                
-                const source = sources[index];
-                let progress = 0;
-                
-                const interval = setInterval(() => {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    
-                    // Draw previous completed sources
-                    for (let i = 0; i < index; i++) {
-                        const y = 50 + i * 70;
-                        ctx.fillStyle = sources[i].color;
-                        ctx.font = '20px Arial';
-                        ctx.fillText(`${sources[i].icon} ${sources[i].name}`, startX, y);
-                        
-                        // Draw completed progress bar
-                        ctx.fillStyle = sources[i].color;
-                        ctx.fillRect(startX + 100, y - 15, endX - startX - 100, 10);
-                        
-                        // Draw DataFrame icon
-                        ctx.font = '24px Arial';
-                        ctx.fillText('📊', endX + 20, y);
-                    }
-                    
-                    // Draw current source
-                    const y = 50 + index * 70;
-                    ctx.fillStyle = source.color;
-                    ctx.font = '20px Arial';
-                    ctx.fillText(`${source.icon} ${source.name}`, startX, y);
-                    
-                    // Draw progress bar
-                    ctx.strokeStyle = source.color;
-                    ctx.strokeRect(startX + 100, y - 15, endX - startX - 100, 10);
-                    ctx.fillStyle = source.color;
-                    ctx.fillRect(startX + 100, y - 15, (endX - startX - 100) * progress, 10);
-                    
-                    // Draw loading percentage
-                    ctx.fillStyle = '#333';
-                    ctx.font = '14px Arial';
-                    ctx.fillText(`${Math.round(progress * 100)}%`, startX + 300, y + 20);
-                    
-                    // Draw data flow animation
-                    if (progress > 0.5) {
-                        ctx.font = '24px Arial';
-                        ctx.globalAlpha = (progress - 0.5) * 2;
-                        ctx.fillText('📊', endX + 20, y);
-                        ctx.globalAlpha = 1;
-                    }
-                    
-                    progress += 0.02;
-                    
-                    if (progress >= 1) {
-                        clearInterval(interval);
-                        setTimeout(() => animateSource(index + 1), 500);
-                    }
-                }, source.time / 50);
-            }
-            
-            // Draw title
-            ctx.fillStyle = '#333';
-            ctx.font = 'bold 20px Arial';
-            ctx.textAlign = 'left';
-            ctx.fillText('Loading Data from Multiple Sources', 20, 30);
-            
-            // Start animation
-            animateSource(0);
-        }
-        
-        // Auto-play simulation on load
-        setTimeout(simulateDataLoading, 1000);
-    </script>
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
 </body>
 </html>

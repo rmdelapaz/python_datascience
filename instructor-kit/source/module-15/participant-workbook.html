@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Participant Workbook: Session 15</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Student workbook —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">write in it · bring it to every session</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Participant Workbook</div>
+    <h1>Session 15: SQL Windows and Query Speed</h1>
+    <p class="sub">Your notes, worked examples, labs and self-check for window functions and query speed.</p>
+    <div class="meta-row">
+      <span class="chip">Lessons <b>5.3–5.4</b></span>
+      <span class="chip">Session <b>15</b> · 3 hours</span>
+      <span class="chip">Name: ____________________</span>
+    </div>
+  </header>
+
+  <div class="sec"><h2>Session Goals</h2><span class="rule"></span></div>
+<p>Today finishes the SQL half of Module 5. By the end of the session you will have:</p><ul class="tick">
+  <li>put group averages, shares, ranks, running totals and moving averages on every row, without losing the rows;</li>
+  <li>picked the top N rows of every group with the three-step recipe;</li>
+  <li>compared each row with the one before it, within its own series;</li>
+  <li>read the engine's plan for a query, added an index, and shown its effect on the plan and on a fair timing;</li>
+  <li>seen the cases where an index cannot help, and replaced a loop of queries with one;</li>
+  <li>checked every answer by a second route: pandas, or a number you already knew.</li>
+</ul>  <div class="note"><div class="t">Three questions for every window</div>
+    <p><b>Partition:</b> which rows belong together? <b>Order:</b> in what order, and is it unique? <b>Frame:</b> how many of those rows does the function look at? Say them before you type the OVER.</p>
+  </div>
+
+  <div class="sec"><h2>Lessons</h2><span class="rule"></span></div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">5.3</span><h3>SQL Window Functions</h3></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Key ideas</div>
+<ul class="tick">
+  <li><b>A window function computes over a set of related rows and keeps every row;</b> GROUP BY collapses them. Any aggregate becomes a window function with <code class="inline">OVER (...)</code>.</li>
+  <li><b><code class="inline">OVER (PARTITION BY ... ORDER BY ... ROWS BETWEEN ...)</code></b>: which rows belong together, in what order, and how many of them to look at. An empty <code class="inline">OVER ()</code> is one window holding every row.</li>
+  <li><b><code class="inline">ROW_NUMBER</code>, <code class="inline">RANK</code>, <code class="inline">DENSE_RANK</code></b> differ only in ties: 1, 2, 3, 4 · 1, 1, 3, 4 · 1, 1, 2, 3.</li>
+  <li><b>Top N per group:</b> number the rows in a CTE, then filter outside it. WHERE runs before window functions exist.</li>
+  <li><b><code class="inline">LAG</code> and <code class="inline">LEAD</code></b> read the previous and next row. Partition by the series, or one series reads another's rows.</li>
+  <li><b>Running totals and moving averages need an explicit <code class="inline">ROWS</code> frame.</b> The default frame treats rows that tie in the order as one.</li>
+  <li><b>SQL uses partial frames</b> at the start of a series; pandas <code class="inline">rolling</code> gives NaN there unless <code class="inline">min_periods=1</code>. A frame ending at <code class="inline">1 PRECEDING</code> never sees the current row.</li>
+  <li><b>End every window's ORDER BY with a unique column</b> so results are the same every run.</li>
+</ul>
+      </div>
+      <div class="blk"><div class="h">Window functions and their pandas twins</div>
+<table class="rubric"><thead><tr><th>Need</th><th>SQL</th><th>pandas</th></tr></thead><tbody>
+<tr><td>Group value on every row</td><td><code class="inline">AVG(x) OVER (PARTITION BY g)</code></td><td><code class="inline">groupby("g")["x"].transform("mean")</code></td></tr>
+<tr><td>Number or rank rows</td><td><code class="inline">ROW_NUMBER(), RANK(), DENSE_RANK()</code></td><td><code class="inline">rank(method="first" / "min" / "dense")</code></td></tr>
+<tr><td>Previous or next row</td><td><code class="inline">LAG(x), LEAD(x)</code></td><td><code class="inline">shift(1), shift(-1)</code></td></tr>
+<tr><td>Running total</td><td><code class="inline">SUM(x) OVER (ORDER BY t ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)</code></td><td><code class="inline">cumsum()</code></td></tr>
+<tr><td>Moving average</td><td><code class="inline">AVG(x) OVER (ORDER BY t ROWS BETWEEN 2 PRECEDING AND CURRENT ROW)</code></td><td><code class="inline">rolling(3, min_periods=1).mean()</code></td></tr>
+<tr><td>Earlier rows only (no leakage)</td><td><code class="inline">... ROWS BETWEEN 3 PRECEDING AND 1 PRECEDING</code></td><td><code class="inline">shift(1).rolling(3, min_periods=1)</code></td></tr>
+<tr><td>Equal-sized buckets</td><td><code class="inline">NTILE(4) OVER (ORDER BY x)</code></td><td><code class="inline">pd.qcut(x, 4)</code></td></tr>
+<tr><td>Share of group</td><td><code class="inline">x / SUM(x) OVER (PARTITION BY g)</code></td><td><code class="inline">x / groupby("g")["x"].transform("sum")</code></td></tr>
+</tbody></table>
+      </div>
+      <div class="blk"><div class="h">Worked example: each store's weakest month, and how weak it was</div>
+<p>Store managers ask: "Which month was our worst, and how far below our own average was it?" That is a bottom-1 per group (ROW_NUMBER ordered by revenue ascending) and a group average on the same row. (<code class="inline">conn</code> and <code class="inline">show</code> are the lesson's read-only connection and helper.)</p><pre class="code">show(<span class="s">"""
+    WITH store_month AS (
+        SELECT store, strftime('%Y-%m', order_date) AS month,
+               ROUND(SUM(order_total), 2) AS revenue
+        FROM orders
+        WHERE status = 'completed' AND store &lt;&gt; 'Online'
+        GROUP BY store, month
+    ),
+    ranked AS (
+        SELECT store, month, revenue,
+               ROW_NUMBER() OVER (PARTITION BY store ORDER BY revenue, month) AS rn,
+               ROUND(AVG(revenue) OVER (PARTITION BY store), 2) AS store_avg
+        FROM store_month
+    )
+    SELECT store, month AS weakest_month, revenue, store_avg,
+           ROUND(100.0 * revenue / store_avg, 1) AS pct_of_avg
+    FROM ranked
+    WHERE rn = 1
+    ORDER BY store
+"""</span>)</pre><pre class="out">    store weakest_month  revenue  store_avg  pct_of_avg
+Asheville       2025-07  5754.39    9907.47        58.1
+     Bend       2025-02  6874.57   11857.30        58.0
+    Boise       2024-01 11237.18   18474.45        60.8
+Flagstaff       2024-01  6660.61   12524.18        53.2</pre><p><b>Reading it.</b> Each store's weakest month ran at 53% to 61% of that store's own monthly average. Three of the four are in January or February; Asheville's is July 2025. Ordering by <code class="inline">revenue, month</code> makes the choice unique even if two months tied. The average and the rank sit on the same row because both are windows over the same partition; with GROUP BY you would have needed two queries and a join.</p>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab</div>
+<p>Open <code class="inline">labs/module-15/l5_3-sql-window-functions/staff_rankings_starter.py</code>: the people team wants each employee compared with their location (average, share of payroll, rank) and the top two earners at every location. You finish with the same answers in pandas.</p><p>Then <code class="inline">labs/module-15/l5_3-sql-window-functions/silver_milestone_starter.py</code>: on which order does a customer's completed spend cross the $600 Silver line? A running total per customer, the first row that meets a condition, and a check against the customer table.</p><p>At home: <code class="inline">labs/module-15/l5_3-sql-window-functions/weekly_trend_starter.py</code> follows online orders week by week with two frames and finds the weeks that beat their own recent past.</p>
+      </div>
+      <div class="blk"><div class="h">Predict, then run</div>
+<p>Write your prediction first, then run it. <code class="inline">MONTHLY</code> is the lesson's CTE string of monthly completed revenue.</p><div class="q"><div class="qn">P1</div><div class="qt">24 months. How many have a value twelve months earlier?</div><pre class="code">show(MONTHLY + <span class="s">"""
+    , lagged AS (
+        SELECT month, LAG(revenue, 12) OVER (ORDER BY month) AS year_before
+        FROM monthly
+    )
+    SELECT COUNT(*) AS months, COUNT(year_before) AS with_a_year_before
+    FROM lagged
+"""</span>)</pre><div class="write"></div></div>
+<div class="q"><div class="qn">P2</div><div class="qt">Seven rows into three buckets. Which bucket gets the extra row?</div><pre class="code">show(<span class="s">"""
+    SELECT NTILE(3) OVER (ORDER BY v) AS bucket, v
+    FROM (SELECT 1 AS v UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4
+          UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7)
+"""</span>)</pre><div class="write"></div></div>
+<div class="q"><div class="qn">P3</div><div class="qt">LAST_VALUE with the default frame. What is in the last_value column for the first two months?</div><pre class="code">show(MONTHLY + <span class="s">"""
+    SELECT month, revenue,
+           LAST_VALUE(revenue) OVER (ORDER BY month) AS last_value
+    FROM monthly
+    ORDER BY month
+    LIMIT 2
+"""</span>)</pre><div class="write"></div></div>
+      </div>
+      <div class="blk"><div class="h">Notes</div>
+<div class="notes-lines"></div>
+      </div>
+      <div class="blk"><div class="h">Self-check (do these at home, without notes first)</div>
+<div class="q" data-sc="1"><div class="qn">Q1</div><div class="qt">Which pandas line gives the same column as <code class="inline">SUM(order_total) OVER (PARTITION BY store)</code>, one value on every order row?</div><div class="opts"><div class="opt">A) <code class="inline">orders.groupby("store")["order_total"].sum()</code></div><div class="opt">B) <code class="inline">orders.groupby("store")["order_total"].transform("sum")</code></div><div class="opt">C) <code class="inline">orders["order_total"].cumsum()</code></div><div class="opt">D) <code class="inline">orders["order_total"].rolling(5).sum()</code></div></div></div>
+<div class="q" data-sc="2" data-kind="short"><div class="qn">Q2</div><div class="qt">What does this print?</div><pre class="code">rows = conn.execute(<span class="s">"""
+    SELECT v, ROW_NUMBER() OVER (ORDER BY v DESC, id),
+           RANK() OVER (ORDER BY v DESC), DENSE_RANK() OVER (ORDER BY v DESC)
+    FROM (SELECT 1 AS id, 50 AS v UNION ALL SELECT 2, 70
+          UNION ALL SELECT 3, 50 UNION ALL SELECT 4, 40)
+    ORDER BY v DESC, id
+"""</span>).fetchall()
+print(rows[-<span class="s">1</span>])</pre><div class="write"></div></div>
+<div class="q" data-sc="3"><div class="qn">Q3</div><div class="qt"><code class="inline">SELECT ... ROW_NUMBER() OVER (PARTITION BY category ORDER BY revenue DESC) AS rn FROM ... WHERE rn &lt;= 2</code> fails. Why, and what is the fix?</div><div class="opts"><div class="opt">A) WHERE runs before window functions are computed; compute <code class="inline">rn</code> in a CTE and filter it in the outer query</div><div class="opt">B) ROW_NUMBER needs a ROWS BETWEEN frame; add one</div><div class="opt">C) <code class="inline">rn</code> is a reserved word; rename it</div><div class="opt">D) PARTITION BY cannot be combined with ORDER BY; remove the partition</div></div></div>
+<div class="q" data-sc="4"><div class="qn">Q4</div><div class="qt">Which frame averages the three months <b>before</b> the current one, without the current month (no leakage)?</div><div class="opts"><div class="opt">A) <code class="inline">ROWS BETWEEN 2 PRECEDING AND CURRENT ROW</code></div><div class="opt">B) <code class="inline">ROWS BETWEEN 3 PRECEDING AND 1 PRECEDING</code></div><div class="opt">C) <code class="inline">ROWS BETWEEN 3 PRECEDING AND CURRENT ROW</code></div><div class="opt">D) <code class="inline">ROWS BETWEEN 1 FOLLOWING AND 3 FOLLOWING</code></div></div></div>
+<div class="q" data-sc="5" data-kind="short"><div class="qn">Q5</div><div class="qt">What does this print? (Two rows share d = 1.)</div><pre class="code">sql = <span class="s">"""SELECT d, x, SUM(x) OVER (ORDER BY d)
+         FROM (SELECT 1 AS d, 10 AS x UNION ALL SELECT 1, 20
+               UNION ALL SELECT 2, 5)
+         ORDER BY d, x"""</span>
+print([row[<span class="s">2</span>] <span class="k">for</span> row <span class="k">in</span> conn.execute(sql)])</pre><div class="write"></div></div>
+<div class="q" data-sc="6"><div class="qn">Q6</div><div class="qt">A SQL column is <code class="inline">AVG(revenue) OVER (ORDER BY month ROWS BETWEEN 3 PRECEDING AND CURRENT ROW)</code>. A colleague computes <code class="inline">df["revenue"].rolling(4).mean()</code>. Where do they disagree?</div><div class="opts"><div class="opt">A) On every row: SQL counts rows, pandas counts days</div><div class="opt">B) Nowhere: the two are identical</div><div class="opt">C) Only on the last row, because SQL has no following rows</div><div class="opt">D) On the first three rows: SQL averages the rows that exist, pandas gives NaN until four rows exist</div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">5.4</span><h3>Query Optimization</h3></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Key ideas</div>
+<ul class="tick">
+  <li><b>SQL is declarative:</b> you say what you want; the planner chooses how. <code class="inline">EXPLAIN QUERY PLAN</code> shows its choice without running the query.</li>
+  <li><b>SCAN reads every row; SEARCH jumps.</b> A scan is fine when you need most of the table, and a problem when you wanted a few rows.</li>
+  <li><b>An index is a sorted copy of some columns</b> plus a pointer to each row. Primary keys are indexed automatically; foreign keys and filter columns usually are not.</li>
+  <li><b>Joins run as nested loops.</b> The inner step runs once per outer row, so it should be a SEARCH. The planner chooses the table order, not your FROM clause.</li>
+  <li><b>Composite indexes follow the leftmost-prefix rule:</b> (a, b) serves a, or a and b, but not b alone. Equality columns first, the range or sort last. A covering index answers without opening the table.</li>
+  <li><b>An index cannot help</b> when the column is inside a function or arithmetic, a pattern starts with <code class="inline">%</code>, most rows match, or the table is tiny.</li>
+  <li><b><code class="inline">ANALYZE</code></b> gives the planner statistics. <b>Every index costs</b> write speed and file size.</li>
+  <li><b>Measure properly:</b> best of several runs, plan before and after, identical results. Work on a copy; open it with <code class="inline">cached_statements=0</code> when you drop indexes and re-plan.</li>
+  <li><b>Ask for less:</b> name your columns, aggregate in SQL, and send one query instead of a loop of queries.</li>
+</ul>
+      </div>
+      <div class="blk"><div class="h">Reading a plan</div>
+<table class="rubric"><thead><tr><th>The plan says</th><th>It means</th><th>Cost grows with</th></tr></thead><tbody>
+<tr><td><code class="inline">SCAN t</code></td><td>Read every row and test each one</td><td>the size of the table</td></tr>
+<tr><td><code class="inline">SEARCH t USING INTEGER PRIMARY KEY (rowid=?)</code></td><td>Jump straight to the row</td><td>almost nothing</td></tr>
+<tr><td><code class="inline">SEARCH t USING INDEX i (col=?)</code></td><td>Find entries in the index, then fetch those rows</td><td>the number of matching rows</td></tr>
+<tr><td><code class="inline">SEARCH t USING COVERING INDEX i (...)</code></td><td>The index alone answers; the table is not touched</td><td>the number of matching rows</td></tr>
+<tr><td><code class="inline">SCAN t USING (COVERING) INDEX i</code></td><td>Still reads everything, but through the index</td><td>the size of the table</td></tr>
+<tr><td><code class="inline">USE TEMP B-TREE FOR ORDER BY</code></td><td>A separate sorting step</td><td>the number of rows sorted</td></tr>
+</tbody></table>
+      </div>
+      <div class="blk"><div class="h">Worked example: should the product lookup get an index?</div>
+<p>The shop's search box filters products by brand and price. One composite index, the plan before and after, and a fair timing. <code class="inline">NOT INDEXED</code> tells SQLite to ignore indexes, so the "without" timing runs on the same connection. (<code class="inline">conn</code>, <code class="inline">plan</code> and <code class="inline">timed</code> are the lesson's, on the working copy.)</p><pre class="code">LOOKUP = <span class="s">"SELECT name, price FROM products WHERE brand = ? AND price &lt; ?"</span>
+plan(LOOKUP, (<span class="s">"Tallgrass"</span>, <span class="s">50</span>))
+conn.execute(<span class="s">"CREATE INDEX IF NOT EXISTS idx_products_brand_price "</span>
+             <span class="s">"ON products (brand, price)"</span>)
+conn.commit()
+plan(LOOKUP, (<span class="s">"Tallgrass"</span>, <span class="s">50</span>))
+print(<span class="s">"rows:"</span>, len(conn.execute(LOOKUP, (<span class="s">"Tallgrass"</span>, <span class="s">50</span>)).fetchall()), <span class="s">"of"</span>,
+      conn.execute(<span class="s">"SELECT COUNT(*) FROM products"</span>).fetchone()[<span class="s">0</span>], <span class="s">"products"</span>)
+NO_INDEX = <span class="s">"SELECT name, price FROM products NOT INDEXED WHERE brand = ? AND price &lt; ?"</span>
+t_without = timed(NO_INDEX, [(<span class="s">"Tallgrass"</span>, <span class="s">50</span>)] * <span class="s">500</span>)
+t_with = timed(LOOKUP, [(<span class="s">"Tallgrass"</span>, <span class="s">50</span>)] * <span class="s">500</span>)
+print(<span class="s">f"500 lookups: {t_without:.1f} ms without the index, {t_with:.1f} ms with it"</span>)
+conn.execute(<span class="s">"DROP INDEX idx_products_brand_price"</span>)
+conn.commit()</pre><pre class="out">    SCAN products
+    SEARCH products USING INDEX idx_products_brand_price (brand=? AND price&lt;?)
+rows: 11 of 242 products
+500 lookups: 7.4 ms without the index, 4.5 ms with it</pre><p><b>Reading it.</b> The plan changed from SCAN to SEARCH, and 500 lookups got a few milliseconds faster in total (your numbers will differ). With 242 products the whole table fits in a few pages: scanning it is nearly as fast as any index, and a few milliseconds over 500 searches is nothing a shop page would notice. This is the fourth case in "When an Index Does Not Help": a small table. The honest recommendation is <b>no index</b>, and the cell drops it again.</p>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab</div>
+<p>Open <code class="inline">labs/module-15/l5_4-query-optimization/customer_lookup_plans_starter.py</code>: a support screen finds customers by state and city. Predict three plans, add one composite index, read the plans again, add a column that removes a sort, and drop everything to confirm the plan goes back. The lab works on a copy of the database.</p><p>Then <code class="inline">labs/module-15/l5_4-query-optimization/n_plus_one_starter.py</code>: a script runs one query per customer for 300 customers. Read its plan, time it, replace the loop with one grouped query, and prove the answers are identical.</p>
+      </div>
+      <div class="blk"><div class="h">Predict, then run</div>
+<p>Write SCAN or SEARCH (and which index) first, then run it on the working copy from the demo.</p><div class="q"><div class="qn">P1</div><div class="qt">A filter on <code class="inline">sku</code> in <code class="inline">order_items</code>, with no index on <code class="inline">sku</code>. SCAN or SEARCH?</div><pre class="code">plan(<span class="s">"SELECT * FROM order_items WHERE sku = ?"</span>, (<span class="s">"TNT-1001"</span>,))</pre><div class="write"></div></div>
+<div class="q"><div class="qn">P2</div><div class="qt">A pattern that starts with <code class="inline">%</code>, on a table with only its primary key indexed. SCAN or SEARCH?</div><pre class="code">plan(<span class="s">"SELECT sku FROM products WHERE name LIKE ?"</span>, (<span class="s">"%Tent%"</span>,))</pre><div class="write"></div></div>
+<div class="q"><div class="qn">P3</div><div class="qt">After the demo's index on <code class="inline">orders(customer_id)</code>: one customer's orders, sorted by date. How many plan lines?</div><pre class="code">plan(<span class="s">"SELECT * FROM orders WHERE customer_id = ? ORDER BY order_date"</span>, (<span class="s">12673</span>,))</pre><div class="write"></div></div>
+      </div>
+      <div class="blk"><div class="h">Notes</div>
+<div class="notes-lines"></div>
+      </div>
+      <div class="blk"><div class="h">Self-check (do these at home, without notes first)</div>
+<div class="q" data-sc="7"><div class="qn">Q7</div><div class="qt">Which plan line means the engine answered from the index alone and never opened the table?</div><div class="opts"><div class="opt">A) <code class="inline">SCAN orders</code></div><div class="opt">B) <code class="inline">SEARCH orders USING INDEX idx_orders_store_date (store=?)</code></div><div class="opt">C) <code class="inline">SEARCH orders USING COVERING INDEX idx_orders_store_date_total (store=? AND order_date&gt;? AND order_date&lt;?)</code></div><div class="opt">D) <code class="inline">USE TEMP B-TREE FOR ORDER BY</code></div></div></div>
+<div class="q" data-sc="8"><div class="qn">Q8</div><div class="qt"><code class="inline">orders</code> has an index on <code class="inline">(store, order_date)</code> and no other. Which filter can NOT seek in it?</div><div class="opts"><div class="opt">A) <code class="inline">WHERE order_date = '2025-07-04'</code></div><div class="opt">B) <code class="inline">WHERE store = 'Bend'</code></div><div class="opt">C) <code class="inline">WHERE store = 'Bend' AND order_date = '2025-07-04'</code></div><div class="opt">D) <code class="inline">WHERE store = 'Bend' AND order_date &gt;= '2025-07-01'</code></div></div></div>
+<div class="q" data-sc="9"><div class="qn">Q9</div><div class="qt">After <code class="inline">DROP INDEX</code>, you run the same <code class="inline">EXPLAIN QUERY PLAN</code> text again on the same connection and it still names the dropped index. What is going on?</div><div class="opts"><div class="opt">A) The DROP did not happen until you commit</div><div class="opt">B) SQLite keeps dropped indexes until VACUUM</div><div class="opt">C) Python's sqlite3 reused its cached prepared statement, planned while the index existed; connect with <code class="inline">cached_statements=0</code> or open a new connection</div><div class="opt">D) EXPLAIN QUERY PLAN always shows the plan from the first time a query ran</div></div></div>
+<div class="q" data-sc="10" data-kind="short"><div class="qn">Q10</div><div class="qt">What does this print?</div><pre class="code">conn = sqlite3.connect(<span class="s">":memory:"</span>)
+conn.execute(<span class="s">"CREATE TABLE t (a INTEGER, b TEXT)"</span>)
+conn.execute(<span class="s">"CREATE INDEX idx_t_a ON t (a)"</span>)
+sql = <span class="s">"EXPLAIN QUERY PLAN SELECT * FROM t WHERE a + 0 = 5"</span>
+print(conn.execute(sql).fetchone()[<span class="s">3</span>])</pre><div class="write"></div></div>
+<div class="q" data-sc="11"><div class="qn">Q11</div><div class="qt">A table receives thousands of inserts a minute and has nine indexes, most added "to be safe". What does each extra index cost?</div><div class="opts"><div class="opt">A) Nothing: indexes only affect reads</div><div class="opt">B) Wrong query results when two indexes cover the same column</div><div class="opt">C) A full table scan on every SELECT</div><div class="opt">D) Slower inserts and a larger file, because every index is a sorted copy that must be kept up to date</div></div></div>
+<div class="q" data-sc="12"><div class="qn">Q12</div><div class="qt">Before adding an index a query took 12 ms; after, 4 ms, each measured once. What should you do before reporting "3 times faster"?</div><div class="opts"><div class="opt">A) Nothing: the numbers speak for themselves</div><div class="opt">B) Run ANALYZE and report the plan instead of times</div><div class="opt">C) Repeat each measurement several times, take the best, and check the plan changed from SCAN to SEARCH</div><div class="opt">D) Measure on a different computer</div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="sec"><h2>Homework Checklist</h2><span class="rule"></span></div>
+<ul class="tick">
+  <li>☐ <b>Lesson 5.3 project:</b> the Store Performance Table, Steps 2 to 5. Your check: all five window columns match pandas.</li>
+  <li>☐ <b>Lesson 5.4 project:</b> the Tuning Report, Steps 3 to 6. Your check: <code class="inline">same_results</code> is True for all three queries, and the report states the file-size cost.</li>
+  <li>☐ Lesson 5.3: read the "pandas Way" blocks; Exercises 1 to 3 (4 is a stretch); quiz; journal.</li>
+  <li>☐ Lesson 5.4: read "What Indexes Cost" and "Where PostgreSQL Differs"; Exercises 1 to 3 (4 is a stretch); quiz; journal.</li>
+  <li>☐ Kit labs: <code class="inline">labs/module-15/l5_3-sql-window-functions/weekly_trend_starter.py</code>; TODO 4 of the Silver lab; <code class="inline">labs/module-15/l5_4-query-optimization/n_plus_one_starter.py</code> if not finished.</li>
+  <li>☐ Delete your working copies (<code class="inline">pinecrest_tuning.db</code>, <code class="inline">tuning_project.db</code>, the labs' <code class="inline">output/</code> folders).</li>
+  <li>☐ Self-check Q1 to Q12 in this workbook.</li>
+  <li>☐ <b>For Session 16:</b> check <code class="inline">import pymongo, mongomock, requests</code>; run <code class="inline">python data/mock_api.py</code> once, open http://127.0.0.1:8000/health, stop it with Ctrl+C.</li>
+</ul>
+  <div class="sec"><h2>Glossary</h2><span class="rule"></span></div>
+<p><b>Window function:</b> a function computed over a set of rows related to the current row, returning one value per row. <b>Partition:</b> the group of rows a window function looks within (PARTITION BY). <b>Frame:</b> the part of the partition the function actually uses for the current row (ROWS BETWEEN ... AND ...). <b>ROW_NUMBER / RANK / DENSE_RANK:</b> numbering that never repeats / repeats on ties and skips / repeats on ties without skipping. <b>LAG / LEAD:</b> the value from the previous / next row of the window. <b>Running total:</b> a sum from the first row of the partition to the current row. <b>Moving average:</b> an average over a frame that slides with the current row. <b>NTILE:</b> deals ordered rows into a number of nearly equal buckets. <b>Query planner:</b> the part of the engine that chooses how to run a query. <b>EXPLAIN QUERY PLAN:</b> returns the planner's chosen strategy instead of running the query. <b>SCAN / SEARCH:</b> read every row / jump to matching rows using an index or the primary key. <b>Index:</b> a separate sorted structure of one or more columns that lets the engine find rows without reading the whole table. <b>Composite index:</b> an index on several columns, usable from the leftmost column onward. <b>Covering index:</b> an index that contains every column a query needs, so the table is not read. <b>Selectivity:</b> how small a share of the rows a filter keeps; indexes pay off on selective filters. <b>ANALYZE:</b> gathers statistics about tables and indexes for the planner. <b>N+1 problem:</b> running one query for a list and then one more query per item, instead of one combined query.</p>
+
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 15 · Participant Workbook · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

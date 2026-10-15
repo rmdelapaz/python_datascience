@@ -3,1272 +3,1188 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Master the Requests library in Python. Learn HTTP methods, headers, sessions, and API interactions for web scraping and data collection.">
-    <title>Requests Library - Python Data Science Path</title>
+    <meta name="description" content="How HTTP requests and responses work, and how to fetch pages and JSON politely with the requests library: status codes, headers, query parameters, timeouts, sessions and encoding. Python Data Science Lesson 6.1.">
+    <meta name="author" content="Ray de la Paz">
+    <title>HTTP with Requests - Python Data Science</title>
     <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/enhanced.css">
-    <link rel="icon" href="/favicon.png" type="image/png">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid: rendered (and re-rendered on theme change) by js/course-enhancements.js -->
     <script type="module">
-      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-      mermaid.initialize({ startOnLoad: true });
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        window.__mermaid = mermaid;
+        mermaid.initialize({ startOnLoad: false });
+        document.dispatchEvent(new Event('mermaid-ready'));
     </script>
-    <script src="js/course-enhancements.js" defer></script>
-    <link rel="stylesheet" href="styles/standard.css">
 </head>
 <body>
-    <!-- Skip to main content for accessibility -->
     <a href="#main-content" class="skip-to-main">Skip to main content</a>
-    
-    <!-- Progress indicator -->
+
     <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
         <div class="progress-bar"></div>
     </div>
-    
+
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">📊 Python Data Science</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">☰</button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
+    </nav>
+
     <main id="main-content">
-    <header role="banner">
-        <h1>Requests Library</h1>
-        <div class="reading-time" aria-label="Estimated reading time"></div>
-    </header>
-
-    <!-- What You'll Learn (learning objectives) -->
-    <div class="card card-info">
-        <h2>📚 What You'll Learn</h2>
-        <p>By the end of this lesson, you will be able to:</p>
-        <ul>
-            <li>Make GET, POST, PUT, PATCH, DELETE, HEAD, and OPTIONS requests and read the response object</li>
-            <li>Send query parameters, form data, JSON payloads, and file uploads</li>
-            <li>Set custom headers and authenticate with Basic auth, bearer tokens, and API keys</li>
-            <li>Use <code>Session</code> objects for cookies, connection pooling, and shared configuration</li>
-            <li>Handle errors, set timeouts, and add automatic retries with exponential backoff</li>
-            <li>Stream large responses and fetch many URLs concurrently with a thread pool</li>
-        </ul>
-        <p><strong>⏱️ Estimated Time:</strong> 45–60 minutes</p>
-        <p><strong>🎯 Project:</strong> Build a small REST API client class that uses a session, sets a timeout, handles errors with <code>raise_for_status</code>, and paginates through all results.</p>
-    </div>
-    
-    <!-- Breadcrumb Navigation -->
-    <nav class="breadcrumb" aria-label="Breadcrumb">
-        <a href="index.html">Home</a>
-        <span class="separator">›</span>
-        <a href="#">Intermediate Module</a>
-        <span class="separator">›</span>
-        <a href="#">Web Scraping & APIs</a>
-        <span class="separator">›</span>
-        <span class="current">Requests Library</span>
-    </nav>
-
-    <h2>HTTP for Humans - Master Web Requests! 🌐</h2>
-    
-    <blockquote>
-        <p>Requests is the most popular Python library for making HTTP requests. With its elegant and simple API, you can interact with web services, APIs, and websites effortlessly. From simple GET requests to complex authentication flows, Requests makes HTTP feel Pythonic and intuitive.</p>
-    </blockquote>
-
-    <h2>Understanding HTTP</h2>
-    
-    <div class="mermaid">
-    graph LR
-        A[Client Python] --> B[HTTP Request]
-        B --> C[Web Server]
-        C --> D[Process Request]
-        D --> E[HTTP Response]
-        E --> A
-        
-        B --> F[Method: GET/POST/PUT/DELETE]
-        B --> G[Headers]
-        B --> H[Body/Payload]
-        
-        E --> I[Status Code]
-        E --> J[Response Headers]
-        E --> K[Response Body]
-    </div>
-
-    <h2>Installation and Basic Usage</h2>
-    
-    <pre class="language-python"><code># Installation
-"""
-pip install requests
-"""
-
-import requests
-import json
-from pprint import pprint
-import time
-from datetime import datetime
-
-# Check version
-print(f"Requests version: {requests.__version__}")
-
-# Basic GET request
-response = requests.get('https://httpbin.org/get')
-
-# Check response
-print(f"Status Code: {response.status_code}")
-print(f"Response Type: {type(response)}")
-print(f"Encoding: {response.encoding}")
-print(f"Headers: {response.headers}")
-
-# Different ways to access response content
-print(response.text)      # As string
-print(response.content)   # As bytes
-print(response.json())    # Parse as JSON
-
-# Response attributes
-print(f"URL: {response.url}")
-print(f"Status: {response.status_code}")
-print(f"OK: {response.ok}")  # True if status < 400
-print(f"Elapsed time: {response.elapsed}")
-print(f"Cookies: {response.cookies}")
-print(f"History: {response.history}")  # Redirects</code></pre>
-
-    <h2>HTTP Methods</h2>
-    
-    <h3>GET Requests</h3>
-    <pre class="language-python"><code># GET request with parameters
-params = {
-    'q': 'python requests',
-    'limit': 10,
-    'offset': 0
-}
-
-response = requests.get('https://httpbin.org/get', params=params)
-print(response.url)  # Shows URL with parameters
-
-# Multiple values for same parameter
-params = {'category': ['python', 'data-science']}
-response = requests.get('https://httpbin.org/get', params=params)
-
-# URL encoding is handled automatically
-params = {'search': 'python & data science'}
-response = requests.get('https://httpbin.org/get', params=params)
-
-# Working with query strings
-from urllib.parse import urlencode, parse_qs
-
-# Manual URL construction
-base_url = 'https://api.example.com/search'
-query_string = urlencode({'q': 'python', 'page': 1})
-full_url = f"{base_url}?{query_string}"
-print(full_url)
-
-# Parse query string from URL
-from urllib.parse import urlparse
-parsed = urlparse(response.url)
-query_params = parse_qs(parsed.query)
-print(query_params)</code></pre>
-
-    <h3>POST Requests</h3>
-    <pre class="language-python"><code># POST with form data
-form_data = {
-    'username': 'john_doe',
-    'email': 'john@example.com',
-    'age': 30
-}
-
-response = requests.post('https://httpbin.org/post', data=form_data)
-print(response.json())
-
-# POST with JSON data
-json_data = {
-    'name': 'Product A',
-    'price': 29.99,
-    'categories': ['electronics', 'gadgets'],
-    'metadata': {
-        'created_at': datetime.now().isoformat(),
-        'updated_by': 'admin'
-    }
-}
-
-# Method 1: Using json parameter
-response = requests.post('https://httpbin.org/post', json=json_data)
-
-# Method 2: Manual JSON encoding
-headers = {'Content-Type': 'application/json'}
-response = requests.post('https://httpbin.org/post', 
-                        data=json.dumps(json_data),
-                        headers=headers)
-
-# File upload
-files = {'file': open('data.csv', 'rb')}
-response = requests.post('https://httpbin.org/post', files=files)
-files['file'].close()
-
-# Multiple files
-files = [
-    ('files', ('file1.txt', open('file1.txt', 'rb'), 'text/plain')),
-    ('files', ('file2.txt', open('file2.txt', 'rb'), 'text/plain'))
-]
-response = requests.post('https://httpbin.org/post', files=files)
-
-# Mixed form data and files
-data = {'name': 'John', 'age': 30}
-files = {'avatar': open('avatar.jpg', 'rb')}
-response = requests.post('https://httpbin.org/post', data=data, files=files)</code></pre>
-
-    <h3>Other HTTP Methods</h3>
-    <pre class="language-python"><code># PUT request (update entire resource)
-update_data = {
-    'id': 123,
-    'name': 'Updated Product',
-    'price': 39.99
-}
-response = requests.put('https://httpbin.org/put', json=update_data)
-
-# PATCH request (partial update)
-partial_update = {'price': 34.99}
-response = requests.patch('https://httpbin.org/patch', json=partial_update)
-
-# DELETE request
-response = requests.delete('https://httpbin.org/delete', 
-                          params={'id': 123})
-
-# HEAD request (headers only, no body)
-response = requests.head('https://httpbin.org/get')
-print(response.headers)
-print(response.text)  # Empty
-
-# OPTIONS request (check allowed methods)
-response = requests.options('https://httpbin.org/get')
-print(response.headers.get('Allow'))</code></pre>
-
-    <h2>Headers and Authentication</h2>
-    
-    <h3>Custom Headers</h3>
-    <pre class="language-python"><code># Setting custom headers
-headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-    'Accept': 'application/json',
-    'Accept-Language': 'en-US,en;q=0.9',
-    'Cache-Control': 'no-cache',
-    'X-Custom-Header': 'CustomValue'
-}
-
-response = requests.get('https://httpbin.org/headers', headers=headers)
-print(response.json())
-
-# Common header patterns
-def get_with_headers(url, auth_token=None):
-    """Make request with common headers"""
-    headers = {
-        'User-Agent': 'Python Requests/2.28.0',
-        'Accept': 'application/json',
-        'Accept-Encoding': 'gzip, deflate',
-    }
-    
-    if auth_token:
-        headers['Authorization'] = f'Bearer {auth_token}'
-    
-    return requests.get(url, headers=headers)
-
-# Response headers
-response = requests.get('https://httpbin.org/get')
-print(f"Content-Type: {response.headers.get('Content-Type')}")
-print(f"Server: {response.headers.get('Server')}")
-print(f"Date: {response.headers.get('Date')}")
-
-# Case-insensitive header access
-print(response.headers['content-type'])
-print(response.headers['Content-Type'])
-print(response.headers['CONTENT-TYPE'])  # All work the same</code></pre>
-
-    <h3>Authentication Methods</h3>
-    <pre class="language-python"><code># Basic Authentication
-from requests.auth import HTTPBasicAuth
-
-# Method 1: Using auth parameter
-response = requests.get('https://httpbin.org/basic-auth/user/pass',
-                       auth=('user', 'pass'))
-
-# Method 2: Using HTTPBasicAuth
-response = requests.get('https://httpbin.org/basic-auth/user/pass',
-                       auth=HTTPBasicAuth('user', 'pass'))
-
-# Bearer Token Authentication
-token = 'your-api-token-here'
-headers = {'Authorization': f'Bearer {token}'}
-response = requests.get('https://api.example.com/data', headers=headers)
-
-# API Key Authentication
-# Method 1: In header
-headers = {'X-API-Key': 'your-api-key'}
-response = requests.get('https://api.example.com/data', headers=headers)
-
-# Method 2: In query parameter
-params = {'api_key': 'your-api-key'}
-response = requests.get('https://api.example.com/data', params=params)
-
-# Custom Authentication Class
-class CustomAuth(requests.auth.AuthBase):
-    """Custom authentication handler"""
-    def __init__(self, token):
-        self.token = token
-    
-    def __call__(self, request):
-        # Modify request headers
-        request.headers['X-Custom-Auth'] = self.token
-        return request
-
-response = requests.get('https://api.example.com/data',
-                       auth=CustomAuth('my-token'))
-
-# OAuth 2.0 (using requests-oauthlib)
-"""
-pip install requests-oauthlib
-"""
-from requests_oauthlib import OAuth2Session
-
-client_id = 'your-client-id'
-client_secret = 'your-client-secret'
-redirect_uri = 'http://localhost:8080/callback'
-authorization_base_url = 'https://github.com/login/oauth/authorize'
-token_url = 'https://github.com/login/oauth/access_token'
-
-# OAuth2 flow
-github = OAuth2Session(client_id, redirect_uri=redirect_uri)
-authorization_url, state = github.authorization_url(authorization_base_url)</code></pre>
-
-    <h2>Sessions and Cookies</h2>
-    
-    <h3>Using Sessions</h3>
-    <pre class="language-python"><code># Sessions maintain state across requests
-session = requests.Session()
-
-# Set default headers for all requests in session
-session.headers.update({
-    'User-Agent': 'Python Bot 1.0',
-    'Accept': 'application/json'
-})
-
-# Cookies persist across requests in same session
-session.get('https://httpbin.org/cookies/set/session_id/12345')
-response = session.get('https://httpbin.org/cookies')
-print(response.json())  # Shows the cookie
-
-# Session with authentication
-session.auth = ('user', 'pass')
-response = session.get('https://httpbin.org/basic-auth/user/pass')
-
-# Context manager for automatic cleanup
-with requests.Session() as session:
-    session.get('https://httpbin.org/cookies/set/temp/value')
-    response = session.get('https://httpbin.org/cookies')
-    print(response.json())
-
-# Advanced session configuration
-session = requests.Session()
-session.mount('https://', requests.adapters.HTTPAdapter(max_retries=3))
-session.timeout = 30  # Default timeout for all requests
-
-# Connection pooling with session
-class APIClient:
-    def __init__(self, base_url, api_key):
-        self.base_url = base_url
-        self.session = requests.Session()
-        self.session.headers.update({
-            'X-API-Key': api_key,
-            'Accept': 'application/json'
-        })
-    
-    def get(self, endpoint, **kwargs):
-        url = f"{self.base_url}/{endpoint}"
-        return self.session.get(url, **kwargs)
-    
-    def post(self, endpoint, **kwargs):
-        url = f"{self.base_url}/{endpoint}"
-        return self.session.post(url, **kwargs)
-    
-    def close(self):
-        self.session.close()
-
-# Usage
-client = APIClient('https://api.example.com', 'your-api-key')
-response = client.get('users', params={'page': 1})
-client.close()</code></pre>
-
-    <h3>Cookie Management</h3>
-    <pre class="language-python"><code># Working with cookies
-import requests
-from http.cookiejar import CookieJar
-
-# Send cookies with request
-cookies = {'session_id': 'abc123', 'user_pref': 'dark_mode'}
-response = requests.get('https://httpbin.org/cookies', cookies=cookies)
-
-# Access response cookies
-response = requests.get('https://httpbin.org/cookies/set/new_cookie/value123')
-print(response.cookies['new_cookie'])
-
-# Cookie jar for advanced management
-jar = CookieJar()
-session = requests.Session()
-session.cookies = jar
-
-# Save and load cookies
-import pickle
-
-# Save cookies to file
-with open('cookies.pkl', 'wb') as f:
-    pickle.dump(session.cookies, f)
-
-# Load cookies from file
-with open('cookies.pkl', 'rb') as f:
-    cookies = pickle.load(f)
-    session.cookies.update(cookies)
-
-# Extract cookies as dict
-cookies_dict = requests.utils.dict_from_cookiejar(session.cookies)
-print(cookies_dict)
-
-# Create cookie jar from dict
-from requests.utils import cookiejar_from_dict
-new_jar = cookiejar_from_dict(cookies_dict)</code></pre>
-
-    <h2>Error Handling and Timeouts</h2>
-    
-    <h3>Handling Response Errors</h3>
-    <pre class="language-python"><code># Check response status
-response = requests.get('https://httpbin.org/status/404')
-
-# Method 1: Check status_code
-if response.status_code == 200:
-    print("Success!")
-elif response.status_code == 404:
-    print("Not found!")
-else:
-    print(f"Error: {response.status_code}")
-
-# Method 2: Use response.ok
-if response.ok:  # True if status_code < 400
-    data = response.json()
-else:
-    print(f"Request failed: {response.status_code}")
-
-# Method 3: Raise exception for bad status
-try:
-    response = requests.get('https://httpbin.org/status/500')
-    response.raise_for_status()  # Raises HTTPError for bad status
-    data = response.json()
-except requests.exceptions.HTTPError as e:
-    print(f"HTTP Error: {e}")
-except requests.exceptions.RequestException as e:
-    print(f"Request Error: {e}")
-
-# Complete error handling
-def safe_request(url, **kwargs):
-    """Make request with comprehensive error handling"""
+        <div class="container">
+            <header>
+                <h1>🌐 Lesson 6.1: HTTP with Requests</h1>
+                <p class="lead">Learn the conversation every web page and every API is built on, and write Python that takes part in it carefully, clearly and politely.</p>
+
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Describe an HTTP request and response (method, URL, headers, status code, body) and read each part from Python</li>
+                        <li>Check a site's <code>robots.txt</code> and decide whether, and how fast, your program may fetch a page</li>
+                        <li>Fetch HTML and JSON with <code>requests.get()</code>, sending a User-Agent that identifies you, query parameters and a timeout</li>
+                        <li>Tell success from failure with status codes and <code>raise_for_status()</code>, and handle timeouts and HTTP errors without crashing</li>
+                        <li>Reuse settings with a <code>Session</code>, fix a wrong text encoding, and save raw responses to disk</li>
+                    </ul>
+                </div>
+
+                <ul class="lesson-meta">
+                    <li><span class="meta-label">⏱️ Time</span> 90 minutes</li>
+                    <li><span class="meta-label">📋 Prerequisites</span> <a href="pandas_data_loading.html">Lesson 2.2: Loading Data</a> (DataFrames, JSON) and <a href="sql_nosql_mongodb.html">Lesson 5.5: NoSQL with MongoDB</a> (nested documents)</li>
+                    <li><span class="meta-label">🛠️ You will build</span> A polite snapshot tool that checks the rules, downloads four pages of the practice shop and logs every request</li>
+                    <li><span class="meta-label">📂 Data</span> The practice shop (online), <code>data/mock_api.py</code>, <code>data/products.csv</code></li>
+                </ul>
+            </header>
+
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#http" class="toc-link">How the Web Talks</a></li>
+                        <li><a href="#rules" class="toc-link">The Ground Rules</a></li>
+                        <li><a href="#first-get" class="toc-link">Your First GET</a></li>
+                        <li><a href="#status" class="toc-link">Status Codes</a></li>
+                        <li><a href="#headers" class="toc-link">Headers and Saying Who You Are</a></li>
+                        <li><a href="#encoding" class="toc-link">Bytes, Text and Encoding</a></li>
+                        <li><a href="#json" class="toc-link">Query Parameters and JSON</a></li>
+                        <li><a href="#timeouts" class="toc-link">Timeouts, Always</a></li>
+                        <li><a href="#sessions" class="toc-link">Sessions</a></li>
+                        <li><a href="#saving" class="toc-link">Saving Raw Responses</a></li>
+                        <li><a href="#mistakes" class="toc-link">Common Mistakes</a></li>
+                        <li><a href="#project" class="toc-link">Project: The Polite Snapshot</a></li>
+                        <li><a href="#exercises" class="toc-link">Hands-on Exercises</a></li>
+                        <li><a href="#quiz" class="toc-link">Quick Quiz</a></li>
+                        <li><a href="#faq" class="toc-link">Common Questions</a></li>
+                        <li><a href="#journal" class="toc-link">Learning Journal</a></li>
+                        <li><a href="#summary" class="toc-link">Lesson Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
+
+            <!-- ============================================================ -->
+            <section id="http" class="lesson-section">
+                <h2>🌐 How the Web Talks</h2>
+
+                <p>So far your data has arrived as files and database tables that someone prepared for you. A great deal of the world's data is not packaged that way. It sits on web pages and behind web services, and it changes every day. In this module you will learn to collect it yourself, and you will start where every browser, phone app and data pipeline starts: with one request and one response.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Mental Model: The Order Counter</h4>
+                    <p>Think of a counter at a deli. You hand over a slip that says what you want (<em>"one number 12, to go"</em>) with a few notes about yourself (<em>"no onions, name: Sam"</em>). A moment later a tray comes back. On top is a ticket with a number that says how it went: order filled, we are out of that, you are not allowed to order that, the kitchen is on fire. Under the ticket is the food, if there is any.</p>
+                    <p>That is the whole of <strong>HTTP</strong>, the HyperText Transfer Protocol. The slip is a <strong>request</strong>. The tray is a <strong>response</strong>. The server never calls you; it only answers. And it does not remember your last order unless you remind it.</p>
+                </div>
+
+                <p>A request and a response have the same three-part shape.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Part</th><th>In a request</th><th>In a response</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>First line</td><td>A <strong>method</strong> (<code>GET</code> to read, <code>POST</code> to send) and a <strong>URL</strong></td><td>A three-digit <strong>status code</strong> such as <code>200</code> or <code>404</code></td></tr>
+                            <tr><td>Headers</td><td>Notes about the sender: who you are, what formats you accept</td><td>Notes about the answer: its type, its encoding, its date</td></tr>
+                            <tr><td>Body</td><td>Usually empty for <code>GET</code>; the data you send for <code>POST</code></td><td>The page, the JSON, the image: the thing you asked for</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mermaid">
+            graph TD
+                A["Your script calls requests.get"] --> B["Request: GET, URL, headers"]
+                B --> C["Server looks for the page"]
+                C --> D["Response: status, headers, body"]
+                D --> E{"Status 200?"}
+                E -->|yes| F["Use the body"]
+                E -->|no| G["Stop and handle it"]
+                </div>
+
+                <p>Python's standard library can speak HTTP, but almost everyone uses the <strong>requests</strong> library because it makes the common things short and the careful things possible. It was installed with the rest of the course environment in Lesson 0.1.</p>
+
+                <pre><code class="language-python">import requests
+
+print(requests.__version__)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>2.34.2</code></pre>
+                </div>
+
+                <h3>🤔 Why This Matters</h3>
+                <p>Every tool in the rest of this module sits on top of what you learn here. Beautiful Soup parses what <code>requests</code> downloads. An API client is <code>requests</code> plus a key. Rate limiting is deciding when to send the next request. When something goes wrong three lessons from now, the answer will be in a status code or a header, and you will know where to look.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="rules" class="lesson-section">
+                <h2>🤝 The Ground Rules</h2>
+
+                <p>Before the first line of fetching code, a word about manners and law, because a program can do in a minute what would take a person a week, and that power cuts both ways. A website is somebody's property, runs on somebody's bill, and often holds information about real people.</p>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Six Rules for This Module (and for Your Career)</h4>
+                    <ol>
+                        <li><strong>Read <code>robots.txt</code> and obey it.</strong> It is the site owner's published request to programs: where they may go and how fast.</li>
+                        <li><strong>Read the terms of use.</strong> If the terms forbid automated collection, the answer is no, however easy the code would be.</li>
+                        <li><strong>Prefer an API or a download when one exists.</strong> It is the front door: stable, documented and meant for programs.</li>
+                        <li><strong>Go slowly and say who you are.</strong> Pause between requests, and send a User-Agent with a way to contact you.</li>
+                        <li><strong>Never go around a login, a paywall or a block.</strong> If you are asked to stop, stop.</li>
+                        <li><strong>Do not collect personal data.</strong> Names, emails, profiles and photos of real people are protected by privacy laws in many places, and "it was public" is not a defense you want to test.</li>
+                    </ol>
+                </div>
+
+                <p>This is not legal advice, and the law differs from country to country. As a working rule: facts such as prices and opening hours are usually fine to collect in modest amounts for analysis, while republishing someone's content, overloading their server or gathering information about people can get you or your employer into real trouble. When in doubt, ask the site owner. An email often gets you a cleaner dataset than a scraper would.</p>
+
+                <div class="card card-success">
+                    <h4>✅ A Site Built for Practice</h4>
+                    <p>Every request in this module goes to one of two places made for this course. The <strong>practice shop</strong> is a small fictional catalog for Pinecrest Outfitters that lives on the course website. The <strong>practice API</strong> is a program you run on your own computer. You have the owner's permission for both, nothing on them is real, and you cannot break anything. Practicing the polite habits here is how they become automatic everywhere else.</p>
+                </div>
+
+                <p>Start a new notebook for this lesson and define the shop's address once, at the top.</p>
+
+                <pre><code class="language-python">BASE_URL = "https://rays-python-datascience.netlify.app/practice/shop/"
+USER_AGENT = "pinecrest-course-bot/1.0 (learning project; contact: you@example.com)"</code></pre>
+
+                <p>Put your own email address in <code>USER_AGENT</code>. You will see what it is for in a few minutes. Open <code>BASE_URL</code> in your browser too, and click around: a paginated catalog, product pages, a price list, a deals page and a search form. You will work through all of them in the next three lessons.</p>
+
+                <div class="card card-info">
+                    <h4>💡 One Address, Defined Once</h4>
+                    <p>Every lesson in this module builds its URLs from <code>BASE_URL</code>, so there is exactly one line to change if the address ever does. You can also work offline. Download <a href="data/pinecrest-practice-site.zip" download><code>pinecrest-practice-site.zip</code></a> (0.4 MB, the whole practice shop) into your project folder, then run these two commands there in a second terminal:</p>
+                    <pre><code class="language-bash">python -m zipfile -e pinecrest-practice-site.zip .
+python -m http.server 8001</code></pre>
+                    <p>The first command unpacks a <code>practice</code> folder and the second serves the current folder until you press <kbd>Ctrl</kbd>+<kbd>C</kbd>. Then set <code>BASE_URL = "http://127.0.0.1:8001/practice/shop/"</code>. The code in this module works unchanged. A few printed details differ from the output shown, because Python's small server is not the course's web host: the addresses and response headers, and the text encoding described later in this lesson.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="first-get" class="lesson-section">
+                <h2>🚀 Your First GET</h2>
+
+                <p>The first page a polite program asks for is the rule book. By convention it is a plain text file named <code>robots.txt</code>. The practice shop keeps its copy one folder up from the shop, and <code>urljoin</code> from the standard library builds that address the same way a browser resolves a link.</p>
+
+                <pre><code class="language-python">from urllib.parse import urljoin
+
+robots_url = urljoin(BASE_URL, "../robots.txt")
+print(robots_url)
+
+r = requests.get(robots_url, timeout=10)
+print(r.status_code)
+print(r.text)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>https://rays-python-datascience.netlify.app/practice/robots.txt
+200
+# Practice rules for the Python Data Science course (fictional shop).
+# A real robots.txt lives at the root of a site; this one is a teaching copy
+# that the lessons read with urllib.robotparser.
+User-agent: *
+Disallow: /practice/shop/staff/
+Crawl-delay: 1
+
+User-agent: BadBot
+Disallow: /</code></pre>
+                </div>
+
+                <p>That was a complete HTTP conversation. <code>requests.get()</code> sent a <code>GET</code> request and returned a <strong>Response</strong> object, which you named <code>r</code>. Its <code>status_code</code> is <code>200</code>, which means "here you go", and <code>r.text</code> is the body as a string. (The <code>timeout=10</code> gets its own section below. For now, never leave it out.)</p>
+
+                <p>Now read the file as its author meant it:</p>
+                <ul>
+                    <li><code>User-agent: *</code> starts a group of rules for every program.</li>
+                    <li><code>Disallow: /practice/shop/staff/</code> asks programs to stay out of that folder.</li>
+                    <li><code>Crawl-delay: 1</code> asks for at least one second between requests.</li>
+                    <li>A second group tells a program calling itself <code>BadBot</code> that it is not welcome anywhere.</li>
+                </ul>
+
+                <p>You do not have to interpret the file by eye. The standard library's <code>RobotFileParser</code> answers the two questions that matter: may I fetch this, and how long should I wait?</p>
+
+                <pre><code class="language-python">from urllib.robotparser import RobotFileParser
+
+robots = RobotFileParser()
+robots.parse(r.text.splitlines())
+
+print(robots.can_fetch(USER_AGENT, BASE_URL))
+print(robots.can_fetch(USER_AGENT, urljoin(BASE_URL, "staff/")))
+print(robots.can_fetch("BadBot", BASE_URL))
+print(robots.crawl_delay(USER_AGENT))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>True
+False
+False
+1</code></pre>
+                </div>
+
+                <p>The shop is open to you, the staff folder is not, and the owner would like one second between requests. Nothing in the software will stop you from fetching the staff page. That is the point: <code>robots.txt</code> is a request, and honoring it is your job.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Where robots.txt Normally Lives</h4>
+                    <p>On a real site the file is always at the root: <code>https://the-site/robots.txt</code>. The practice shop's copy sits at <code>/practice/robots.txt</code> because the shop shares a website with these lessons. If a site has no <code>robots.txt</code> at all, nothing is disallowed by it, and the other five rules still apply.</p>
+                </div>
+
+                <h3>The Shop's Front Page</h3>
+
+                <p>With permission settled, ask for the catalog.</p>
+
+                <pre><code class="language-python">r = requests.get(BASE_URL, timeout=10)
+
+print(r.status_code, r.reason)
+print(r.ok)
+print(r.url)
+print(len(r.content), "bytes")
+print(r.text[:66])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>200 OK
+True
+https://rays-python-datascience.netlify.app/practice/shop/
+11783 bytes
+&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+    &lt;meta charset="UTF-8"&gt;</code></pre>
+                </div>
+
+                <p>The body is HTML, the same text your browser receives before it draws the page. <code>r.ok</code> is a shortcut that is <code>True</code> for any status below 400. Taking that HTML apart is the subject of <a href="webscraping_beautifulsoup.html">Lesson 6.2</a>. Today the focus is the envelope it arrived in.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="status" class="lesson-section">
+                <h2>🚦 Status Codes</h2>
+
+                <p>The status code is the server's one-number summary of what happened. You only need to remember the first digit to know whose move it is.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Range</th><th>Meaning</th><th>Ones you will meet</th><th>What to do</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>2xx</code></td><td>Success</td><td><code>200</code> OK</td><td>Use the body</td></tr>
+                            <tr><td><code>3xx</code></td><td>Look elsewhere</td><td><code>301</code>, <code>302</code> redirects</td><td>Nothing: <code>requests</code> follows them for you</td></tr>
+                            <tr><td><code>4xx</code></td><td>Your request has a problem</td><td><code>400</code> bad request, <code>401</code> not signed in, <code>403</code> forbidden, <code>404</code> not found, <code>429</code> too many requests</td><td>Fix the request. Asking again unchanged will not help (except <code>429</code>: wait first)</td></tr>
+                            <tr><td><code>5xx</code></td><td>The server has a problem</td><td><code>500</code> server error, <code>503</code> unavailable</td><td>Wait and try again later</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>Ask for a page that does not exist and look closely at what comes back.</p>
+
+                <pre><code class="language-python">missing = requests.get(urljoin(BASE_URL, "no-such-page.html"), timeout=10)
+
+print(missing.status_code, missing.reason)
+print(missing.ok)
+print(missing.headers["Content-Type"])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>404 Not Found
+False
+text/html; charset=utf-8</code></pre>
+                </div>
+
+                <div class="card card-warning">
+                    <h4>⚠️ A 404 Is Not an Exception</h4>
+                    <p><code>requests.get()</code> did not raise an error. From its point of view the conversation went perfectly: it asked, and the server answered "not found" and, as the content type shows, put a friendly HTML error page in the body. If your code goes on to parse that body, it will find no products, report zero results, and never tell you why. <strong>A failed request looks like success unless you check.</strong></p>
+                </div>
+
+                <p>The check is one method. <code>raise_for_status()</code> does nothing for a good response and raises <code>HTTPError</code> for a 4xx or 5xx.</p>
+
+                <pre data-raises="requests.exceptions.HTTPError"><code class="language-python">missing.raise_for_status()</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>HTTPError: 404 Client Error: Not Found for url: https://rays-python-datascience.netlify.app/practice/shop/no-such-page.html</code></pre>
+                </div>
+
+                <p>Make it a reflex: <strong>get, then <code>raise_for_status()</code>, then use the body.</strong> A loud failure at the request is far cheaper than a quiet one three steps later.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="headers" class="lesson-section">
+                <h2>📨 Headers and Saying Who You Are</h2>
+
+                <p>Headers are the notes on the slip and on the ticket: name-and-value pairs that travel with every request and response. The response's headers are in <code>r.headers</code>, which behaves like a dictionary whose keys ignore upper and lower case.</p>
+
+                <pre><code class="language-python">for name in ["Content-Type", "Server", "Cache-Control", "Date"]:
+    print(f"{name}: {r.headers.get(name)}")
+
+print(r.headers["content-type"])</code></pre>
+                <div class="card card-output">
+                    <h4>Output (your date will differ)</h4>
+                    <pre><code>Content-Type: text/html; charset=UTF-8
+Server: Netlify
+Cache-Control: public,max-age=0,must-revalidate
+Date: Sun, 11 Oct 2026 20:33:57 GMT
+text/html; charset=UTF-8</code></pre>
+                </div>
+
+                <p><code>Content-Type</code> is the one you will use most. It says what the body is (<code>text/html</code>, <code>application/json</code>, <code>image/png</code>) and often how its text is encoded. More on that in the next section.</p>
+
+                <p>What did <em>you</em> send? The response keeps a copy of the request that produced it.</p>
+
+                <pre><code class="language-python">print(r.request.method, r.request.url)
+for name, value in r.request.headers.items():
+    print(f"{name}: {value}")</code></pre>
+                <div class="card card-output">
+                    <h4>Output (your version number may differ)</h4>
+                    <pre><code>GET https://rays-python-datascience.netlify.app/practice/shop/
+User-Agent: python-requests/2.34.2
+Accept-Encoding: gzip, deflate
+Accept: */*
+Connection: keep-alive</code></pre>
+                </div>
+
+                <p>You wrote none of those headers. <code>requests</code> filled them in, including a <code>User-Agent</code> that says only "some Python script". To the person who runs the site, that is an anonymous visitor: if your script misbehaves, their only option is to block it. Introduce yourself instead.</p>
+
+                <pre><code class="language-python">HEADERS = {"User-Agent": USER_AGENT}
+
+r = requests.get(BASE_URL, headers=HEADERS, timeout=10)
+print(r.request.headers["User-Agent"])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>pinecrest-course-bot/1.0 (learning project; contact: you@example.com)</code></pre>
+                </div>
+
+                <p>A good User-Agent names your project and gives a contact. Now an administrator who sees your requests in the server log can write to you before reaching for the block button. You will pass <code>HEADERS</code> with every request from here on.</p>
+
+                <div class="card card-danger">
+                    <h4>🛑 Do Not Pretend to Be a Browser</h4>
+                    <p>You will find advice online to copy a browser's User-Agent so that a site "cannot tell" you are a script. That is disguising yourself to get around a site's wishes, which breaks rules 4 and 5 at once. If a site turns away honest programs, the honest response is to use its API, ask for permission, or leave it alone.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="encoding" class="lesson-section">
+                <h2>🔤 Bytes, Text and Encoding</h2>
+
+                <p>Computers send <strong>bytes</strong>. A response body is a sequence of numbers from 0 to 255, available untouched as <code>r.content</code>. To give you a string in <code>r.text</code>, <code>requests</code> has to <strong>decode</strong> those bytes with some encoding, and it chooses the one named in the <code>Content-Type</code> header.</p>
+
+                <pre><code class="language-python">print(type(r.content), type(r.text))
+print(r.encoding)
+print(len(r.content), "bytes became", len(r.text), "characters")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>&lt;class 'bytes'&gt; &lt;class 'str'&gt;
+UTF-8
+11783 bytes became 11725 characters</code></pre>
+                </div>
+
+                <p>There are fewer characters than bytes because some characters need more than one byte in UTF-8. The shop's rating star is one of them:</p>
+
+                <pre><code class="language-python">star = "★"
+star_bytes = star.encode("utf-8")
+print(star_bytes, len(star_bytes))
+print(star_bytes.decode("utf-8"))
+print(star_bytes.decode("cp1252"))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>b'\xe2\x98\x85' 3
+★
+â˜…</code></pre>
+                </div>
+
+                <p>Three bytes, one star, when decoded with the encoding that wrote them. Decoded with the wrong table (<code>cp1252</code>, an old Western European encoding), the same three bytes become three junk characters. That garbage has a name, <strong>mojibake</strong>, and you will recognize it for the rest of your life: <code>â˜…</code>, <code>â€™</code>, <code>Ã©</code>.</p>
+
+                <p>It happens with web pages when the server does not say which encoding it used. Then <code>requests</code> has to guess, and for HTML its fallback is a Western European encoding. You can reproduce the problem, and the cure, by setting <code>r.encoding</code> yourself:</p>
+
+                <pre><code class="language-python">r.encoding = "cp1252"                    # decode the same bytes with the wrong table
+print("★" in r.text, "â˜…" in r.text)
+
+r.encoding = "utf-8"                     # the table that matches the bytes
+print("★" in r.text, "â˜…" in r.text)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>False True
+True False</code></pre>
+                </div>
+
+                <div class="card card-info">
+                    <h4>💡 Three Ways to Stay Out of Trouble</h4>
+                    <ul>
+                        <li>If text looks wrong, print <code>r.encoding</code> and the <code>Content-Type</code> header. A missing <code>charset</code> is the usual cause. Python's own <code>http.server</code>, for one, does not send it, so a local copy of the shop shows this exact problem.</li>
+                        <li>Set <code>r.encoding = "utf-8"</code> before reading <code>r.text</code> when you know the page is UTF-8 (nearly all modern pages are).</li>
+                        <li>Or skip the guess: hand the bytes, <code>r.content</code>, to a parser that reads the page's own <code>&lt;meta charset&gt;</code> tag. Beautiful Soup does this, as you will see in Lesson 6.2.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="json" class="lesson-section">
+                <h2>🧩 Query Parameters and JSON</h2>
+
+                <p>HTML is written for people. When a site wants to serve programs, it offers an <strong>API</strong> (application programming interface): URLs that return data, usually as JSON, with no page design in the way. You already know JSON from <a href="pandas_data_loading.html">Lesson 2.2</a> and from the documents in Lesson 5.5.</p>
+
+                <p>Your data folder includes a small practice API. Open a <strong>second terminal</strong>, go to your project folder, activate the environment, and start it. Leave it running; you will switch back to your notebook to use it.</p>
+
+                <pre><code class="language-bash">python data/mock_api.py</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>Pinecrest mock API on http://127.0.0.1:8000  (limit: 30 requests per 10 s; Ctrl+C to stop)</code></pre>
+                </div>
+
+                <p><code>127.0.0.1</code> is the address every computer uses for itself, and <code>8000</code> is the port, a numbered door on that computer. This server answers only requests from your own machine. It is a real HTTP server all the same, and it logs each request it receives in that terminal, which is worth a glance now and then.</p>
+
+                <h3>Asking a Narrower Question</h3>
+
+                <p>The API's <code>/products</code> address returns the whole catalog, a page at a time. To ask for less you add <strong>query parameters</strong>: the part of a URL after the <code>?</code>, written as <code>name=value</code> pairs joined by <code>&amp;</code>. Do not glue that string together yourself. Pass a dictionary as <code>params</code> and let <code>requests</code> build it.</p>
+
+                <pre><code class="language-python">API = "http://127.0.0.1:8000"
+
+r = requests.get(f"{API}/products", params={"category": "Tents", "per_page": 3},
+                 headers=HEADERS, timeout=10)
+r.raise_for_status()
+
+print(r.url)
+print(r.headers["Content-Type"])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>http://127.0.0.1:8000/products?category=Tents&amp;per_page=3
+application/json; charset=utf-8</code></pre>
+                </div>
+
+                <p><code>r.url</code> shows the address that was really requested, with the parameters attached. The content type says JSON, so instead of <code>r.text</code> call <code>r.json()</code>, which parses the body into Python dictionaries and lists.</p>
+
+                <pre><code class="language-python">data = r.json()
+
+print(type(data))
+print(list(data))
+print(data["total"], "tents in all;", len(data["items"]), "on this page")
+print(data["items"][0]["name"], data["items"][0]["price"])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>&lt;class 'dict'&gt;
+['page', 'per_page', 'total', 'total_pages', 'next', 'items']
+24 tents in all; 3 on this page
+Granite Fork Drift 1-Person Tent 299.95</code></pre>
+                </div>
+
+                <p>The response is a dictionary. Its <code>items</code> key holds a list of product records, and the other keys describe the paging (you will follow <code>next</code> to the end in Lesson 6.4). A list of flat dictionaries is exactly what <code>pd.DataFrame()</code> wants.</p>
+
+                <pre><code class="language-python">import pandas as pd
+
+tents = pd.DataFrame(data["items"])
+print(tents[["sku", "name", "price", "rating"]])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>        sku                                 name   price  rating
+0  TNT-1001     Granite Fork Drift 1-Person Tent  299.95     4.0
+1  TNT-1002  Cedar Notch Ridgeline 2-Person Tent  217.95     3.7
+2  TNT-1003     Pinecrest Solstice 3-Person Tent  459.95     4.7</code></pre>
+                </div>
+
+                <p>Three lines from a URL to a DataFrame. That is why rule 3 says to prefer an API: no HTML to pick apart, and the numbers arrive as numbers.</p>
+
+                <h3>Why You Let requests Build the URL</h3>
+
+                <pre><code class="language-python">r = requests.get(f"{API}/products", params={"category": "Camp Kitchen", "per_page": 1},
+                 headers=HEADERS, timeout=10)
+print(r.url)
+print(r.json()["total"])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>http://127.0.0.1:8000/products?category=Camp+Kitchen&amp;per_page=1
+29</code></pre>
+                </div>
+
+                <p>A URL cannot contain a space, so <code>requests</code> wrote it as <code>+</code>. It also handles <code>&amp;</code>, <code>#</code>, accents and every other character that would otherwise break the address or change its meaning. Hand-built query strings are a classic source of bugs that appear only for some values.</p>
+
+                <h3>Errors Speak JSON Too</h3>
+
+                <p>A well-made API explains its errors in the body. The status code tells your program what happened; the message tells <em>you</em>.</p>
+
+                <pre><code class="language-python">r = requests.get(f"{API}/products/TNT-9999", headers=HEADERS, timeout=10)
+print(r.status_code)
+print(r.json())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>404
+{'error': {'code': 'not_found', 'message': "No product with SKU 'TNT-9999'."}}</code></pre>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="timeouts" class="lesson-section">
+                <h2>⏳ Timeouts, Always</h2>
+
+                <p>Here is a fact that surprises people: <strong>by default, <code>requests</code> will wait forever.</strong> If a server accepts your connection and then goes quiet, a call without <code>timeout</code> never returns. No error, no output, just a notebook cell that says "running" until you notice, or a nightly job that hangs until someone asks where the report is.</p>
+
+                <p>The practice API has an address for rehearsing this. <code>/slow</code> waits the number of seconds you ask for before answering.</p>
+
+                <pre><code class="language-python">r = requests.get(f"{API}/slow", params={"seconds": 2}, headers=HEADERS, timeout=10)
+print(r.json())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>{'waited_seconds': 2.0}</code></pre>
+                </div>
+
+                <p>Two seconds is inside the ten you allowed. Now ask it to take five seconds while you are only willing to wait one.</p>
+
+                <pre data-raises="requests.exceptions.ReadTimeout"><code class="language-python">requests.get(f"{API}/slow", params={"seconds": 5}, headers=HEADERS, timeout=1)</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>ReadTimeout: HTTPConnectionPool(host='127.0.0.1', port=8000): Read timed out. (read timeout=1)</code></pre>
+                </div>
+
+                <p>After one second <code>requests</code> gave up and raised <code>ReadTimeout</code>. That is the behavior you want: a clear error you can catch, at a moment you chose.</p>
+
+                <div class="card card-info">
+                    <h4>💡 What the Number Means</h4>
+                    <p><code>timeout=10</code> is not a limit on the whole download. It is the longest <code>requests</code> will wait for the connection to open, and then the longest it will wait <em>between bytes</em> once the server starts answering. You can set the two separately with a tuple: <code>timeout=(3.05, 10)</code> means up to about 3 seconds to connect and up to 10 seconds of silence while reading. For ordinary pages, a single number between 5 and 30 is a sensible choice.</p>
+                </div>
+
+                <h3>One Function That Does It Right</h3>
+
+                <p>You now have four habits: identify yourself, set a timeout, check the status, and expect failure. Typing all four on every call is how they get skipped, so put them in one small function. Everything that can go wrong in <code>requests</code> is a subclass of <code>requests.exceptions.RequestException</code>, with <code>Timeout</code> and <code>HTTPError</code> as the two you will most often want to treat specially.</p>
+
+                <pre><code class="language-python">def fetch(url, **kwargs):
+    """GET a URL politely. Returns the response, or None after saying why not."""
+    kwargs.setdefault("headers", HEADERS)
+    kwargs.setdefault("timeout", 10)
     try:
-        response = requests.get(url, **kwargs)
-        response.raise_for_status()
-        return response
-    
+        resp = requests.get(url, **kwargs)
+        resp.raise_for_status()
     except requests.exceptions.Timeout:
-        print(f"Request timed out for {url}")
-    except requests.exceptions.TooManyRedirects:
-        print(f"Too many redirects for {url}")
-    except requests.exceptions.ConnectionError:
-        print(f"Connection error for {url}")
-    except requests.exceptions.HTTPError as e:
-        print(f"HTTP {e.response.status_code} error for {url}")
-    except requests.exceptions.RequestException as e:
-        print(f"Request exception for {url}: {e}")
-    except Exception as e:
-        print(f"Unexpected error: {e}")
-    
-    return None</code></pre>
+        print(f"TIMEOUT   {url}")
+    except requests.exceptions.HTTPError as err:
+        print(f"HTTP {err.response.status_code}  {url}")
+    except requests.exceptions.RequestException as err:
+        print(f"FAILED    {url} ({type(err).__name__})")
+    else:
+        return resp
+    return None
 
-    <h3>Timeouts and Retries</h3>
-    <pre class="language-python"><code># Set timeout for requests
-# Timeout as single value (both connect and read)
-response = requests.get('https://httpbin.org/delay/1', timeout=5)
+print(fetch(BASE_URL))
+print(fetch(urljoin(BASE_URL, "no-such-page.html")))
+print(fetch(f"{API}/slow", params={"seconds": 5}, timeout=1))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>&lt;Response [200]&gt;
+HTTP 404  https://rays-python-datascience.netlify.app/practice/shop/no-such-page.html
+None
+TIMEOUT   http://127.0.0.1:8000/slow
+None</code></pre>
+                </div>
 
-# Separate connect and read timeouts
-response = requests.get('https://httpbin.org/delay/1', 
-                       timeout=(3.05, 27))  # (connect, read)
+                <p>The order of the <code>except</code> clauses matters: specific exceptions first, the general <code>RequestException</code> last, as a net for everything else (no network, a mistyped host name, a refused connection). The caller gets either a good response or <code>None</code>, and can never mistake one for the other.</p>
 
-# No timeout (wait forever) - NOT RECOMMENDED
-response = requests.get('https://httpbin.org/delay/1', timeout=None)
+                <div class="card card-success">
+                    <h4>✅ Errors Are the Normal Case</h4>
+                    <p>On your own disk, a file is either there or it is not. On a network, things fail for reasons that have nothing to do with your code: a router restarts, a server is busy, a page was removed yesterday. Writing the <code>except</code> branches is not pessimism and it is not a sign you did something wrong. It is what finished network code looks like.</p>
+                </div>
+            </section>
 
-# Retry logic with exponential backoff
-from urllib3.util.retry import Retry
-from requests.adapters import HTTPAdapter
+            <!-- ============================================================ -->
+            <section id="sessions" class="lesson-section">
+                <h2>🔗 Sessions</h2>
 
-def create_session_with_retries(
-    retries=3,
-    backoff_factor=0.3,
-    status_forcelist=(500, 502, 504)
-):
-    """Create session with automatic retries"""
-    session = requests.Session()
-    
-    retry = Retry(
-        total=retries,
-        read=retries,
-        connect=retries,
-        backoff_factor=backoff_factor,
-        status_forcelist=status_forcelist,
-        allowed_methods=["HEAD", "GET", "PUT", "DELETE", "OPTIONS", "TRACE"]
-    )
-    
-    adapter = HTTPAdapter(max_retries=retry)
-    session.mount('http://', adapter)
-    session.mount('https://', adapter)
-    
-    return session
+                <p>Each call to <code>requests.get()</code> opens a new connection to the server, sends one request, and hangs up. For a handful of pages that is fine. For many pages from the same site, a <strong>Session</strong> is better in two ways: it keeps the connection open between requests, which is faster for you and lighter for the server, and it remembers settings such as your headers so you state them once.</p>
 
-# Use session with retries
-session = create_session_with_retries()
-response = session.get('https://httpbin.org/status/500')  # Will retry
+                <pre><code class="language-python">import time
 
-# Custom retry logic
-def retry_request(url, max_retries=3, delay=1, backoff=2):
-    """Custom retry implementation"""
-    for attempt in range(max_retries):
-        try:
-            response = requests.get(url, timeout=10)
-            response.raise_for_status()
-            return response
-        
-        except (requests.exceptions.RequestException, 
-                requests.exceptions.HTTPError) as e:
-            if attempt == max_retries - 1:
-                raise
-            
-            wait_time = delay * (backoff ** attempt)
-            print(f"Attempt {attempt + 1} failed. Retrying in {wait_time}s...")
-            time.sleep(wait_time)
-    
-    return None</code></pre>
-
-    <h2>Advanced Features</h2>
-    
-    <h3>Streaming Responses</h3>
-    <pre class="language-python"><code># Stream large responses
-response = requests.get('https://httpbin.org/stream/100', stream=True)
-
-# Process line by line
-for line in response.iter_lines():
-    if line:
-        data = json.loads(line)
-        print(data)
-
-# Download large file in chunks
-def download_file(url, filename, chunk_size=8192):
-    """Download file with progress tracking"""
-    with requests.get(url, stream=True) as response:
-        response.raise_for_status()
-        
-        total_size = int(response.headers.get('content-length', 0))
-        downloaded = 0
-        
-        with open(filename, 'wb') as file:
-            for chunk in response.iter_content(chunk_size=chunk_size):
-                if chunk:
-                    file.write(chunk)
-                    downloaded += len(chunk)
-                    
-                    if total_size > 0:
-                        progress = (downloaded / total_size) * 100
-                        print(f"Progress: {progress:.2f}%", end='\r')
-        
-        print(f"\nDownloaded {filename}")
-
-# Stream JSON data
-def stream_json_array(url):
-    """Stream large JSON array"""
-    with requests.get(url, stream=True) as response:
-        response.raise_for_status()
-        
-        parser = ijson.items(response.raw, 'item')
-        for item in parser:
-            yield item
-
-# Server-Sent Events (SSE)
-def stream_sse(url):
-    """Stream Server-Sent Events"""
-    response = requests.get(url, stream=True)
-    
-    for line in response.iter_lines():
-        if line:
-            line = line.decode('utf-8')
-            if line.startswith('data: '):
-                data = line[6:]  # Remove 'data: ' prefix
-                yield json.loads(data)</code></pre>
-
-    <h3>Async Requests with Threading</h3>
-    <pre class="language-python"><code>import concurrent.futures
-import threading
-from queue import Queue
-
-# Parallel requests using ThreadPoolExecutor
-def fetch_url(url):
-    """Fetch single URL"""
-    try:
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-        return {'url': url, 'status': response.status_code, 'size': len(response.content)}
-    except Exception as e:
-        return {'url': url, 'error': str(e)}
-
-urls = [
-    'https://httpbin.org/delay/1',
-    'https://httpbin.org/delay/2',
-    'https://httpbin.org/delay/3',
-    'https://httpbin.org/get',
-    'https://httpbin.org/post'
-]
-
-# Fetch URLs in parallel
-with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-    results = list(executor.map(fetch_url, urls))
-
-for result in results:
-    print(result)
-
-# Async pattern with queue
-class AsyncRequester:
-    def __init__(self, num_workers=5):
-        self.queue = Queue()
-        self.results = []
-        self.num_workers = num_workers
-    
-    def worker(self):
-        """Worker thread function"""
-        while True:
-            url = self.queue.get()
-            if url is None:
-                break
-            
-            result = fetch_url(url)
-            self.results.append(result)
-            self.queue.task_done()
-    
-    def fetch_all(self, urls):
-        """Fetch all URLs asynchronously"""
-        # Start worker threads
-        threads = []
-        for _ in range(self.num_workers):
-            t = threading.Thread(target=self.worker)
-            t.start()
-            threads.append(t)
-        
-        # Add URLs to queue
-        for url in urls:
-            self.queue.put(url)
-        
-        # Wait for completion
-        self.queue.join()
-        
-        # Stop workers
-        for _ in range(self.num_workers):
-            self.queue.put(None)
-        
-        for t in threads:
-            t.join()
-        
-        return self.results
-
-# Usage
-requester = AsyncRequester(num_workers=5)
-results = requester.fetch_all(urls)</code></pre>
-
-    <h2>Working with APIs</h2>
-    
-    <h3>REST API Client</h3>
-    <pre class="language-python"><code>class RESTClient:
-    """Generic REST API client"""
-    
-    def __init__(self, base_url, auth_token=None):
-        self.base_url = base_url.rstrip('/')
-        self.session = requests.Session()
-        
-        # Default headers
-        self.session.headers.update({
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-        })
-        
-        if auth_token:
-            self.session.headers['Authorization'] = f'Bearer {auth_token}'
-    
-    def _request(self, method, endpoint, **kwargs):
-        """Make HTTP request"""
-        url = f"{self.base_url}/{endpoint.lstrip('/')}"
-        
-        # Set default timeout if not provided
-        kwargs.setdefault('timeout', 30)
-        
-        response = self.session.request(method, url, **kwargs)
-        response.raise_for_status()
-        
-        # Return JSON if possible, otherwise return response
-        try:
-            return response.json()
-        except ValueError:
-            return response.text
-    
-    def get(self, endpoint, params=None):
-        """GET request"""
-        return self._request('GET', endpoint, params=params)
-    
-    def post(self, endpoint, data=None):
-        """POST request"""
-        return self._request('POST', endpoint, json=data)
-    
-    def put(self, endpoint, data=None):
-        """PUT request"""
-        return self._request('PUT', endpoint, json=data)
-    
-    def patch(self, endpoint, data=None):
-        """PATCH request"""
-        return self._request('PATCH', endpoint, json=data)
-    
-    def delete(self, endpoint):
-        """DELETE request"""
-        return self._request('DELETE', endpoint)
-
-# Example: GitHub API client
-class GitHubClient(RESTClient):
-    """GitHub API client"""
-    
-    def __init__(self, token=None):
-        super().__init__('https://api.github.com', token)
-        self.session.headers['Accept'] = 'application/vnd.github.v3+json'
-    
-    def get_user(self, username):
-        """Get user information"""
-        return self.get(f'/users/{username}')
-    
-    def get_repos(self, username):
-        """Get user repositories"""
-        return self.get(f'/users/{username}/repos')
-    
-    def create_gist(self, description, files):
-        """Create a new gist"""
-        data = {
-            'description': description,
-            'public': True,
-            'files': files
-        }
-        return self.post('/gists', data)
-
-# Usage
-client = GitHubClient()
-user = client.get_user('octocat')
-repos = client.get_repos('octocat')</code></pre>
-
-    <h3>Pagination Handling</h3>
-    <pre class="language-python"><code>class PaginatedAPI:
-    """Handle paginated API responses"""
-    
-    def __init__(self, base_url):
-        self.base_url = base_url
-        self.session = requests.Session()
-    
-    def fetch_all_pages(self, endpoint, method='offset', **kwargs):
-        """Fetch all pages of paginated data"""
-        all_data = []
-        
-        if method == 'offset':
-            return self._fetch_offset_pagination(endpoint, **kwargs)
-        elif method == 'cursor':
-            return self._fetch_cursor_pagination(endpoint, **kwargs)
-        elif method == 'link':
-            return self._fetch_link_pagination(endpoint, **kwargs)
-        else:
-            raise ValueError(f"Unknown pagination method: {method}")
-    
-    def _fetch_offset_pagination(self, endpoint, page_size=100):
-        """Handle offset/limit pagination"""
-        offset = 0
-        all_data = []
-        
-        while True:
-            params = {'offset': offset, 'limit': page_size}
-            response = self.session.get(f"{self.base_url}/{endpoint}", 
-                                       params=params)
-            response.raise_for_status()
-            
-            data = response.json()
-            items = data.get('items', data.get('results', []))
-            
-            if not items:
-                break
-            
-            all_data.extend(items)
-            offset += page_size
-            
-            # Check if we have all data
-            total = data.get('total', data.get('count'))
-            if total and offset >= total:
-                break
-            
-            time.sleep(0.1)  # Rate limiting
-        
-        return all_data
-    
-    def _fetch_cursor_pagination(self, endpoint, page_size=100):
-        """Handle cursor-based pagination"""
-        all_data = []
-        cursor = None
-        
-        while True:
-            params = {'limit': page_size}
-            if cursor:
-                params['cursor'] = cursor
-            
-            response = self.session.get(f"{self.base_url}/{endpoint}", 
-                                       params=params)
-            response.raise_for_status()
-            
-            data = response.json()
-            items = data.get('items', data.get('results', []))
-            
-            if not items:
-                break
-            
-            all_data.extend(items)
-            cursor = data.get('next_cursor')
-            
-            if not cursor:
-                break
-            
-            time.sleep(0.1)
-        
-        return all_data
-    
-    def _fetch_link_pagination(self, endpoint):
-        """Handle Link header pagination (GitHub style)"""
-        all_data = []
-        url = f"{self.base_url}/{endpoint}"
-        
-        while url:
-            response = self.session.get(url)
-            response.raise_for_status()
-            
-            all_data.extend(response.json())
-            
-            # Parse Link header
-            links = self._parse_link_header(response.headers.get('Link', ''))
-            url = links.get('next')
-            
-            time.sleep(0.1)
-        
-        return all_data
-    
-    def _parse_link_header(self, link_header):
-        """Parse Link header for pagination"""
-        links = {}
-        
-        if not link_header:
-            return links
-        
-        for link in link_header.split(','):
-            parts = link.split(';')
-            if len(parts) == 2:
-                url = parts[0].strip()[1:-1]  # Remove < and >
-                rel = parts[1].split('=')[1].strip()[1:-1]  # Remove quotes
-                links[rel] = url
-        
-        return links</code></pre>
-
-    <h2>Real-world Examples</h2>
-    
-    <h3>Weather API Integration</h3>
-    <pre class="language-python"><code># OpenWeatherMap API example
-class WeatherAPI:
-    """OpenWeatherMap API client"""
-    
-    def __init__(self, api_key):
-        self.api_key = api_key
-        self.base_url = 'https://api.openweathermap.org/data/2.5'
-        self.session = requests.Session()
-    
-    def get_current_weather(self, city, country_code=None):
-        """Get current weather for a city"""
-        if country_code:
-            q = f"{city},{country_code}"
-        else:
-            q = city
-        
-        params = {
-            'q': q,
-            'appid': self.api_key,
-            'units': 'metric'
-        }
-        
-        response = self.session.get(f"{self.base_url}/weather", 
-                                   params=params)
-        response.raise_for_status()
-        
-        data = response.json()
-        
-        return {
-            'city': data['name'],
-            'country': data['sys']['country'],
-            'temperature': data['main']['temp'],
-            'feels_like': data['main']['feels_like'],
-            'humidity': data['main']['humidity'],
-            'description': data['weather'][0]['description'],
-            'wind_speed': data['wind']['speed'],
-            'timestamp': datetime.fromtimestamp(data['dt'])
-        }
-    
-    def get_forecast(self, city, days=5):
-        """Get weather forecast"""
-        params = {
-            'q': city,
-            'appid': self.api_key,
-            'units': 'metric',
-            'cnt': days * 8  # 8 forecasts per day (3-hour intervals)
-        }
-        
-        response = self.session.get(f"{self.base_url}/forecast", 
-                                   params=params)
-        response.raise_for_status()
-        
-        data = response.json()
-        forecasts = []
-        
-        for item in data['list']:
-            forecasts.append({
-                'datetime': datetime.fromtimestamp(item['dt']),
-                'temperature': item['main']['temp'],
-                'description': item['weather'][0]['description'],
-                'precipitation': item.get('rain', {}).get('3h', 0)
-            })
-        
-        return forecasts
-
-# Usage
-# weather_api = WeatherAPI('your-api-key')
-# weather = weather_api.get_current_weather('London', 'UK')
-# forecast = weather_api.get_forecast('London', days=3)</code></pre>
-
-    <h3>Data Collection Pipeline</h3>
-    <pre class="language-python"><code>import csv
-import sqlite3
-from datetime import datetime, timedelta
-
-class DataCollector:
-    """Automated data collection pipeline"""
-    
-    def __init__(self, db_path='data.db'):
-        self.db_path = db_path
-        self.session = requests.Session()
-        self.session.headers['User-Agent'] = 'DataCollector/1.0'
-        self._init_database()
-    
-    def _init_database(self):
-        """Initialize database"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS collected_data (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                source TEXT,
-                url TEXT,
-                data TEXT,
-                collected_at TIMESTAMP,
-                status TEXT
-            )
-        ''')
-        
-        conn.commit()
-        conn.close()
-    
-    def collect(self, sources):
-        """Collect data from multiple sources"""
-        results = []
-        
-        for source in sources:
-            try:
-                result = self._collect_single(source)
-                results.append(result)
-                self._save_result(result)
-                
-                # Rate limiting
-                time.sleep(source.get('delay', 1))
-                
-            except Exception as e:
-                print(f"Error collecting from {source['name']}: {e}")
-                results.append({
-                    'source': source['name'],
-                    'status': 'error',
-                    'error': str(e)
-                })
-        
-        return results
-    
-    def _collect_single(self, source):
-        """Collect from single source"""
-        response = self.session.get(
-            source['url'],
-            params=source.get('params'),
-            headers=source.get('headers', {}),
-            timeout=source.get('timeout', 30)
-        )
-        response.raise_for_status()
-        
-        # Parse based on content type
-        content_type = response.headers.get('content-type', '')
-        
-        if 'json' in content_type:
-            data = response.json()
-        elif 'xml' in content_type:
-            data = response.text
-            # Parse XML as needed
-        else:
-            data = response.text
-        
-        return {
-            'source': source['name'],
-            'url': response.url,
-            'data': data,
-            'collected_at': datetime.now(),
-            'status': 'success'
-        }
-    
-    def _save_result(self, result):
-        """Save result to database"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            INSERT INTO collected_data (source, url, data, collected_at, status)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (
-            result['source'],
-            result['url'],
-            json.dumps(result['data']) if isinstance(result['data'], dict) else result['data'],
-            result['collected_at'],
-            result['status']
-        ))
-        
-        conn.commit()
-        conn.close()
-    
-    def export_to_csv(self, filename='collected_data.csv'):
-        """Export collected data to CSV"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        cursor.execute('SELECT * FROM collected_data ORDER BY collected_at DESC')
-        rows = cursor.fetchall()
-        
-        with open(filename, 'w', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow(['ID', 'Source', 'URL', 'Data', 'Collected At', 'Status'])
-            writer.writerows(rows)
-        
-        conn.close()
-        print(f"Exported {len(rows)} records to {filename}")
-
-# Usage
-collector = DataCollector()
-
-sources = [
-    {
-        'name': 'API 1',
-        'url': 'https://api.example.com/data',
-        'params': {'limit': 100},
-        'delay': 2
-    },
-    {
-        'name': 'API 2',
-        'url': 'https://another-api.com/feed',
-        'headers': {'API-Key': 'secret'},
-        'timeout': 10
-    }
-]
-
-# results = collector.collect(sources)
-# collector.export_to_csv()</code></pre>
-
-    <h2>Best Practices</h2>
-    
-    <pre class="language-python"><code># Best practices for using Requests
-
-# 1. Always use sessions for multiple requests to same host
 with requests.Session() as session:
-    # Multiple requests share connection pool
-    session.get('https://api.example.com/endpoint1')
-    session.get('https://api.example.com/endpoint2')
+    session.headers.update(HEADERS)
+    for page in ["index.html", "page-2.html", "page-3.html"]:
+        resp = session.get(urljoin(BASE_URL, page), timeout=10)
+        resp.raise_for_status()
+        print(page, resp.status_code, len(resp.content), "bytes")
+        time.sleep(1)                    # the Crawl-delay from robots.txt</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>index.html 200 11783 bytes
+page-2.html 200 11854 bytes
+page-3.html 200 11708 bytes</code></pre>
+                </div>
 
-# 2. Set timeouts on all requests
-response = requests.get('https://api.example.com/data', timeout=30)
+                <p>Three things to notice. <code>session.headers.update()</code> adds your User-Agent to every request the session makes. The <code>with</code> block closes the connection when you are done, exactly like <code>with open(...)</code> closes a file. And <code>time.sleep(1)</code> honors the one-second crawl delay you read at the start of the lesson.</p>
 
-# 3. Use context managers for file uploads
-with open('data.csv', 'rb') as f:
-    files = {'file': f}
-    response = requests.post('https://api.example.com/upload', files=files)
+                <div class="card card-warning">
+                    <h4>⚠️ A Session Does Not Remember a Timeout</h4>
+                    <p>There is no session-wide timeout setting. You still pass <code>timeout=</code> on every call, which is one more reason to wrap your requests in a small function of your own.</p>
+                </div>
 
-# 4. Handle errors gracefully
-try:
-    response = requests.get('https://api.example.com/data')
-    response.raise_for_status()
-    data = response.json()
-except requests.exceptions.RequestException as e:
-    print(f"Request failed: {e}")
-    data = None
+                <p>A session also keeps <strong>cookies</strong>, the small values a server hands out so that it can recognize your next request. That is how a site knows you are signed in. The practice shop sets none, and authentication is the subject of <a href="webscraping_api_authentication.html">Lesson 6.4</a>.</p>
+            </section>
 
-# 5. Respect rate limits
-class RateLimiter:
-    def __init__(self, calls_per_second=1):
-        self.delay = 1.0 / calls_per_second
-        self.last_call = 0
-    
-    def wait(self):
-        elapsed = time.time() - self.last_call
-        if elapsed < self.delay:
-            time.sleep(self.delay - elapsed)
-        self.last_call = time.time()
+            <!-- ============================================================ -->
+            <section id="saving" class="lesson-section">
+                <h2>💾 Saving Raw Responses</h2>
 
-# 6. Log requests for debugging
-import logging
+                <p>Downloading and analyzing are two different jobs, and the first is the slow, fragile, impolite-if-repeated one. So do it once. Save exactly what the server sent, then do all your parsing experiments on the saved copy. If your parsing code has a bug, and it will, you fix it and rerun without sending a single new request.</p>
 
-logging.basicConfig(level=logging.DEBUG)
-requests_log = logging.getLogger("requests.packages.urllib3")
-requests_log.setLevel(logging.DEBUG)
-requests_log.propagate = True
+                <pre><code class="language-python">from pathlib import Path
 
-# 7. Validate SSL certificates (default, but worth mentioning)
-response = requests.get('https://api.example.com', verify=True)
+raw_dir = Path("raw")
+raw_dir.mkdir(exist_ok=True)
 
-# 8. Use environment variables for sensitive data
-import os
+resp = fetch(urljoin(BASE_URL, "price-list.html"))
+path = raw_dir / "price-list.html"
+path.write_bytes(resp.content)
 
-api_key = os.environ.get('API_KEY')
-headers = {'Authorization': f'Bearer {api_key}'}</code></pre>
+print(path.as_posix(), path.stat().st_size, "bytes")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>raw/price-list.html 38515 bytes</code></pre>
+                </div>
 
-    <h2>Practice Exercises</h2>
-    
-    <h3>Exercise 1: Build an API Wrapper</h3>
-    <p>Create a complete API wrapper for a public API:</p>
-    <ol>
-        <li>Implement all CRUD operations</li>
-        <li>Handle authentication</li>
-        <li>Implement pagination</li>
-        <li>Add retry logic with exponential backoff</li>
-        <li>Include comprehensive error handling</li>
-    </ol>
+                <p>Write <code>resp.content</code>, the bytes, not <code>resp.text</code>. Bytes are what arrived; saving them sidesteps every encoding question and works just as well for images and PDFs. Reading it back needs no network at all:</p>
 
-    <h3>Exercise 2: Multi-Source Data Aggregator</h3>
-    <p>Build a system that:</p>
-    <ol>
-        <li>Fetches data from multiple APIs concurrently</li>
-        <li>Handles different authentication methods</li>
-        <li>Normalizes data from different sources</li>
-        <li>Implements caching to reduce API calls</li>
-        <li>Exports aggregated data</li>
-    </ol>
+                <pre><code class="language-python">html = path.read_text(encoding="utf-8")
+print(html.count("&lt;tr&gt;"), "table rows, read from disk")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>248 table rows, read from disk</code></pre>
+                </div>
 
-    <h3>Exercise 3: API Performance Monitor</h3>
-    <p>Create a monitoring tool that:</p>
-    <ol>
-        <li>Tests API endpoints periodically</li>
-        <li>Measures response times</li>
-        <li>Checks for status codes</li>
-        <li>Alerts on failures or slow responses</li>
-        <li>Generates performance reports</li>
-    </ol>
+                <p>A saved copy is also a record. Pages change and disappear, and "this is what the site said on the day I collected it" is something an analyst needs to be able to show. Keep the <code>raw/</code> folder next to your notebook; the project below adds a log of what is in it.</p>
+            </section>
 
-    <h2>Key Takeaways</h2>
-    <ul>
-        <li>🌐 Requests makes HTTP simple and Pythonic</li>
-        <li>🔐 Multiple authentication methods supported</li>
-        <li>🍪 Sessions maintain state across requests</li>
-        <li>⚡ Connection pooling improves performance</li>
-        <li>🔄 Retry strategies handle transient failures</li>
-        <li>📊 Stream large responses to save memory</li>
-        <li>⚠️ Always handle errors and set timeouts</li>
-    </ul>
+            <!-- ============================================================ -->
+            <section id="mistakes" class="lesson-section">
+                <h2>⚠️ Common Mistakes</h2>
 
-    <h2>Further Resources</h2>
-    <ul>
-        <li><a href="https://docs.python-requests.org/">Requests Documentation</a></li>
-        <li><a href="https://httpbin.org/">HTTPBin - HTTP Testing Service</a></li>
-        <li><a href="https://www.postman.com/">Postman - API Testing Tool</a></li>
-        <li><a href="https://curl.se/">cURL - Command Line HTTP Tool</a></li>
-        <li><a href="https://developer.mozilla.org/en-US/docs/Web/HTTP">MDN HTTP Documentation</a></li>
-        <li><a href="https://github.com/public-apis/public-apis">List of Public APIs for Practice</a></li>
-    </ul>
+                <p>Everyone makes these in their first week of network code. Each one is quick to recognize once you have seen its message.</p>
 
-    <!-- Learning Journal (REQUIRED per the Courseware Authoring Standard) -->
-    <section id="journal" class="lesson-section">
-        <h2>📓 Learning Journal</h2>
-        <div class="card card-info">
-            <p>Keep a learning journal — digital or physical. After this lesson, take a few minutes to write down:</p>
-            <ul>
-                <li><strong>Key concepts</strong> you learned</li>
-                <li><strong>Techniques that clicked</strong> for you</li>
-                <li><strong>Questions or confusion points</strong> to revisit</li>
-                <li><strong>Ideas you want to try</strong></li>
-                <li><strong>Your progress and feelings</strong> about learning this</li>
-            </ul>
-            <p><strong>✍️ This lesson's prompt:</strong> Requests calls itself "HTTP for humans." Now that you've seen the request
-            and response objects up close, what part of how the web actually works became clearer to you — and what still feels
-            like a black box you'd like to open?</p>
+                <h3>1. Leaving Off the https://</h3>
+
+                <pre data-raises="requests.exceptions.MissingSchema"><code class="language-python">requests.get("rays-python-datascience.netlify.app/practice/shop/", timeout=10)</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>MissingSchema: Invalid URL 'rays-python-datascience.netlify.app/practice/shop/': No scheme supplied. Perhaps you meant https://rays-python-datascience.netlify.app/practice/shop/?</code></pre>
+                </div>
+                <p><strong>What it means:</strong> the "scheme" is the <code>https://</code> or <code>http://</code> at the front. Browsers add it for you; <code>requests</code> will not guess. <strong>Fix:</strong> write the full URL, and build the others from <code>BASE_URL</code> with <code>urljoin</code>.</p>
+
+                <h3>2. Calling .json() on Something That Is Not JSON</h3>
+
+                <pre data-raises="requests.exceptions.JSONDecodeError"><code class="language-python">page = requests.get(BASE_URL, headers=HEADERS, timeout=10)
+page.json()</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>JSONDecodeError: Expecting value: line 1 column 1 (char 0)</code></pre>
+                </div>
+                <p><strong>What it means:</strong> the parser expected JSON and the very first character (line 1, column 1) was the <code>&lt;</code> of an HTML page. This often appears when an API answers with an HTML error page, or when you requested the wrong URL. <strong>Fix:</strong> check <code>r.status_code</code> and <code>r.headers["Content-Type"]</code>, and print <code>r.text[:200]</code> to see what you really received.</p>
+
+                <h3>3. Parsing an Error Page as if It Were Data</h3>
+
+                <pre><code class="language-python">page = requests.get(urljoin(BASE_URL, "page-14.html"), headers=HEADERS, timeout=10)
+print(page.status_code, page.text.count("product-card"))</code></pre>
+                <div class="card card-output">
+                    <h4>Output (no error, and no data)</h4>
+                    <pre><code>404 0</code></pre>
+                </div>
+                <p><strong>What happened:</strong> the catalog has 13 pages. Page 14 is a 404, and its body contains no products, so a loop that counts products quietly records zero. <strong>Fix:</strong> <code>raise_for_status()</code> after every request, or use a helper like <code>fetch()</code> that does.</p>
+
+                <h3>4. No Timeout</h3>
+                <pre data-norun><code class="language-python">r = requests.get(f"{API}/slow", params={"seconds": 10})   # waits as long as the server likes</code></pre>
+                <p><strong>What happens:</strong> nothing, for as long as the server stays silent. There is no message to show you because there is no error. <strong>Fix:</strong> <code>timeout=</code> on every call. If a cell has been "running" for a minute, interrupt it (the stop button in Jupyter, <kbd>Ctrl</kbd>+<kbd>C</kbd> in a terminal) and look for the call that is missing one.</p>
+
+                <h3>5. Forgetting to Start the Practice API</h3>
+                <p>If the second terminal is closed, every call to <code>http://127.0.0.1:8000</code> raises <code>ConnectionError</code> with a long message that ends in <code>Connection refused</code> (on some systems it shows up as a connect timeout instead). <strong>Fix:</strong> start <code>python data/mock_api.py</code> again and rerun the cell. The same error for a public site usually means you are offline or the host name is misspelled.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="project" class="lesson-section">
+                <h2>🛠️ Project: The Polite Snapshot</h2>
+
+                <p>You will build a small tool that does what a careful analyst does before any scraping project: check the rules, download a few pages slowly, keep the raw files, and log every request. Then you will use one of the downloaded files to check the shop against the product table you already know. Work in a new notebook called <code>lesson_6_1_project</code> or a script called <code>snapshot.py</code>. Keep the practice API running for Step 5. Allow about 30 minutes.</p>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 1: Set up and read the rules <span class="step-time">(5 min)</span></h3>
+                    <p>Start from a clean slate: imports, the two constants, a session that carries your User-Agent, and the robots rules parsed from a live request.</p>
+                    <pre><code class="language-python">import time
+from pathlib import Path
+from urllib.parse import urljoin
+from urllib.robotparser import RobotFileParser
+
+import pandas as pd
+import requests
+
+BASE_URL = "https://rays-python-datascience.netlify.app/practice/shop/"
+USER_AGENT = "pinecrest-course-bot/1.0 (learning project; contact: you@example.com)"
+
+session = requests.Session()
+session.headers.update({"User-Agent": USER_AGENT})
+
+robots_resp = session.get(urljoin(BASE_URL, "../robots.txt"), timeout=10)
+robots_resp.raise_for_status()
+robots = RobotFileParser()
+robots.parse(robots_resp.text.splitlines())
+
+delay = robots.crawl_delay(USER_AGENT) or 1
+print("crawl delay:", delay, "second(s)")</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>crawl delay: 1 second(s)</code></pre>
+                    </div>
+                    <p><code>crawl_delay()</code> returns <code>None</code> when a site does not set one. The <code>or 1</code> gives you a polite default in that case.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 2: Write polite_get() <span class="step-time">(8 min)</span></h3>
+                    <p>One function holds every habit from this lesson. It refuses URLs that <code>robots.txt</code> disallows, sets a timeout, catches failures, and pauses after each request. It returns a small dictionary describing what happened, plus the response when there is one.</p>
+                    <pre><code class="language-python">def polite_get(url):
+    """Fetch one URL by the rules. Returns (log_row, response_or_None)."""
+    row = {"url": url.replace(BASE_URL, ""), "status": None, "bytes": 0, "note": ""}
+    if not robots.can_fetch(USER_AGENT, url):
+        row["note"] = "skipped: robots.txt"
+        return row, None
+    try:
+        resp = session.get(url, timeout=10)
+        row["status"] = resp.status_code
+        resp.raise_for_status()
+    except requests.exceptions.Timeout:
+        row["note"] = "timeout"
+        resp = None
+    except requests.exceptions.HTTPError:
+        row["note"] = "http error"
+        resp = None
+    except requests.exceptions.RequestException as err:
+        row["note"] = type(err).__name__
+        resp = None
+    else:
+        row["bytes"] = len(resp.content)
+    time.sleep(delay)
+    return row, resp
+
+row, resp = polite_get(urljoin(BASE_URL, "staff/"))
+print(row)</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>{'url': 'staff/', 'status': None, 'bytes': 0, 'note': 'skipped: robots.txt'}</code></pre>
+                    </div>
+                    <p>The staff page was never requested. The check happens before the network is touched, which is the only place it does any good.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 3: Take the snapshot <span class="step-time">(7 min)</span></h3>
+                    <p>Fetch a mix of targets: two catalog pages, the price list, the JSON file behind the search page, a page that does not exist, and the staff folder. Save each good response into <code>raw/</code> and collect the log rows as you go. With a one-second delay this takes about five seconds, and that is fine.</p>
+                    <pre><code class="language-python">targets = ["index.html", "page-2.html", "price-list.html", "products.json",
+           "page-99.html", "staff/"]
+
+raw_dir = Path("raw")
+raw_dir.mkdir(exist_ok=True)
+
+log = []
+for name in targets:
+    row, resp = polite_get(urljoin(BASE_URL, name))
+    if resp is not None:
+        (raw_dir / name).write_bytes(resp.content)
+        row["note"] = "saved"
+    log.append(row)
+    print(f"{row['url']:&lt;16} {row['note']}")</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>index.html       saved
+page-2.html      saved
+price-list.html  saved
+products.json    saved
+page-99.html     http error
+staff/           skipped: robots.txt</code></pre>
+                    </div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 4: Keep the log <span class="step-time">(5 min)</span></h3>
+                    <p>A list of dictionaries becomes a DataFrame, and the DataFrame becomes a CSV file that travels with the raw pages. Anyone who opens your <code>raw/</code> folder later can see what was asked for, what came back, and what was skipped on purpose.</p>
+                    <pre><code class="language-python">manifest = pd.DataFrame(log)
+manifest["status"] = manifest["status"].astype("Int64")
+manifest.to_csv(raw_dir / "manifest.csv", index=False)
+
+print(manifest)
+print()
+print(sorted(p.name for p in raw_dir.iterdir()))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>               url  status  bytes                 note
+0       index.html     200  11783                saved
+1      page-2.html     200  11854                saved
+2  price-list.html     200  38515                saved
+3    products.json     200  62169                saved
+4     page-99.html     404      0           http error
+5           staff/    &lt;NA&gt;      0  skipped: robots.txt
+
+['index.html', 'manifest.csv', 'page-2.html', 'price-list.html', 'products.json']</code></pre>
+                    </div>
+                    <p><code>Int64</code> (capital I) is the pandas integer type that allows missing values, which you met in Lesson 2.3. The skipped request has no status because no request was made.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 5: Use what you saved <span class="step-time">(5 min)</span></h3>
+                    <p>Parse the saved JSON from disk, with no new request, and check it against <code>data/products.csv</code>. Then ask the practice API the same question a third way. Three sources that agree are worth more than one.</p>
+                    <pre><code class="language-python">import json
+
+shop = json.loads((raw_dir / "products.json").read_text(encoding="utf-8"))
+shop_df = pd.DataFrame(shop["products"])
+catalog = pd.read_csv("data/products.csv")
+
+print(shop_df.shape)
+print("same SKUs as products.csv:", set(shop_df["sku"]) == set(catalog["sku"]))
+print("same prices:", shop_df["price"].tolist() == catalog["price"].tolist())
+
+api = session.get("http://127.0.0.1:8000/products", params={"per_page": 1}, timeout=10)
+api.raise_for_status()
+print("API total:", api.json()["total"])
+
+session.close()</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>(242, 9)
+same SKUs as products.csv: True
+same prices: True
+API total: 242</code></pre>
+                    </div>
+                    <p>The website, the CSV file and the API all describe the same 242 products. In real projects they often disagree, and finding out where is the first useful result of collecting the data.</p>
+                </div>
+
+                <div class="card card-success">
+                    <h3>✅ Project Completion Checklist</h3>
+                    <ul class="checklist">
+                        <li>Your session sends a User-Agent that names the project and gives your contact address</li>
+                        <li><code>robots.txt</code> is fetched and parsed in code, and the crawl delay comes from it</li>
+                        <li><code>polite_get()</code> refuses the staff URL without sending a request</li>
+                        <li>Every request has a timeout and is followed by <code>raise_for_status()</code></li>
+                        <li><code>raw/</code> holds four saved files and <code>manifest.csv</code> with six rows</li>
+                        <li>The 404 and the skipped URL appear in the log instead of crashing the loop</li>
+                        <li>The saved <code>products.json</code> matches <code>data/products.csv</code>: 242 SKUs, same prices</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="exercises" class="lesson-section">
+                <h2>🏋️ Hands-on Exercises</h2>
+
+                <p>These continue in your lesson notebook, where <code>BASE_URL</code>, <code>API</code>, <code>HEADERS</code> and <code>fetch()</code> are already defined. Try each one before opening the solution.</p>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 1: Three Requests, Three Outcomes</h3>
+                    <p>Request <code>deals.html</code>, <code>search.html</code> and <code>checkout.html</code> from the practice shop, one second apart. For each, print the file name, the status code and whether <code>.ok</code> is true. Which one does not exist?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Loop over the three names, build each URL with <code>urljoin(BASE_URL, name)</code>, and use plain <code>requests.get()</code> with <code>headers=HEADERS</code> and a timeout so that you can look at the status yourself.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">for name in ["deals.html", "search.html", "checkout.html"]:
+    resp = requests.get(urljoin(BASE_URL, name), headers=HEADERS, timeout=10)
+    print(name, resp.status_code, resp.ok)
+    time.sleep(1)</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>deals.html 200 True
+search.html 200 True
+checkout.html 404 False</code></pre>
+                        </div>
+                        <p>There is no checkout page. The other two exist, but as you will discover in Lesson 6.3, their interesting content is not in the HTML that <code>requests</code> receives.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 2: Count Without Downloading</h3>
+                    <p>Use the practice API to find out how many products are in each of the categories Tents, Snow and Footwear, while transferring as little data as possible. Print one line per category.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Every page of results carries a <code>total</code>. Ask for <code>per_page=1</code> and read that key instead of counting items.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">for category in ["Tents", "Snow", "Footwear"]:
+    resp = fetch(f"{API}/products", params={"category": category, "per_page": 1})
+    print(category, resp.json()["total"])</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>Tents 24
+Snow 22
+Footwear 28</code></pre>
+                        </div>
+                        <p>Each response carried one product and the answer. Reading the metadata an API gives you is often the cheapest way to answer a counting question.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 3: Just the Headers, Please</h3>
+                    <p>HTTP has a method called <code>HEAD</code> that asks for the status and headers of a page without its body. Send one to <code>price-list.html</code> with <code>requests.head()</code>. Print the status code, the <code>Content-Type</code> header and the length of <code>r.content</code>. When could this be useful?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>requests.head()</code> takes the same arguments as <code>requests.get()</code>, including <code>headers</code> and <code>timeout</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">resp = requests.head(urljoin(BASE_URL, "price-list.html"), headers=HEADERS, timeout=10)
+print(resp.status_code)
+print(resp.headers["Content-Type"])
+print(len(resp.content), "bytes of body")</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>200
+text/html; charset=UTF-8
+0 bytes of body</code></pre>
+                        </div>
+                        <p>A <code>HEAD</code> request is a cheap way to check that a URL exists, or to see what type of file it is, before deciding whether to download it.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 4: A JSON Helper That Explains Itself (Stretch)</h3>
+                    <p>Write <code>get_json(url, **kwargs)</code> that returns a pair <code>(data, problem)</code>. On success, <code>data</code> is the parsed JSON and <code>problem</code> is <code>None</code>. On failure, <code>data</code> is <code>None</code> and <code>problem</code> is a short string: <code>"timeout"</code>, the API's own error message for an HTTP error when it sent one, or <code>"not JSON"</code>. Test it on a product that exists, a product that does not, the shop's front page, and <code>/slow</code> with a one-second timeout.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>An <code>HTTPError</code> carries the response as <code>err.response</code>, and that response may have a JSON body of its own. <code>requests.exceptions.JSONDecodeError</code> is what <code>.json()</code> raises for a body that is not JSON.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">def get_json(url, **kwargs):
+    kwargs.setdefault("headers", HEADERS)
+    kwargs.setdefault("timeout", 10)
+    try:
+        resp = requests.get(url, **kwargs)
+        resp.raise_for_status()
+        return resp.json(), None
+    except requests.exceptions.Timeout:
+        return None, "timeout"
+    except requests.exceptions.HTTPError as err:
+        try:
+            return None, err.response.json()["error"]["message"]
+        except (requests.exceptions.JSONDecodeError, KeyError):
+            return None, f"HTTP {err.response.status_code}"
+    except requests.exceptions.JSONDecodeError:
+        return None, "not JSON"
+
+data, problem = get_json(f"{API}/products/SNW-1001")
+print(data["name"], "|", problem)
+print(get_json(f"{API}/products/SNW-9999"))
+print(get_json(BASE_URL))
+print(get_json(f"{API}/slow", params={"seconds": 3}, timeout=1))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>Wrenfield Sawtooth Snowshoes | None
+(None, "No product with SKU 'SNW-9999'.")
+(None, 'not JSON')
+(None, 'timeout')</code></pre>
+                        </div>
+                        <p>The <code>JSONDecodeError</code> clause can sit after the others because the exceptions are checked in order and only one matches each failure. Notice the nested <code>try</code>: an error response is itself something you parse carefully, because not every server explains its errors in JSON.</p>
+                    </details>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="quiz" class="lesson-section">
+                <h2>🎯 Quick Quiz</h2>
+                <div class="card quiz-container">
+                    <h3>🎯 Check Your Understanding</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> A request comes back with status code <code>404</code>. Without any extra code from you, what does <code>requests.get()</code> do?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Think back to the missing page: did the call itself fail, or did it hand you a response object you could inspect?">
+                                A) Raises <code>HTTPError</code> immediately
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="An HTTP error status is still a complete, successful conversation as far as requests is concerned. You get a response with status_code 404 and ok False, and nothing is raised unless you call raise_for_status.">
+                                B) Returns a normal response object whose <code>.ok</code> is <code>False</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="None is what the fetch helper in this lesson returns after it catches the error. What does plain requests.get give back?">
+                                C) Returns <code>None</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> What does this print? (No request is sent: <code>prepare()</code> only builds it.)</p>
+                        <pre><code class="language-python">prepared = requests.Request("GET", "http://127.0.0.1:8000/products",
+                            params={"category": "Camp Kitchen", "page": 2}).prepare()
+print(prepared.url)</code></pre>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="requests joins the pairs with an ampersand after a question mark and encodes the space so the URL stays valid. Letting params build the query string avoids this whole class of bug.">
+                                A) <code>http://127.0.0.1:8000/products?category=Camp+Kitchen&amp;page=2</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="A URL cannot contain a raw space. What did requests do with the space in the Camp Kitchen request earlier in the lesson?">
+                                B) <code>http://127.0.0.1:8000/products?category=Camp Kitchen&amp;page=2</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="params become the query string, the part after the question mark, written as name=value pairs. They do not change the path.">
+                                C) <code>http://127.0.0.1:8000/products/Camp+Kitchen/2</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> You call <code>requests.get(url, timeout=10)</code>. Which statement is true?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="The timeout is not a stopwatch on the whole transfer. A large file that keeps arriving steadily can take much longer than 10 seconds without any error.">
+                                A) The whole download is guaranteed to finish or fail within 10 seconds
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="requests does not retry on its own because of a timeout value. Retrying is something you add deliberately, in Lesson 6.5.">
+                                B) The request is retried for up to 10 seconds if it fails
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="The timeout bounds the wait to connect and the wait between bytes. Without it, requests waits forever, which is why every call in this course has one.">
+                                C) A <code>Timeout</code> exception is raised if the server takes more than 10 seconds to connect or goes silent for 10 seconds while sending
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 4:</strong> You print <code>r.text</code> from a page and the ratings show as <code>â˜… 4.0</code> instead of a star. What is the most likely cause, and the fix?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="Three junk characters in place of one symbol is the signature of UTF-8 bytes read with a Western European table. The bytes are fine. Tell requests the right encoding, or give the raw bytes to a parser that reads the page's own charset.">
+                                A) The bytes were decoded with the wrong encoding; set <code>r.encoding = "utf-8"</code> (or parse <code>r.content</code>)
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="The same request would return the same bytes. Count the junk characters: three of them where one symbol should be. What does that suggest about how the bytes were read?">
+                                B) The server sent a damaged file; request the page again
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="JavaScript content would be missing from the HTML entirely, not present in a scrambled form. Scrambled symbols point at how bytes were turned into text.">
+                                C) The page uses JavaScript to draw the stars
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 5:</strong> A site's <code>robots.txt</code> says <code>Disallow: /staff/</code>. The staff page has no login and opens in your browser. What should your data collection script do?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Being reachable is not the same as being offered. Who wrote the Disallow line, and who is it addressed to?">
+                                A) Fetch it, since anything a browser can open is public
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Going slowly and identifying yourself are good habits for pages you are allowed to fetch. They do not turn a no into a yes.">
+                                B) Fetch it, but slowly and with an honest User-Agent
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="robots.txt is the site owner's request to automated clients. Nothing technical enforces it, which is exactly why honoring it is part of doing this work professionally.">
+                                C) Leave it alone: the owner has asked programs not to go there
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="faq" class="lesson-section">
+                <h2>❓ Common Questions at This Stage</h2>
+
+                <details>
+                    <summary>Is web scraping legal?</summary>
+                    <p>It depends on what you collect, how, from whom, and where you live, which is why this lesson gives you rules of conduct instead of a yes or no. Collecting modest amounts of non-personal facts from pages a site offers to everyone, at a gentle pace, while honoring <code>robots.txt</code> and the terms of use, is the low-risk end. Going around logins, ignoring a request to stop, copying creative content or gathering data about people is the high-risk end. For anything commercial or large, ask the site owner or get advice from someone qualified.</p>
+                </details>
+                <details>
+                    <summary>pandas can read a URL directly. Why not just use <code>pd.read_csv(url)</code>?</summary>
+                    <p>For a public CSV file on a server you trust, that is a fine shortcut. It gives you no say over the User-Agent, the timeout or what happens on an error, and it does not keep the raw file. Fetching with <code>requests</code>, saving the bytes, then reading the saved file with pandas gives you control and a record, for three extra lines.</p>
+                </details>
+                <details>
+                    <summary>When would I use POST instead of GET?</summary>
+                    <p><code>GET</code> reads: it should never change anything on the server, and its parameters travel in the URL. <code>POST</code> sends data in the request body, for example to submit a form or to log in. You will send your first <code>POST</code> in Lesson 6.4, with <code>requests.post(url, json={...})</code>. The response object works exactly as it does for <code>GET</code>.</p>
+                </details>
+                <details>
+                    <summary>What is the difference between <code>http://</code> and <code>https://</code>?</summary>
+                    <p>HTTPS is the same conversation inside an encrypted connection, so nobody between you and the server can read or alter it. <code>requests</code> handles the encryption and checks the site's certificate for you. Public sites should always be HTTPS. The practice API uses plain HTTP only because it never leaves your own computer.</p>
+                </details>
+                <details>
+                    <summary>I have seen <code>urllib</code> and <code>httpx</code> in other tutorials. Should I learn those?</summary>
+                    <p><code>urllib</code> is the standard library's HTTP tool: always available, more typing. <code>httpx</code> is a newer library with a very similar interface to <code>requests</code> plus support for asynchronous code. The concepts in this lesson (methods, status codes, headers, timeouts, sessions) are HTTP itself, so they carry over unchanged to either one.</p>
+                </details>
+
+                <div class="card card-accent">
+                    <h3>🌟 Going Further: Bonus Challenge</h3>
+                    <p>Turn <code>polite_get()</code> into a cache. Before requesting a URL, check whether its file already exists in <code>raw/</code>. If it does, read the bytes from disk and add the note <code>"from cache"</code> to the log without touching the network (and without sleeping). Run your snapshot twice and compare the two logs and the two running times. Then decide, and write down, how you would choose when a cached page is too old to trust. Lesson 6.5 returns to this idea.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="journal" class="lesson-section">
+                <h2>📓 Learning Journal</h2>
+                <div class="card card-accent">
+                    <p>Take five minutes to write in your learning journal (the <code>journal.md</code> file you started in Lesson 0.1, or a paper notebook). Jot down:</p>
+                    <ul>
+                        <li><strong>Key concepts</strong> you learned today</li>
+                        <li><strong>Techniques that clicked</strong> (and the ones that have not, yet)</li>
+                        <li><strong>Questions or confusion</strong> to come back to</li>
+                        <li><strong>Ideas to try</strong> on your own</li>
+                        <li><strong>Progress and feelings</strong>: how did this lesson go for you?</li>
+                    </ul>
+                    <p><strong>✍️ This lesson's prompt:</strong> Describe one HTTP request and its response in your own words, using the order-counter picture or a better one of your own. Then write your personal checklist for "before I point a script at a website": which of the six ground rules would be easiest for you to forget under deadline pressure, and what will you do about that?</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="summary" class="lesson-section">
+                <h2>📝 Lesson Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎓 Key Takeaways</h3>
+                    <ul>
+                        <li>HTTP is <strong>request and response</strong>: a method, a URL, headers and maybe a body go out; a status code, headers and a body come back</li>
+                        <li>Check <code>robots.txt</code> and the terms first, prefer an API, go slowly, identify yourself, never go around a login, and do not collect personal data</li>
+                        <li>A 4xx or 5xx status is <strong>not an exception</strong> until you call <code>raise_for_status()</code>: get, check, then use</li>
+                        <li>Send a <code>User-Agent</code> that names your project and gives a contact address</li>
+                        <li><code>r.content</code> is bytes and <code>r.text</code> is those bytes decoded with <code>r.encoding</code>; junk such as <code>â˜…</code> means the wrong encoding</li>
+                        <li>Pass query parameters as a <code>params</code> dictionary, and read JSON responses with <code>r.json()</code></li>
+                        <li><strong>Every request gets a <code>timeout</code></strong>; without one, <code>requests</code> waits forever</li>
+                        <li>A <code>Session</code> reuses the connection and remembers your headers</li>
+                        <li>Save the raw bytes once, then parse the saved copy as many times as you like</li>
+                    </ul>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🏆 What You've Accomplished</h3>
+                    <ul>
+                        <li>You read a site's rules in code and let them decide what your program may fetch</li>
+                        <li>You fetched HTML and JSON and inspected every part of the request and the response</li>
+                        <li>You caused, read and handled a 404, a timeout and a decoding problem on purpose</li>
+                        <li>You wrote <code>fetch()</code> and <code>polite_get()</code>, two helpers that make the careful way the easy way</li>
+                        <li>You built a snapshot of the practice shop with its raw files and a log of every request</li>
+                    </ul>
+                </div>
+
+                <h3>🔭 Looking Ahead</h3>
+                <p>In <a href="webscraping_beautifulsoup.html"><strong>Lesson 6.2: Parsing HTML with Beautiful Soup</strong></a> you will take HTML like the pages you downloaded today and pull the data out of it: product names, prices, ratings and stock levels from the catalog cards, across all 13 pages, into a tidy DataFrame. Lesson 6.2 fetches the pages again and parses them; your <code>raw/</code> folder comes back in its bonus challenge.</p>
+
+                <h3>📋 Before the Next Lesson</h3>
+                <ul>
+                    <li>Keep your <code>raw/</code> folder and your lesson notebook. Lesson 6.2 reuses <code>BASE_URL</code>, the same User-Agent header and the idea behind <code>fetch()</code>.</li>
+                    <li>Open the practice shop in your browser, right-click a product name and choose <strong>Inspect</strong>. Look at the HTML around it. You do not need to understand it all yet.</li>
+                    <li>Put your real contact address in <code>USER_AGENT</code> if you have not already.</li>
+                </ul>
+
+                <div class="card card-accent">
+                    <h3>🌱 Encouragement for the Journey</h3>
+                    <p>Something changed today: your programs can now reach beyond your own disk. You also made the errors happen on purpose and read what they said, which is exactly how people who do this for a living get comfortable with a network that fails in new ways every week. If status codes and encodings feel like a lot of detail, that is fine. You do not need to memorize them. You need to remember that the answer is in the response, and you now know how to look.</p>
+                </div>
+            </section>
+
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="sql_nosql_mongodb.html" class="prev-lesson">← Previous: NoSQL with MongoDB</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="webscraping_beautifulsoup.html" class="next-lesson">Next: Parsing HTML with Beautiful Soup →</a>
+            </nav>
         </div>
-    </section>
-
-    <!-- Lesson Summary (full standard block) -->
-    <section id="summary" class="lesson-section">
-        <h2>📝 Lesson Summary</h2>
-        <div class="card card-success">
-            <h3>🎓 Key Takeaways</h3>
-            <ul>
-                <li>Every request returns a response object carrying the status code, headers, and body — reach for <code>.json()</code>, <code>.text</code>, or <code>.content</code> as needed.</li>
-                <li>The HTTP method expresses intent: GET reads, POST creates, PUT/PATCH update, DELETE removes; send data with <code>params</code>, <code>data</code>, <code>json</code>, or <code>files</code>.</li>
-                <li><code>Session</code> objects share headers, persist cookies, and reuse connections, making them the right choice for multiple requests to the same host.</li>
-                <li>Production code always sets a timeout, checks status with <code>raise_for_status</code>, and adds retries with backoff for transient failures.</li>
-            </ul>
-        </div>
-        <h3>🎉 What You've Accomplished</h3>
-        <p>You now speak HTTP fluently from Python — you can call any REST API, authenticate, upload files, stream large
-        downloads, and fetch many URLs at once, all with clean error handling. This is the foundation under every scraper and
-        data pipeline you'll build.</p>
-        <h3>❓ Common Questions at This Stage</h3>
-        <details>
-            <summary>When should I use <code>data=</code> versus <code>json=</code> in a POST?</summary>
-            <p>Use <code>data=</code> to send form-encoded fields (like an HTML form), and <code>json=</code> to send a JSON body —
-            the latter also sets the <code>Content-Type: application/json</code> header for you. Most modern APIs expect <code>json=</code>.</p>
-        </details>
-        <details>
-            <summary>Why should I always pass a timeout?</summary>
-            <p>Without a timeout, a request can hang indefinitely if the server never responds, freezing your program. Setting a
-            timeout (e.g. <code>timeout=30</code>) guarantees the call fails fast so your code can retry or move on.</p>
-        </details>
-        <details>
-            <summary>What's the real benefit of a Session?</summary>
-            <p>A <code>Session</code> reuses the underlying TCP connection across requests (faster), persists cookies automatically
-            (needed for logins), and lets you set headers or auth once for every call — cleaner and more efficient than repeating them.</p>
-        </details>
-        <h3>🔭 Looking Ahead</h3>
-        <p>Next you'll build on requests to handle authentication in depth — API keys, OAuth, JWT, and the secure credential
-        practices real APIs demand.</p>
-        <h3>✅ Before the Next Lesson</h3>
-        <ul>
-            <li>Use httpbin.org to send one request of each method (GET, POST, PUT, DELETE) and inspect the JSON it echoes back.</li>
-            <li>Wrap a public API in a small client class that uses a <code>Session</code>, a timeout, and <code>raise_for_status</code>.</li>
-            <li>Write your Learning Journal entry for this lesson.</li>
-        </ul>
-        <div class="card card-accent" style="text-align: center; padding: 2rem;">
-            <h3>🌟 Encouragement for the Journey</h3>
-            <p>You just learned to talk to any service on the internet from a few lines of Python. That single skill unlocks
-            countless APIs and datasets. Every project you build from here rests on what you practiced today — well done!</p>
-        </div>
-    </section>
-
-    <!-- Navigation at the bottom -->
-    <nav class="lesson-nav" aria-label="Lesson navigation">
-        <a href="webscraping_beautifulsoup.html" class="prev-lesson" aria-label="Previous lesson">Previous: BeautifulSoup for HTML Parsing</a>
-        <a href="index.html" class="home-link" aria-label="Course home">Course Home</a>
-        <a href="webscraping_api_authentication.html" class="next-lesson" aria-label="Next lesson">Next: API Authentication</a>
-    </nav>
-    
     </main>
 
-    <!-- Footer -->
     <footer class="site-footer">
         <p>&copy; 2026 Ray de la Paz. Python Data Science. All rights reserved.</p>
         <div class="footer-links">
@@ -1276,6 +1192,10 @@ headers = {'Authorization': f'Bearer {api_key}'}</code></pre>
             <a href="https://rays-home.netlify.app/contact">Contact</a>
             <a href="#" id="print-button">Print Page</a>
         </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
     </footer>
+
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
 </body>
 </html>

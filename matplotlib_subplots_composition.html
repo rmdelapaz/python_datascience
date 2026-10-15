@@ -3,1211 +3,1073 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Subplots and Figure Composition - Python Data Science Path</title>
-    <link rel="icon" href="/favicon.png" type="image/png">
+    <meta name="description" content="Put several charts on one Matplotlib figure: grids with plt.subplots, shared axes, named layouts with subplot_mosaic, constrained layout, twin axes and their risks, and small multiples. Python Data Science Lesson 3.2.">
+    <meta name="author" content="Ray de la Paz">
+    <title>Subplots and Composition - Python Data Science</title>
     <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/enhanced.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid: rendered (and re-rendered on theme change) by js/course-enhancements.js -->
     <script type="module">
         import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({ startOnLoad: true });
+        window.__mermaid = mermaid;
+        mermaid.initialize({ startOnLoad: false });
+        document.dispatchEvent(new Event('mermaid-ready'));
     </script>
-    <style>
-        :root {
-            --primary-color: #2563eb;
-            --secondary-color: #1e40af;
-            --accent-color: #10b981;
-            --bg-dark: #1e293b;
-            --bg-light: #f8fafc;
-            --text-dark: #0f172a;
-            --text-light: #64748b;
-            --border-color: #e2e8f0;
-            --code-bg: #f1f5f9;
-            --subplot-1: #3b82f6;
-            --subplot-2: #8b5cf6;
-            --subplot-3: #f59e0b;
-            --subplot-4: #10b981;
-            --subplot-5: #ef4444;
-            --subplot-6: #6366f1;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.6;
-            color: var(--text-dark);
-            background: linear-gradient(135deg, var(--bg-light) 0%, #e0f2fe 100%);
-            min-height: 100vh;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 1rem;
-        }
-
-        header {
-            background: white;
-            border-radius: 1rem;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-            border-left: 5px solid var(--accent-color);
-        }
-
-        h1 {
-            color: var(--primary-color);
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .breadcrumb {
-            color: var(--text-light);
-            font-size: 0.9rem;
-            margin-bottom: 1rem;
-        }
-
-        .breadcrumb a {
-            color: var(--primary-color);
-            text-decoration: none;
-            transition: color 0.3s ease;
-        }
-
-        .breadcrumb a:hover {
-            color: var(--secondary-color);
-            text-decoration: underline;
-        }
-
-        .intro {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 2rem;
-            border-radius: 1rem;
-            margin-bottom: 2rem;
-            animation: slideIn 0.6s ease;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .layout-overview {
-            background: white;
-            border-radius: 1rem;
-            padding: 2rem;
-            margin: 2rem 0;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .layout-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin: 1.5rem 0;
-        }
-
-        .layout-example {
-            background: var(--bg-light);
-            border: 2px solid var(--border-color);
-            border-radius: 0.5rem;
-            padding: 1rem;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .layout-example:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            border-color: var(--primary-color);
-        }
-
-        .layout-example.active {
-            background: var(--primary-color);
-            color: white;
-            border-color: var(--primary-color);
-        }
-
-        .subplot-grid {
-            display: grid;
-            gap: 2px;
-            background: var(--border-color);
-            padding: 2px;
-            border-radius: 0.25rem;
-            margin: 0.5rem 0;
-        }
-
-        .subplot-cell {
-            background: white;
-            height: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.75rem;
-            color: var(--text-light);
-        }
-
-        .concept-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .concept-card {
-            background: white;
-            border-radius: 1rem;
-            padding: 1.5rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            border-top: 4px solid var(--accent-color);
-        }
-
-        .concept-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-        }
-
-        .concept-card h3 {
-            color: var(--primary-color);
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .code-example {
-            background: var(--code-bg);
-            border-radius: 0.5rem;
-            padding: 1rem;
-            margin: 1rem 0;
-            border-left: 4px solid var(--primary-color);
-            overflow-x: auto;
-        }
-
-        pre {
-            margin: 0;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 0.9rem;
-        }
-
-        code {
-            background: var(--code-bg);
-            padding: 0.2rem 0.4rem;
-            border-radius: 0.25rem;
-            font-family: 'Courier New', Courier, monospace;
-            color: var(--secondary-color);
-        }
-
-        .interactive-demo {
-            background: white;
-            border-radius: 1rem;
-            padding: 2rem;
-            margin: 2rem 0;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        canvas {
-            border: 2px solid var(--border-color);
-            border-radius: 0.5rem;
-            margin: 1rem 0;
-            display: block;
-            width: 100%;
-            max-width: 800px;
-        }
-
-        .control-panel {
-            background: var(--bg-light);
-            border-radius: 0.5rem;
-            padding: 1rem;
-            margin: 1rem 0;
-        }
-
-        .control-row {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin: 0.5rem 0;
-            flex-wrap: wrap;
-        }
-
-        .control-button {
-            padding: 0.5rem 1rem;
-            background: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 0.5rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .control-button:hover {
-            background: var(--secondary-color);
-            transform: translateY(-2px);
-        }
-
-        .control-button.active {
-            background: var(--accent-color);
-        }
-
-        .spacing-demo {
-            background: var(--bg-light);
-            border-radius: 0.5rem;
-            padding: 1rem;
-            margin: 1rem 0;
-        }
-
-        .spacing-visual {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin: 1rem 0;
-        }
-
-        .spacing-box {
-            background: white;
-            border: 2px solid var(--primary-color);
-            padding: 1rem;
-            border-radius: 0.5rem;
-            text-align: center;
-            font-size: 0.9rem;
-            position: relative;
-        }
-
-        .spacing-arrow {
-            color: var(--accent-color);
-            font-size: 1.5rem;
-        }
-
-        .tip-box {
-            background: linear-gradient(135deg, #10b98120, #06b67420);
-            border-left: 4px solid var(--accent-color);
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin: 1rem 0;
-        }
-
-        .warning-box {
-            background: linear-gradient(135deg, #f5922020, #ef444420);
-            border-left: 4px solid #ef4444;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin: 1rem 0;
-        }
-
-        .navigation {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 3rem;
-            padding: 1rem;
-            background: white;
-            border-radius: 1rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-        }
-
-        .nav-button {
-            padding: 0.75rem 1.5rem;
-            background: var(--primary-color);
-            color: white;
-            text-decoration: none;
-            border-radius: 0.5rem;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .nav-button:hover {
-            background: var(--secondary-color);
-            transform: translateX(5px);
-        }
-
-        .nav-button.prev:hover {
-            transform: translateX(-5px);
-        }
-
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 1.8rem;
-            }
-
-            .concept-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .layout-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
-            .navigation {
-                flex-direction: column;
-                gap: 1rem;
-            }
-
-            .nav-button {
-                width: 100%;
-                justify-content: center;
-            }
-        }
-    </style>
-    <script src="/js/course-enhancements.js" defer></script>
-    <script src="/js/clipboard.js" defer></script>
-    <link rel="stylesheet" href="styles/standard.css">
 </head>
 <body>
-    <!-- Skip to main content for accessibility -->
     <a href="#main-content" class="skip-to-main">Skip to main content</a>
-    
-    <!-- Progress indicator -->
+
     <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
         <div class="progress-bar"></div>
     </div>
-    <div class="container">
-        <header>
-            <div class="breadcrumb">
-                <a href="index.html">Home</a> / 
-                <a href="foundation.html">Foundation Module</a> / 
-                <a href="matplotlib_visualization.html">Data Visualization</a> / 
-                Subplots
-            </div>
-            <h1>🎨 Subplots and Figure Composition</h1>
-            <p>Master the art of creating complex, multi-panel visualizations with perfect layouts</p>
-        </header>
 
-    <!-- What You'll Learn (learning objectives) -->
-    <div class="card card-info">
-        <h2>📚 What You'll Learn</h2>
-        <p>By the end of this lesson, you will be able to:</p>
-        <ul>
-            <li>Distinguish a Figure from its Axes and create multi-panel layouts with <code>plt.subplots()</code>, <code>plt.subplot()</code>, and <code>add_subplot()</code></li>
-            <li>Build complex, asymmetric arrangements with <code>GridSpec</code> using row/column spans and width/height ratios</li>
-            <li>Lay out panels intuitively with <code>subplot_mosaic()</code> and ASCII-art specifications</li>
-            <li>Share x and y axes across subplots and add twin (secondary) axes for comparison</li>
-            <li>Control spacing and alignment with <code>tight_layout</code>, <code>constrained_layout</code>, and <code>subplots_adjust</code></li>
-            <li>Add inset axes and cross-panel annotations to compose a complete dashboard</li>
-        </ul>
-        <p><strong>⏱️ Estimated Time:</strong> 45–60 minutes</p>
-        <p><strong>🎯 Project:</strong> Compose a multi-panel dashboard that combines a large main plot with several supporting panels using GridSpec, shared axes, and a single super title.</p>
-    </div>
-
-        <div class="intro">
-            <h2>🏗️ Building Visual Stories with Multiple Plots</h2>
-            <p>Think of subplots like panels in a comic book - each tells part of the story, but together they create a complete narrative. Whether you're comparing different datasets, showing multiple perspectives, or creating a comprehensive dashboard, mastering subplot layouts is essential!</p>
-            <p>In professional data science, single plots rarely tell the whole story. You need to show trends alongside distributions, comparisons next to correlations, and summaries with details. Subplots let you compose these elements into cohesive, publication-ready visualizations!</p>
-        </div>
-
-        <div class="layout-overview">
-            <h2>📐 Understanding Figure Architecture</h2>
-            <div class="mermaid">
-                graph TB
-                    A[Figure<br/>The Canvas] --> B[Axes/Subplot 1]
-                    A --> C[Axes/Subplot 2]
-                    A --> D[Axes/Subplot 3]
-                    A --> E[Axes/Subplot N]
-                    
-                    B --> F[Title]
-                    B --> G[X-axis]
-                    B --> H[Y-axis]
-                    B --> I[Data]
-                    B --> J[Legend]
-                    
-                    style A fill:#f9f,stroke:#333,stroke-width:2px
-                    style B fill:#9ff,stroke:#333,stroke-width:2px
-                    style C fill:#9ff,stroke:#333,stroke-width:2px
-                    style D fill:#9ff,stroke:#333,stroke-width:2px
-                    style E fill:#9ff,stroke:#333,stroke-width:2px
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">📊 Python Data Science</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">☰</button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
             </div>
         </div>
+    </nav>
 
-        <div class="interactive-demo">
-            <h2>🎮 Interactive Layout Builder</h2>
-            <p>Click on different layouts to see them in action:</p>
-            
-            <div class="layout-grid">
-                <div class="layout-example active" onclick="changeLayout('2x1')">
-                    <div class="subplot-grid" style="grid-template-columns: 1fr; grid-template-rows: 1fr 1fr;">
-                        <div class="subplot-cell">1</div>
-                        <div class="subplot-cell">2</div>
-                    </div>
-                    <small>2×1 Vertical</small>
+        <main id="main-content">
+        <div class="container">
+            <header>
+                <h1>🧩 Lesson 3.2: Subplots and Composition</h1>
+                <p class="lead">Put several charts on one figure so the reader can compare them at a glance: grids, shared scales, named layouts, and the honest way to show two measures together.</p>
+
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Create a grid of Axes with <code>plt.subplots(nrows, ncols)</code> and reach each one by index or in a loop</li>
+                        <li>Decide when panels should share an x or y axis, and explain what the reader loses when they do not</li>
+                        <li>Build an uneven layout with <code>plt.subplot_mosaic()</code> and address its panels by name</li>
+                        <li>Explain why a chart with two different y scales can mislead, and replace it with stacked panels or a ratio</li>
+                        <li>Draw small multiples from grouped data with one function and one loop</li>
+                    </ul>
                 </div>
-                <div class="layout-example" onclick="changeLayout('1x2')">
-                    <div class="subplot-grid" style="grid-template-columns: 1fr 1fr; grid-template-rows: 1fr;">
-                        <div class="subplot-cell">1</div>
-                        <div class="subplot-cell">2</div>
-                    </div>
-                    <small>1×2 Horizontal</small>
+
+                <ul class="lesson-meta">
+                    <li><span class="meta-label">⏱️ Time</span> 85 minutes</li>
+                    <li><span class="meta-label">📋 Prerequisites</span> <a href="matplotlib_line_scatter_bar.html">Lesson 3.1: Line, Scatter and Bar Charts</a> (Figure and Axes, the <code>ax</code> methods)</li>
+                    <li><span class="meta-label">🛠️ You will build</span> A nine-panel figure showing when each product category has its season</li>
+                    <li><span class="meta-label">📂 Data</span> <code>data/daily_sales.csv</code>, <code>data/store_weather.csv</code>, <code>data/orders.csv</code>, <code>data/order_items.csv</code>, <code>data/products.csv</code></li>
+                </ul>
+            </header>
+
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#why" class="toc-link">One Figure, Several Charts</a></li>
+                        <li><a href="#grid" class="toc-link">A Grid of Axes</a></li>
+                        <li><a href="#shared" class="toc-link">Shared Axes</a></li>
+                        <li><a href="#layout" class="toc-link">Layout: Size and Spacing</a></li>
+                        <li><a href="#mosaic" class="toc-link">Named Layouts with subplot_mosaic</a></li>
+                        <li><a href="#twin" class="toc-link">Twin Axes, and When Not to Use Them</a></li>
+                        <li><a href="#multiples" class="toc-link">Small Multiples</a></li>
+                        <li><a href="#mistakes" class="toc-link">Common Mistakes</a></li>
+                        <li><a href="#project" class="toc-link">Project: Nine Categories, Twelve Months</a></li>
+                        <li><a href="#exercises" class="toc-link">Hands-on Exercises</a></li>
+                        <li><a href="#quiz" class="toc-link">Quick Quiz</a></li>
+                        <li><a href="#faq" class="toc-link">Common Questions</a></li>
+                        <li><a href="#journal" class="toc-link">Learning Journal</a></li>
+                        <li><a href="#summary" class="toc-link">Lesson Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
+
+            <!-- ============================================================ -->
+            <section id="why" class="lesson-section">
+                <h2>🗞️ One Figure, Several Charts</h2>
+
+                <p>In Lesson 3.1 every figure held one chart. Real questions are rarely that tidy. "How are the stores doing?" has four answers, one per store. "What is going on in Boise?" wants a trend, a weekly pattern and a sense of how much days vary. You could draw separate figures and ask the reader to scroll between them, but people compare best what they can see <em>at the same time</em>.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Mental Model: Panels on a Page</h4>
+                    <p>Think of a page of a comic or the front page of a newspaper. The page is one object, divided into panels. Each panel shows one thing, and the arrangement tells you how to read them: panels in a row invite comparison, a wide panel across the top is the headline, and smaller panels underneath are the supporting detail. In Matplotlib the page is the <strong>Figure</strong> and each panel is an <strong>Axes</strong>. You already know how to draw on an Axes. This lesson is about arranging them.</p>
                 </div>
-                <div class="layout-example" onclick="changeLayout('2x2')">
-                    <div class="subplot-grid" style="grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;">
-                        <div class="subplot-cell">1</div>
-                        <div class="subplot-cell">2</div>
-                        <div class="subplot-cell">3</div>
-                        <div class="subplot-cell">4</div>
-                    </div>
-                    <small>2×2 Grid</small>
+
+                <div class="mermaid">
+graph TD
+    Q{"Same chart for each group?"}
+    Q -->|yes| G["Grid: plt.subplots"]
+    Q -->|no, a mix| M["Layout: subplot_mosaic"]
+    G --> S["Share axes so sizes compare"]
+    M --> H["Biggest panel for the main point"]
                 </div>
-                <div class="layout-example" onclick="changeLayout('3x2')">
-                    <div class="subplot-grid" style="grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr;">
-                        <div class="subplot-cell">1</div>
-                        <div class="subplot-cell">2</div>
-                        <div class="subplot-cell">3</div>
-                        <div class="subplot-cell">4</div>
-                        <div class="subplot-cell">5</div>
-                        <div class="subplot-cell">6</div>
-                    </div>
-                    <small>3×2 Grid</small>
-                </div>
-                <div class="layout-example" onclick="changeLayout('mixed')">
-                    <div class="subplot-grid" style="grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;">
-                        <div class="subplot-cell" style="grid-column: span 2;">1</div>
-                        <div class="subplot-cell">2</div>
-                        <div class="subplot-cell">3</div>
-                    </div>
-                    <small>Mixed Layout</small>
-                </div>
-                <div class="layout-example" onclick="changeLayout('mosaic')">
-                    <div class="subplot-grid" style="grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr;">
-                        <div class="subplot-cell" style="grid-row: span 2;">1</div>
-                        <div class="subplot-cell">2</div>
-                        <div class="subplot-cell">3</div>
-                        <div class="subplot-cell" style="grid-column: span 2;">4</div>
-                    </div>
-                    <small>Mosaic</small>
-                </div>
-            </div>
-            
-            <canvas id="layoutCanvas" width="800" height="600"></canvas>
-            
-            <div class="control-panel">
-                <div class="control-row">
-                    <label>Spacing:</label>
-                    <input type="range" id="spacingSlider" min="0" max="50" value="20" onchange="updateSpacing()">
-                    <span id="spacingValue">0.2</span>
-                    <button class="control-button" onclick="toggleGrid()">Toggle Grid</button>
-                    <button class="control-button" onclick="toggleTitles()">Toggle Titles</button>
-                </div>
-            </div>
-        </div>
 
-        <div class="concept-grid">
-            <div class="concept-card">
-                <h3>🔧 Basic Subplot Creation</h3>
-                <p>The fundamental methods for creating subplot layouts</p>
-                <div class="code-example">
-                    <pre><code># Method 1: plt.subplots()
-import matplotlib.pyplot as plt
-import numpy as np
+                <h3>🤔 Why This Matters</h3>
+                <p>Composition is where the object-oriented habit from Lesson 3.1 pays off. With several Axes on a figure there is no single "current chart" any more, so you need a name for each one. You have been holding <code>ax</code> in a variable all along. Now you will hold several.</p>
+            </section>
 
-# Create figure with subplots
-fig, axes = plt.subplots(2, 2, figsize=(10, 8))
+            <!-- ============================================================ -->
+            <section id="grid" class="lesson-section">
+                <h2>🔲 A Grid of Axes</h2>
 
-# Access individual subplots
-axes[0, 0].plot([1, 2, 3], [1, 4, 9])
-axes[0, 1].scatter([1, 2, 3], [1, 4, 9])
-axes[1, 0].bar([1, 2, 3], [1, 4, 9])
-axes[1, 1].hist(np.random.randn(100))
+                <p>Start a new notebook and rebuild the monthly revenue table from Lesson 3.1: one row per month, one column per store.</p>
 
-# Method 2: plt.subplot()
-plt.figure(figsize=(10, 8))
-
-plt.subplot(2, 2, 1)  # (rows, cols, index)
-plt.plot([1, 2, 3], [1, 4, 9])
-
-plt.subplot(2, 2, 2)
-plt.scatter([1, 2, 3], [1, 4, 9])
-
-plt.subplot(2, 2, 3)
-plt.bar([1, 2, 3], [1, 4, 9])
-
-plt.subplot(2, 2, 4)
-plt.hist(np.random.randn(100))
-
-# Method 3: add_subplot()
-fig = plt.figure(figsize=(10, 8))
-
-ax1 = fig.add_subplot(2, 2, 1)
-ax2 = fig.add_subplot(2, 2, 2)
-ax3 = fig.add_subplot(2, 2, 3)
-ax4 = fig.add_subplot(2, 2, 4)
-
-plt.tight_layout()
-plt.show()</code></pre>
-                </div>
-            </div>
-
-            <div class="concept-card">
-                <h3>📏 GridSpec for Advanced Layouts</h3>
-                <p>Create complex, asymmetric subplot arrangements</p>
-                <div class="code-example">
-                    <pre><code>import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-import numpy as np
-
-fig = plt.figure(figsize=(12, 8))
-
-# Create GridSpec
-gs = gridspec.GridSpec(3, 3, figure=fig)
-
-# Spanning multiple cells
-ax1 = fig.add_subplot(gs[0, :])  # Top row, all columns
-ax2 = fig.add_subplot(gs[1, :-1])  # Middle row, first 2 columns
-ax3 = fig.add_subplot(gs[1:, -1])  # Last 2 rows, last column
-ax4 = fig.add_subplot(gs[-1, 0])  # Bottom left
-ax5 = fig.add_subplot(gs[-1, 1])  # Bottom middle
-
-# Add plots
-ax1.plot(np.random.randn(100).cumsum())
-ax1.set_title('Main Time Series')
-
-ax2.scatter(np.random.randn(50), np.random.randn(50))
-ax2.set_title('Correlation')
-
-ax3.barh(['A', 'B', 'C', 'D'], [23, 45, 56, 78])
-ax3.set_title('Categories')
-
-ax4.pie([30, 25, 20, 25])
-ax5.hist(np.random.randn(100))
-
-# Custom spacing
-gs.update(wspace=0.3, hspace=0.3)
-
-# GridSpec with ratios
-fig2 = plt.figure(figsize=(12, 6))
-gs2 = gridspec.GridSpec(2, 3, 
-                        width_ratios=[1, 2, 1],
-                        height_ratios=[2, 1])
-
-ax1 = fig2.add_subplot(gs2[0, :2])  # Top left, 2 columns
-ax2 = fig2.add_subplot(gs2[0, 2])   # Top right
-ax3 = fig2.add_subplot(gs2[1, :])   # Bottom, all columns
-
-plt.tight_layout()
-plt.show()</code></pre>
-                </div>
-            </div>
-
-            <div class="concept-card">
-                <h3>🎭 Subplot Mosaic</h3>
-                <p>Visual ASCII art layout specification (matplotlib 3.3+)</p>
-                <div class="code-example">
-                    <pre><code># Using subplot_mosaic for intuitive layouts
-import matplotlib.pyplot as plt
-import numpy as np
-
-# Define layout with ASCII art
-mosaic = """
-    AAB
-    AAC
-    DEC
-"""
-
-fig, axes = plt.subplot_mosaic(mosaic, figsize=(12, 8))
-
-# Access subplots by letter
-axes['A'].plot(np.random.randn(100).cumsum())
-axes['A'].set_title('Large Main Plot')
-
-axes['B'].scatter(np.random.randn(30), np.random.randn(30))
-axes['B'].set_title('Scatter')
-
-axes['C'].bar(['X', 'Y', 'Z'], [10, 20, 15])
-axes['C'].set_title('Bar Chart')
-
-axes['D'].pie([30, 70])
-axes['E'].hist(np.random.randn(50))
-
-# Complex mosaic with empty spaces
-mosaic2 = """
-    AB.
-    ACD
-    .CD
-"""
-
-fig2, axes2 = plt.subplot_mosaic(
-    mosaic2,
-    figsize=(10, 8),
-    empty_sentinel=".",  # Use . for empty spaces
-    gridspec_kw={'wspace': 0.3, 'hspace': 0.3}
-)
-
-# Nested lists alternative
-mosaic_list = [
-    ['top', 'top', 'right'],
-    ['left', 'middle', 'right'],
-    ['left', 'bottom', 'bottom']
-]
-
-fig3, axes3 = plt.subplot_mosaic(mosaic_list, figsize=(10, 8))
-
-plt.tight_layout()
-plt.show()</code></pre>
-                </div>
-            </div>
-
-            <div class="concept-card">
-                <h3>🔗 Sharing Axes</h3>
-                <p>Link axes across subplots for better comparison</p>
-                <div class="code-example">
-                    <pre><code># Shared axes for synchronized views
-import matplotlib.pyplot as plt
-import numpy as np
-
-# Share x-axis
-fig, (ax1, ax2, ax3) = plt.subplots(3, 1, 
-                                     figsize=(10, 8),
-                                     sharex=True)
-
-x = np.linspace(0, 10, 100)
-ax1.plot(x, np.sin(x))
-ax1.set_title('Sin(x)')
-
-ax2.plot(x, np.cos(x))
-ax2.set_title('Cos(x)')
-
-ax3.plot(x, np.sin(x) * np.cos(x))
-ax3.set_title('Sin(x) × Cos(x)')
-ax3.set_xlabel('X axis (shared)')
-
-# Share y-axis
-fig2, axes = plt.subplots(2, 2, 
-                         figsize=(10, 8),
-                         sharey='row')  # Share y within rows
-
-# Share both axes
-fig3, axes3 = plt.subplots(2, 2,
-                          figsize=(10, 8),
-                          sharex='all',
-                          sharey='all')
-
-# Zoom/pan in one subplot affects all shared axes
-
-# Twin axes (secondary y-axis)
-fig4, ax = plt.subplots(figsize=(10, 6))
-
-x = np.arange(0, 10, 0.1)
-y1 = np.sin(x)
-y2 = np.exp(x/10)
-
-color = 'tab:blue'
-ax.set_xlabel('X data')
-ax.set_ylabel('Sin(x)', color=color)
-ax.plot(x, y1, color=color)
-ax.tick_params(axis='y', labelcolor=color)
-
-ax2 = ax.twinx()  # Secondary y-axis
-color = 'tab:orange'
-ax2.set_ylabel('Exp(x)', color=color)
-ax2.plot(x, y2, color=color)
-ax2.tick_params(axis='y', labelcolor=color)
-
-fig4.tight_layout()
-plt.show()</code></pre>
-                </div>
-            </div>
-
-            <div class="concept-card">
-                <h3>✨ Spacing and Alignment</h3>
-                <p>Perfect your subplot spacing and alignment</p>
-                <div class="spacing-demo">
-                    <div class="spacing-visual">
-                        <div class="spacing-box">Subplot 1</div>
-                        <span class="spacing-arrow">↔</span>
-                        <div class="spacing-box">wspace</div>
-                        <span class="spacing-arrow">↔</span>
-                        <div class="spacing-box">Subplot 2</div>
-                    </div>
-                </div>
-                <div class="code-example">
-                    <pre><code># Control spacing between subplots
-import matplotlib.pyplot as plt
-
-fig, axes = plt.subplots(2, 2, figsize=(10, 8))
-
-# Method 1: subplots_adjust
-plt.subplots_adjust(
-    left=0.1,    # Left margin
-    right=0.9,   # Right margin
-    top=0.9,     # Top margin
-    bottom=0.1,  # Bottom margin
-    wspace=0.3,  # Width space between subplots
-    hspace=0.4   # Height space between subplots
-)
-
-# Method 2: tight_layout
-plt.tight_layout()  # Automatic spacing
-plt.tight_layout(pad=2.0)  # With padding
-
-# Method 3: constrained_layout (newer, better)
-fig, axes = plt.subplots(2, 2, 
-                        figsize=(10, 8),
-                        constrained_layout=True)
-
-# Method 4: GridSpec spacing
-gs = gridspec.GridSpec(2, 2,
-                      wspace=0.4,
-                      hspace=0.3,
-                      left=0.1,
-                      right=0.9,
-                      top=0.95,
-                      bottom=0.05)
-
-# Colorbar handling with proper spacing
-fig, axes = plt.subplots(2, 2, 
-                        figsize=(10, 8),
-                        constrained_layout=True)
-
-for ax in axes.flat:
-    im = ax.imshow(np.random.randn(10, 10))
-    
-# Add single colorbar for all subplots
-fig.colorbar(im, ax=axes.ravel().tolist(), 
-            shrink=0.6, location='right')</code></pre>
-                </div>
-            </div>
-
-            <div class="concept-card">
-                <h3>🎨 Inset Axes and Annotations</h3>
-                <p>Add plot-in-plot and advanced annotations</p>
-                <div class="code-example">
-                    <pre><code>import matplotlib.pyplot as plt
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-from mpl_toolkits.axes_grid1.inset_locator import mark_inset
-import numpy as np
-
-fig, ax = plt.subplots(figsize=(10, 8))
-
-# Main plot
-x = np.linspace(0, 10, 1000)
-y = np.sin(x) * np.exp(-x/10)
-ax.plot(x, y, 'b-', linewidth=2)
-ax.set_title('Signal with Detailed Inset')
-
-# Create inset axes
-axins = inset_axes(ax, 
-                   width="40%",  # Width of inset
-                   height="30%",  # Height of inset
-                   loc='upper right',  # Location
-                   borderpad=3)  # Padding
-
-# Plot in inset - zoomed region
-x_zoom = np.linspace(2, 4, 100)
-y_zoom = np.sin(x_zoom) * np.exp(-x_zoom/10)
-axins.plot(x_zoom, y_zoom, 'r-', linewidth=2)
-axins.set_xlim(2, 4)
-axins.set_ylim(0.3, 0.5)
-
-# Mark the zoomed region
-mark_inset(ax, axins, loc1=2, loc2=4, fc="none", ec="red")
-
-# Multiple insets
-fig2, ax2 = plt.subplots(figsize=(10, 8))
-
-# Main data
-data = np.random.randn(1000)
-ax2.hist(data, bins=30, alpha=0.7, color='blue')
-
-# Inset 1: QQ plot
-axins1 = inset_axes(ax2, width="30%", height="30%", 
-                    loc='upper left', borderpad=3)
-from scipy import stats
-stats.probplot(data, dist="norm", plot=axins1)
-
-# Inset 2: Box plot
-axins2 = inset_axes(ax2, width="30%", height="20%", 
-                    loc='lower right', borderpad=3)
-axins2.boxplot(data, vert=False)
-
-# Annotations between plots
-from matplotlib.patches import ConnectionPatch
-
-fig3, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
-
-# Plot 1
-ax1.scatter([1, 2, 3], [1, 4, 9])
-point1 = [2, 4]
-
-# Plot 2
-ax2.bar(['A', 'B', 'C'], [4, 8, 12])
-point2 = [0.5, 4]
-
-# Connect points between subplots
-con = ConnectionPatch(xyA=point1, xyB=point2, 
-                      coordsA='data', coordsB='data',
-                      axesA=ax1, axesB=ax2,
-                      color='red', linewidth=2,
-                      arrowstyle="-|>")
-ax2.add_artist(con)
-
-plt.tight_layout()
-plt.show()</code></pre>
-                </div>
-            </div>
-        </div>
-
-        <div class="layout-overview">
-            <h2>🌍 Real-World Example: Financial Dashboard</h2>
-            <p>Create a comprehensive financial analysis dashboard using advanced subplot techniques:</p>
-            
-            <div class="code-example">
-                <pre><code>import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
+                <pre><code class="language-python">import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
 
-# Generate sample financial data
-np.random.seed(42)
-dates = pd.date_range(start='2023-01-01', end='2024-12-31', freq='D')
-n_days = len(dates)
+pd.set_option("display.width", 150)
+pd.set_option("display.max_columns", 20)
 
-# Stock price simulation
-initial_price = 100
-returns = np.random.normal(0.0005, 0.02, n_days)
-price = initial_price * np.exp(np.cumsum(returns))
+daily = pd.read_csv("data/daily_sales.csv", parse_dates=["date"])
+daily["month"] = daily["date"].dt.to_period("M").dt.to_timestamp()
+monthly = daily.pivot_table(index="month", columns="store", values="revenue", aggfunc="sum")
+stores = list(monthly.columns)
 
-# Volume data
-volume = np.random.gamma(2, 2, n_days) * 1000000
+print(stores)
+print(monthly.shape)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>['Asheville', 'Bend', 'Boise', 'Flagstaff']
+(24, 4)</code></pre>
+                </div>
 
-# Moving averages
-ma_20 = pd.Series(price).rolling(window=20).mean()
-ma_50 = pd.Series(price).rolling(window=50).mean()
-ma_200 = pd.Series(price).rolling(window=200).mean()
+                <p>You have been calling <code>plt.subplots()</code> with no grid arguments, which gives one Axes. Give it a number of rows and columns and it gives back a whole grid.</p>
 
-# Portfolio components
-portfolio = {
-    'Stocks': 45,
-    'Bonds': 25,
-    'Real Estate': 15,
-    'Commodities': 10,
-    'Cash': 5
-}
+                <pre><code class="language-python">fig, axs = plt.subplots(2, 2, figsize=(9, 5.5), layout="constrained")
 
-# Sector performance
-sectors = ['Tech', 'Finance', 'Healthcare', 'Energy', 'Consumer']
-sector_returns = np.random.normal(0.08, 0.15, len(sectors))
+print(type(axs).__name__, axs.shape)
+print(type(axs[0, 1]).__name__)
+print(len(fig.axes))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>ndarray (2, 2)
+Axes
+4</code></pre>
+                </div>
 
-# Risk metrics
-daily_returns = np.diff(price) / price[:-1]
-volatility = pd.Series(daily_returns).rolling(window=30).std()
+                <p>Look at what came back. <code>axs</code> is a <strong>NumPy array</strong> of shape <code>(2, 2)</code>, and each element is an Axes. Everything you learned in Lesson 1.1 about two-dimensional indexing applies: <code>axs[0, 1]</code> is row 0, column 1, the top-right panel. (The name <code>axs</code> is only a convention for "several Axes"; you will also see <code>axes</code>.)</p>
 
-# Create comprehensive dashboard
-fig = plt.figure(figsize=(16, 12))
-fig.suptitle('Financial Portfolio Dashboard - Q4 2024', 
-             fontsize=18, fontweight='bold')
+                <p>You could now write <code>axs[0, 0].plot(...)</code>, <code>axs[0, 1].plot(...)</code> and so on, four times. A loop is shorter and scales to any grid. <code>axs.flat</code> walks through the panels row by row, and <code>zip</code> pairs each panel with a store.</p>
 
-# Create GridSpec
-gs = gridspec.GridSpec(4, 4, 
-                      width_ratios=[1, 1, 1, 1],
-                      height_ratios=[2, 1, 1, 1],
-                      hspace=0.3, wspace=0.3)
+                <pre><code class="language-python">tick_dates = pd.to_datetime(["2024-01-01", "2024-07-01", "2025-01-01", "2025-07-01"])
+tick_labels = ["Jan 2024", "Jul 2024", "Jan 2025", "Jul 2025"]
 
-# 1. Main price chart with volume (top, spanning 3 columns)
-ax1 = fig.add_subplot(gs[0, :3])
-ax1_vol = ax1.twinx()
+for ax, store in zip(axs.flat, stores):
+    ax.plot(monthly.index, monthly[store], color="#667eea")
+    ax.set_title(store)
+    ax.set_xticks(tick_dates, labels=tick_labels)
 
-# Price lines
-ax1.plot(dates, price, 'b-', linewidth=1.5, label='Price', alpha=0.8)
-ax1.plot(dates, ma_20, 'orange', linewidth=1, label='MA20', alpha=0.7)
-ax1.plot(dates, ma_50, 'green', linewidth=1, label='MA50', alpha=0.7)
-ax1.plot(dates, ma_200, 'red', linewidth=1, label='MA200', alpha=0.7)
-
-# Volume bars
-ax1_vol.bar(dates, volume, alpha=0.3, color='gray', width=1)
-
-ax1.set_title('Stock Price & Volume', fontweight='bold')
-ax1.set_ylabel('Price ($)')
-ax1_vol.set_ylabel('Volume')
-ax1.legend(loc='upper left')
-ax1.grid(True, alpha=0.3)
-
-# Highlight important regions
-ax1.axhspan(price.min(), price.min() * 1.1, alpha=0.2, color='red')
-ax1.axhspan(price.max() * 0.9, price.max(), alpha=0.2, color='green')
-
-# 2. Portfolio allocation (top right)
-ax2 = fig.add_subplot(gs[0, 3])
-colors = plt.cm.Set3(np.linspace(0, 1, len(portfolio)))
-wedges, texts, autotexts = ax2.pie(portfolio.values(), 
-                                    labels=portfolio.keys(),
-                                    autopct='%1.1f%%',
-                                    colors=colors,
-                                    startangle=90)
-
-for autotext in autotexts:
-    autotext.set_color('white')
-    autotext.set_weight('bold')
-    autotext.set_fontsize(9)
-
-ax2.set_title('Portfolio Allocation', fontweight='bold')
-
-# 3. Returns distribution (second row, left)
-ax3 = fig.add_subplot(gs[1, :2])
-ax3.hist(daily_returns * 100, bins=50, alpha=0.7, 
-        color='skyblue', edgecolor='black')
-ax3.axvline(np.mean(daily_returns) * 100, color='red', 
-           linestyle='--', linewidth=2, label='Mean')
-ax3.axvline(np.percentile(daily_returns * 100, 5), 
-           color='orange', linestyle='--', linewidth=2, label='5% VaR')
-
-ax3.set_title('Daily Returns Distribution', fontweight='bold')
-ax3.set_xlabel('Return (%)')
-ax3.set_ylabel('Frequency')
-ax3.legend()
-ax3.grid(True, alpha=0.3, axis='y')
-
-# 4. Sector performance (second row, right)
-ax4 = fig.add_subplot(gs[1, 2:])
-bars = ax4.barh(sectors, sector_returns * 100, 
-               color=['green' if r > 0 else 'red' for r in sector_returns])
-
-for i, (sector, ret) in enumerate(zip(sectors, sector_returns)):
-    ax4.text(ret * 100 + 1, i, f'{ret*100:.1f}%', 
-            va='center', fontweight='bold')
-
-ax4.set_title('Sector Performance (YTD)', fontweight='bold')
-ax4.set_xlabel('Return (%)')
-ax4.axvline(0, color='black', linewidth=1)
-ax4.grid(True, alpha=0.3, axis='x')
-
-# 5. Correlation heatmap (third row, left half)
-ax5 = fig.add_subplot(gs[2, :2])
-
-# Generate correlation matrix
-n_assets = 6
-asset_names = ['Stock A', 'Stock B', 'Bond X', 'Bond Y', 'Gold', 'REIT']
-corr_matrix = np.random.rand(n_assets, n_assets)
-corr_matrix = (corr_matrix + corr_matrix.T) / 2
-np.fill_diagonal(corr_matrix, 1)
-
-im = ax5.imshow(corr_matrix, cmap='RdBu_r', vmin=-1, vmax=1)
-ax5.set_xticks(np.arange(n_assets))
-ax5.set_yticks(np.arange(n_assets))
-ax5.set_xticklabels(asset_names, rotation=45, ha='right')
-ax5.set_yticklabels(asset_names)
-
-# Add correlation values
-for i in range(n_assets):
-    for j in range(n_assets):
-        text = ax5.text(j, i, f'{corr_matrix[i, j]:.2f}',
-                       ha="center", va="center", 
-                       color="white" if abs(corr_matrix[i, j]) > 0.5 else "black",
-                       fontsize=8)
-
-ax5.set_title('Asset Correlation Matrix', fontweight='bold')
-plt.colorbar(im, ax=ax5, fraction=0.046, pad=0.04)
-
-# 6. Risk-Return scatter (third row, right half)
-ax6 = fig.add_subplot(gs[2, 2:])
-
-# Generate risk-return data
-n_investments = 20
-risk = np.random.uniform(5, 25, n_investments)
-expected_return = risk * 0.5 + np.random.normal(0, 3, n_investments)
-investment_size = np.random.uniform(100, 1000, n_investments)
-
-scatter = ax6.scatter(risk, expected_return, s=investment_size, 
-                     c=expected_return/risk, cmap='viridis', 
-                     alpha=0.6, edgecolors='black', linewidth=1)
-
-# Efficient frontier
-ef_risk = np.linspace(5, 25, 50)
-ef_return = ef_risk * 0.6
-ax6.plot(ef_risk, ef_return, 'r--', linewidth=2, 
-        label='Efficient Frontier')
-
-ax6.set_title('Risk-Return Profile', fontweight='bold')
-ax6.set_xlabel('Risk (Volatility %)')
-ax6.set_ylabel('Expected Return (%)')
-ax6.legend()
-ax6.grid(True, alpha=0.3)
-plt.colorbar(scatter, ax=ax6, label='Sharpe Ratio', 
-            fraction=0.046, pad=0.04)
-
-# 7. Performance metrics table (bottom row, left)
-ax7 = fig.add_subplot(gs[3, :2])
-ax7.axis('tight')
-ax7.axis('off')
-
-metrics = {
-    'Metric': ['Total Return', 'Sharpe Ratio', 'Max Drawdown', 
-               'Volatility', 'Beta', 'Alpha'],
-    'Value': ['24.5%', '1.82', '-8.3%', '16.2%', '0.95', '3.2%'],
-    'Benchmark': ['18.2%', '1.45', '-12.1%', '14.8%', '1.00', '0.0%']
-}
-
-table_data = list(zip(metrics['Metric'], metrics['Value'], metrics['Benchmark']))
-table = ax7.table(cellText=table_data,
-                  colLabels=['Metric', 'Portfolio', 'Benchmark'],
-                  cellLoc='center',
-                  loc='center',
-                  colColours=['lightgray']*3)
-
-table.auto_set_font_size(False)
-table.set_fontsize(10)
-table.scale(1.2, 1.5)
-
-for i in range(len(metrics['Metric']) + 1):
-    for j in range(3):
-        cell = table[(i, j)]
-        if i == 0:
-            cell.set_facecolor('#4472C4')
-            cell.set_text_props(weight='bold', color='white')
-        else:
-            cell.set_facecolor('#F2F2F2' if i % 2 == 0 else 'white')
-
-ax7.set_title('Performance Metrics', fontweight='bold', pad=20)
-
-# 8. Monthly returns heatmap (bottom row, right)
-ax8 = fig.add_subplot(gs[3, 2:])
-
-# Generate monthly returns
-months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-years = ['2023', '2024']
-monthly_returns = np.random.normal(0.01, 0.05, (2, 12))
-
-im2 = ax8.imshow(monthly_returns * 100, cmap='RdYlGn', 
-                vmin=-10, vmax=10, aspect='auto')
-ax8.set_xticks(np.arange(12))
-ax8.set_yticks(np.arange(2))
-ax8.set_xticklabels(months, fontsize=8)
-ax8.set_yticklabels(years)
-
-# Add return values
-for i in range(2):
-    for j in range(12):
-        val = monthly_returns[i, j] * 100
-        color = 'white' if abs(val) > 5 else 'black'
-        text = ax8.text(j, i, f'{val:.1f}%',
-                       ha="center", va="center", 
-                       color=color, fontsize=8)
-
-ax8.set_title('Monthly Returns Heatmap (%)', fontweight='bold')
-plt.colorbar(im2, ax=ax8, fraction=0.046, pad=0.04)
-
-# Add timestamp
-fig.text(0.99, 0.01, f'Generated: {datetime.now().strftime("%Y-%m-%d %H:%M")}',
-        fontsize=9, ha='right', style='italic', color='gray')
-
-# Add performance summary
-total_return = (price[-1] / price[0] - 1) * 100
-fig.text(0.5, 0.01, 
-        f'Portfolio Value: ${price[-1]*10000:,.0f} | ' +
-        f'Total Return: {total_return:.1f}% | ' +
-        f'Daily Avg: {np.mean(daily_returns)*100:.3f}%',
-        fontsize=11, ha='center', 
-        bbox=dict(boxstyle='round', facecolor='lightblue', alpha=0.5))
-
-plt.tight_layout()
+fig.suptitle("Monthly revenue by store")
 plt.show()</code></pre>
-            </div>
-        </div>
+                <figure>
+                    <img src="images/matplotlib_subplots_composition_grid_own_scale.png" alt="A two by two grid of line charts, one per store: Asheville, Bend, Boise and Flagstaff. Each panel fills its own height, so all four lines look about equally tall even though the y axis numbers differ from panel to panel." width="990" height="605" loading="lazy">
+                    <figcaption>Four charts, one figure. But read the y axes: every panel has its own scale, so the four stores look the same size. They are not.</figcaption>
+                </figure>
 
-        <div class="tip-box">
-            <h3>💡 Pro Tips for Perfect Subplots</h3>
-            <ul>
-                <li><strong>Use constrained_layout:</strong> Better than tight_layout for complex arrangements</li>
-                <li><strong>Plan your layout first:</strong> Sketch on paper before coding</li>
-                <li><strong>Share axes wisely:</strong> Improves comparison and saves space</li>
-                <li><strong>Consistent style:</strong> Use the same color schemes and fonts across subplots</li>
-                <li><strong>Label everything:</strong> Each subplot needs clear titles and axis labels</li>
-                <li><strong>Use GridSpec for complex layouts:</strong> More control than basic subplots</li>
-                <li><strong>Consider subplot_mosaic:</strong> Intuitive for asymmetric layouts</li>
-                <li><strong>Add a super title:</strong> Use fig.suptitle() for overall context</li>
-            </ul>
-        </div>
+                <p>Two new methods appeared. <code>fig.suptitle()</code> puts one title over the whole figure (a "super title"), while <code>ax.set_title()</code> still titles one panel. And <code>ax.set_xticks(positions, labels=...)</code> chooses where the ticks go and what they say; four short labels fit a small panel better than the default dates, and keeping them in two variables lets later charts reuse them. Lesson 3.3 has much more on ticks.</p>
 
-        <div class="warning-box">
-            <h3>⚠️ Common Pitfalls to Avoid</h3>
-            <ul>
-                <li><strong>Overlapping labels:</strong> Always use tight_layout() or constrained_layout</li>
-                <li><strong>Inconsistent scales:</strong> Be careful when not sharing axes</li>
-                <li><strong>Too many subplots:</strong> More than 6-9 becomes hard to read</li>
-                <li><strong>Forgetting to flatten:</strong> Use axes.flat or axes.ravel() for iteration</li>
-                <li><strong>Colorbar issues:</strong> Plan space for colorbars in advance</li>
-                <li><strong>Memory with large grids:</strong> Many subplots can consume significant RAM</li>
-            </ul>
-        </div>
+                <h3>What Shape Do You Get Back?</h3>
 
-        <!-- Learning Journal (REQUIRED per the Courseware Authoring Standard) -->
-        <section id="journal" class="lesson-section">
-            <h2>📓 Learning Journal</h2>
-            <div class="card card-info">
-                <p>Keep a learning journal — digital or physical. After this lesson, take a few minutes to write down:</p>
+                <p>The one surprise in <code>plt.subplots()</code> is that the type of its second return value depends on the grid you ask for.</p>
+
+                <pre><code class="language-python">f1, a = plt.subplots(1, 3)
+f2, b = plt.subplots(3, 1)
+f3, c = plt.subplots()
+f4, d = plt.subplots(1, 3, squeeze=False)
+
+print("1 x 3:", a.shape)
+print("3 x 1:", b.shape)
+print("1 x 1:", type(c).__name__)
+print("1 x 3 with squeeze=False:", d.shape)
+
+for f in (f1, f2, f3, f4):
+    plt.close(f)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>1 x 3: (3,)
+3 x 1: (3,)
+1 x 1: Axes
+1 x 3 with squeeze=False: (1, 3)</code></pre>
+                </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>You ask for</th><th>You get</th><th>Index it with</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>One Axes (the default)</td><td>A single Axes, not an array</td><td><code>ax</code></td></tr>
+                            <tr><td>One row or one column</td><td>A 1-D array</td><td><code>axs[0]</code>, <code>axs[1]</code></td></tr>
+                            <tr><td>Several rows and columns</td><td>A 2-D array</td><td><code>axs[row, col]</code></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>Matplotlib "squeezes" away dimensions of length one to save you typing. It is convenient until a function of yours expects 2-D and receives 1-D. <code>axs.flat</code> works on every array shape, which is one more reason to loop with it, and <code>squeeze=False</code> always gives a 2-D array when you want no surprises.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="shared" class="lesson-section">
+                <h2>⚖️ Shared Axes</h2>
+
+                <p>In the grid above, Boise's panel tops out near 400,000 and Asheville's near 220,000, but the two lines reach the same height on the page. Each Axes chose a y range to fit its own data. That is the right behavior for one chart and the wrong one for a comparison: a reader who glances at the figure will conclude the stores are similar.</p>
+
+                <p><code>sharey=True</code> gives every panel the same y scale, and <code>sharex=True</code> the same x scale.</p>
+
+                <pre><code class="language-python">fig, axs = plt.subplots(2, 2, figsize=(9, 5.5), sharex=True, sharey=True, layout="constrained")
+
+for ax, store in zip(axs.flat, stores):
+    ax.plot(monthly.index, monthly[store], color="#667eea")
+    ax.set_title(store)
+    ax.set_xticks(tick_dates, labels=tick_labels)
+
+fig.suptitle("Monthly revenue by store, on one scale")
+fig.supylabel("Revenue (USD)")
+plt.show()
+
+print(axs[0, 0].get_ylim() == axs[1, 1].get_ylim())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>True</code></pre>
+                </div>
+                <figure>
+                    <img src="images/matplotlib_subplots_composition_grid_shared.png" alt="The same two by two grid with a shared y axis. Boise's line now sits clearly above the other three. Asheville's line is the lowest and flattest. Tick labels appear only on the left column and the bottom row." width="990" height="605" loading="lazy">
+                    <figcaption>Same data, shared scale. Now position on the page means the same thing in every panel, and Boise is visibly the biggest store.</figcaption>
+                </figure>
+
+                <p>Three things changed. Height is now comparable across panels. Matplotlib removed the tick labels from the inner edges, because they would only repeat the outer ones, which gives the data more room. And <code>fig.supylabel()</code> wrote one y label for the whole figure instead of four copies (<code>fig.supxlabel()</code> does the same along the bottom).</p>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Sharing Is a Decision, Not a Default</h4>
+                    <p>A shared y axis answers "which is bigger?" and can flatten a small series into a line along the bottom. Separate y axes answer "what shape does each one have?" and hide the difference in size. Neither is wrong. Decide which question the figure is for, and when the panels do <em>not</em> share a scale, say so in the title or caption, as the first grid's caption did. You can also share by row or column: <code>sharey="row"</code>, <code>sharex="col"</code>.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="layout" class="lesson-section">
+                <h2>📐 Layout: Size and Spacing</h2>
+
+                <p>Every figure so far has used <code>layout="constrained"</code>. With several panels you can finally see what it has been doing for you. Here is a grid without it.</p>
+
+                <pre><code class="language-python">fig, axs = plt.subplots(2, 2, figsize=(7, 4))          # no layout argument
+
+for ax, store in zip(axs.flat, stores):
+    ax.plot(monthly.index, monthly[store], color="#667eea")
+    ax.set_title(store)
+    ax.set_xlabel("Month")
+    ax.set_ylabel("Revenue (USD)")
+
+plt.show()</code></pre>
+                <figure>
+                    <img src="images/matplotlib_subplots_composition_no_layout.png" alt="A two by two grid drawn without a layout engine. The titles of the bottom panels collide with the x axis labels of the top panels, the date tick labels run into each other, and the y axis labels of the right column overlap the left column's plots." width="770" height="440" loading="lazy">
+                    <figcaption>Without a layout engine, Matplotlib places the panels at fixed positions and lets titles, labels and ticks collide.</figcaption>
+                </figure>
+
+                <p><strong>Constrained layout</strong> measures every title, label and tick label after you have drawn them and then sizes the panels so that nothing overlaps and nothing falls off the edge. Ask for it when you create the figure, with <code>layout="constrained"</code>, and you will rarely think about spacing again.</p>
+
+                <p>The other half of layout is the size of the page. Panels divide the figure between them, so a figure with more panels needs more inches. A useful starting point is 3 to 4.5 inches of width and 2.5 to 3 inches of height per panel, up to about 10 inches wide for a notebook or web page. When one column deserves more room than another, <code>width_ratios</code> (and <code>height_ratios</code> for rows) divides the space unevenly.</p>
+
+                <pre><code class="language-python">totals_2025 = daily[daily["date"].dt.year == 2025].groupby("store")["revenue"].sum().sort_values()
+
+fig, (left, right) = plt.subplots(1, 2, figsize=(9, 3.2), width_ratios=[2, 1], layout="constrained")
+
+for store in stores:
+    left.plot(monthly.index, monthly[store], label=store)
+left.set_title("Revenue per month")
+left.set_xticks(tick_dates, labels=tick_labels)
+left.legend(ncols=2, fontsize=8)
+
+right.barh(totals_2025.index, totals_2025.values, color="#667eea")
+right.set_title("Total for 2025")
+plt.show()
+
+print(round(left.get_position().width / right.get_position().width, 1))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>2.0</code></pre>
+                </div>
+                <figure>
+                    <img src="images/matplotlib_subplots_composition_width_ratios.png" alt="A figure with two panels side by side. The left panel, twice as wide, shows four lines of monthly revenue. The narrower right panel shows horizontal bars of 2025 revenue with Boise the longest." width="990" height="352" loading="lazy">
+                    <figcaption>Two different chart types on one figure, with the time series given twice the width.</figcaption>
+                </figure>
+
+                <p>Notice <code>fig, (left, right) = ...</code>. Because a one-row grid comes back as a 1-D array of two Axes, you can unpack it straight into two meaningful names. For two or three panels, names like <code>left</code> and <code>right</code> read better than <code>axs[0]</code> and <code>axs[1]</code>. The printed ratio confirms that the left panel is twice as wide as the right one.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="mosaic" class="lesson-section">
+                <h2>🧱 Named Layouts with subplot_mosaic</h2>
+
+                <p>A regular grid suits panels that are all the same kind. A summary figure usually is not regular: one wide panel for the main trend and smaller ones for supporting views. <code>plt.subplot_mosaic()</code> lets you <em>draw the layout as a little picture made of names</em>. Each name is a panel, and a name that repeats across neighboring cells makes that panel span them.</p>
+
+                <pre><code class="language-python">fig, axd = plt.subplot_mosaic(
+    [["trend", "trend"],
+     ["week",  "spread"]],
+    figsize=(9, 6), layout="constrained")
+
+print(type(axd).__name__, list(axd))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>dict ['trend', 'week', 'spread']</code></pre>
+                </div>
+
+                <p>This time you get back a <strong>dictionary</strong>, conventionally called <code>axd</code>, whose keys are the names you chose. <code>"trend"</code> appeared twice in the top row, so it is one panel two cells wide. Now fill each panel by name with a one-store summary of Boise.</p>
+
+                <pre><code class="language-python">boise = daily[daily["store"] == "Boise"]
+by_weekday = boise.groupby(boise["date"].dt.dayofweek)["revenue"].mean()     # 0 = Monday
+
+axd["trend"].plot(monthly.index, monthly["Boise"], marker="o", markersize=3, color="#667eea")
+axd["trend"].set_title("Revenue per month")
+
+axd["week"].bar(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], by_weekday.values, color="#667eea")
+axd["week"].set_title("Mean revenue by day of the week")
+
+axd["spread"].hist(boise["revenue"].dropna(), bins=30, color="#667eea", edgecolor="white")
+axd["spread"].set_title("How daily revenue is distributed")
+axd["spread"].set_xlabel("Revenue per day (USD)")
+
+fig.suptitle("Boise store, 2024 and 2025", fontsize=14)
+plt.show()</code></pre>
+                <figure>
+                    <img src="images/matplotlib_subplots_composition_mosaic.png" alt="A three-panel summary of the Boise store. A wide line chart across the top shows monthly revenue rising with summer and December peaks. Below left, bars of mean revenue by weekday show Saturday highest. Below right, a histogram of daily revenue is centered near 9,000 dollars with a tail to the right." width="990" height="660" loading="lazy">
+                    <figcaption>A headline panel and two supporting ones. The code that fills each panel says what it is: <code>axd["trend"]</code>, not <code>axs[0]</code>.</figcaption>
+                </figure>
+
+                <p>Named panels make code easier to read and to change. If you later move the histogram to the left, you edit the layout picture and nothing else, because no code depends on positions.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Layout</th><th>Meaning</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>[["a", "b"], ["c", "d"]]</code></td><td>A plain 2 by 2 grid with named panels</td></tr>
+                            <tr><td><code>[["main", "side"], ["main", "side2"]]</code></td><td><code>main</code> spans both rows on the left</td></tr>
+                            <tr><td><code>[["top", "top"], ["left", "."]]</code></td><td>A period leaves a cell empty</td></tr>
+                            <tr><td><code>"AAB;CCB"</code></td><td>String shorthand: one letter per cell, <code>;</code> between rows</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p><code>subplot_mosaic()</code> accepts <code>width_ratios</code>, <code>height_ratios</code>, <code>sharex</code> and <code>sharey</code> just as <code>subplots()</code> does. The one rule: each name must cover a rectangle.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="twin" class="lesson-section">
+                <h2>⚠️ Twin Axes, and When Not to Use Them</h2>
+
+                <p>Sooner or later someone will ask you to "put revenue and visitors on the same chart". They are in different units (dollars and people) with very different sizes, so they cannot share a y axis. Matplotlib offers a tempting answer: <code>ax.twinx()</code> creates a second Axes on top of the first, sharing the x axis but with its own y axis on the right.</p>
+
+                <pre><code class="language-python">bm = boise.groupby("month")[["revenue", "visitors"]].sum()
+
+fig, ax = plt.subplots(figsize=(9, 3.6), layout="constrained")
+ax.plot(bm.index, bm["revenue"], color="#667eea")
+ax.set_ylabel("Revenue (USD)", color="#667eea")
+
+ax2 = ax.twinx()
+ax2.plot(bm.index, bm["visitors"], color="#d95f02", linestyle="--")
+ax2.set_ylabel("Visitors", color="#d95f02")
+ax.set_title("Boise: monthly revenue (solid) and visitors (dashed)")
+plt.show()
+
+print(len(fig.axes), "Axes on this figure")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>2 Axes on this figure</code></pre>
+                </div>
+
+                <p>It works, and it is the most misused feature in charting. The problem is that <strong>where the two lines sit relative to each other is decided by the two scales, and the scales are arbitrary</strong>. Whoever draws the chart can make the lines hug, cross, or fly apart without changing a single number. Watch: the same data twice, with only the right-hand axis limits changed.</p>
+
+                <pre><code class="language-python">fig, axs = plt.subplots(1, 2, figsize=(10, 3.6), layout="constrained")
+
+versions = [((9000, 19500), '"Visitors drive revenue"'),
+            ((0, 60000), '"Revenue soars, traffic is flat"')]
+
+for ax, (limits, claim) in zip(axs, versions):
+    ax.plot(bm.index, bm["revenue"], color="#667eea")
+    ax.set_ylabel("Revenue (USD)", color="#667eea")
+    ax.set_xticks(pd.to_datetime(["2024-01-01", "2025-01-01"]), labels=["2024", "2025"])
+    right = ax.twinx()
+    right.plot(bm.index, bm["visitors"], color="#d95f02", linestyle="--")
+    right.set_ylabel("Visitors", color="#d95f02")
+    right.set_ylim(limits)
+    ax.set_title(claim)
+
+plt.show()</code></pre>
+                <figure>
+                    <img src="images/matplotlib_subplots_composition_twin_misleading.png" alt="Two twin-axis charts of the same Boise data. In the left chart the dashed visitors line lies almost on top of the solid revenue line. In the right chart, where the visitors axis runs from 0 to 60,000, the visitors line is nearly flat along the bottom while revenue swings above it." width="1100" height="396" loading="lazy">
+                    <figcaption>Identical data. On the left the lines overlap; on the right visitors look flat. Only the right-hand axis limits differ, and each title is a claim the picture seems to support.</figcaption>
+                </figure>
+
+                <p>Neither chart is a lie in its numbers, and each one pushes the reader toward a different conclusion. A crossing point on a twin-axis chart means nothing at all: it is where two unrelated rulers happen to line up.</p>
+
+                <h3>What to Do Instead</h3>
+
+                <p><strong>Stack two panels that share the x axis.</strong> Each measure gets its own honest scale, the months line up vertically, and nobody can read meaning into an overlap that does not exist.</p>
+
+                <pre><code class="language-python">fig, (top, bottom) = plt.subplots(2, 1, figsize=(9, 5), sharex=True, layout="constrained")
+
+top.plot(bm.index, bm["revenue"], color="#667eea")
+top.set_ylabel("Revenue (USD)")
+top.set_title("Boise: revenue and visitors rise and fall together")
+
+bottom.plot(bm.index, bm["visitors"], color="#d95f02")
+bottom.set_ylabel("Visitors")
+plt.show()
+
+per_visitor = bm["revenue"] / bm["visitors"]
+print("Revenue per visitor, lowest and highest month:", per_visitor.min().round(2), per_visitor.max().round(2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>Revenue per visitor, lowest and highest month: 19.85 22.46</code></pre>
+                </div>
+                <figure>
+                    <img src="images/matplotlib_subplots_composition_stacked.png" alt="Two stacked line charts sharing one x axis. The top panel shows Boise monthly revenue and the bottom panel monthly visitors. Both have the same shape, with peaks in the same summer and December months." width="990" height="550" loading="lazy">
+                    <figcaption>Two panels, one shared x axis. The peaks line up, and each line has its own honest scale.</figcaption>
+                </figure>
+
+                <p><strong>Or plot the relationship itself.</strong> If the real question is how the two measures relate, compute the thing you care about. Revenue per visitor stays between about $20 and $22.50 in every month, which answers the question more directly than any pair of lines: the two move together because each visitor spends about the same. A scatter plot of one against the other (Lesson 3.1) is another good answer.</p>
+
+                <h3>The Honest Use: One Quantity, Two Units</h3>
+
+                <p>A second axis is fine when both sides measure the <em>same thing</em>, because then the two scales are tied together by a formula and nobody chooses them. <code>ax.secondary_yaxis()</code> takes a pair of conversion functions and keeps the two sides in step. Temperatures in Flagstaff, in both Fahrenheit and Celsius:</p>
+
+                <pre><code class="language-python">weather = pd.read_csv("data/store_weather.csv", parse_dates=["date"])
+flag = weather[weather["city"] == "Flagstaff"]
+flag_monthly = flag.groupby(flag["date"].dt.to_period("M").dt.to_timestamp())["high_f"].mean()
+
+def f_to_c(f):
+    return (f - 32) * 5 / 9
+
+def c_to_f(c):
+    return c * 9 / 5 + 32
+
+fig, ax = plt.subplots(figsize=(8, 3.4), layout="constrained")
+ax.plot(flag_monthly.index, flag_monthly, color="#667eea", marker="o", markersize=3)
+ax.set_ylabel("Mean daily high (°F)")
+ax.set_title("Flagstaff: mean daily high temperature by month")
+
+celsius = ax.secondary_yaxis("right", functions=(f_to_c, c_to_f))
+celsius.set_ylabel("°C")
+plt.show()
+
+print(f"{flag_monthly.max():.1f} °F is {f_to_c(flag_monthly.max()):.1f} °C")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>83.3 °F is 28.5 °C</code></pre>
+                </div>
+                <figure>
+                    <img src="images/matplotlib_subplots_composition_secondary.png" alt="A line chart of Flagstaff's mean daily high temperature by month over two years, with a Fahrenheit axis on the left and a matching Celsius axis on the right. Temperatures run from about 35 degrees Fahrenheit in winter to the low 80s in summer." width="880" height="374" loading="lazy">
+                    <figcaption>One line, one quantity, two rulers that always agree. Here a second axis informs instead of persuading.</figcaption>
+                </figure>
+
+                <div class="card card-success">
+                    <h4>✅ A Simple Test</h4>
+                    <p>Before reaching for <code>twinx()</code>, ask: "Could I change one of these axes and make the chart tell a different story?" If yes, use stacked panels or a ratio. If the two axes are locked together by a formula, a secondary axis is fine.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="multiples" class="lesson-section">
+                <h2>🪟 Small Multiples</h2>
+
+                <p>The grid of four stores has a name in the visualization world: <strong>small multiples</strong>. It means the same small chart repeated once per group, with the same axes, so that the only thing that changes from panel to panel is the data. The reader learns to read one panel and can then read them all. It is one of the most effective designs there is, and it replaces the tangle you get from putting many lines on a single chart.</p>
+
+                <p>The clean way to build small multiples is a <strong>function that draws one panel on an Axes it is given</strong>, plus a loop. This is the payoff of the object-oriented style: the function does not care where on the figure its Axes lives.</p>
+
+                <pre><code class="language-python">def draw_store(ax, store):
+    """Draw one store in color, with the other stores in gray behind it."""
+    for other in stores:
+        if other != store:
+            ax.plot(monthly.index, monthly[other], color="lightgray", linewidth=1)
+    ax.plot(monthly.index, monthly[store], color="#667eea", linewidth=2)
+    ax.set_title(store)
+    ax.set_xticks(pd.to_datetime(["2024-01-01", "2025-01-01"]), labels=["2024", "2025"])
+
+fig, axs = plt.subplots(1, 4, figsize=(10, 2.8), sharex=True, sharey=True, layout="constrained")
+
+for ax, store in zip(axs, stores):
+    draw_store(ax, store)
+
+fig.suptitle("Monthly revenue: each store against the others")
+fig.supylabel("Revenue (USD)")
+plt.show()</code></pre>
+                <figure>
+                    <img src="images/matplotlib_subplots_composition_small_multiples.png" alt="Four panels in a row sharing one y axis, one per store. In each panel that store's line is drawn in color and the other three stores are light gray. Boise is far above the rest. Flagstaff starts at the bottom of the gray lines and ends near the top of them. Asheville ends as the lowest line." width="1100" height="308" loading="lazy">
+                    <figcaption>Each panel answers "how does this store compare with the rest?" Flagstaff's climb through the pack and Asheville's slide to the bottom are both easy to see.</figcaption>
+                </figure>
+
+                <p>The gray lines are the trick that makes this version better than the plain grid. Every panel carries the full context, so you never have to look back and forth to compare, and the one colored line tells you which store the panel is about. You will use color this way, gray for context and one strong color for the subject, throughout Lesson 3.3.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Small Multiples or One Chart?</h4>
+                    <p>Four lines on one chart are readable. Nine are spaghetti. As a rule of thumb, when a single chart needs more than four or five colors, or the lines cross so often that you cannot follow one, switch to small multiples. The cost is that each panel is small, so keep each one simple: no legends inside panels, few ticks, short titles.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="mistakes" class="lesson-section">
+                <h2>⚠️ Common Mistakes</h2>
+
+                <p>Almost every subplot error comes from forgetting what <code>plt.subplots()</code> handed back. When one of these appears, print <code>type(axs)</code> and <code>axs.shape</code> first. That is not a beginner's crutch; it is what experienced people do too.</p>
+
+                <h3>1. Plotting on the Array Instead of an Axes</h3>
+                <pre data-raises="AttributeError"><code class="language-python">fig, axs = plt.subplots(2, 2)
+axs.plot(monthly.index, monthly["Boise"])</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>AttributeError: 'numpy.ndarray' object has no attribute 'plot'</code></pre>
+                </div>
+                <p><strong>What it means:</strong> <code>axs</code> is the NumPy array that holds the four Axes, and an array has no <code>plot</code> method. The same message appears for <code>axs[0].plot(...)</code> on a 2-D grid, because <code>axs[0]</code> is a whole row. <strong>Fix:</strong> pick one Axes: <code>axs[0, 0].plot(...)</code>, or loop over <code>axs.flat</code>.</p>
+
+                <h3>2. Two Indexes on a One-Row Grid</h3>
+                <pre data-raises="IndexError"><code class="language-python">fig, axs = plt.subplots(1, 3)
+axs[0, 1].set_title("Middle panel")</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>IndexError: too many indices for array: array is 1-dimensional, but 2 were indexed</code></pre>
+                </div>
+                <p><strong>What it means:</strong> a grid with one row is squeezed to a 1-D array, so it takes one index, not two. <strong>Fix:</strong> <code>axs[1]</code>. If the number of rows varies in your code, create the grid with <code>squeeze=False</code> and always use two indexes.</p>
+
+                <h3>3. A pyplot Call Inside the Loop</h3>
+                <pre><code class="language-python">fig, axs = plt.subplots(2, 2, layout="constrained")
+for ax, store in zip(axs.flat, stores):
+    ax.plot(monthly.index, monthly[store])
+    plt.title(store)                      # pyplot style: which Axes is this?
+
+print([ax.get_title() for ax in axs.flat])
+plt.close(fig)</code></pre>
+                <div class="card card-output">
+                    <h4>Output (three panels have no title, and no error says so)</h4>
+                    <pre><code>['', '', '', 'Flagstaff']</code></pre>
+                </div>
+                <p><strong>What happened:</strong> <code>plt.title()</code> writes on the "current" Axes, which is the last one created: the bottom-right panel. All four titles were written there, one over the other, and the last one won. <strong>Fix:</strong> <code>ax.set_title(store)</code>. This is exactly the bug the object-oriented style exists to prevent.</p>
+
+                <h3>4. Empty Panels Left Over</h3>
+                <p>Five charts do not fill a 2 by 3 grid, and the sixth cell shows an empty frame with ticks from 0 to 1, which looks like a chart that failed to load. Remove what you did not use.</p>
+                <pre><code class="language-python">fig, axs = plt.subplots(2, 3, figsize=(9, 4.5), layout="constrained")
+panels = stores + ["All stores"]
+
+for ax, name in zip(axs.flat, panels):
+    ax.set_title(name)
+
+print(len(fig.axes), "Axes before")
+for ax in axs.flat[len(panels):]:
+    ax.remove()
+print(len(fig.axes), "Axes after")
+plt.close(fig)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>6 Axes before
+5 Axes after</code></pre>
+                </div>
+                <p><code>zip</code> stops at the shorter of its two inputs, so the loop quietly leaves the extra cell untouched. Slicing <code>axs.flat</code> from <code>len(panels)</code> onward picks up exactly the leftovers.</p>
+
+                <h3>5. Comparing Heights Across Panels That Do Not Share a Scale</h3>
+                <p>This one produces no message at all: it is the first grid in this lesson. If the panels have separate y axes, the reader will still compare heights. <strong>Fix:</strong> <code>sharey=True</code> when size is the point; when shape is the point, keep separate scales and state it in the title or caption.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="project" class="lesson-section">
+                <h2>🛠️ Project: Nine Categories, Twelve Months</h2>
+
+                <p>Pinecrest's buyers need to know when each product category has its season, so they can order stock ahead of it. Nine categories on one chart would be unreadable. You will build a 3 by 3 figure of small multiples from the online and account-holder orders, make the panels comparable, and arrange them so the figure tells its story. Work in a new notebook called <code>lesson_3_2_project</code>. Allow about 35 minutes.</p>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 1: Build the table <span class="step-time">(8 min)</span></h3>
+                    <p>Revenue by category needs three files: the order lines, the order dates (completed orders only), and each product's category. Merge them, compute line revenue from the price actually charged, and pivot to one row per calendar month and one column per category, adding the two years together.</p>
+                    <pre><code class="language-python">import calendar
+
+import matplotlib.pyplot as plt
+import pandas as pd
+
+orders = pd.read_csv("data/orders.csv", parse_dates=["order_date"])
+items = pd.read_csv("data/order_items.csv")
+products = pd.read_csv("data/products.csv")
+
+completed = orders.loc[orders["status"] == "completed", ["order_id", "order_date"]]
+lines = items.merge(completed, on="order_id", how="inner")
+with_category = lines.merge(products[["sku", "category"]], on="sku", how="inner")
+print(len(lines), "lines on completed orders;", len(lines) - len(with_category), "use discontinued products with no category")
+
+with_category["revenue"] = with_category["quantity"] * with_category["unit_price"]
+with_category["month"] = with_category["order_date"].dt.month
+
+by_month = with_category.pivot_table(index="month", columns="category", values="revenue", aggfunc="sum")
+print(by_month.shape)
+print(by_month[["Snow", "Tents", "Apparel"]].round(0).iloc[[0, 6, 11]])</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>41788 lines on completed orders; 567 use discontinued products with no category
+(12, 9)
+category     Snow    Tents  Apparel
+month
+1         42252.0  11849.0  37807.0
+7           169.0  59714.0  25130.0
+12        60100.0  28154.0  61911.0</code></pre>
+                    </div>
+                    <p>Twelve rows, nine columns. Even three rows show the story: Snow sells almost nothing in July, and Tents sell five times more in July than in January.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 2: A first grid <span class="step-time">(6 min)</span></h3>
+                    <p>Write a function that draws one category on an Axes, then loop over a 3 by 3 grid. Leave the y axes separate for now and look at the result critically.</p>
+                    <pre><code class="language-python">def draw_category(ax, table, name):
+    ax.plot(table.index, table[name], color="#667eea", marker="o", markersize=3)
+    ax.set_title(name)
+    ax.set_xticks([1, 4, 7, 10], labels=["Jan", "Apr", "Jul", "Oct"])
+
+fig, axs = plt.subplots(3, 3, figsize=(9, 6.5), sharex=True, layout="constrained")
+for ax, name in zip(axs.flat, by_month.columns):
+    draw_category(ax, by_month, name)
+fig.suptitle("Revenue by month (each panel has its own scale)")
+plt.show()
+
+print(by_month.sum().round(0).sort_values(ascending=False).head(3))
+print(by_month.sum().round(0).sort_values(ascending=False).tail(1))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>category
+Accessories    567699.0
+Sleeping       516302.0
+Tents          447115.0
+dtype: float64
+category
+Snow    216940.0
+dtype: float64</code></pre>
+                    </div>
+                    <p>The shapes are visible, but the panels cannot be compared: the largest category sells nearly three times what the smallest does, and the y axes hide that. Sharing the y axis would fix the comparison of sizes and squash the small categories. The buyers' question is about <em>timing</em>, not size, so there is a better option.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 3: Make the panels comparable <span class="step-time">(7 min)</span></h3>
+                    <p>Convert each category to <strong>percent of its own yearly revenue</strong>. Dividing a DataFrame by its column sums does this in one line. Now every panel is in the same unit, a shared y axis is meaningful, and a category with no season at all would sit at a flat 8.3% (one twelfth) every month. Draw that reference line with <code>ax.axhline()</code>.</p>
+                    <pre><code class="language-python">share = by_month / by_month.sum() * 100
+print(share.sum().round(1).unique())                # every column adds up to 100
+print(share[["Snow", "Tents", "Apparel"]].round(1).iloc[[0, 6, 11]])
+
+fig, axs = plt.subplots(3, 3, figsize=(9, 6.5), sharex=True, sharey=True, layout="constrained")
+for ax, name in zip(axs.flat, share.columns):
+    ax.axhline(100 / 12, color="gray", linewidth=0.8, linestyle="--")
+    draw_category(ax, share, name)
+fig.supylabel("Percent of the category's yearly revenue")
+plt.show()</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>[100.]
+category  Snow  Tents  Apparel
+month
+1         19.5    2.7      8.7
+7          0.1   13.4      5.8
+12        27.7    6.3     14.2</code></pre>
+                    </div>
+                    <p>Your function did not change at all: it draws whatever table it is given. That is what makes a panel function worth writing.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 4: Order the panels to tell the story <span class="step-time">(7 min)</span></h3>
+                    <p>Alphabetical order is an accident of spelling. Sort the categories by the month in which they peak, so the grid reads from winter categories to summer ones and back. <code>idxmax()</code> gives each column's peak month.</p>
+                    <pre><code class="language-python">peak = share.idxmax()
+order = peak.sort_values().index
+summary = pd.DataFrame({"peak_month": [calendar.month_abbr[m] for m in peak[order]],
+                        "peak_share": share.max()[order].round(1),
+                        "low_share": share.min()[order].round(1)})
+print(summary)</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>             peak_month  peak_share  low_share
+category
+Sleeping            Jun        14.2        3.9
+Camp Kitchen        Jul        11.3        4.8
+Packs               Aug        11.1        5.1
+Climbing            Aug        10.8        5.3
+Tents               Aug        13.6        2.7
+Footwear            Sep        10.2        5.9
+Accessories         Dec        11.2        6.0
+Apparel             Dec        14.2        5.8
+Snow                Dec        27.7        0.1</code></pre>
+                    </div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 5: Finish the figure <span class="step-time">(7 min)</span></h3>
+                    <p>Redraw in the new order. Put each category's peak month in its panel title, mark the peak with a larger dot, and give the figure a title that states what it shows.</p>
+                    <pre><code class="language-python">fig, axs = plt.subplots(3, 3, figsize=(9, 6.5), sharex=True, sharey=True, layout="constrained")
+
+for ax, name in zip(axs.flat, order):
+    ax.axhline(100 / 12, color="gray", linewidth=0.8, linestyle="--")
+    draw_category(ax, share, name)
+    ax.scatter([peak[name]], [share[name].max()], color="#d95f02", s=40, zorder=3)
+    ax.set_title(f"{name}: peaks in {calendar.month_abbr[peak[name]]}", fontsize=10)
+
+fig.suptitle("Every Pinecrest category has a season\nSleeping and Tents own the summer, Snow and Apparel the winter")
+fig.supylabel("Percent of the category's yearly revenue")
+fig.supxlabel("Dashed line: an even year (8.3% per month). Completed orders, 2024 and 2025 combined.", fontsize=9)
+plt.show()</code></pre>
+                    <figure>
+                        <img src="images/matplotlib_subplots_composition_project_categories.png" alt="A three by three grid of small line charts, one per product category, each showing the percent of yearly revenue earned in each month against a dashed line at 8.3 percent. Sleeping, Camp Kitchen, Climbing, Packs and Tents rise to summer peaks. Footwear peaks in September. Accessories, Apparel and Snow peak in December, and Snow falls to almost zero in summer." width="990" height="715" loading="lazy">
+                        <figcaption>Nine categories, one glance. Snow is the most seasonal by far; Accessories barely leave the dashed line until December.</figcaption>
+                    </figure>
+                </div>
+
+                <div class="card card-success">
+                    <h3>✅ Project Completion Checklist</h3>
+                    <ul class="checklist">
+                        <li><code>by_month</code> has shape <code>(12, 9)</code> and was built from completed orders using <code>unit_price</code></li>
+                        <li>One function draws a panel, and a loop over <code>axs.flat</code> fills the grid</li>
+                        <li>Every column of <code>share</code> adds up to 100</li>
+                        <li>The final figure shares both axes and has a reference line at 8.3%</li>
+                        <li>Panels are ordered by peak month, and each title names that month</li>
+                        <li>The figure has one title, one y label and a note saying what data it covers</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="exercises" class="lesson-section">
+                <h2>🏋️ Hands-on Exercises</h2>
+
+                <p>These continue from the lesson's variables (<code>daily</code>, <code>monthly</code>, <code>stores</code>, <code>boise</code>). Sketch each layout on paper before you write code: thirty seconds with a pencil saves ten minutes of rearranging.</p>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 1: Side by Side</h3>
+                    <p>Make a figure with two panels in one row. Left: a scatter of visitors against revenue for Asheville. Right: the same for Boise. Share both axes. Which store has the wider spread of visitors?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>A 1 by 2 grid is a 1-D array, so you can unpack it: <code>fig, (left, right) = plt.subplots(1, 2, sharex=True, sharey=True, ...)</code>. Or loop with <code>zip(axs, ["Asheville", "Boise"])</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">fig, axs = plt.subplots(1, 2, figsize=(9, 3.6), sharex=True, sharey=True, layout="constrained")
+
+for ax, store in zip(axs, ["Asheville", "Boise"]):
+    one = daily[daily["store"] == store]
+    ax.scatter(one["visitors"], one["revenue"], s=8, alpha=0.3, color="#667eea")
+    ax.set_title(store)
+    print(store, "visitors from", one["visitors"].min(), "to", one["visitors"].max())
+
+fig.supxlabel("Visitors per day")
+fig.supylabel("Revenue (USD)")
+plt.show()</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>Asheville visitors from 127 to 705
+Boise visitors from 177 to 1164</code></pre>
+                        </div>
+                        <p>With shared axes the two clouds lie along the same band, and Boise's simply extends much further along it. Without sharing, the two panels would look nearly identical.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 2: The Weekly Rhythm of Every Store</h3>
+                    <p>Draw a 2 by 2 grid of bar charts showing mean revenue by day of the week, one panel per store, with a shared y axis. Use a loop. Is Saturday the best day everywhere?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Inside the loop, filter <code>daily</code> to one store and group by <code>.dt.dayofweek</code> (0 is Monday), as the Boise summary did. Pass a list of seven short day names as the x values.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+fig, axs = plt.subplots(2, 2, figsize=(9, 5), sharex=True, sharey=True, layout="constrained")
+for ax, store in zip(axs.flat, stores):
+    one = daily[daily["store"] == store]
+    weekday_mean = one.groupby(one["date"].dt.dayofweek)["revenue"].mean()
+    ax.bar(day_names, weekday_mean.values, color="#667eea")
+    ax.set_title(store)
+    print(f"{store:&lt;10} best day: {day_names[weekday_mean.idxmax()]}  ${weekday_mean.max():,.0f}")
+
+fig.suptitle("Mean daily revenue by day of the week")
+fig.supylabel("Revenue (USD)")
+plt.show()</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>Asheville  best day: Sat  $8,442
+Bend       best day: Sat  $10,230
+Boise      best day: Sat  $15,119
+Flagstaff  best day: Sat  $9,941</code></pre>
+                        </div>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 3: A Layout from a Sketch</h3>
+                    <p>Build this layout with <code>subplot_mosaic</code>: a tall panel named <code>rank</code> on the right, spanning both rows; on the left, <code>trend</code> on top and <code>traffic</code> below. Make the left column twice as wide as the right. Fill it with: all four stores' monthly revenue lines (<code>trend</code>), all four stores' monthly visitors (<code>traffic</code>), and horizontal bars of total revenue by store (<code>rank</code>). Print the panel names.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>The layout picture is <code>[["trend", "rank"], ["traffic", "rank"]]</code> with <code>width_ratios=[2, 1]</code>. For monthly visitors, make a second pivot table with <code>values="visitors"</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">monthly_visitors = daily.pivot_table(index="month", columns="store", values="visitors", aggfunc="sum")
+total_by_store = daily.groupby("store")["revenue"].sum().sort_values()
+
+fig, axd = plt.subplot_mosaic([["trend", "rank"],
+                               ["traffic", "rank"]],
+                              figsize=(9.5, 5), width_ratios=[2, 1], layout="constrained")
+print(list(axd))
+
+monthly.plot(ax=axd["trend"], legend=False)
+axd["trend"].set_title("Revenue per month (USD)")
+axd["trend"].set_xlabel("")
+
+monthly_visitors.plot(ax=axd["traffic"])
+axd["traffic"].set_title("Visitors per month")
+axd["traffic"].set_xlabel("")
+axd["traffic"].legend(ncols=2, fontsize=8)
+
+axd["rank"].barh(total_by_store.index, total_by_store.values, color="#667eea")
+axd["rank"].set_title("Revenue, both years (USD)")
+plt.show()</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>['trend', 'rank', 'traffic']</code></pre>
+                        </div>
+                        <figure>
+                            <img src="images/matplotlib_subplots_composition_ex_mosaic.png" alt="A three-panel figure. On the left, two stacked line charts show monthly revenue and monthly visitors for the four stores. On the right, a tall panel shows horizontal bars of total revenue by store, with Boise the longest." width="1045" height="550" loading="lazy">
+                            <figcaption>The pandas shortcut works on a named panel too: <code>monthly.plot(ax=axd["trend"])</code>.</figcaption>
+                        </figure>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 4: Retire a Twin Axis (Stretch)</h3>
+                    <p>A colleague sends you a chart of Flagstaff's monthly revenue with monthly <code>staff_on_duty</code> on a second y axis, titled "More staff, more sales". Replace it with a figure of three stacked panels sharing the x axis: revenue, total staff shifts, and revenue per staff shift. What does the third panel suggest about the title?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Group Flagstaff's rows by <code>month</code> and sum <code>revenue</code> and <code>staff_on_duty</code>. <code>plt.subplots(3, 1, sharex=True)</code> returns a 1-D array of three Axes that you can unpack into three names.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">fl = daily[daily["store"] == "Flagstaff"].groupby("month")[["revenue", "staff_on_duty"]].sum()
+fl["per_shift"] = fl["revenue"] / fl["staff_on_duty"]
+
+fig, (a1, a2, a3) = plt.subplots(3, 1, figsize=(9, 6.5), sharex=True, layout="constrained")
+a1.plot(fl.index, fl["revenue"], color="#667eea")
+a1.set_ylabel("Revenue (USD)")
+a2.plot(fl.index, fl["staff_on_duty"], color="#d95f02")
+a2.set_ylabel("Staff shifts")
+a3.plot(fl.index, fl["per_shift"], color="black")
+a3.set_ylabel("Revenue per shift (USD)")
+a3.set_ylim(bottom=0)
+fig.suptitle("Flagstaff: revenue, staffing, and revenue per staff shift")
+plt.show()
+
+print(fl["per_shift"].describe().round(0)[["min", "mean", "max"]])</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>min      997.0
+mean    1127.0
+max     1233.0
+Name: per_shift, dtype: float64</code></pre>
+                        </div>
+                        <p>Revenue and staffing rise and fall together, but revenue per shift stays in a fairly narrow band. That is what you would see if managers schedule staff to match the demand they expect, which is how Pinecrest does it (<code>data/README.md</code> says staff are "scheduled in advance"). The staffing follows the sales forecast; the chart cannot show that extra staff <em>cause</em> sales. Lesson 4.4 returns to this pair.</p>
+                    </details>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="quiz" class="lesson-section">
+                <h2>🎯 Quick Quiz</h2>
+                <div class="card quiz-container">
+                    <h3>🎯 Check Your Understanding</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> What does this print?</p>
+                        <pre><code class="language-python">fig_q, axs_q = plt.subplots(3, 2)
+print(axs_q.shape, type(axs_q[2, 0]).__name__)
+plt.close(fig_q)</code></pre>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="The arguments are rows then columns, so the array of Axes has shape (3, 2), and indexing it with a row and a column gives one Axes: here the bottom-left panel.">
+                                A) <code>(3, 2) Axes</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="plt.subplots takes the number of rows first and columns second, the same order as a NumPy shape.">
+                                B) <code>(2, 3) Axes</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Only grids with a single row or a single column are squeezed to one dimension. This grid has three rows and two columns.">
+                                C) <code>(6,) ndarray</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> A 2 by 2 grid shows monthly revenue for four stores. Boise sells nearly twice what Asheville does, yet the two lines reach the same height in their panels. Why?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Constrained layout only arranges the panels and their labels so nothing overlaps. It never changes the data range an Axes shows.">
+                                A) <code>layout="constrained"</code> rescaled the data to fit
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Nothing was normalized. Each line shows the real dollar values. Look at the numbers on each panel's y axis: are they the same from panel to panel?">
+                                B) Matplotlib converts each panel to percentages by default
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="By default every Axes picks a y range that fits its own data, so each line fills its panel. Passing sharey=True gives all panels one scale and makes heights comparable.">
+                                C) Each panel chose its own y scale; <code>sharey=True</code> would make heights comparable
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> What does this print?</p>
+                        <pre><code class="language-python">fig_m, axd_m = plt.subplot_mosaic([["top", "top"],
+                                   ["left", "right"]])
+print(len(axd_m), sorted(axd_m))
+plt.close(fig_m)</code></pre>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="There are four cells in the layout picture, but a name that repeats in neighboring cells is one panel that spans them.">
+                                A) <code>4 ['left', 'right', 'top', 'top']</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="subplot_mosaic returns a dictionary with one entry per distinct name. The name top covers both cells of the first row, so it is a single wide panel, giving three panels in all.">
+                                B) <code>3 ['left', 'right', 'top']</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="The result is a dictionary keyed by the names you wrote, not by row. How many different names appear in the layout?">
+                                C) <code>2 ['row0', 'row1']</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 4:</strong> A chart shows revenue on the left y axis and visitors on a right y axis made with <code>twinx()</code>. A colleague says: "The lines cross in March, so that is when revenue overtook traffic." What is the best response?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Dollars and people are different units. For one to overtake the other, they would need a common scale. Who decided where the two scales line up?">
+                                A) Correct: a crossing point always marks where one measure passes the other
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="The two y scales are independent and arbitrary, so where the lines cross depends only on the axis limits. Change either limit and the crossing moves or disappears. Stacked panels or a ratio such as revenue per visitor show the relationship honestly.">
+                                B) The crossing depends only on how the two scales were chosen; stacked panels or a ratio would be more honest
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="twinx works without any error, which is part of the danger. The issue is not whether Matplotlib allows it but what a reader can conclude from it.">
+                                C) The chart must be broken, because Matplotlib does not allow two y axes
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 5:</strong> Inside <code>for ax, store in zip(axs.flat, stores):</code> on a 2 by 2 grid, someone writes <code>plt.title(store)</code> instead of <code>ax.set_title(store)</code>. What is the result?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="plt.title acts on the current Axes, which is the last one created: the bottom-right panel. Every pass of the loop overwrites that one title, and the other three panels get none. ax.set_title names the Axes explicitly.">
+                                A) Only the last panel gets a title, and it shows the last store's name
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="pyplot functions do not know about your loop variable ax. They act on whichever Axes pyplot considers current. Which Axes is that after plt.subplots(2, 2)?">
+                                B) Each panel gets its own store name, exactly as with <code>ax.set_title</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="No error is raised, which is what makes this bug hard to find. The titles are written, but all to one place.">
+                                C) Python raises an error because <code>plt.title</code> cannot be used with subplots
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="faq" class="lesson-section">
+                <h2>❓ Common Questions at This Stage</h2>
+
+                <details>
+                    <summary>I see <code>plt.subplot(2, 2, 1)</code>, <code>fig.add_subplot()</code> and <code>GridSpec</code> in other tutorials. Do I need them?</summary>
+                    <p>Rarely. <code>plt.subplot(2, 2, 1)</code> is the older pyplot way of adding one panel at a time to the "current" figure. <code>GridSpec</code> is the machinery underneath every layout, and it is what people used for uneven layouts before <code>subplot_mosaic</code> existed. <code>plt.subplots()</code> for regular grids and <code>plt.subplot_mosaic()</code> for everything else cover nearly all needs, and both hand you the Axes as objects. It is still useful to recognize the others when you read someone else's code.</p>
+                </details>
+                <details>
+                    <summary>What about <code>fig.tight_layout()</code>? I see it everywhere.</summary>
+                    <p>It is the older way of fixing overlaps, called after drawing. <code>layout="constrained"</code> is the newer engine: it is set once when the figure is created, it handles figure-level titles, shared labels and color bars better, and it keeps working as you add things. Use one or the other, not both on the same figure. If you call <code>fig.tight_layout()</code> on a constrained figure, Matplotlib warns that the layout engine has changed.</p>
+                </details>
+                <details>
+                    <summary>How do I get one legend for the whole figure instead of one per panel?</summary>
+                    <p>Give the lines labels in one panel, collect them with <code>handles, labels = ax.get_legend_handles_labels()</code>, and call <code>fig.legend(handles, labels, loc="outside lower center", ncols=4)</code>. With constrained layout, the <code>"outside ..."</code> locations reserve space for the legend beside the panels so it does not cover any of them.</p>
+                </details>
+                <details>
+                    <summary>How many panels is too many?</summary>
+                    <p>For a figure someone reads on a page or a slide, around 12 small multiples is a practical ceiling, fewer if each panel carries more than one series. Past that, the panels become too small to read and it is better to filter to the groups that matter or to summarize the rest in a table. A good test: can you still read the tick labels at the size the figure will actually be shown?</p>
+                </details>
+                <details>
+                    <summary>Can the panels of one figure have different chart types?</summary>
+                    <p>Yes. Each Axes is independent: the Boise summary mixed a line, bars and a histogram. What the panels should have in common is a subject. A figure whose panels are about unrelated things is really several figures, and reads better as several figures.</p>
+                </details>
+
+                <div class="card card-accent">
+                    <h3>🌟 Going Further: Bonus Challenge</h3>
+                    <p>Give the project figure the gray-context treatment from the Small Multiples section. Change <code>draw_category()</code> so that each panel first draws <em>all nine</em> categories' share lines in light gray, then the panel's own category in color on top. Does the context help or does it clutter a panel this small? Then try a different arrangement of the same nine panels: one row of nine, or three rows ordered by total revenue instead of peak month. Write down which version you would send to the buyers and why. There is no single right answer; the point is that arrangement is a choice you make for the reader.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="journal" class="lesson-section">
+                <h2>📓 Learning Journal</h2>
+                <div class="card card-accent">
+                    <p>Take five minutes to write in your learning journal (the <code>journal.md</code> file you started in Lesson 0.1, or a paper notebook). Jot down:</p>
+                    <ul>
+                        <li><strong>Key concepts</strong> you learned today</li>
+                        <li><strong>Techniques that clicked</strong> (and the ones that have not, yet)</li>
+                        <li><strong>Questions or confusion</strong> to come back to</li>
+                        <li><strong>Ideas to try</strong> on your own</li>
+                        <li><strong>Progress and feelings</strong>: how did this lesson go for you?</li>
+                    </ul>
+                    <p><strong>✍️ This lesson's prompt:</strong> Sketch, in words or with a quick drawing, a one-page summary of something you follow regularly (a budget, a team's season, your own exercise or study time). What is the headline panel? Which two or three supporting panels would you add, and which of them should share an axis? Then explain in two sentences, as if to a colleague, why two lines on a twin-axis chart crossing each other does not mean anything.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="summary" class="lesson-section">
+                <h2>📝 Lesson Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎓 Key Takeaways</h3>
+                    <ul>
+                        <li><code>plt.subplots(nrows, ncols)</code> returns a NumPy array of Axes: 2-D for a grid, 1-D for one row or column, a single Axes for 1 by 1</li>
+                        <li>Loop with <code>zip(axs.flat, groups)</code>; it works for every grid shape</li>
+                        <li><code>sharey=True</code> makes heights comparable across panels; separate scales show shape and hide size. Choose on purpose and tell the reader</li>
+                        <li><code>layout="constrained"</code> keeps titles, labels and ticks from colliding; <code>fig.suptitle</code>, <code>fig.supxlabel</code> and <code>fig.supylabel</code> label the whole figure</li>
+                        <li><code>plt.subplot_mosaic()</code> builds uneven layouts from a picture of names and returns a dictionary of Axes</li>
+                        <li>A twin-axis chart with two different measures can be made to say almost anything; prefer stacked panels with a shared x axis, or plot a ratio</li>
+                        <li><code>secondary_yaxis</code> is fine for one quantity in two units</li>
+                        <li>Small multiples: one function that draws a panel on a given <code>ax</code>, plus a loop</li>
+                    </ul>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🏆 What You've Accomplished</h3>
+                    <ul>
+                        <li>You arranged four stores on one figure and saw how a shared scale changes what the figure says</li>
+                        <li>You built a three-panel summary with a named layout</li>
+                        <li>You made the same data support two opposite claims with a twin axis, and then showed it honestly</li>
+                        <li>You wrote panel-drawing functions and reused one on two different tables without changing it</li>
+                        <li>You turned 41,000 order lines into a nine-panel picture of Pinecrest's seasons</li>
+                    </ul>
+                </div>
+
+                <h3>🔭 Looking Ahead</h3>
+                <p>In <a href="matplotlib_customizing_plots.html"><strong>Lesson 3.3: Customizing Plots</strong></a> you will take charts like these from "correct" to "ready to show someone": titles that state the finding, dollar and date formats on the axes, color used with a purpose (and safe for color-blind readers), annotations, and the removal of everything that does not help.</p>
+
+                <h3>📋 Before the Next Lesson</h3>
                 <ul>
-                    <li><strong>Key concepts</strong> you learned</li>
-                    <li><strong>Techniques that clicked</strong> for you</li>
-                    <li><strong>Questions or confusion points</strong> to revisit</li>
-                    <li><strong>Ideas you want to try</strong></li>
-                    <li><strong>Your progress and feelings</strong> about learning this</li>
+                    <li>Keep your project notebook. The seasons figure is a good candidate for polishing in Lesson 3.3.</li>
+                    <li>Take any one chart you made in Lesson 3.1 and turn it into small multiples by store.</li>
+                    <li>Look for a twin-axis chart in the news or in a report this week. Ask what it would look like if one axis started at zero.</li>
                 </ul>
-                <p><strong>✍️ This lesson's prompt:</strong> When you imagine a dashboard for a project you care about, how would you divide the canvas? Sketch the panels in words — what deserves the biggest panel, and which plots should share an axis so they can be compared fairly?</p>
-            </div>
-        </section>
 
-        <!-- Lesson Summary (full standard block) -->
-        <section id="summary" class="lesson-section">
-            <h2>📝 Lesson Summary</h2>
-            <div class="card card-success">
-                <h3>🎓 Key Takeaways</h3>
-                <ul>
-                    <li>A Figure is the whole canvas; each Axes is one plotting area, and <code>plt.subplots()</code> is the quickest way to make a grid of them.</li>
-                    <li><code>GridSpec</code> and <code>subplot_mosaic()</code> unlock asymmetric layouts where panels span multiple rows or columns.</li>
-                    <li>Sharing axes keeps comparisons honest, and twin axes let two scales live in one panel.</li>
-                    <li><code>constrained_layout</code> or <code>tight_layout</code> prevents overlapping labels in complex compositions.</li>
-                </ul>
-            </div>
-            <h3>🎉 What You've Accomplished</h3>
-            <p>You can now arrange many plots on a single figure with intentional sizing, spacing, and shared axes — the skill behind every professional dashboard and multi-panel scientific figure.</p>
-            <h3>❓ Common Questions at This Stage</h3>
-            <details>
-                <summary>When should I use GridSpec instead of plt.subplots()?</summary>
-                <p>Use <code>plt.subplots()</code> for simple, uniform grids. Reach for <code>GridSpec</code> (or <code>subplot_mosaic()</code>) when you need unequal panel sizes, panels that span multiple cells, or fine control over width and height ratios.</p>
-            </details>
-            <details>
-                <summary>What's the difference between tight_layout and constrained_layout?</summary>
-                <p>Both prevent overlapping elements, but <code>constrained_layout</code> is newer and generally handles complex figures, colorbars, and shared legends more gracefully. Set it when you create the figure; call <code>tight_layout()</code> after plotting.</p>
-            </details>
-            <details>
-                <summary>How do I iterate over subplots when I have a grid?</summary>
-                <p>When <code>plt.subplots()</code> returns a 2D array of axes, use <code>axes.flat</code> or <code>axes.ravel()</code> to loop over every subplot in one pass instead of nested indexing.</p>
-            </details>
-            <h3>🔭 Looking Ahead</h3>
-            <p>With well-composed figures in hand, the natural next step is refining how each panel looks — customizing colors, fonts, and annotations to make the whole composition polished and consistent.</p>
-            <h3>✅ Before the Next Lesson</h3>
-            <ul>
-                <li>Recreate a 2×2 grid, then rebuild the same idea with GridSpec so one panel spans the top row.</li>
-                <li>Take two related plots and give them a shared x-axis, noting how it aids comparison.</li>
-                <li>Write your Learning Journal entry for this lesson</li>
-            </ul>
-            <div class="card card-accent" style="text-align: center; padding: 2rem;">
-                <h3>🌟 Encouragement for the Journey</h3>
-                <p>Composing a great figure is like arranging a story — each panel a scene. You now hold the layout tools the pros use; the more you compose, the more naturally the structure will come.</p>
-            </div>
-        </section>
+                <div class="card card-accent">
+                    <h3>🌱 Encouragement for the Journey</h3>
+                    <p>You did something today that many people who make charts for a living never stop to do: you looked at a convincing picture and asked whether it could have been drawn to say the opposite. That skepticism, turned on your own work first, is what makes an analyst trustworthy. If indexing <code>axs</code> still trips you up now and then, that is expected. Print its shape, as you would for any array, and carry on.</p>
+                </div>
+            </section>
 
-        <div class="navigation">
-            <a href="matplotlib_line_scatter_bar.html" class="nav-button prev">← Line, Scatter, Bar Charts</a>
-            <a href="matplotlib_customizing_plots.html" class="nav-button">Customizing Plots →</a>
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="matplotlib_line_scatter_bar.html" class="prev-lesson">← Previous: Line, Scatter and Bar Charts</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="matplotlib_customizing_plots.html" class="next-lesson">Next: Customizing Plots →</a>
+            </nav>
         </div>
-    </div>
+    </main>
 
-    <!-- Footer -->
     <footer class="site-footer">
         <p>&copy; 2026 Ray de la Paz. Python Data Science. All rights reserved.</p>
         <div class="footer-links">
@@ -1215,181 +1077,10 @@ plt.show()</code></pre>
             <a href="https://rays-home.netlify.app/contact">Contact</a>
             <a href="#" id="print-button">Print Page</a>
         </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
     </footer>
 
-    <script>
-        let currentLayout = '2x1';
-        let showGrid = true;
-        let showTitles = true;
-
-        function changeLayout(layout) {
-            currentLayout = layout;
-            
-            // Update active state
-            document.querySelectorAll('.layout-example').forEach(el => {
-                el.classList.remove('active');
-            });
-            event.currentTarget.classList.add('active');
-            
-            drawLayout();
-        }
-
-        function drawLayout() {
-            const canvas = document.getElementById('layoutCanvas');
-            const ctx = canvas.getContext('2d');
-            const width = 800;
-            const height = 600;
-            
-            // Clear canvas
-            ctx.clearRect(0, 0, width, height);
-            
-            // Get spacing value
-            const spacing = document.getElementById('spacingSlider').value;
-            const spacingRatio = spacing / 100;
-            document.getElementById('spacingValue').textContent = (spacingRatio * 2).toFixed(2);
-            
-            // Define subplot configurations
-            const layouts = {
-                '2x1': [
-                    { x: 0.1, y: 0.1, w: 0.8, h: 0.35 },
-                    { x: 0.1, y: 0.55, w: 0.8, h: 0.35 }
-                ],
-                '1x2': [
-                    { x: 0.1, y: 0.2, w: 0.35, h: 0.6 },
-                    { x: 0.55, y: 0.2, w: 0.35, h: 0.6 }
-                ],
-                '2x2': [
-                    { x: 0.1, y: 0.1, w: 0.35, h: 0.35 },
-                    { x: 0.55, y: 0.1, w: 0.35, h: 0.35 },
-                    { x: 0.1, y: 0.55, w: 0.35, h: 0.35 },
-                    { x: 0.55, y: 0.55, w: 0.35, h: 0.35 }
-                ],
-                '3x2': [
-                    { x: 0.1, y: 0.05, w: 0.35, h: 0.25 },
-                    { x: 0.55, y: 0.05, w: 0.35, h: 0.25 },
-                    { x: 0.1, y: 0.35, w: 0.35, h: 0.25 },
-                    { x: 0.55, y: 0.35, w: 0.35, h: 0.25 },
-                    { x: 0.1, y: 0.65, w: 0.35, h: 0.25 },
-                    { x: 0.55, y: 0.65, w: 0.35, h: 0.25 }
-                ],
-                'mixed': [
-                    { x: 0.1, y: 0.1, w: 0.8, h: 0.35 },
-                    { x: 0.1, y: 0.55, w: 0.35, h: 0.35 },
-                    { x: 0.55, y: 0.55, w: 0.35, h: 0.35 }
-                ],
-                'mosaic': [
-                    { x: 0.1, y: 0.1, w: 0.25, h: 0.8 },
-                    { x: 0.4, y: 0.1, w: 0.25, h: 0.35 },
-                    { x: 0.7, y: 0.1, w: 0.2, h: 0.35 },
-                    { x: 0.4, y: 0.55, w: 0.5, h: 0.35 }
-                ]
-            };
-            
-            const subplots = layouts[currentLayout];
-            const colors = ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#6366f1'];
-            
-            // Apply spacing
-            subplots.forEach((subplot, index) => {
-                const x = subplot.x * width + spacingRatio * width * 0.5;
-                const y = subplot.y * height + spacingRatio * height * 0.5;
-                const w = subplot.w * width - spacingRatio * width;
-                const h = subplot.h * height - spacingRatio * height;
-                
-                // Draw subplot background
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(x, y, w, h);
-                
-                // Draw border
-                ctx.strokeStyle = colors[index % colors.length];
-                ctx.lineWidth = 2;
-                ctx.strokeRect(x, y, w, h);
-                
-                // Draw grid if enabled
-                if (showGrid) {
-                    ctx.strokeStyle = '#e5e7eb';
-                    ctx.lineWidth = 1;
-                    
-                    // Vertical lines
-                    for (let i = 1; i < 5; i++) {
-                        ctx.beginPath();
-                        ctx.moveTo(x + w * i / 5, y);
-                        ctx.lineTo(x + w * i / 5, y + h);
-                        ctx.stroke();
-                    }
-                    
-                    // Horizontal lines
-                    for (let i = 1; i < 4; i++) {
-                        ctx.beginPath();
-                        ctx.moveTo(x, y + h * i / 4);
-                        ctx.lineTo(x + w, y + h * i / 4);
-                        ctx.stroke();
-                    }
-                }
-                
-                // Draw sample data
-                ctx.strokeStyle = colors[index % colors.length];
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                
-                const points = 50;
-                for (let i = 0; i < points; i++) {
-                    const px = x + (i / points) * w;
-                    const py = y + h/2 + Math.sin(i * 0.3 + index) * h * 0.3;
-                    
-                    if (i === 0) {
-                        ctx.moveTo(px, py);
-                    } else {
-                        ctx.lineTo(px, py);
-                    }
-                }
-                ctx.stroke();
-                
-                // Draw title if enabled
-                if (showTitles) {
-                    ctx.fillStyle = '#333333';
-                    ctx.font = 'bold 14px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(`Subplot ${index + 1}`, x + w/2, y - 5);
-                }
-                
-                // Draw axes labels
-                ctx.fillStyle = '#666666';
-                ctx.font = '12px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('X axis', x + w/2, y + h + 20);
-                
-                ctx.save();
-                ctx.translate(x - 20, y + h/2);
-                ctx.rotate(-Math.PI/2);
-                ctx.fillText('Y axis', 0, 0);
-                ctx.restore();
-            });
-            
-            // Draw figure title
-            ctx.fillStyle = '#333333';
-            ctx.font = 'bold 18px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText(`Layout: ${currentLayout.toUpperCase()}`, width/2, 30);
-        }
-
-        function updateSpacing() {
-            drawLayout();
-        }
-
-        function toggleGrid() {
-            showGrid = !showGrid;
-            drawLayout();
-        }
-
-        function toggleTitles() {
-            showTitles = !showTitles;
-            drawLayout();
-        }
-
-        // Initialize on load
-        window.onload = function() {
-            drawLayout();
-        };
-    </script>
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
 </body>
 </html>

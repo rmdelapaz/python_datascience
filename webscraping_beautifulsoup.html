@@ -3,1083 +3,1210 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Learn web scraping with BeautifulSoup in Python. Master HTML parsing, CSS selectors, and data extraction from websites.">
-    <title>BeautifulSoup for HTML Parsing - Python Data Science Path</title>
+    <meta name="description" content="Turn web pages into tidy data with Beautiful Soup: CSS selectors that survive page changes, product cards to dictionaries, pagination, detail pages, missing elements and pandas.read_html. Python Data Science Lesson 6.2.">
+    <meta name="author" content="Ray de la Paz">
+    <title>Parsing HTML with Beautiful Soup - Python Data Science</title>
     <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/enhanced.css">
-    <link rel="icon" href="/favicon.png" type="image/png">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid: rendered (and re-rendered on theme change) by js/course-enhancements.js -->
     <script type="module">
-      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-      mermaid.initialize({ startOnLoad: true });
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        window.__mermaid = mermaid;
+        mermaid.initialize({ startOnLoad: false });
+        document.dispatchEvent(new Event('mermaid-ready'));
     </script>
-    <script src="js/course-enhancements.js" defer></script>
-    <link rel="stylesheet" href="styles/standard.css">
 </head>
 <body>
-    <!-- Skip to main content for accessibility -->
     <a href="#main-content" class="skip-to-main">Skip to main content</a>
-    
-    <!-- Progress indicator -->
+
     <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
         <div class="progress-bar"></div>
     </div>
-    
+
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">📊 Python Data Science</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">☰</button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
+    </nav>
+
     <main id="main-content">
-    <header role="banner">
-        <h1>BeautifulSoup for HTML Parsing</h1>
-        <div class="reading-time" aria-label="Estimated reading time"></div>
-    </header>
+        <div class="container">
+            <header>
+                <h1>🍲 Lesson 6.2: Parsing HTML with Beautiful Soup</h1>
+                <p class="lead">Take the HTML you learned to download and turn it into a clean table: every product in the practice shop, across every page, with the gaps handled on purpose.</p>
 
-    <!-- What You'll Learn (learning objectives) -->
-    <div class="card card-info">
-        <h2>📚 What You'll Learn</h2>
-        <p>By the end of this lesson, you will be able to:</p>
-        <ul>
-            <li>Create a <code>BeautifulSoup</code> object and choose the right parser (html.parser, lxml, html5lib)</li>
-            <li>Navigate the parse tree using tags, parents, children, and siblings</li>
-            <li>Locate elements with <code>find</code>/<code>find_all</code> and with CSS selectors via <code>select</code></li>
-            <li>Extract structured data — including HTML tables — into pandas DataFrames</li>
-            <li>Handle pagination, forms/sessions, and JavaScript-rendered content</li>
-            <li>Build robust, ethical scrapers that respect robots.txt and add delays</li>
-        </ul>
-        <p><strong>⏱️ Estimated Time:</strong> 45–60 minutes</p>
-        <p><strong>🎯 Project:</strong> Scrape a multi-page product or article listing into a clean pandas DataFrame, with error handling and a polite request delay.</p>
-    </div>
-    
-    <!-- Breadcrumb Navigation -->
-    <nav class="breadcrumb" aria-label="Breadcrumb">
-        <a href="index.html">Home</a>
-        <span class="separator">›</span>
-        <a href="#">Intermediate Module</a>
-        <span class="separator">›</span>
-        <a href="#">Web Scraping & APIs</a>
-        <span class="separator">›</span>
-        <span class="current">BeautifulSoup for HTML Parsing</span>
-    </nav>
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Read a page's HTML as a tree and locate the elements that hold the data you want</li>
+                        <li>Select elements with <code>find()</code>, <code>find_all()</code> and CSS selectors, and choose selectors that survive small changes to a page</li>
+                        <li>Write a function that turns one repeated block of HTML into a dictionary, including when optional pieces are missing</li>
+                        <li>Follow "next" links to the last page of a paginated listing, politely, and visit detail pages for extra fields</li>
+                        <li>Read HTML tables with <code>pandas.read_html()</code>, validate what you scraped, and save a tidy DataFrame</li>
+                    </ul>
+                </div>
 
-    <h2>Extract Data from Any Website! 🕷️</h2>
-    
-    <blockquote>
-        <p>Web scraping opens up a world of data that isn't available through traditional APIs or datasets. BeautifulSoup makes it easy to parse HTML and XML documents, navigate parse trees, and extract the data you need. From e-commerce prices to news articles, master the art of web scraping to gather data from across the internet!</p>
-    </blockquote>
+                <ul class="lesson-meta">
+                    <li><span class="meta-label">⏱️ Time</span> 95 minutes</li>
+                    <li><span class="meta-label">📋 Prerequisites</span> <a href="webscraping_requests.html">Lesson 6.1: HTTP with Requests</a> (GET, status codes, User-Agent, timeouts, the ground rules)</li>
+                    <li><span class="meta-label">🛠️ You will build</span> A category price report scraped from the nine category pages of the practice shop</li>
+                    <li><span class="meta-label">📂 Data</span> The practice shop (online), <code>data/products.csv</code> as the answer key</li>
+                </ul>
+            </header>
 
-    <h2>Understanding Web Scraping</h2>
-    
-    <div class="mermaid">
-    graph TD
-        A[Web Page] --> B[HTTP Request]
-        B --> C[HTML Response]
-        C --> D[Parse HTML]
-        D --> E[BeautifulSoup]
-        E --> F[Navigate DOM]
-        F --> G[Extract Data]
-        G --> H[Clean & Store]
-        
-        E --> I[find/find_all]
-        E --> J[CSS Selectors]
-        E --> K[Navigation]
-        
-        I --> L[By Tag]
-        I --> M[By Class]
-        I --> N[By ID]
-        I --> O[By Attributes]
-    </div>
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#tree" class="toc-link">A Page Is a Tree</a></li>
+                        <li><a href="#soup" class="toc-link">Making the Soup</a></li>
+                        <li><a href="#find" class="toc-link">Finding Elements</a></li>
+                        <li><a href="#select" class="toc-link">CSS Selectors That Last</a></li>
+                        <li><a href="#card" class="toc-link">One Card, One Dictionary</a></li>
+                        <li><a href="#missing" class="toc-link">When Something Is Missing</a></li>
+                        <li><a href="#pagination" class="toc-link">Following Pagination</a></li>
+                        <li><a href="#validate" class="toc-link">A Tidy, Checked DataFrame</a></li>
+                        <li><a href="#detail" class="toc-link">Detail Pages</a></li>
+                        <li><a href="#tables" class="toc-link">Tables with read_html</a></li>
+                        <li><a href="#mistakes" class="toc-link">Common Mistakes</a></li>
+                        <li><a href="#project" class="toc-link">Project: Category Price Report</a></li>
+                        <li><a href="#exercises" class="toc-link">Hands-on Exercises</a></li>
+                        <li><a href="#quiz" class="toc-link">Quick Quiz</a></li>
+                        <li><a href="#faq" class="toc-link">Common Questions</a></li>
+                        <li><a href="#journal" class="toc-link">Learning Journal</a></li>
+                        <li><a href="#summary" class="toc-link">Lesson Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
 
-    <h2>Installation and Setup</h2>
-    
-    <pre class="language-python"><code># Install required libraries
-"""
-pip install beautifulsoup4
-pip install requests
-pip install lxml  # Faster parser
-pip install html5lib  # More lenient parser
-pip install pandas  # For data storage
-"""
+            <!-- ============================================================ -->
+            <section id="tree" class="lesson-section">
+                <h2>🌳 A Page Is a Tree</h2>
 
-# Import libraries
-from bs4 import BeautifulSoup
-import requests
-import pandas as pd
-import re
-from urllib.parse import urljoin, urlparse
+                <p>In Lesson 6.1 you downloaded the practice shop's front page and got back about twelve thousand characters of HTML. Somewhere in that string are twenty product names and twenty prices. You could hunt for them with string methods, and for one page on one day it might even work. There is a much better way, and it starts with seeing the page the way a browser does.</p>
+
+                <p>HTML is made of <strong>elements</strong>. An element has a <strong>tag</strong> name, optional <strong>attributes</strong>, and content, which can be text or more elements. Here is one product from the shop's catalog, exactly as the server sends it:</p>
+
+                <pre><code class="language-html">&lt;li class="product-card" data-sku="TNT-1001"&gt;
+    &lt;h2 class="product-name"&gt;&lt;a href="products/TNT-1001.html"&gt;Granite Fork Drift 1-Person Tent&lt;/a&gt;&lt;/h2&gt;
+    &lt;p class="product-category"&gt;Tents&lt;/p&gt;
+    &lt;p class="price" data-price="299.95"&gt;$299.95&lt;/p&gt;
+    &lt;p class="rating" data-rating="4.0"&gt;★ 4.0 &lt;span class="review-count"&gt;(8 reviews)&lt;/span&gt;&lt;/p&gt;
+    &lt;p class="stock low-stock"&gt;Low stock&lt;/p&gt;
+&lt;/li&gt;</code></pre>
+
+                <p>The <code>li</code> (list item) element contains an <code>h2</code> heading and four <code>p</code> paragraphs. The heading contains an <code>a</code> link. One paragraph contains a <code>span</code>. Elements inside elements inside elements: that is a tree, and the page as a whole is one big tree with <code>html</code> at the root.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Mental Model: A Labeled Filing Cabinet</h4>
+                    <p>Think of the page as a filing cabinet. Drawers hold folders, folders hold sheets, and nearly everything has a label on it: <code>class="price"</code>, <code>data-sku="TNT-1001"</code>. You do not find a document by counting "third drawer, second folder, fifth sheet". You read the labels: "the sheet labeled <em>price</em> inside the folder labeled <em>product-card</em>". Scraping well is mostly the skill of choosing good labels.</p>
+                </div>
+
+                <p>The whole job follows one pattern, which you will build piece by piece in this lesson.</p>
+
+                <div class="mermaid">
+            graph TD
+                A["Fetch the page with requests"] --> B["Parse the HTML into a tree"]
+                B --> C["Select the repeated block"]
+                C --> D["One dictionary per block"]
+                D --> E["List of dictionaries"]
+                E --> F["DataFrame, then check it"]
+                </div>
+
+                <div class="card card-success">
+                    <h4>✅ You Do Not Need to Know HTML Well</h4>
+                    <p>You need to recognize tags, attributes and nesting, and you just did. Your browser does the rest: right-click anything on a page and choose <strong>Inspect</strong> to see the element behind it, with its labels. Keep the practice shop open in a browser tab for this whole lesson and inspect as you go.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="soup" class="lesson-section">
+                <h2>🍲 Making the Soup</h2>
+
+                <p><strong>Beautiful Soup</strong> is the library that turns an HTML string into a tree you can search. It is installed as <code>beautifulsoup4</code> and imported from <code>bs4</code>. Start a new notebook with the same polite setup as last time, and one helper that fetches a page and parses it. (Working offline? Serve <a href="data/pinecrest-practice-site.zip" download><code>pinecrest-practice-site.zip</code></a> as described in <a href="webscraping_requests.html">Lesson 6.1</a>: unzip it in your project folder, run <code>python -m http.server 8001</code> there, and set <code>BASE_URL = "http://127.0.0.1:8001/practice/shop/"</code>.)</p>
+
+                <pre><code class="language-python">import re
 import time
-import json
-
-# Check versions
-import bs4
-print(f"BeautifulSoup version: {bs4.__version__}")
-
-# Basic setup - create your first soup
-html_doc = """
-&lt;html&gt;
-&lt;head&gt;&lt;title&gt;Sample Page&lt;/title&gt;&lt;/head&gt;
-&lt;body&gt;
-    &lt;h1&gt;Welcome to Web Scraping&lt;/h1&gt;
-    &lt;p class="intro"&gt;This is a sample paragraph.&lt;/p&gt;
-    &lt;div id="content"&gt;
-        &lt;ul&gt;
-            &lt;li&gt;Item 1&lt;/li&gt;
-            &lt;li&gt;Item 2&lt;/li&gt;
-            &lt;li&gt;Item 3&lt;/li&gt;
-        &lt;/ul&gt;
-    &lt;/div&gt;
-&lt;/body&gt;
-&lt;/html&gt;
-"""
-
-# Create BeautifulSoup object
-soup = BeautifulSoup(html_doc, 'html.parser')
-
-# Pretty print
-print(soup.prettify())</code></pre>
-
-    <h2>BeautifulSoup Basics</h2>
-    
-    <h3>Parsers Comparison</h3>
-    <pre class="language-python"><code># Different parsers and their characteristics
-
-# 1. html.parser (built-in)
-soup = BeautifulSoup(html_doc, 'html.parser')
-# Pros: No extra dependencies, decent speed
-# Cons: Less lenient with broken HTML
-
-# 2. lxml's HTML parser (recommended)
-soup = BeautifulSoup(html_doc, 'lxml')
-# Pros: Very fast, lenient
-# Cons: Requires C dependency
-
-# 3. lxml's XML parser
-soup = BeautifulSoup(html_doc, 'xml')
-# Pros: Only currently supported XML parser
-# Cons: XML only
-
-# 4. html5lib
-soup = BeautifulSoup(html_doc, 'html5lib')
-# Pros: Most lenient, creates valid HTML5
-# Cons: Slowest
-
-# Performance comparison
-import time
-
-parsers = ['html.parser', 'lxml', 'html5lib']
-html_large = html_doc * 1000  # Large HTML for testing
-
-for parser in parsers:
-    try:
-        start = time.time()
-        soup = BeautifulSoup(html_large, parser)
-        end = time.time()
-        print(f"{parser}: {end - start:.4f} seconds")
-    except:
-        print(f"{parser}: Not available")</code></pre>
-
-    <h3>Navigating the Parse Tree</h3>
-    <pre class="language-python"><code># Sample HTML for demonstration
-html = """
-&lt;div class="container"&gt;
-    &lt;header&gt;
-        &lt;h1&gt;Product Store&lt;/h1&gt;
-        &lt;nav&gt;
-            &lt;a href="/home"&gt;Home&lt;/a&gt;
-            &lt;a href="/products"&gt;Products&lt;/a&gt;
-            &lt;a href="/about"&gt;About&lt;/a&gt;
-        &lt;/nav&gt;
-    &lt;/header&gt;
-    &lt;main&gt;
-        &lt;div class="product" data-id="1"&gt;
-            &lt;h2&gt;Laptop&lt;/h2&gt;
-            &lt;p class="price"&gt;$999.99&lt;/p&gt;
-            &lt;p class="description"&gt;High-performance laptop&lt;/p&gt;
-            &lt;span class="rating"&gt;4.5&lt;/span&gt;
-        &lt;/div&gt;
-        &lt;div class="product" data-id="2"&gt;
-            &lt;h2&gt;Phone&lt;/h2&gt;
-            &lt;p class="price"&gt;$699.99&lt;/p&gt;
-            &lt;p class="description"&gt;Latest smartphone&lt;/p&gt;
-            &lt;span class="rating"&gt;4.8&lt;/span&gt;
-        &lt;/div&gt;
-    &lt;/main&gt;
-&lt;/div&gt;
-"""
-
-soup = BeautifulSoup(html, 'html.parser')
-
-# Accessing tags directly
-print(soup.title)  # None (no title in this HTML)
-print(soup.h1)  # First h1 tag
-print(soup.h1.string)  # Text content
-
-# Navigating using tag names
-print(soup.div)  # First div
-print(soup.div.h2)  # First h2 inside first div
-
-# Access tag attributes
-product = soup.find('div', class_='product')
-print(product['data-id'])  # Access attribute
-print(product.get('data-id'))  # Safe access
-print(product.attrs)  # All attributes
-
-# Navigate children
-container = soup.find('div', class_='container')
-for child in container.children:
-    if child.name:  # Skip text nodes
-        print(f"Child tag: {child.name}")
-
-# Navigate descendants (all levels)
-for desc in container.descendants:
-    if desc.name:
-        print(f"Descendant: {desc.name}")
-
-# Navigate parents
-price = soup.find('p', class_='price')
-print(price.parent.name)  # div
-print(price.find_parent('main').name)  # main
-
-# Navigate siblings
-first_product = soup.find('div', class_='product')
-print(first_product.find_next_sibling('div')['data-id'])  # 2
-print(first_product.find_previous_sibling())  # None</code></pre>
-
-    <h2>Finding Elements</h2>
-    
-    <h3>find() and find_all()</h3>
-    <pre class="language-python"><code># find() - returns first match
-# find_all() - returns list of all matches
-
-# Find by tag
-soup.find('h2')  # First h2
-soup.find_all('p')  # All p tags
-
-# Find by class
-soup.find('div', class_='product')  # Note: class_ with underscore
-soup.find_all('p', class_='price')
-
-# Find by ID
-soup.find('div', id='content')
-
-# Find by attributes
-soup.find('div', attrs={'data-id': '1'})
-soup.find_all('div', attrs={'class': 'product'})
-
-# Find by multiple criteria
-soup.find('p', class_='price', string=re.compile(r'\$\d+'))
-
-# Find with custom function
-def has_data_attribute(tag):
-    return tag.has_attr('data-id')
-
-soup.find_all(has_data_attribute)
-
-# Limit results
-soup.find_all('div', limit=2)
-
-# Find by text content
-soup.find_all(string="Laptop")  # Exact match
-soup.find_all(string=re.compile("laptop", re.IGNORECASE))  # Regex
-
-# Find parent/children with specific criteria
-product = soup.find('div', class_='product')
-product.find_all('p')  # Search within element
-
-# Practical examples
-def extract_products(soup):
-    products = []
-    for product in soup.find_all('div', class_='product'):
-        data = {
-            'id': product.get('data-id'),
-            'name': product.find('h2').text.strip(),
-            'price': product.find('p', class_='price').text.strip(),
-            'description': product.find('p', class_='description').text.strip(),
-            'rating': float(product.find('span', class_='rating').text.strip())
-        }
-        products.append(data)
-    return products
-
-products_data = extract_products(soup)
-df = pd.DataFrame(products_data)
-print(df)</code></pre>
-
-    <h3>CSS Selectors</h3>
-    <pre class="language-python"><code># CSS selectors provide powerful and familiar syntax
-
-# Basic selectors
-soup.select('p')  # All p tags
-soup.select('.price')  # Class selector
-soup.select('#content')  # ID selector
-soup.select('div.product')  # Tag with class
-
-# Descendant selectors
-soup.select('div p')  # p inside div (any level)
-soup.select('div > p')  # Direct children only
-soup.select('main .product')  # class product inside main
-
-# Multiple selectors
-soup.select('p.price, p.description')  # Either selector
-
-# Attribute selectors
-soup.select('[data-id]')  # Has attribute
-soup.select('[data-id="1"]')  # Specific value
-soup.select('[class*="pro"]')  # Contains string
-soup.select('[href^="http"]')  # Starts with
-soup.select('[href$=".pdf"]')  # Ends with
-
-# Pseudo-selectors
-soup.select('div:first-child')
-soup.select('p:nth-of-type(2)')
-soup.select('li:last-child')
-
-# Complex example
-# Find all prices in products with rating > 4.5
-products = soup.select('.product')
-high_rated = []
-for product in products:
-    rating = float(product.select_one('.rating').text)
-    if rating > 4.5:
-        price = product.select_one('.price').text
-        high_rated.append(price)
-
-print(f"Prices of high-rated products: {high_rated}")
-
-# One-liner using list comprehension
-high_rated_prices = [
-    p.select_one('.price').text 
-    for p in soup.select('.product') 
-    if float(p.select_one('.rating').text) > 4.5
-]</code></pre>
-
-    <h2>Real Website Scraping</h2>
-    
-    <h3>Scraping a News Website</h3>
-    <pre class="language-python"><code># Example: Scraping news articles (use responsibly!)
-
-def scrape_news_site(url):
-    """Scrape news articles from a website"""
-    
-    # Set headers to appear as a regular browser
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-    }
-    
-    try:
-        # Make request
-        response = requests.get(url, headers=headers)
-        response.raise_for_status()  # Raise exception for bad status codes
-        
-        # Parse HTML
-        soup = BeautifulSoup(response.content, 'lxml')
-        
-        # Remove script and style elements
-        for script in soup(['script', 'style']):
-            script.decompose()
-        
-        articles = []
-        
-        # Example: Find article containers (adjust selectors for specific site)
-        article_containers = soup.find_all('article') or soup.find_all('div', class_='article')
-        
-        for article in article_containers:
-            try:
-                # Extract data (adjust based on site structure)
-                data = {
-                    'title': article.find(['h1', 'h2', 'h3']).text.strip(),
-                    'summary': article.find('p').text.strip() if article.find('p') else '',
-                    'link': article.find('a')['href'] if article.find('a') else '',
-                    'date': article.find('time')['datetime'] if article.find('time') else '',
-                    'author': article.find(class_='author').text.strip() if article.find(class_='author') else ''
-                }
-                
-                # Clean data
-                data = {k: v.replace('\n', ' ').strip() for k, v in data.items()}
-                articles.append(data)
-                
-            except AttributeError:
-                continue  # Skip if structure doesn't match
-        
-        return articles
-        
-    except requests.RequestException as e:
-        print(f"Error fetching {url}: {e}")
-        return []
-
-# Example usage (respect robots.txt!)
-# articles = scrape_news_site('https://example-news.com')
-# df = pd.DataFrame(articles)
-# df.to_csv('news_articles.csv', index=False)</code></pre>
-
-    <h3>E-commerce Product Scraping</h3>
-    <pre class="language-python"><code># Scraping product information
-
-def scrape_products(url, max_pages=5):
-    """Scrape products from e-commerce site"""
-    
-    all_products = []
-    session = requests.Session()
-    session.headers.update({
-        'User-Agent': 'Mozilla/5.0 (compatible; DataScienceBot/1.0)'
-    })
-    
-    for page in range(1, max_pages + 1):
-        # Add pagination parameter
-        params = {'page': page}
-        
-        try:
-            response = session.get(url, params=params)
-            if response.status_code != 200:
-                break
-                
-            soup = BeautifulSoup(response.content, 'lxml')
-            
-            # Find product containers (example selectors)
-            products = soup.select('.product-item, .product-card, [data-testid="product"]')
-            
-            if not products:
-                print(f"No products found on page {page}")
-                break
-            
-            for product in products:
-                try:
-                    # Extract product details
-                    name = product.select_one('.product-name, .title, h3, h4')
-                    price = product.select_one('.price, .product-price, [data-testid="price"]')
-                    rating = product.select_one('.rating, .stars, [aria-label*="rating"]')
-                    image = product.select_one('img')
-                    link = product.select_one('a')
-                    
-                    # Extract and clean data
-                    product_data = {
-                        'name': name.text.strip() if name else 'N/A',
-                        'price': extract_price(price.text) if price else None,
-                        'rating': extract_rating(rating) if rating else None,
-                        'image_url': image.get('src', '') if image else '',
-                        'product_url': urljoin(url, link.get('href', '')) if link else '',
-                        'scraped_at': pd.Timestamp.now()
-                    }
-                    
-                    all_products.append(product_data)
-                    
-                except Exception as e:
-                    print(f"Error parsing product: {e}")
-                    continue
-            
-            print(f"Scraped page {page}: {len(products)} products")
-            
-            # Be respectful - add delay between requests
-            time.sleep(1)
-            
-        except Exception as e:
-            print(f"Error on page {page}: {e}")
-            break
-    
-    return all_products
-
-def extract_price(price_text):
-    """Extract numerical price from text"""
-    # Remove currency symbols and extract number
-    price = re.findall(r'[\d,]+\.?\d*', price_text.replace(',', ''))
-    return float(price[0]) if price else None
-
-def extract_rating(rating_element):
-    """Extract rating from various formats"""
-    if not rating_element:
-        return None
-    
-    # Try different extraction methods
-    # Method 1: aria-label
-    if rating_element.get('aria-label'):
-        rating = re.findall(r'[\d.]+', rating_element['aria-label'])
-        return float(rating[0]) if rating else None
-    
-    # Method 2: Text content
-    rating = re.findall(r'[\d.]+', rating_element.text)
-    return float(rating[0]) if rating else None
-
-# Usage example
-# products = scrape_products('https://example-shop.com/products')
-# df = pd.DataFrame(products)
-# print(df.head())
-# df.to_csv('products.csv', index=False)</code></pre>
-
-    <h2>Handling Dynamic Content</h2>
-    
-    <h3>JavaScript-Rendered Content</h3>
-    <pre class="language-python"><code># Sometimes content is loaded by JavaScript after page load
-# BeautifulSoup alone won't see this content
-
-# Method 1: Find API endpoints
-def find_api_data(url):
-    """Look for API calls in network tab"""
-    
-    # First, get the initial HTML
-    response = requests.get(url)
-    soup = BeautifulSoup(response.content, 'lxml')
-    
-    # Look for JavaScript variables containing data
-    scripts = soup.find_all('script')
-    for script in scripts:
-        if script.string and 'window.__INITIAL_STATE__' in script.string:
-            # Extract JSON data
-            json_text = re.search(r'window\.__INITIAL_STATE__ = ({.*?});', 
-                                 script.string, re.DOTALL)
-            if json_text:
-                data = json.loads(json_text.group(1))
-                return data
-    
-    return None
-
-# Method 2: Use requests-html (renders JavaScript)
-"""
-from requests_html import HTMLSession
-
-session = HTMLSession()
-response = session.get(url)
-response.html.render()  # This will execute JavaScript
-soup = BeautifulSoup(response.html.html, 'lxml')
-"""
-
-# Method 3: Selenium (covered in separate lesson)
-# For complex JavaScript sites, use Selenium
-
-# Method 4: Find XHR/Fetch requests
-def find_ajax_endpoints(url):
-    """
-    Use browser developer tools to find AJAX endpoints:
-    1. Open Network tab
-    2. Filter by XHR or Fetch
-    3. Look for JSON responses
-    4. Use those endpoints directly
-    """
-    pass</code></pre>
-
-    <h2>Data Extraction Patterns</h2>
-    
-    <h3>Tables to DataFrames</h3>
-    <pre class="language-python"><code># Extract HTML tables directly to pandas
-html_table = """
-&lt;table id="data-table"&gt;
-    &lt;thead&gt;
-        &lt;tr&gt;
-            &lt;th&gt;Name&lt;/th&gt;
-            &lt;th&gt;Age&lt;/th&gt;
-            &lt;th&gt;City&lt;/th&gt;
-        &lt;/tr&gt;
-    &lt;/thead&gt;
-    &lt;tbody&gt;
-        &lt;tr&gt;
-            &lt;td&gt;Alice&lt;/td&gt;
-            &lt;td&gt;30&lt;/td&gt;
-            &lt;td&gt;New York&lt;/td&gt;
-        &lt;/tr&gt;
-        &lt;tr&gt;
-            &lt;td&gt;Bob&lt;/td&gt;
-            &lt;td&gt;25&lt;/td&gt;
-            &lt;td&gt;Los Angeles&lt;/td&gt;
-        &lt;/tr&gt;
-    &lt;/tbody&gt;
-&lt;/table&gt;
-"""
-
-# Method 1: Using pandas read_html
-dfs = pd.read_html(html_table)
-df = dfs[0]  # First table
-print(df)
-
-# Method 2: Manual extraction with BeautifulSoup
-soup = BeautifulSoup(html_table, 'lxml')
-table = soup.find('table')
-
-# Extract headers
-headers = [th.text.strip() for th in table.find_all('th')]
-
-# Extract rows
-rows = []
-for tr in table.find('tbody').find_all('tr'):
-    row = [td.text.strip() for td in tr.find_all('td')]
-    rows.append(row)
-
-# Create DataFrame
-df = pd.DataFrame(rows, columns=headers)
-print(df)
-
-# Method 3: More complex table with attributes
-def extract_complex_table(soup, table_id):
-    """Extract table with additional attributes"""
-    
-    table = soup.find('table', id=table_id)
-    if not table:
-        return None
-    
-    # Extract headers (handle colspan/rowspan)
-    headers = []
-    header_rows = table.find('thead').find_all('tr') if table.find('thead') else []
-    for row in header_rows:
-        headers.extend([th.text.strip() for th in row.find_all(['th', 'td'])])
-    
-    # Extract data
-    data = []
-    body = table.find('tbody') or table
-    for row in body.find_all('tr'):
-        if row.find('th'):  # Skip header rows in tbody
-            continue
-        
-        row_data = {}
-        cells = row.find_all(['td', 'th'])
-        
-        for i, cell in enumerate(cells):
-            if i < len(headers):
-                # Handle various data types
-                value = cell.text.strip()
-                
-                # Check for links
-                if cell.find('a'):
-                    row_data[f"{headers[i]}_link"] = cell.find('a').get('href')
-                
-                # Check for images
-                if cell.find('img'):
-                    row_data[f"{headers[i]}_img"] = cell.find('img').get('src')
-                
-                row_data[headers[i]] = value
-        
-        if row_data:
-            data.append(row_data)
-    
-    return pd.DataFrame(data)</code></pre>
-
-    <h3>Pagination Handling</h3>
-    <pre class="language-python"><code># Scraping multiple pages
-
-def scrape_with_pagination(base_url, max_pages=None):
-    """Handle different pagination styles"""
-    
-    all_data = []
-    page = 1
-    session = requests.Session()
-    
-    while True:
-        # Construct URL (adjust based on site's pagination style)
-        # Style 1: Query parameter
-        url = f"{base_url}?page={page}"
-        # Style 2: Path-based
-        # url = f"{base_url}/page/{page}"
-        # Style 3: Offset-based
-        # url = f"{base_url}?offset={(page-1)*20}"
-        
-        try:
-            response = session.get(url)
-            if response.status_code != 200:
-                break
-                
-            soup = BeautifulSoup(response.content, 'lxml')
-            
-            # Extract data from current page
-            items = soup.select('.item')  # Adjust selector
-            
-            if not items:
-                print(f"No items found on page {page}")
-                break
-            
-            for item in items:
-                # Extract item data
-                data = extract_item_data(item)
-                all_data.append(data)
-            
-            print(f"Scraped page {page}: {len(items)} items")
-            
-            # Check for next page
-            next_link = soup.select_one('.pagination .next, [rel="next"], .next-page')
-            if not next_link or next_link.get('disabled') or next_link.get('aria-disabled') == 'true':
-                print("No more pages")
-                break
-            
-            # Respect rate limits
-            time.sleep(1)
-            
-            page += 1
-            if max_pages and page > max_pages:
-                break
-                
-        except Exception as e:
-            print(f"Error on page {page}: {e}")
-            break
-    
-    return all_data
-
-def extract_item_data(item_element):
-    """Extract data from individual item"""
-    return {
-        'title': item_element.select_one('.title').text.strip(),
-        'price': item_element.select_one('.price').text.strip(),
-        # Add more fields as needed
-    }</code></pre>
-
-    <h2>Advanced Techniques</h2>
-    
-    <h3>Handling Forms and Sessions</h3>
-    <pre class="language-python"><code># Login and maintain session
-
-def login_and_scrape(login_url, username, password, target_url):
-    """Login to website and scrape protected content"""
-    
-    session = requests.Session()
-    
-    # Get login page
-    login_page = session.get(login_url)
-    soup = BeautifulSoup(login_page.content, 'lxml')
-    
-    # Find CSRF token (if present)
-    csrf_token = soup.find('input', {'name': 'csrf_token'})
-    
-    # Prepare login data
-    login_data = {
-        'username': username,
-        'password': password
-    }
-    
-    if csrf_token:
-        login_data['csrf_token'] = csrf_token.get('value')
-    
-    # Submit login form
-    response = session.post(login_url, data=login_data)
-    
-    if response.status_code == 200:
-        print("Login successful")
-        
-        # Now access protected content
-        protected_page = session.get(target_url)
-        soup = BeautifulSoup(protected_page.content, 'lxml')
-        
-        # Extract protected data
-        return soup
-    else:
-        print("Login failed")
-        return None
-
-# Handle cookies
-def scrape_with_cookies():
-    """Use cookies for authentication"""
-    
-    cookies = {
-        'session_id': 'abc123',
-        'auth_token': 'xyz789'
-    }
-    
-    response = requests.get('https://example.com/protected', cookies=cookies)
-    soup = BeautifulSoup(response.content, 'lxml')
-    return soup</code></pre>
-
-    <h3>Error Handling and Robustness</h3>
-    <pre class="language-python"><code># Robust scraping with error handling
-
-import logging
 from urllib.parse import urljoin
-from requests.adapters import HTTPAdapter
-from requests.packages.urllib3.util.retry import Retry
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+import pandas as pd
+import requests
+from bs4 import BeautifulSoup
 
-class RobustScraper:
-    def __init__(self, base_url, max_retries=3):
-        self.base_url = base_url
-        self.session = self._create_session(max_retries)
-        self.scraped_urls = set()
-    
-    def _create_session(self, max_retries):
-        """Create session with retry strategy"""
-        session = requests.Session()
-        
-        retry_strategy = Retry(
-            total=max_retries,
-            status_forcelist=[429, 500, 502, 503, 504],
-            method_whitelist=["HEAD", "GET", "OPTIONS"],
-            backoff_factor=1
-        )
-        
-        adapter = HTTPAdapter(max_retries=retry_strategy)
-        session.mount("http://", adapter)
-        session.mount("https://", adapter)
-        
-        # Set headers
-        session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (compatible; PythonScraper/1.0)'
-        })
-        
-        return session
-    
-    def scrape_url(self, url):
-        """Scrape a single URL with error handling"""
-        
-        # Check if already scraped
-        if url in self.scraped_urls:
-            logger.info(f"Already scraped: {url}")
-            return None
-        
-        try:
-            response = self.session.get(url, timeout=10)
-            response.raise_for_status()
-            
-            self.scraped_urls.add(url)
-            
-            soup = BeautifulSoup(response.content, 'lxml')
-            return soup
-            
-        except requests.exceptions.Timeout:
-            logger.error(f"Timeout error for {url}")
-        except requests.exceptions.ConnectionError:
-            logger.error(f"Connection error for {url}")
-        except requests.exceptions.HTTPError as e:
-            logger.error(f"HTTP error {e.response.status_code} for {url}")
-        except Exception as e:
-            logger.error(f"Unexpected error for {url}: {e}")
-        
-        return None
-    
-    def extract_links(self, soup, pattern=None):
-        """Extract all links from page"""
-        links = set()
-        
-        for link in soup.find_all('a', href=True):
-            url = urljoin(self.base_url, link['href'])
-            
-            # Filter links based on pattern
-            if pattern and not re.match(pattern, url):
-                continue
-                
-            links.add(url)
-        
-        return links
-    
-    def scrape_site(self, start_url, max_pages=100):
-        """Scrape entire site with crawling"""
-        
-        to_scrape = {start_url}
-        scraped_data = []
-        
-        while to_scrape and len(self.scraped_urls) < max_pages:
-            url = to_scrape.pop()
-            
-            soup = self.scrape_url(url)
-            if not soup:
-                continue
-            
-            # Extract data from page
-            data = self.extract_page_data(soup, url)
-            if data:
-                scraped_data.append(data)
-            
-            # Find more links
-            new_links = self.extract_links(soup)
-            to_scrape.update(new_links - self.scraped_urls)
-            
-            # Rate limiting
-            time.sleep(1)
-        
-        return scraped_data
-    
-    def extract_page_data(self, soup, url):
-        """Override this method for specific data extraction"""
-        return {
-            'url': url,
-            'title': soup.find('title').text if soup.find('title') else '',
-            'h1': soup.find('h1').text if soup.find('h1') else '',
-            'paragraphs': len(soup.find_all('p')),
-            'links': len(soup.find_all('a'))
-        }</code></pre>
+pd.set_option("display.width", 150)
+pd.set_option("display.max_columns", 20)
 
-    <h2>Best Practices</h2>
-    
-    <h3>Ethical Scraping Guidelines</h3>
-    <pre class="language-python"><code># Always follow ethical scraping practices
+BASE_URL = "https://rays-python-datascience.netlify.app/practice/shop/"
+HEADERS = {"User-Agent": "pinecrest-course-bot/1.0 (learning project; contact: you@example.com)"}
+DELAY = 1        # seconds between requests: the Crawl-delay in the shop's robots.txt
 
-def check_robots_txt(domain):
-    """Check robots.txt before scraping"""
-    from urllib.robotparser import RobotFileParser
-    
-    rp = RobotFileParser()
-    rp.set_url(f"{domain}/robots.txt")
-    rp.read()
-    
-    # Check if URL is allowed
-    can_fetch = rp.can_fetch("*", f"{domain}/page")
-    crawl_delay = rp.crawl_delay("*")
-    
-    return can_fetch, crawl_delay
 
-# Respectful scraping class
-class EthicalScraper:
-    def __init__(self, domain, user_agent="PythonBot/1.0"):
-        self.domain = domain
-        self.user_agent = user_agent
-        self.session = requests.Session()
-        self.session.headers.update({'User-Agent': user_agent})
-        
-        # Check robots.txt
-        self.can_scrape, self.delay = check_robots_txt(domain)
-        
-        if not self.can_scrape:
-            raise Exception(f"Scraping not allowed for {domain}")
-        
-        # Default delay if not specified
-        self.delay = self.delay or 1
-    
-    def scrape(self, url):
-        """Scrape with rate limiting"""
-        
-        if not self.can_scrape:
-            return None
-        
-        response = self.session.get(url)
-        
-        # Respect rate limits
-        time.sleep(self.delay)
-        
-        return BeautifulSoup(response.content, 'lxml')
+def get_soup(url):
+    """Fetch one page politely and return it as a parsed tree."""
+    resp = requests.get(url, headers=HEADERS, timeout=10)
+    resp.raise_for_status()
+    return BeautifulSoup(resp.content, "html.parser")
 
-# Best practices checklist
-scraping_best_practices = """
-1. ALWAYS check robots.txt
-2. Identify yourself with proper User-Agent
-3. Respect rate limits and add delays
-4. Cache responses to avoid re-scraping
-5. Handle errors gracefully
-6. Don't overload servers
-7. Check website's terms of service
-8. Use APIs when available
-9. Be prepared to stop if asked
-10. Store data responsibly
-"""
 
-print(scraping_best_practices)</code></pre>
+soup = get_soup(BASE_URL)
+print(type(soup))
+print(soup.title)
+print(soup.title.string)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>&lt;class 'bs4.BeautifulSoup'&gt;
+&lt;title&gt;All products, page 1 | Pinecrest Outfitters (practice site)&lt;/title&gt;
+All products, page 1 | Pinecrest Outfitters (practice site)</code></pre>
+                </div>
 
-    <h2>Practice Exercises</h2>
-    
-    <h3>Exercise 1: Build a Price Monitor</h3>
-    <p>Create a price monitoring system that:</p>
-    <ol>
-        <li>Scrapes product prices from multiple e-commerce sites</li>
-        <li>Stores historical price data</li>
-        <li>Sends alerts when prices drop</li>
-        <li>Generates price trend visualizations</li>
-        <li>Handles different site structures</li>
-    </ol>
+                <p><code>BeautifulSoup(markup, "html.parser")</code> builds the tree. The second argument names the parser: <code>"html.parser"</code> comes with Python and is all you need here. The result, by tradition called <code>soup</code>, stands for the whole document. <code>soup.title</code> is a shortcut for "the first <code>title</code> element", and <code>.string</code> is the text inside it.</p>
 
-    <h3>Exercise 2: News Aggregator</h3>
-    <p>Build a news aggregation system:</p>
-    <ol>
-        <li>Scrape articles from multiple news sources</li>
-        <li>Extract title, author, date, and content</li>
-        <li>Remove duplicate articles</li>
-        <li>Categorize articles by topic</li>
-        <li>Create a searchable database</li>
-    </ol>
+                <div class="card card-info">
+                    <h4>💡 Why resp.content and Not resp.text</h4>
+                    <p>You met the encoding problem in Lesson 6.1: when a server does not announce a charset, <code>resp.text</code> can come out scrambled. Given the raw bytes, Beautiful Soup reads the page's own <code>&lt;meta charset="UTF-8"&gt;</code> tag and decodes correctly whatever the server said. Passing <code>resp.content</code> is the habit that never bites.</p>
+                </div>
 
-    <h3>Exercise 3: Job Market Analyzer</h3>
-    <p>Develop a job market analysis tool:</p>
-    <ol>
-        <li>Scrape job listings from job boards</li>
-        <li>Extract skills, salary, and requirements</li>
-        <li>Analyze trending skills</li>
-        <li>Geographic distribution of jobs</li>
-        <li>Generate market insights report</li>
-    </ol>
+                <h3>An Element Has a Name, Attributes and Text</h3>
 
-    <h2>Key Takeaways</h2>
-    <ul>
-        <li>🕷️ BeautifulSoup makes HTML parsing intuitive and pythonic</li>
-        <li>🔍 Multiple ways to find elements: tags, classes, IDs, CSS selectors</li>
-        <li>🌳 Navigate HTML trees with parent, children, and sibling methods</li>
-        <li>⚡ Choose the right parser for speed vs. leniency trade-off</li>
-        <li>🔄 Handle pagination and dynamic content appropriately</li>
-        <li>⚠️ Always follow ethical scraping practices</li>
-        <li>🛡️ Implement robust error handling for production scraping</li>
-    </ul>
+                <pre><code class="language-python">card = soup.find("li")
 
-    <h2>Further Resources</h2>
-    <ul>
-        <li><a href="https://www.crummy.com/software/BeautifulSoup/bs4/doc/">BeautifulSoup Documentation</a></li>
-        <li><a href="https://scrapy.org/">Scrapy Framework (Advanced)</a></li>
-        <li><a href="https://httpbin.org/">HTTPBin - HTTP Request Testing</a></li>
-        <li><a href="https://toscrape.com/">Scraping Sandbox for Practice</a></li>
-        <li><a href="https://www.scrapethissite.com/">Scrape This Site - Tutorial</a></li>
-        <li><a href="https://github.com/lorien/awesome-web-scraping">Awesome Web Scraping Resources</a></li>
-    </ul>
+print(card.name)
+print(card.attrs)
+print(card["data-sku"])
+print(card.get_text(" | ", strip=True))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>li
+{'class': ['product-card'], 'data-sku': 'TNT-1001'}
+TNT-1001
+Granite Fork Drift 1-Person Tent | Tents | $299.95 | ★ 4.0 | (8 reviews) | Low stock</code></pre>
+                </div>
 
-    <!-- Learning Journal (REQUIRED per the Courseware Authoring Standard) -->
-    <section id="journal" class="lesson-section">
-        <h2>📓 Learning Journal</h2>
-        <div class="card card-info">
-            <p>Keep a learning journal — digital or physical. After this lesson, take a few minutes to write down:</p>
-            <ul>
-                <li><strong>Key concepts</strong> you learned</li>
-                <li><strong>Techniques that clicked</strong> for you</li>
-                <li><strong>Questions or confusion points</strong> to revisit</li>
-                <li><strong>Ideas you want to try</strong></li>
-                <li><strong>Your progress and feelings</strong> about learning this</li>
-            </ul>
-            <p><strong>✍️ This lesson's prompt:</strong> You now have two ways to target elements — <code>find_all</code> with
-            keyword filters and <code>select</code> with CSS selectors. Which felt more natural to you, and how might your
-            experience (or lack of experience) with CSS shape that preference?</p>
+                <p><code>soup.find("li")</code> returns the first <code>li</code> element in the page, which is the product card you saw above. It is a <code>Tag</code> object. Its attributes behave like a dictionary, so <code>card["data-sku"]</code> reads one. Notice that <code>class</code> is a <em>list</em>: an element can carry several classes, separated by spaces in the HTML.</p>
+
+                <p><code>get_text()</code> collects all the text inside an element and its descendants. The two arguments used here are worth remembering: a separator to put between the pieces, and <code>strip=True</code> to trim the whitespace around each one.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="find" class="lesson-section">
+                <h2>🔎 Finding Elements</h2>
+
+                <p>Two methods do most of the searching. <code>find()</code> returns the <strong>first</strong> match, or <code>None</code>. <code>find_all()</code> returns a <strong>list</strong> of every match, possibly empty. Both can filter by tag name and by attributes.</p>
+
+                <pre><code class="language-python">cards = soup.find_all("li", class_="product-card")
+print(len(cards))
+
+first = cards[0]
+link = first.find("a")
+print(link.get_text())
+print(link["href"])
+print(first.find("p", class_="price").get_text())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>20
+Granite Fork Drift 1-Person Tent
+products/TNT-1001.html
+$299.95</code></pre>
+                </div>
+
+                <p>Three things to notice.</p>
+                <ul>
+                    <li>The keyword is <code>class_</code>, with an underscore, because <code>class</code> is a reserved word in Python.</li>
+                    <li>You can search <em>inside</em> any element, not only inside <code>soup</code>. <code>first.find("a")</code> looks only within the first card. This is the key move in scraping: find the repeated block, then search within each block.</li>
+                    <li>The link's <code>href</code> is <strong>relative</strong>: <code>products/TNT-1001.html</code>, not a full URL. You will turn it into a full one with <code>urljoin</code>, as you did for <code>robots.txt</code>.</li>
+                </ul>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="select" class="lesson-section">
+                <h2>🎯 CSS Selectors That Last</h2>
+
+                <p>Web designers pick out elements to style with a compact pattern language called <strong>CSS selectors</strong>. Beautiful Soup understands the same language through <code>select()</code>, which returns a list like <code>find_all()</code>, and <code>select_one()</code>, which returns the first match or <code>None</code> like <code>find()</code>. Most people find selectors quicker to write and easier to read, and your browser's Inspect panel speaks them too.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Selector</th><th>Matches</th><th>Example from the shop</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>p</code></td><td>Every <code>p</code> element</td><td><code>soup.select("p")</code></td></tr>
+                            <tr><td><code>.price</code></td><td>Elements whose class includes <code>price</code></td><td><code>p.price</code></td></tr>
+                            <tr><td><code>.stock.low-stock</code></td><td>Elements with <em>both</em> classes</td><td><code>p.stock.low-stock</code></td></tr>
+                            <tr><td><code>#price-list</code></td><td>The element with that <code>id</code></td><td><code>table#price-list</code></td></tr>
+                            <tr><td><code>[data-sku]</code></td><td>Elements that have the attribute</td><td><code>li[data-sku]</code></td></tr>
+                            <tr><td><code>[data-sku="TNT-1003"]</code></td><td>Elements whose attribute has that value</td><td><code>li[data-sku="TNT-1003"]</code></td></tr>
+                            <tr><td><code>A B</code> (a space)</td><td><code>B</code> anywhere inside <code>A</code></td><td><code>li.product-card a</code></td></tr>
+                            <tr><td><code>A &gt; B</code></td><td><code>B</code> directly inside <code>A</code>, one level down</td><td><code>nav.pagination &gt; a</code></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <pre><code class="language-python">print(len(soup.select("li.product-card")))
+print(soup.select_one("li.product-card h2.product-name a").get_text())
+print(soup.select_one("p.result-count").get_text())
+print(len(soup.select("p.stock.low-stock")), "low-stock products on this page")
+print(soup.select_one('li[data-sku="TNT-1003"] p.price').get_text())
+print([a.get_text() for a in soup.select("p.category-links a")][:4])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>20
+Granite Fork Drift 1-Person Tent
+Showing 1–20 of 242 products
+2 low-stock products on this page
+$459.95
+['Accessories', 'Apparel', 'Camp Kitchen', 'Climbing']</code></pre>
+                </div>
+
+                <h3>Fragile and Sturdy</h3>
+
+                <p>There are always many selectors that reach the same element. Both of these find the price of the third product:</p>
+
+                <pre><code class="language-python">fragile = soup.select_one("main &gt; ul &gt; li:nth-of-type(3) &gt; p:nth-of-type(2)")
+sturdy = soup.select_one('li[data-sku="TNT-1003"] p.price')
+
+print(fragile.get_text(), sturdy.get_text())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>$459.95 $459.95</code></pre>
+                </div>
+
+                <p>The first is a set of directions by position: "inside <code>main</code>, the list, the third item, the second paragraph". Browser tools will happily generate selectors like this for you with "Copy selector". It works today. It breaks the day the shop adds a "New!" badge above the price, reorders the products, or wraps the list in one more <code>div</code>, and it breaks <em>silently</em>, by returning some other paragraph.</p>
+
+                <p>The second reads the labels: "the price inside the card for TNT-1003". It keeps working through all of those changes, because it depends on what the element <em>means</em>, not where it happens to sit.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Choosing a Selector That Survives</h4>
+                    <ul>
+                        <li><strong>Prefer names that describe meaning</strong>: classes such as <code>price</code> and <code>product-card</code>, ids, and <code>data-</code> attributes. Site owners put them there for their own code, so they tend to stay.</li>
+                        <li><strong>Avoid position</strong> (<code>nth-of-type</code>, <code>nth-child</code>, long <code>&gt;</code> chains) unless nothing else identifies the element.</li>
+                        <li><strong>Keep it short.</strong> Every extra step in a selector is one more thing that can change. <code>li.product-card p.price</code> is enough.</li>
+                        <li><strong>Avoid classes that describe looks</strong>, such as <code>blue</code> or <code>col-4</code>. Those change with the next redesign.</li>
+                    </ul>
+                </div>
+
+                <h3>Read Data from Attributes When You Can</h3>
+
+                <pre><code class="language-python">price_tag = first.select_one("p.price")
+
+print(price_tag.get_text())
+print(price_tag["data-price"])
+print(float(price_tag["data-price"]) * 2)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>$299.95
+299.95
+599.9</code></pre>
+                </div>
+
+                <p>The visible text is formatted for people: a dollar sign today, perhaps "From $299" or a thousands separator tomorrow. The <code>data-price</code> attribute holds the plain number for the site's own scripts. When a page offers a machine-readable value, take it. Either way, what you get from HTML is always a <strong>string</strong>, and converting it with <code>float()</code> is your job.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="card" class="lesson-section">
+                <h2>🗂️ One Card, One Dictionary</h2>
+
+                <p>You can now reach every field of a card. The next step is the one that makes scraping manageable: write <strong>one function that turns one block into one dictionary</strong>. The function knows about the HTML. The rest of your code never has to.</p>
+
+                <pre><code class="language-python">def parse_card(card):
+    """Turn one product card into a flat dictionary. First version."""
+    link = card.select_one("h2.product-name a")
+    return {
+        "sku": card["data-sku"],
+        "name": link.get_text(strip=True),
+        "category": card.select_one("p.product-category").get_text(strip=True),
+        "price": float(card.select_one("p.price")["data-price"]),
+        "rating": float(card.select_one("p.rating")["data-rating"]),
+        "url": urljoin(BASE_URL, link["href"]),
+    }
+
+print(parse_card(first))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>{'sku': 'TNT-1001', 'name': 'Granite Fork Drift 1-Person Tent', 'category': 'Tents', 'price': 299.95, 'rating': 4.0, 'url': 'https://rays-python-datascience.netlify.app/practice/shop/products/TNT-1001.html'}</code></pre>
+                </div>
+
+                <p>A list of such dictionaries is a DataFrame waiting to happen, exactly as it was for the API's JSON in Lesson 6.1.</p>
+
+                <pre><code class="language-python">page1 = pd.DataFrame([parse_card(c) for c in soup.select("li.product-card")])
+
+print(page1.shape)
+print(page1[["sku", "name", "price", "rating"]].head())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>(20, 6)
+        sku                                  name   price  rating
+0  TNT-1001      Granite Fork Drift 1-Person Tent  299.95     4.0
+1  TNT-1002   Cedar Notch Ridgeline 2-Person Tent  217.95     3.7
+2  TNT-1003      Pinecrest Solstice 3-Person Tent  459.95     4.7
+3  TNT-1004       Wrenfield Skyline 4-Person Tent  294.95     3.7
+4  TNT-1005  Quillback Talus 6-Person Family Tent  511.95     4.0</code></pre>
+                </div>
+
+                <p>Twenty rows from twenty cards, with numbers that are already numbers. It looks finished. It is not, and finding out why is the most useful ten minutes of this lesson.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="missing" class="lesson-section">
+                <h2>🕳️ When Something Is Missing</h2>
+
+                <p>A function that works on page 1 has been tested on twenty products. Try it on page 3.</p>
+
+                <pre><code class="language-python">soup3 = get_soup(urljoin(BASE_URL, "page-3.html"))
+cards3 = soup3.select("li.product-card")
+print(len(cards3))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>20</code></pre>
+                </div>
+
+                <pre data-raises="KeyError"><code class="language-python">rows = [parse_card(c) for c in cards3]</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>KeyError: 'data-rating'</code></pre>
+                </div>
+
+                <p>Some card on this page has a rating paragraph with no <code>data-rating</code> attribute. Do not guess which. Ask the page.</p>
+
+                <pre><code class="language-python">for c in cards3:
+    tag = c.select_one("p.rating")
+    if "data-rating" not in tag.attrs:
+        print(c["data-sku"], tag)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>PCK-1002 &lt;p class="rating no-rating"&gt;No reviews yet&lt;/p&gt;
+PCK-1009 &lt;p class="rating no-rating"&gt;No reviews yet&lt;/p&gt;</code></pre>
+                </div>
+
+                <p>Two packs have no reviews yet, so the shop shows different HTML for them: no number, no <code>data-rating</code>, no review count. Real sites are full of this. A product with no reviews, no image, no sale price, a "call for price" label: the markup changes whenever the data does.</p>
+
+                <div class="card card-info">
+                    <h4>💡 The Two Ways Lookups Fail, and the Two Ways to Ask Safely</h4>
+                    <ul>
+                        <li>A missing <strong>attribute</strong>: <code>tag["data-rating"]</code> raises <code>KeyError</code>. Ask with <code>tag.get("data-rating")</code> instead, which returns <code>None</code>.</li>
+                        <li>A missing <strong>element</strong>: <code>select_one()</code> and <code>find()</code> return <code>None</code>, and the next thing you do to that <code>None</code> raises <code>AttributeError</code>. Check <code>if tag</code> (or <code>if tag is None</code>) before using it.</li>
+                    </ul>
+                </div>
+
+                <p>Now decide, field by field, what missing should mean. A product without a rating is normal: record a missing value. A product without a SKU or a price is not something you expected: let that crash, loudly, so that you find out. Here is the version that draws that line, and picks up two more fields while it is at it.</p>
+
+                <pre><code class="language-python">def parse_card(card):
+    """Turn one product card into a flat dictionary."""
+    link = card.select_one("h2.product-name a")
+    rating = card.select_one("p.rating").get("data-rating")      # None when there is no rating
+    count_tag = card.select_one("span.review-count")             # None when there are no reviews
+    reviews = int(re.search(r"\d+", count_tag.get_text()).group()) if count_tag else 0
+    stock_classes = card.select_one("p.stock")["class"]          # ['stock', 'low-stock']
+    return {
+        "sku": card["data-sku"],
+        "name": link.get_text(strip=True),
+        "category": card.select_one("p.product-category").get_text(strip=True),
+        "price": float(card.select_one("p.price")["data-price"]),
+        "rating": float(rating) if rating else None,
+        "review_count": reviews,
+        "stock_status": stock_classes[1].replace("-", "_"),
+        "url": urljoin(BASE_URL, link["href"]),
+    }
+
+page3 = pd.DataFrame([parse_card(c) for c in cards3])
+print(page3.loc[page3["rating"].isna(), ["sku", "name", "rating", "review_count"]])
+print(page3["stock_status"].value_counts().to_dict())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>         sku                               name  rating  review_count
+9   PCK-1002    Pinecrest Headwater 30L Daypack     NaN             0
+16  PCK-1009  Juniper Vane Sawtooth 30L Daypack     NaN             0
+{'in_stock': 16, 'out_of_stock': 3, 'low_stock': 1}</code></pre>
+                </div>
+
+                <p>The two unrated packs are now rows with <code>NaN</code> in <code>rating</code> and <code>0</code> reviews, which is exactly what they are. The review count came from the text <code>(8 reviews)</code> with a small regular expression, <code>\d+</code>, meaning "one or more digits". The stock status came from the element's second class, which is steadier than its display text.</p>
+
+                <div class="card card-success">
+                    <h4>✅ That Crash Was the Process Working</h4>
+                    <p>Nobody writes a parser that handles every case on the first try, because nobody can see every case on the first page. Write it for what you can see, run it on more pages, and let the errors show you what you assumed. Each fix makes the function a little more honest about the data.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="pagination" class="lesson-section">
+                <h2>📄 Following Pagination</h2>
+
+                <p>The catalog is spread over several pages. At the bottom of each is a navigation block. Compare the first page's with the last page's:</p>
+
+                <pre><code class="language-html">&lt;!-- index.html --&gt;
+&lt;nav class="pagination" aria-label="Pages"&gt;
+    &lt;span class="prev disabled"&gt;← Previous&lt;/span&gt;
+    &lt;span class="current"&gt;Page &lt;span class="page-number"&gt;1&lt;/span&gt; of &lt;span class="page-total"&gt;13&lt;/span&gt;&lt;/span&gt;
+    &lt;a class="next" rel="next" href="page-2.html"&gt;Next →&lt;/a&gt;
+&lt;/nav&gt;
+
+&lt;!-- page-13.html --&gt;
+&lt;nav class="pagination" aria-label="Pages"&gt;
+    &lt;a class="prev" rel="prev" href="page-12.html"&gt;← Previous&lt;/a&gt;
+    &lt;span class="current"&gt;Page &lt;span class="page-number"&gt;13&lt;/span&gt; of &lt;span class="page-total"&gt;13&lt;/span&gt;&lt;/span&gt;
+    &lt;span class="next disabled"&gt;Next →&lt;/span&gt;
+&lt;/nav&gt;</code></pre>
+
+                <p>On every page but the last, "Next" is a link (<code>a.next</code>) with an <code>href</code>. On the last page it is a plain <code>span</code>, so the selector <code>nav.pagination a.next</code> finds nothing. That gives you a loop that needs no page count and no guessing at URL patterns: <strong>follow the next link until there is none.</strong></p>
+
+                <div class="mermaid">
+            graph TD
+                A["Start at the first page"] --> B["Fetch and parse the page"]
+                B --> C["Parse every card"]
+                C --> D{"Is there a next link?"}
+                D -->|yes| E["Wait, then follow it"]
+                E --> B
+                D -->|no| F["Done: return all rows"]
+                </div>
+
+                <pre><code class="language-python">def scrape_catalog(start_url, max_pages=50):
+    """Follow 'next' links from start_url. Returns (rows, pages_fetched)."""
+    rows, url, pages = [], start_url, 0
+    while url and pages &lt; max_pages:
+        soup = get_soup(url)
+        rows.extend(parse_card(c) for c in soup.select("li.product-card"))
+        pages += 1
+        next_link = soup.select_one("nav.pagination a.next")
+        url = urljoin(url, next_link["href"]) if next_link else None
+        time.sleep(DELAY)
+    return rows, pages
+
+rows, pages = scrape_catalog(BASE_URL)
+print(pages, "pages,", len(rows), "products")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>13 pages, 242 products</code></pre>
+                </div>
+
+                <p>That took about fifteen seconds, nearly all of it the one-second pauses. That is the right speed. You are a guest on this server, the whole job is 13 requests, and nothing about your analysis gets better if it finishes in two seconds instead.</p>
+
+                <p>Read the loop once more for its details:</p>
+                <ul>
+                    <li><code>urljoin(url, next_link["href"])</code> resolves the relative link against the page it was found on, so it works wherever the pages live.</li>
+                    <li><code>max_pages</code> is a seat belt. If a site's "next" link ever points back to an earlier page, a loop without a limit would run forever, sending requests the whole time.</li>
+                    <li>If any page fails, <code>raise_for_status()</code> inside <code>get_soup()</code> stops the loop with an error instead of quietly returning a partial catalog.</li>
+                </ul>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Do Not Count Pages by Hand</h4>
+                    <p>Writing <code>for n in range(2, 14)</code> and building <code>f"page-{n}.html"</code> works today. When the shop adds its 261st product there will be a page 14 that your loop never visits, and nothing will tell you. Let the site say where the end is.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="validate" class="lesson-section">
+                <h2>✅ A Tidy, Checked DataFrame</h2>
+
+                <pre><code class="language-python">products = pd.DataFrame(rows)
+
+print(products.shape)
+print(products.dtypes)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>(242, 8)
+sku                 str
+name                str
+category            str
+price           float64
+rating          float64
+review_count      int64
+stock_status        str
+url                 str
+dtype: object</code></pre>
+                </div>
+
+                <p>One row per product, one column per field, sensible types: tidy data, ready for everything you learned in Module 2. Before you trust it, check it. Scraped data deserves more suspicion than a file someone handed you, because the page was never designed to be your data source. Three quick questions catch most problems.</p>
+
+                <pre><code class="language-python"># 1. Did we get as many as the site says it has?
+count_text = soup.select_one("p.result-count").get_text()
+claimed = int(re.search(r"of (\d+)", count_text).group(1))
+print(count_text, "|", "scraped:", len(products), "| match:", claimed == len(products))
+
+# 2. Is the key unique?
+print("unique SKUs:", products["sku"].is_unique)
+
+# 3. Do the values look plausible?
+print(products["price"].describe().round(2).to_dict())
+print("missing ratings:", products["rating"].isna().sum())
+print(products["stock_status"].value_counts().to_dict())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>Showing 1–20 of 242 products | scraped: 242 | match: True
+unique SKUs: True
+{'count': 242.0, 'mean': 121.8, 'std': 117.14, 'min': 8.5, '25%': 39.95, '50%': 82.95, '75%': 155.95, 'max': 616.95}
+missing ratings: 8
+{'in_stock': 198, 'low_stock': 29, 'out_of_stock': 15}</code></pre>
+                </div>
+
+                <p>The page says 242 and you have 242, no SKU appears twice, prices run from $8.50 to $616.95, and eight products have no rating. In this course you have something a real project never does: the answer key. The shop was generated from <code>data/products.csv</code>, so you can check the scrape against it exactly.</p>
+
+                <pre><code class="language-python">catalog = pd.read_csv("data/products.csv")
+check = products.merge(catalog, on="sku", suffixes=("_web", "_csv"))
+
+print(len(check), "SKUs matched")
+for col in ["name", "price", "review_count", "stock_status"]:
+    print(col, (check[f"{col}_web"] == check[f"{col}_csv"]).all())
+print("rating", check["rating_web"].equals(check["rating_csv"]))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>242 SKUs matched
+name True
+price True
+review_count True
+stock_status True
+rating True</code></pre>
+                </div>
+
+                <p>Every value agrees. (<code>.equals()</code> is used for <code>rating</code> because it treats two missing values in the same position as equal, which <code>==</code> does not.) Save your work so that later analysis never needs to touch the site again.</p>
+
+                <pre><code class="language-python">products.to_csv("shop_products.csv", index=False)
+print(pd.read_csv("shop_products.csv").shape)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>(242, 8)</code></pre>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="detail" class="lesson-section">
+                <h2>🔬 Detail Pages</h2>
+
+                <p>A listing shows a summary. The full record is usually one click away, on a page of its own, and you collected the address of each one in the <code>url</code> column. Open a product page in your browser and inspect it. The parts worth having are a description and a specifications table:</p>
+
+                <pre><code class="language-html">&lt;p class="description"&gt;Granite Fork 1-person tent in moss. Pitches fast, ...&lt;/p&gt;
+&lt;table class="specs"&gt;
+    &lt;tbody&gt;
+        &lt;tr&gt;&lt;th scope="row"&gt;Brand&lt;/th&gt;&lt;td&gt;Granite Fork&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;th scope="row"&gt;Type&lt;/th&gt;&lt;td&gt;1-Person Tent&lt;/td&gt;&lt;/tr&gt;
+        &lt;tr&gt;&lt;th scope="row"&gt;Weight&lt;/th&gt;&lt;td&gt;1.34 kg&lt;/td&gt;&lt;/tr&gt;
+        ...
+    &lt;/tbody&gt;
+&lt;/table&gt;</code></pre>
+
+                <p>Each row of the table is a label in a <code>th</code> and a value in a <code>td</code>. A dictionary comprehension turns the whole table into a lookup, and then the same pattern as before applies: one function, one page, one dictionary.</p>
+
+                <pre><code class="language-python">def parse_product_page(soup):
+    """Turn one product detail page into a flat dictionary."""
+    specs = {tr.th.get_text(strip=True): tr.td.get_text(strip=True)
+             for tr in soup.select("table.specs tr")}
+    return {
+        "sku": soup.select_one("span.sku-value").get_text(strip=True),
+        "brand": specs.get("Brand"),
+        "weight": specs.get("Weight"),
+        "color": specs.get("Color"),
+        "launched": specs.get("Launched"),
+        "description": soup.select_one("p.description").get_text(strip=True),
+    }
+
+snow = products[products["category"] == "Snow"].head(5)
+
+detail_rows = []
+for url in snow["url"]:
+    detail_rows.append(parse_product_page(get_soup(url)))
+    time.sleep(DELAY)
+
+details = pd.DataFrame(detail_rows)
+print(details.drop(columns="description"))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>        sku           brand      weight   color    launched
+0  SNW-1001       Wrenfield     1.55 kg  Forest  2021-10-29
+1  SNW-1002       Wrenfield     0.18 kg    Rust  2022-06-26
+2  SNW-1003       Quillback  Not listed   Slate  2023-07-03
+3  SNW-1004  Larkspur Ridge  Not listed   Slate  2021-01-01
+4  SNW-1005       Wrenfield     2.05 kg    Sand  2020-11-07</code></pre>
+                </div>
+
+                <p><code>specs.get("Weight")</code> uses the dictionary's <code>.get()</code> so that a product page without a weight row would give <code>None</code>, not a crash. The weights arrived as text with a unit, and two of them are not numbers at all. Clean them the way you learned in Lesson 2.3, then join the details to the listing on the shared key.</p>
+
+                <pre><code class="language-python">details["weight_kg"] = pd.to_numeric(details["weight"].str.replace(" kg", ""), errors="coerce")
+details["launched"] = pd.to_datetime(details["launched"])
+
+enriched = snow.merge(details.drop(columns=["weight", "description"]), on="sku", how="left")
+print(enriched[["sku", "price", "brand", "weight_kg", "launched"]])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>        sku   price           brand  weight_kg   launched
+0  SNW-1001  255.95       Wrenfield       1.55 2021-10-29
+1  SNW-1002   59.95       Wrenfield       0.18 2022-06-26
+2  SNW-1003   52.95       Quillback        NaN 2023-07-03
+3  SNW-1004  200.95  Larkspur Ridge        NaN 2021-01-01
+4  SNW-1005   53.95       Wrenfield       2.05 2020-11-07</code></pre>
+                </div>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Count the Requests Before You Loop</h4>
+                    <p>Five detail pages took five seconds. All 242 would take four minutes and send 242 requests to get fields you may not need. On a real site with a hundred thousand products the same loop is a day of traffic. Before you write a loop over detail pages, ask whether the listing already has what your question needs, and fetch details only for the rows that matter.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="tables" class="lesson-section">
+                <h2>📊 Tables with read_html</h2>
+
+                <p>When the data you want is already an HTML <code>&lt;table&gt;</code>, you can skip the selectors. <code>pandas.read_html()</code> finds every table in a page and returns a <strong>list of DataFrames</strong>. The shop's price list page has two tables. Fetch the page yourself, so that your User-Agent and timeout apply, and hand pandas the bytes.</p>
+
+                <pre><code class="language-python">import io
+
+resp = requests.get(urljoin(BASE_URL, "price-list.html"), headers=HEADERS, timeout=10)
+resp.raise_for_status()
+
+tables = pd.read_html(io.BytesIO(resp.content), encoding="utf-8")
+print(len(tables), "tables")
+print(tables[0].head(3))
+print(tables[1])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>2 tables
+        SKU                              Product Category    Price  Rating Availability
+0  TNT-1001     Granite Fork Drift 1-Person Tent    Tents  $299.95     4.0    Low stock
+1  TNT-1002  Cedar Notch Ridgeline 2-Person Tent    Tents  $217.95     3.7     In stock
+2  TNT-1003     Pinecrest Solstice 3-Person Tent    Tents  $459.95     4.7     In stock
+        City State     Open daily           Phone
+0      Boise    ID   9 am to 8 pm  (208) 555-0142
+1       Bend    OR   9 am to 7 pm  (541) 555-0118
+2  Flagstaff    AZ  10 am to 7 pm  (928) 555-0167
+3  Asheville    NC  10 am to 8 pm  (828) 555-0193</code></pre>
+                </div>
+
+                <p>Two tables: all 242 products, and the four stores. <code>io.BytesIO</code> wraps the downloaded bytes so that pandas can read them like a file. (<code>read_html</code> needs the <code>lxml</code> package, which is in the course's <code>requirements.txt</code>.)</p>
+
+                <p>When a page has many tables, select the one you want by an attribute instead of by its position in the list. The same reasoning as for selectors applies: position changes, labels last.</p>
+
+                <pre><code class="language-python">prices = pd.read_html(io.BytesIO(resp.content), encoding="utf-8", attrs={"id": "price-list"})[0]
+
+print(prices.dtypes)
+prices["Price"] = prices["Price"].str.replace("[$,]", "", regex=True).astype(float)
+print(prices["Price"].sum().round(2), products["price"].sum().round(2))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>SKU                 str
+Product             str
+Category            str
+Price               str
+Rating          float64
+Availability        str
+dtype: object
+29475.9 29475.9</code></pre>
+                </div>
+
+                <p><code>read_html</code> reads what a person would see, so <code>Price</code> came in as text such as <code>$299.95</code> and needed the same cleaning as any messy column. After that, the price list and your card-by-card scrape add up to the same total: two routes to one answer.</p>
+
+                <div class="card card-info">
+                    <h4>💡 read_html or Beautiful Soup?</h4>
+                    <p>Use <code>read_html</code> when the data is a real <code>&lt;table&gt;</code> and the visible text is all you need. Use Beautiful Soup when the data is in cards, lists or scattered elements, when you need attributes such as <code>href</code> or <code>data-price</code>, or when rows need special handling. Many projects use both.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="mistakes" class="lesson-section">
+                <h2>⚠️ Common Mistakes</h2>
+
+                <p>These five messages account for most of the errors you will see while scraping. Each is short once you know what it is pointing at.</p>
+
+                <h3>1. Using the Result of a Search That Found Nothing</h3>
+
+                <pre data-raises="AttributeError"><code class="language-python">soup.select_one("p.sale-price").get_text()</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>AttributeError: 'NoneType' object has no attribute 'get_text'</code></pre>
+                </div>
+                <p><strong>What it means:</strong> there is no <code>p.sale-price</code> on the page, so <code>select_one()</code> returned <code>None</code>, and <code>None</code> has no <code>get_text</code>. The error names <code>NoneType</code>, not your selector, which is why it confuses people. <strong>Fix:</strong> check the selector against the page in your browser (a typo in a class name is the usual cause), and if the element is truly optional, test for <code>None</code> before using it.</p>
+
+                <h3>2. Treating a List of Elements as One Element</h3>
+
+                <pre data-raises="AttributeError"><code class="language-python">soup.select("p.price").get_text()</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>AttributeError: ResultSet object has no attribute "get_text". You're probably treating a list of elements like a single element. Did you call find_all() when you meant to call find()?</code></pre>
+                </div>
+                <p><strong>What it means:</strong> <code>select()</code> and <code>find_all()</code> return a list, even when it holds one element. Beautiful Soup's message tells you exactly that. <strong>Fix:</strong> use <code>select_one()</code> for a single element, or loop: <code>[p.get_text() for p in soup.select("p.price")]</code>.</p>
+
+                <h3>3. Writing class Instead of class_</h3>
+
+                <pre data-raises="SyntaxError"><code class="language-python">exec('soup.find_all("p", class="price")')</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>SyntaxError: invalid syntax (&lt;string&gt;, line 1)</code></pre>
+                </div>
+                <p><strong>What it means:</strong> <code>class</code> is a Python keyword and cannot be an argument name. (The <code>exec()</code> wrapper is only here so that this page can show you the error; in your notebook the cell simply refuses to run.) <strong>Fix:</strong> <code>class_="price"</code>, or use a selector: <code>soup.select("p.price")</code>.</p>
+
+                <h3>4. Requesting a Relative Link</h3>
+
+                <pre data-raises="requests.exceptions.MissingSchema"><code class="language-python">requests.get(link["href"], headers=HEADERS, timeout=10)</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>MissingSchema: Invalid URL 'products/TNT-1001.html': No scheme supplied. Perhaps you meant https://products/TNT-1001.html?</code></pre>
+                </div>
+                <p><strong>What it means:</strong> the <code>href</code> in the page is <code>products/TNT-1001.html</code>, which only makes sense relative to the page it came from. <strong>Fix:</strong> <code>urljoin(page_url, link["href"])</code>, always, even when a site's links happen to be absolute today.</p>
+
+                <h3>5. Looking for Content That Is Not in the HTML</h3>
+
+                <pre><code class="language-python">deals = get_soup(urljoin(BASE_URL, "deals.html"))
+print(len(deals.select("li.deal")), "deals found")
+print(deals.select_one("p#loading").get_text())</code></pre>
+                <div class="card card-output">
+                    <h4>Output (no error, and no data)</h4>
+                    <pre><code>0 deals found
+Loading deals…</code></pre>
+                </div>
+                <p><strong>What happened:</strong> in your browser the deals page shows a list of offers. In the HTML that <code>requests</code> received there are none, only a "Loading" message, because the list is added by JavaScript after the page loads, and <code>requests</code> does not run JavaScript. Your selector is fine. The data simply is not there yet. <strong>Fix:</strong> that is the whole of <a href="webscraping_selenium.html">Lesson 6.3</a>. The clue to remember is this one: <em>visible in the browser, absent from <code>resp.text</code></em>.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="project" class="lesson-section">
+                <h2>🛠️ Project: Category Price Report</h2>
+
+                <p>Pinecrest's merchandising lead wants a one-page comparison of the nine product categories as a customer sees them on the website: how many products, typical price, rating and availability. The shop has a page for each category. You will discover those pages from the front page, scrape each one, check the result against what each page claims, and produce the report. Continue in your lesson notebook, where <code>get_soup()</code>, <code>parse_card()</code>, <code>BASE_URL</code> and <code>DELAY</code> are defined. Allow about 35 minutes.</p>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 1: Discover the category pages <span class="step-time">(5 min)</span></h3>
+                    <p>Do not type nine URLs. The front page links to every category inside <code>p.category-links</code>. Build a dictionary from category name to full URL.</p>
+                    <pre><code class="language-python">home = get_soup(BASE_URL)
+
+category_urls = {a.get_text(strip=True): urljoin(BASE_URL, a["href"])
+                 for a in home.select("p.category-links a")}
+
+print(len(category_urls))
+for name, url in list(category_urls.items())[:3]:
+    print(name, "-", url)</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>9
+Accessories - https://rays-python-datascience.netlify.app/practice/shop/category-accessories.html
+Apparel - https://rays-python-datascience.netlify.app/practice/shop/category-apparel.html
+Camp Kitchen - https://rays-python-datascience.netlify.app/practice/shop/category-camp-kitchen.html</code></pre>
+                    </div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 2: Look before you loop <span class="step-time">(5 min)</span></h3>
+                    <p>Fetch one category page and check your assumptions on it before requesting the other eight: does it use the same cards, does it have pagination, and what does its count line say?</p>
+                    <pre><code class="language-python">tents = get_soup(category_urls["Tents"])
+
+print(len(tents.select("li.product-card")), "cards")
+print(tents.select_one("p.result-count").get_text())
+print("pagination:", tents.select_one("nav.pagination"))
+print(parse_card(tents.select_one("li.product-card"))["name"])</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>24 cards
+24 products
+pagination: None
+Granite Fork Drift 1-Person Tent</code></pre>
+                    </div>
+                    <p>Same cards, so <code>parse_card()</code> works unchanged. No pagination: each category is a single page. And the count line has a different wording from the catalog's ("24 products", not "Showing 1 to 20 of 242"), which matters for the check in the next step.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 3: Scrape all nine, checking each <span class="step-time">(10 min)</span></h3>
+                    <p>For every category, parse the cards and compare the number you got with the number the page claims. Collect everything in one list. Nine requests at one per second.</p>
+                    <pre><code class="language-python">all_rows = []
+for name, url in category_urls.items():
+    page = get_soup(url)
+    page_rows = [parse_card(c) for c in page.select("li.product-card")]
+    claimed = int(re.search(r"\d+", page.select_one("p.result-count").get_text()).group())
+    status = "ok" if claimed == len(page_rows) else "MISMATCH"
+    print(f"{name:&lt;13} claimed {claimed:&gt;3}  scraped {len(page_rows):&gt;3}  {status}")
+    all_rows.extend(page_rows)
+    time.sleep(DELAY)
+
+by_category = pd.DataFrame(all_rows)
+print(by_category.shape, "unique SKUs:", by_category["sku"].is_unique)</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>Accessories   claimed  32  scraped  32  ok
+Apparel       claimed  35  scraped  35  ok
+Camp Kitchen  claimed  29  scraped  29  ok
+Climbing      claimed  24  scraped  24  ok
+Footwear      claimed  28  scraped  28  ok
+Packs         claimed  24  scraped  24  ok
+Sleeping      claimed  24  scraped  24  ok
+Snow          claimed  22  scraped  22  ok
+Tents         claimed  24  scraped  24  ok
+(242, 8) unique SKUs: True</code></pre>
+                    </div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 4: Cross-check two routes <span class="step-time">(5 min)</span></h3>
+                    <p>You now have the catalog twice: once from the 13 paginated pages (<code>products</code>) and once from the 9 category pages (<code>by_category</code>). If both scrapes are right they hold the same rows. Sort both the same way and compare.</p>
+                    <pre><code class="language-python">a = products.sort_values("sku").reset_index(drop=True)
+b = by_category.sort_values("sku").reset_index(drop=True)
+
+print("identical:", a.equals(b))
+print("every card's category is one of the nine:",
+      all(row["category"] in category_urls for row in all_rows))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>identical: True
+every card's category is one of the nine: True</code></pre>
+                    </div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 5: Build and save the report <span class="step-time">(10 min)</span></h3>
+                    <p>Summarize with the named aggregation you learned in Lesson 2.4. The median describes a typical price better than the mean when a few expensive items pull the average up, as you saw in Module 4.</p>
+                    <pre><code class="language-python">report = (
+    by_category
+    .assign(in_stock=by_category["stock_status"] != "out_of_stock")
+    .groupby("category")
+    .agg(products=("sku", "count"),
+         median_price=("price", "median"),
+         max_price=("price", "max"),
+         mean_rating=("rating", "mean"),
+         pct_available=("in_stock", "mean"))
+    .sort_values("median_price", ascending=False)
+)
+report["mean_rating"] = report["mean_rating"].round(2)
+report["pct_available"] = (report["pct_available"] * 100).round(1)
+
+print(report)
+report.to_csv("category_report.csv")</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>              products  median_price  max_price  mean_rating  pct_available
+category                                                                   
+Tents               24        298.45     616.95         4.25           95.8
+Sleeping            24        141.45     513.95         4.03           95.8
+Packs               24        118.95     335.95         4.20           87.5
+Climbing            24         82.45     264.95         4.08           95.8
+Snow                22         78.45     255.95         4.17           90.9
+Footwear            28         74.95     259.95         4.12           92.9
+Apparel             35         66.95     375.95         4.14           94.3
+Accessories         32         56.95     176.95         4.02           93.8
+Camp Kitchen        29         39.95     222.95         4.25           96.6</code></pre>
+                    </div>
+                    <p>Tents and Sleeping gear are the high-ticket categories, while Accessories and Camp Kitchen are where the low prices live. <code>mean()</code> skipped the eight unrated products automatically because you stored them as missing values, not as zeros. That decision in <code>parse_card()</code> is what makes this column correct.</p>
+                </div>
+
+                <div class="card card-success">
+                    <h3>✅ Project Completion Checklist</h3>
+                    <ul class="checklist">
+                        <li>The nine category URLs come from the front page's links, not from a typed list</li>
+                        <li>You inspected one category page before looping over all of them</li>
+                        <li>Every page's claimed count equals the number of cards you parsed</li>
+                        <li><code>by_category</code> has 242 rows with unique SKUs and equals the paginated scrape</li>
+                        <li>The loop pauses one second between requests and sends an identifying User-Agent</li>
+                        <li><code>category_report.csv</code> is saved with nine rows, sorted by median price</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="exercises" class="lesson-section">
+                <h2>🏋️ Hands-on Exercises</h2>
+
+                <p>Work in your lesson notebook. Each exercise sends only a few requests; keep the one-second pause whenever you loop.</p>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 1: Where Am I?</h3>
+                    <p>Fetch <code>page-5.html</code>. Using selectors, print the page number, the total number of pages, the text of the count line, and the <code>href</code> of the "previous" link as a full URL.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Look at the pagination HTML in the lesson: <code>span.page-number</code>, <code>span.page-total</code> and <code>a.prev</code>. Convert the two numbers with <code>int()</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">page_url = urljoin(BASE_URL, "page-5.html")
+p5 = get_soup(page_url)
+
+number = int(p5.select_one("span.page-number").get_text())
+total = int(p5.select_one("span.page-total").get_text())
+print(number, "of", total)
+print(p5.select_one("p.result-count").get_text())
+print(urljoin(page_url, p5.select_one("nav.pagination a.prev")["href"]))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>5 of 13
+Showing 81–100 of 242 products
+https://rays-python-datascience.netlify.app/practice/shop/page-4.html</code></pre>
+                        </div>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 2: From a Detail to Its Card</h3>
+                    <p>On the front page (the <code>soup</code> variable), find every stock label that says the product is low on stock, and print the SKU and name of the product each one belongs to. The label is deep inside the card, so you need to go <em>up</em> the tree.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Select <code>p.stock.low-stock</code>. Each tag has a <code>find_parent("li")</code> method that returns the nearest enclosing <code>li</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">for label in soup.select("p.stock.low-stock"):
+    parent = label.find_parent("li")
+    print(parent["data-sku"], parent.select_one("h2.product-name a").get_text())</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>TNT-1001 Granite Fork Drift 1-Person Tent
+TNT-1018 Pinecrest Talus 2-Person Tent</code></pre>
+                        </div>
+                        <p>The selector <code>li.product-card:has(p.low-stock)</code> would also work: <code>:has()</code> selects an element by what it contains. Either way, you start from the label that identifies the thing and move to the block that holds the rest.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 3: Details Only Where They Matter</h3>
+                    <p>From the <code>products</code> DataFrame, pick the three highest-rated products that have at least 100 reviews. Fetch only those three detail pages and print each product's SKU, brand, color and rating.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Filter, then <code>sort_values("rating", ascending=False).head(3)</code>. Loop over the <code>url</code> column with <code>parse_product_page(get_soup(url))</code> and a pause.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">top = (products[products["review_count"] &gt;= 100]
+       .sort_values(["rating", "review_count"], ascending=False)
+       .head(3))
+
+top_details = []
+for url in top["url"]:
+    top_details.append(parse_product_page(get_soup(url)))
+    time.sleep(DELAY)
+
+answer = top[["sku", "name", "rating"]].merge(
+    pd.DataFrame(top_details)[["sku", "brand", "color"]], on="sku")
+print(answer)</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>        sku                                name  rating         brand     color
+0  CLM-1002  Quillback Sawtooth Climbing Helmet     5.0     Quillback      Moss
+1  KIT-1003  Quillback Timberline Insulated Mug     4.9     Quillback  Charcoal
+2  KIT-1008    Juniper Vane Drift Fuel Canister     4.9  Juniper Vane      Moss</code></pre>
+                        </div>
+                        <p>Three requests answered the question. Sorting by review count as well as rating makes the order the same on every run when ratings tie.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 4: Structured Data in the Page (Stretch)</h3>
+                    <p>Many shops embed a machine-readable description of each product for search engines, as JSON inside a <code>&lt;script type="application/ld+json"&gt;</code> element. The practice shop does too. Fetch the detail page for <code>TNT-1001</code>, find that script element, parse its contents with <code>json.loads()</code>, and print the product name, the price and the rating. What type is the price, and why might this route be sturdier than reading the visible HTML?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>The selector is <code>script[type="application/ld+json"]</code>, and the JSON text is the tag's <code>.string</code>. The result is a nested dictionary: explore it with <code>.keys()</code> as you did with documents in Lesson 5.5.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">import json
+
+tent = get_soup(urljoin(BASE_URL, "products/TNT-1001.html"))
+ld = json.loads(tent.select_one('script[type="application/ld+json"]').string)
+
+print(list(ld))
+print(ld["name"])
+print(ld["offers"]["price"], type(ld["offers"]["price"]).__name__)
+print(ld["aggregateRating"]["ratingValue"], ld["aggregateRating"]["reviewCount"])</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>['@context', '@type', 'sku', 'name', 'category', 'brand', 'offers', 'aggregateRating']
+Granite Fork Drift 1-Person Tent
+299.95 str
+4.0 8</code></pre>
+                        </div>
+                        <p>The price is a string here, so it still needs <code>float()</code>. This block follows a published vocabulary (schema.org) that search engines depend on, so sites change it far less often than they change their page design. When a page has it, it is often the best selector of all.</p>
+                    </details>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="quiz" class="lesson-section">
+                <h2>🎯 Quick Quiz</h2>
+                <div class="card quiz-container">
+                    <h3>🎯 Check Your Understanding</h3>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> What does this print?</p>
+                        <pre><code class="language-python">snippet = BeautifulSoup('&lt;ul&gt;&lt;li class="item"&gt;Tent&lt;/li&gt;&lt;li class="item sale"&gt;Stove&lt;/li&gt;&lt;/ul&gt;', "html.parser")
+print(len(snippet.select("li.item")), len(snippet.select("li.sale")), snippet.select_one("li.gone"))</code></pre>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="The second li has two classes, item and sale. Does li.item match an element that has other classes as well?">
+                                A) <code>1 1 None</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="The counts are right. Now think about the last call: select returns a list, but what does select_one return when nothing matches?">
+                                B) <code>2 1 []</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="A class selector matches any element whose class list includes that class, so both items match li.item and one matches li.sale. select_one returns None when there is no match, where select would return an empty list.">
+                                C) <code>2 1 None</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> Your parser runs <code>card.select_one("span.review-count").get_text()</code> on 242 cards and crashes on the 43rd with <code>AttributeError: 'NoneType' object has no attribute 'get_text'</code>. What is the most likely cause?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="select_one returns None when nothing matches, and calling a method on None raises this AttributeError. Products with no reviews have no count element, so check for None and decide what missing should mean for that field.">
+                                A) That card has no <code>span.review-count</code> element, so <code>select_one()</code> returned <code>None</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="A card is a piece of a page you already downloaded, not a separate request. What does select_one give back when the element it is looking for is not in that piece?">
+                                B) The server sent a 404 for that card
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="get_text works on any tag. Look at the type named in the message: what kind of object did the method get called on?">
+                                C) <code>get_text()</code> only works on <code>p</code> elements
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> Which selector for a product's price is most likely to keep working after the shop's next redesign?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="This depends on the price being the second paragraph, directly inside a list item, directly inside a list, directly inside main. How many of those facts could a designer change without touching the price itself?">
+                                A) <code>main &gt; ul &gt; li &gt; p:nth-of-type(2)</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="It names the block and the field by what they mean and assumes nothing about order or depth. Classes that describe meaning tend to survive redesigns, while positions and long child chains do not.">
+                                B) <code>li.product-card p.price</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="A bare position with no context matches the third paragraph of every parent on the page, and stops being the price as soon as anything is inserted above it.">
+                                C) <code>p:nth-of-type(3)</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 4:</strong> The catalog has 13 pages today. Which loop is the best way to collect every product?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="This works until the number of pages changes. When a 14th page appears, what tells this loop to visit it?">
+                                A) <code>for n in range(1, 14)</code>, building each page's URL from <code>n</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="The site itself marks the last page by not having a next link, so the loop stays correct when products are added or removed. The limit protects you from a link that loops back.">
+                                B) Follow the page's "next" link until a page has none, with a maximum page count as a safety limit
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="It would stop in the right place, but it guesses at URL patterns and deliberately sends a request for a page that does not exist. Is there something on each page that already says whether another one follows?">
+                                C) Keep requesting higher page numbers until a request returns 404
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+
+                    <div class="quiz-question">
+                        <p><strong>Question 5:</strong> Why does <code>get_soup()</code> pass <code>resp.content</code> to Beautiful Soup instead of <code>resp.text</code>?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="resp.text is decoded using the encoding requests inferred from the response headers, which can be wrong. From the raw bytes, Beautiful Soup can use the meta charset tag inside the document.">
+                                A) Given bytes, the parser reads the page's own charset declaration, so the text is decoded correctly even if the server's header is missing or wrong
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Both hold the complete document. The difference is whether it has already been turned from bytes into characters, and by whom.">
+                                B) <code>resp.text</code> leaves out the page's attributes
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Speed is not the reason. Think back to the star that turned into three junk characters in Lesson 6.1: at which step did that go wrong?">
+                                C) Bytes are parsed faster than strings
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="faq" class="lesson-section">
+                <h2>❓ Common Questions at This Stage</h2>
+
+                <details>
+                    <summary>How do I find the right selector on a page I have never seen?</summary>
+                    <p>Open the page in a browser, right-click the value you want and choose Inspect. Look at the element and walk up through its parents until you find the repeated block (here, <code>li.product-card</code>). Note the classes and <code>data-</code> attributes on the way. Then test in Python on one page: <code>len(soup.select("your selector"))</code> should equal the number of items you can see. If it is 0, check for typos, then check whether the content is added by JavaScript.</p>
+                </details>
+                <details>
+                    <summary>Should I use <code>"html.parser"</code> or <code>"lxml"</code>?</summary>
+                    <p><code>"html.parser"</code> is built into Python and handles ordinary pages well. <code>"lxml"</code> is faster on very large pages and is already installed in the course environment (pandas uses it for <code>read_html</code>). The two can build slightly different trees from badly broken HTML, so pick one per project and stay with it. Everything in this lesson works the same with either.</p>
+                </details>
+                <details>
+                    <summary>Why not pull values out with regular expressions?</summary>
+                    <p>A regular expression is a good tool for a small pattern inside a piece of text you have already isolated, as with <code>\d+</code> on <code>(8 reviews)</code>. It is a poor tool for finding that piece in the first place, because HTML nests, attributes come in any order, and whitespace varies. Use the tree to locate, and string tools to clean.</p>
+                </details>
+                <details>
+                    <summary>My scraper worked last month and returns nothing today. What happened?</summary>
+                    <p>Almost certainly the site changed its HTML and a selector no longer matches. This is the normal cost of scraping, and it is why the count check in this lesson matters: it turns a silent failure into a loud one. Inspect the page again, update the selector in your one parsing function, and rerun. If the site offers an API, this is a good moment to switch to it.</p>
+                </details>
+
+                <div class="card card-accent">
+                    <h3>🌟 Going Further: Bonus Challenge</h3>
+                    <p>Make the scrape repeatable without the network. Change <code>get_soup()</code> so that it saves each page's bytes into the <code>raw/</code> folder from Lesson 6.1 (use the last part of the URL as the file name) and, when the file already exists, parses the saved copy instead of requesting the page. Run <code>scrape_catalog()</code> twice and time both runs. Then break a selector in <code>parse_card()</code> on purpose and see how quickly you can find and fix it when every rerun takes milliseconds.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="journal" class="lesson-section">
+                <h2>📓 Learning Journal</h2>
+                <div class="card card-accent">
+                    <p>Take five minutes to write in your learning journal (the <code>journal.md</code> file you started in Lesson 0.1, or a paper notebook). Jot down:</p>
+                    <ul>
+                        <li><strong>Key concepts</strong> you learned today</li>
+                        <li><strong>Techniques that clicked</strong> (and the ones that have not, yet)</li>
+                        <li><strong>Questions or confusion</strong> to come back to</li>
+                        <li><strong>Ideas to try</strong> on your own</li>
+                        <li><strong>Progress and feelings</strong>: how did this lesson go for you?</li>
+                    </ul>
+                    <p><strong>✍️ This lesson's prompt:</strong> Your first <code>parse_card()</code> worked on page 1 and failed on page 3. Describe what you assumed, how the error revealed it, and how you decided what "missing" should mean for each field. Then think of a website you use often: which pieces of a listing there are probably optional?</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="summary" class="lesson-section">
+                <h2>📝 Lesson Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎓 Key Takeaways</h3>
+                    <ul>
+                        <li>A page is a <strong>tree</strong> of elements with tags, attributes and text; <code>BeautifulSoup(resp.content, "html.parser")</code> builds it</li>
+                        <li><code>find()</code> and <code>select_one()</code> return one element or <code>None</code>; <code>find_all()</code> and <code>select()</code> return a list</li>
+                        <li>Good selectors use <strong>meaning</strong> (classes, ids, <code>data-</code> attributes), not position, and are as short as they can be</li>
+                        <li>Find the repeated block, then write <strong>one function that turns one block into one dictionary</strong></li>
+                        <li>Missing attributes raise <code>KeyError</code> and missing elements give <code>None</code>: decide per field whether missing is normal or an error</li>
+                        <li>Follow the "next" link until there is none, with a pause between requests and a page limit</li>
+                        <li>Check a scrape before trusting it: the site's own count, unique keys, plausible values</li>
+                        <li><code>pd.read_html()</code> reads real tables in one call; fetch the page yourself and pass it the bytes</li>
+                    </ul>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🏆 What You've Accomplished</h3>
+                    <ul>
+                        <li>You scraped all 242 products from 13 pages and matched them, value for value, against the source data</li>
+                        <li>You wrote a parser, watched it fail on real variation, and made it handle missing data deliberately</li>
+                        <li>You enriched a listing with fields from detail pages while keeping the request count small</li>
+                        <li>You read two HTML tables straight into DataFrames</li>
+                        <li>You delivered a category price report built from two independent routes that agree</li>
+                    </ul>
+                </div>
+
+                <h3>🔭 Looking Ahead</h3>
+                <p>In <a href="webscraping_selenium.html"><strong>Lesson 6.3: Dynamic Pages with Selenium</strong></a> you will deal with the deals page that came back empty: content that JavaScript adds after the page loads. You will learn to recognize such pages, to look first for the data file the page itself loads, and to drive a real browser from Python when nothing else will do.</p>
+
+                <h3>📋 Before the Next Lesson</h3>
+                <ul>
+                    <li>Keep your notebook and <code>shop_products.csv</code>.</li>
+                    <li>Open the shop's <strong>Deals</strong> page in your browser and watch it load. Then view the page source (right-click, View Page Source) and look for the deals in it.</li>
+                    <li>Make sure Google Chrome is installed on your computer. Lesson 6.3 uses it.</li>
+                </ul>
+
+                <div class="card card-accent">
+                    <h3>🌱 Encouragement for the Journey</h3>
+                    <p>You turned a website into a dataset today, and then you proved the dataset was right. The second half of that sentence is the part that makes you someone whose numbers can be trusted. If selectors still feel like guesswork, that fades quickly with practice: inspect, try, count the matches, adjust. Every page you look at from now on will have a little more structure visible in it than it did yesterday.</p>
+                </div>
+            </section>
+
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="webscraping_requests.html" class="prev-lesson">← Previous: HTTP with Requests</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="webscraping_selenium.html" class="next-lesson">Next: Dynamic Pages with Selenium →</a>
+            </nav>
         </div>
-    </section>
-
-    <!-- Lesson Summary (full standard block) -->
-    <section id="summary" class="lesson-section">
-        <h2>📝 Lesson Summary</h2>
-        <div class="card card-success">
-            <h3>🎓 Key Takeaways</h3>
-            <ul>
-                <li>BeautifulSoup parses messy HTML into a navigable tree; <code>lxml</code> is fast, <code>html5lib</code> is the most forgiving.</li>
-                <li>You can locate data by tag, class, id, or attribute with <code>find</code>/<code>find_all</code>, or with familiar CSS selectors via <code>select</code>.</li>
-                <li>Tables come out cleanly with <code>pd.read_html</code>, and pagination, sessions, and login forms are all handled through <code>requests</code> + BeautifulSoup.</li>
-                <li>Static parsing can't see JavaScript-rendered content — look for API endpoints or reach for a browser-automation tool instead.</li>
-            </ul>
-        </div>
-        <h3>🎉 What You've Accomplished</h3>
-        <p>You can now turn the raw HTML of almost any web page into structured data — navigating the DOM, pulling out exactly
-        the elements you need, and assembling them into a DataFrame ready for analysis, all while scraping responsibly.</p>
-        <h3>❓ Common Questions at This Stage</h3>
-        <details>
-            <summary>Which parser should I use?</summary>
-            <p>Use <code>lxml</code> as your default — it's fast and handles imperfect markup well. Fall back to <code>html5lib</code>
-            when a page is badly broken and <code>lxml</code> mangles it, and use the built-in <code>html.parser</code> when you can't
-            install extra dependencies.</p>
-        </details>
-        <details>
-            <summary>My scraper returns nothing even though I can see the data in my browser. Why?</summary>
-            <p>The content is probably rendered by JavaScript after the page loads, so it isn't in the HTML that <code>requests</code>
-            downloads. Check the browser's Network tab for an API/XHR endpoint you can call directly, or use a tool like Selenium.</p>
-        </details>
-        <details>
-            <summary>Why does <code>class_</code> have a trailing underscore?</summary>
-            <p><code>class</code> is a reserved keyword in Python, so BeautifulSoup uses <code>class_</code> as the keyword argument.
-            With CSS selectors (<code>select</code>) you just write <code>.classname</code> as usual.</p>
-        </details>
-        <h3>🔭 Looking Ahead</h3>
-        <p>Next you'll go deeper into the <code>requests</code> library that feeds BeautifulSoup its HTML — the foundation for
-        every scraper and API client you'll build.</p>
-        <h3>✅ Before the Next Lesson</h3>
-        <ul>
-            <li>Pick a simple, scraping-friendly practice site (like toscrape.com) and extract one listing into a DataFrame.</li>
-            <li>Rewrite one of your <code>find_all</code> queries as a CSS <code>select</code> query, and vice versa, to build fluency in both.</li>
-            <li>Write your Learning Journal entry for this lesson.</li>
-        </ul>
-        <div class="card card-accent" style="text-align: center; padding: 2rem;">
-            <h3>🌟 Encouragement for the Journey</h3>
-            <p>The entire web just became a dataset you can work with. That's a genuine superpower — use it thoughtfully,
-            respect the sites you visit, and you'll never be short of data to explore. Great work!</p>
-        </div>
-    </section>
-
-    <!-- Navigation at the bottom -->
-    <nav class="lesson-nav" aria-label="Lesson navigation">
-        <a href="sql_nosql_mongodb.html" class="prev-lesson" aria-label="Previous lesson">Previous: NoSQL Basics (MongoDB)</a>
-        <a href="index.html" class="home-link" aria-label="Course home">Course Home</a>
-        <a href="webscraping_requests.html" class="next-lesson" aria-label="Next lesson">Next: Requests Library</a>
-    </nav>
-    
     </main>
 
-    <!-- Footer -->
     <footer class="site-footer">
         <p>&copy; 2026 Ray de la Paz. Python Data Science. All rights reserved.</p>
         <div class="footer-links">
@@ -1087,6 +1214,10 @@ print(scraping_best_practices)</code></pre>
             <a href="https://rays-home.netlify.app/contact">Contact</a>
             <a href="#" id="print-button">Print Page</a>
         </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
     </footer>
+
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
 </body>
 </html>

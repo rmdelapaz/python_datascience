@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Answer Key: Session 17</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Instructor copy —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">answers &amp; solutions · not for students</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Answer Key</div>
+    <h1>Session 17: Scraping Static and Dynamic Pages</h1>
+    <p class="sub">Answers, reasoning and reference output for Session 17: the 12 self-check items, predict-then-run answers, four lab solutions, both lesson quizzes, the warm-up and the exit ticket.</p>
+    <div class="meta-row">
+      <span class="chip">Session <b>17</b></span>
+      <span class="chip"><b>12</b> self-check items</span>
+      <span class="chip"><b>4</b> lab solutions</span>
+      <span class="chip">Confidential</span>
+    </div>
+  </header>
+
+  <div class="sec"><h2>How to Use This Key</h2><span class="rule"></span></div>
+<ul class="tick">
+  <li>The same 12 self-check items as the workbook with every option explained, then predict-then-run answers, lab reference solutions with real output, the lesson pages' quizzes, warm-up and exit ticket.</li>
+  <li>Lab output below is from real runs of the solutions. Offline (saved pages) and online (live shop, real headless Chrome) runs gave the same numbers.</li>
+  <li>Correct letters: Q1 C, Q3 A, Q4 D, Q5 B, Q7 B, Q9 C, Q10 D, Q11 A, Q12 D.</li>
+</ul>
+
+  <div class="sec"><h2>6.2 · Parsing HTML with Beautiful Soup: Self-check</h2><span class="rule"></span></div>
+<div class="q" data-sc="1"><div class="qn">Q1</div><div class="qt">Which call gives you <code class="inline">None</code> (not an empty list, not an exception) when nothing on the page matches?</div><div class="opts"><div class="opt">A) <code class="inline">soup.select("p.sale-price")</code></div><div class="opt">B) <code class="inline">soup.find_all("p", class_="sale-price")</code></div><div class="opt correct">C) <code class="inline">soup.select_one("p.sale-price")</code></div><div class="opt">D) <code class="inline">card["data-sale-price"]</code> on a card without that attribute</div></div><div class="why"><b>Why:</b> <code class="inline">select_one()</code> and <code class="inline">find()</code> return one element or <code class="inline">None</code>. Calling a method on that <code class="inline">None</code> is what produces <code class="inline">AttributeError: 'NoneType' object has no attribute ...</code>.<br><b>A</b> is wrong: <code class="inline">select()</code> always returns a list; with no match it is an empty list.<br><b>B</b> is wrong: <code class="inline">find_all()</code> also returns a list, empty when nothing matches.<br><b>D</b> is wrong: Square brackets on a missing attribute raise <code class="inline">KeyError</code>. Use <code class="inline">.get()</code> to receive <code class="inline">None</code> instead.</div></div>
+<div class="q" data-sc="2" data-kind="short"><div class="qn">Q2</div><div class="qt">What does this print?</div><pre class="code">soup = BeautifulSoup(<span class="s">'&lt;ul&gt;&lt;li class="card" data-sku="A1"&gt;&lt;b&gt;Tent&lt;/b&gt;&lt;/li&gt;'</span>
+                     <span class="s">'&lt;li class="card"&gt;&lt;b&gt;Stove&lt;/b&gt;&lt;/li&gt;&lt;/ul&gt;'</span>, <span class="s">"html.parser"</span>)
+print([li.get(<span class="s">"data-sku"</span>) <span class="k">for</span> li <span class="k">in</span> soup.select(<span class="s">"li.card"</span>)])</pre><div class="opts"><div class="opt correct"><code class="inline">['A1', None]</code></div></div><div class="why"><b>Why:</b> Both items match <code class="inline">li.card</code>. The first has a <code class="inline">data-sku</code>; the second has none, and <code class="inline">.get()</code> returns <code class="inline">None</code> instead of raising <code class="inline">KeyError</code>, the safe way to read an optional attribute.</div></div>
+<div class="q" data-sc="3"><div class="qn">Q3</div><div class="qt">Your loop follows <code class="inline">nav.pagination a.next</code> from page to page. How does it know it has reached the last page?</div><div class="opts"><div class="opt correct">A) On the last page "Next" is a plain <code class="inline">span</code>, so <code class="inline">select_one("nav.pagination a.next")</code> returns <code class="inline">None</code></div><div class="opt">B) The server answers the last page with a 404</div><div class="opt">C) The last page has no product cards</div><div class="opt">D) The loop counts to 13, the number of pages</div></div><div class="why"><b>Why:</b> The site marks the end itself: the last page has <code class="inline">span.next.disabled</code> instead of a link. The loop needs no page count, and <code class="inline">max_pages</code> stays as a seat belt.<br><b>B</b> is wrong: Every catalog page answers 200. Probing for a 404 sends one useless request and treats an error as normal.<br><b>C</b> is wrong: The last page has 2 cards. Stopping on an empty page would need one extra request past the end.<br><b>D</b> is wrong: A typed count is exactly what breaks when the shop adds products. Let the site say where the end is.</div></div>
+<div class="q" data-sc="4"><div class="qn">Q4</div><div class="qt">What does this print?</div><pre class="code">soup = BeautifulSoup(<span class="s">'&lt;p class="stock low-stock"&gt;Low stock&lt;/p&gt;'</span>, <span class="s">"html.parser"</span>)
+print(soup.p[<span class="s">"class"</span>], soup.p[<span class="s">"class"</span>][<span class="s">1</span>].replace(<span class="s">"-"</span>, <span class="s">"_"</span>))</pre><div class="opts"><div class="opt">A) <code class="inline">['stock low-stock'] low-stock</code></div><div class="opt">B) <code class="inline">stock low_stock</code></div><div class="opt">C) <code class="inline">['stock', 'low-stock'] low-stock</code></div><div class="opt correct">D) <code class="inline">['stock', 'low-stock'] low_stock</code></div></div><div class="why"><b>Why:</b> Beautiful Soup splits <code class="inline">class</code> into a list because an element can carry several classes. Element 1 is <code class="inline">low-stock</code>, and <code class="inline">.replace("-", "_")</code> turns it into <code class="inline">low_stock</code>.<br><b>A</b> is wrong: <code class="inline">class</code> is never one string with a space in it: it is a list of class names.<br><b>B</b> is wrong: The first value printed is the whole list, not its first element.<br><b>C</b> is wrong: The replace call changed the hyphen into an underscore.</div></div>
+<div class="q" data-sc="5"><div class="qn">Q5</div><div class="qt">Lesson 6.2 fetches <code class="inline">price-list.html</code> with <code class="inline">requests</code> and passes <code class="inline">io.BytesIO(resp.content)</code> to <code class="inline">pd.read_html()</code>, instead of giving <code class="inline">read_html</code> the URL. Why?</div><div class="opts"><div class="opt">A) <code class="inline">read_html</code> cannot read a URL</div><div class="opt correct">B) So that your User-Agent, your timeout and <code class="inline">raise_for_status()</code> apply, and pandas reads the exact bytes you checked</div><div class="opt">C) Bytes make <code class="inline">read_html</code> return numbers instead of text</div><div class="opt">D) <code class="inline">BytesIO</code> removes the second table</div></div><div class="why"><b>Why:</b> Fetching yourself keeps the polite habits of Session 16 (identify yourself, time out, check the status) and lets you save or reuse the bytes.<br><b>A</b> is wrong: It can, but then you have no say over the User-Agent, the timeout or what happens on an error.<br><b>C</b> is wrong: <code class="inline">read_html</code> reads what a person sees either way: <code class="inline">Price</code> still arrives as text such as <code class="inline">$299.95</code>.<br><b>D</b> is wrong: Both tables come back; you choose one with <code class="inline">attrs={"id": ...}</code>.</div></div>
+<div class="q" data-sc="6" data-kind="short"><div class="qn">Q6</div><div class="qt">What does this print?</div><pre class="code">html = (<span class="s">'&lt;table id="t"&gt;&lt;tr&gt;&lt;th&gt;City&lt;/th&gt;&lt;th&gt;Price&lt;/th&gt;&lt;/tr&gt;'</span>
+        <span class="s">'&lt;tr&gt;&lt;td&gt;Bend&lt;/td&gt;&lt;td&gt;$1,299.00&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;'</span>)
+t = pd.read_html(io.StringIO(html), attrs={<span class="s">"id"</span>: <span class="s">"t"</span>})[<span class="s">0</span>]
+print(t[<span class="s">"Price"</span>].dtype, t[<span class="s">"Price"</span>].str.replace(<span class="s">"[$,]"</span>, <span class="s">""</span>, regex=<span class="k">True</span>).astype(float)[<span class="s">0</span>])</pre><div class="opts"><div class="opt correct"><code class="inline">str 1299.0</code></div></div><div class="why"><b>Why:</b> <code class="inline">read_html</code> reads the visible text, so <code class="inline">$1,299.00</code> arrives as a string. Removing <code class="inline">$</code> and <code class="inline">,</code> with a regular-expression replace and converting with <code class="inline">astype(float)</code> gives 1299.0.</div></div>
+
+  <div class="sec"><h2>6.3 · Dynamic Pages with Selenium: Self-check</h2><span class="rule"></span></div>
+<div class="q" data-sc="7"><div class="qn">Q7</div><div class="qt"><code class="inline">requests</code> gets the Search page and finds 0 results in <code class="inline">#search-results</code>, while the browser shows 24. What should you try first?</div><div class="opts"><div class="opt">A) Drive a headless browser with <code class="inline">time.sleep(5)</code> after <code class="inline">get()</code></div><div class="opt correct">B) Find the data file the page loads (Network tab, or read its script) and, if you may, request it directly</div><div class="opt">C) Send a browser's User-Agent so the server sends the full page</div><div class="opt">D) Use <code class="inline">pd.read_html</code> on the page instead</div></div><div class="why"><b>Why:</b> The page's own script fills the list from a data file (<code class="inline">products.json</code>). One request for the file is faster, lighter for the server and sturdier than any browser automation.<br><b>A</b> is wrong: A browser is the last resort, and a fixed sleep is always too short or too long.<br><b>C</b> is wrong: The server sent the same HTML it sends everyone; the list is empty until JavaScript runs. Disguising your script also breaks the ground rules.<br><b>D</b> is wrong: There is no table in the HTML that <code class="inline">requests</code> received, and the results are not a table anyway.</div></div>
+<div class="q" data-sc="8" data-kind="short"><div class="qn">Q8</div><div class="qt">What does this print?</div><pre class="code">print(urlencode({<span class="s">"q"</span>: <span class="s">""</span>, <span class="s">"category"</span>: <span class="s">"Snow"</span>, <span class="s">"max_price"</span>: <span class="s">""</span>, <span class="s">"in_stock"</span>: <span class="s">1</span>}))</pre><div class="opts"><div class="opt correct"><code class="inline">q=&amp;category=Snow&amp;max_price=&amp;in_stock=1</code></div></div><div class="why"><b>Why:</b> <code class="inline">urlencode</code> writes every pair, empty ones included, in dictionary order, joined by <code class="inline">&amp;</code>. This is the exact query string the shop's search form sends when the text boxes are left empty.</div></div>
+<div class="q" data-sc="9"><div class="qn">Q9</div><div class="qt">Which line waits correctly for the deals status line to exist?</div><div class="opts"><div class="opt">A) <code class="inline">time.sleep(3)</code></div><div class="opt">B) <code class="inline">WebDriverWait(driver, 10).until(EC.presence_of_element_located(By.ID, "deal-status"))</code></div><div class="opt correct">C) <code class="inline">WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "deal-status")))</code></div><div class="opt">D) <code class="inline">driver.find_element(By.ID, "deal-status")</code></div></div><div class="why"><b>Why:</b> An explicit wait with the locator as ONE tuple: <code class="inline">(By.ID, "deal-status")</code>. It continues the moment the element exists and raises <code class="inline">TimeoutException</code> after 10 seconds if it never does.<br><b>A</b> is wrong: A fixed sleep is too short on a slow day and wasted time on a fast one.<br><b>B</b> is wrong: The inner parentheses are missing: the condition receives two arguments instead of one locator tuple, and fails with a <code class="inline">TypeError</code>.<br><b>D</b> is wrong: That looks once, immediately, and raises <code class="inline">NoSuchElementException</code> if the script has not finished.</div></div>
+<div class="q" data-sc="10"><div class="qn">Q10</div><div class="qt">After clicking Submit on the GET search form, the demo waits twice: first <code class="inline">EC.url_contains("category=Packs")</code>, then for <code class="inline">#search-results[data-loaded="true"]</code>. Why not only the second wait?</div><div class="opts"><div class="opt">A) The second condition is slower</div><div class="opt">B) <code class="inline">url_contains</code> is the only wait that raises on failure</div><div class="opt">C) The form submits twice</div><div class="opt correct">D) The OLD page's results are already marked loaded, so the second wait alone could pass instantly, before the new page arrives</div></div><div class="why"><b>Why:</b> Submitting loads a new page. Until it arrives, the old page still satisfies the results condition. Waiting for the address first guarantees you are looking at the new page.<br><b>A</b> is wrong: Speed is not the issue; correctness is.<br><b>B</b> is wrong: Every <code class="inline">wait.until</code> raises <code class="inline">TimeoutException</code> when its limit passes.<br><b>C</b> is wrong: One click, one new page.</div></div>
+<div class="q" data-sc="11"><div class="qn">Q11</div><div class="qt">You stored <code class="inline">status = driver.find_element(By.ID, "deal-status")</code>, called <code class="inline">driver.refresh()</code>, and now <code class="inline">status.text</code> raises <code class="inline">StaleElementReferenceException</code>. What happened?</div><div class="opts"><div class="opt correct">A) The handle pointed at an element in the page that was replaced; find the element again after anything changes the page</div><div class="opt">B) The browser crashed and must be restarted</div><div class="opt">C) The element's text was empty</div><div class="opt">D) The wait limit was too short</div></div><div class="why"><b>Why:</b> A WebElement is a handle on one element in one loaded page. Store the data you read, not the element.<br><b>B</b> is wrong: The browser is fine; only the old handle is dead.<br><b>C</b> is wrong: An empty text is just <code class="inline">""</code>, not an exception.<br><b>D</b> is wrong: No wait is involved: the element you hold no longer exists.</div></div>
+<div class="q" data-sc="12"><div class="qn">Q12</div><div class="qt">What is in <code class="inline">driver.page_source</code> after the deals have loaded and Load more was clicked twice?</div><div class="opts"><div class="opt">A) The HTML exactly as the server sent it, with an empty deal list</div><div class="opt">B) Only the 24 deal elements, without the rest of the page</div><div class="opt">C) The JSON from <code class="inline">deals.json</code></div><div class="opt correct">D) The page's HTML as it is now, after its scripts ran: all 24 deals are in it</div></div><div class="why"><b>Why:</b> <code class="inline">page_source</code> is the current document, which is why Beautiful Soup finds the deals in it while the soup from <code class="inline">requests</code> found none.<br><b>A</b> is wrong: That is what <code class="inline">requests</code> receives.<br><b>B</b> is wrong: It is the whole document: head, banner, navigation and all.<br><b>C</b> is wrong: The page fetched that file, but <code class="inline">page_source</code> is HTML, not the data file.</div></div>
+
+  <div class="sec"><h2>Predict, Then Run: Answers</h2><span class="rule"></span></div>
+<div class="blk"><div class="h">6.2</div>
+<p><b>1.</b></p>
+<pre class="out">2 1
+None
+None</pre>
+<p>Two elements carry the class <code class="inline">price</code>; one carries <code class="inline">sale</code>. The sale paragraph has no <code class="inline">data-price</code>, so <code class="inline">.get()</code> gives <code class="inline">None</code>, and <code class="inline">select_one</code> with no match gives <code class="inline">None</code> too. Common wrong answer: <code class="inline">[]</code> for the last line (that is what <code class="inline">select</code> returns).</p>
+<p><b>2.</b></p>
+<pre class="out">https://example.com/shop/page-4.html
+https://example.com/robots.txt
+https://example.com/shop/products/A-1.html</pre>
+<p><code class="inline">urljoin</code> resolves like a browser: a bare name replaces the last part of the path, <code class="inline">../</code> goes up one folder, and a path starting with <code class="inline">/</code> starts again at the site root. Common wrong answer: <code class="inline">https://example.com/shop/robots.txt</code> for the second line.</p>
+<p><b>3.</b></p>
+<pre class="out">'★ 4.2 (31 reviews)'
+'★ 4.2 | (31 reviews)'
+31</pre>
+<p>With no arguments <code class="inline">get_text()</code> keeps the inner spacing as it is; a separator plus <code class="inline">strip=True</code> gives tidy pieces. The regular expression <code class="inline">\d+</code> takes the first run of digits from <code class="inline">(31 reviews)</code>.</p>
+</div>
+<div class="blk"><div class="h">6.3</div>
+<p><b>1.</b></p>
+<pre class="out">Deals | Pinecrest Outfitters (practice site)
+0 deals right after get()</pre>
+<p>Zero: <code class="inline">get()</code> returned before the page's script had added the deals. This is the race that explicit waits solve.</p>
+<p><b>2.</b></p>
+<pre class="out">[]
+NoSuchElementException</pre>
+<p><code class="inline">find_elements</code> returns an empty list; <code class="inline">find_element</code> raises <code class="inline">NoSuchElementException</code>. Common wrong answer: "both return None".</p>
+<p><b>3.</b></p>
+<pre class="out">q=rain+jacket&amp;category=Apparel&amp;in_stock=1</pre>
+<p>The space becomes <code class="inline">+</code>, the pairs keep dictionary order, and <code class="inline">1</code> becomes the text <code class="inline">1</code>.</p>
+</div>
+
+  <div class="sec"><h2>Lab Reference Solutions</h2><span class="rule"></span></div>
+<div class="blk"><div class="h">Lab 6.2-A · sleeping_bag_shortlist_solution.py</div>
+<p>File: <code class="inline">labs/module-17/l6_2-beautifulsoup/sleeping_bag_shortlist_solution.py</code>. Output of a real run:</p>
+<pre class="out">mode: offline (saved pages in _fixtures/)
+1. cards on the page: 24 | the page claims: 24 | match: True
+2. listing: (24, 6) | unique SKUs: True
+     sku                                    name  price  rating stock_status
+SLP-1001       Pinecrest Summit 20F Sleeping Bag 307.95     4.8     in_stock
+SLP-1002  Juniper Vane Foothill 30F Sleeping Bag 132.95     4.5     in_stock
+SLP-1003       Tallgrass Lookout 0F Sleeping Bag 513.95     4.2    low_stock
+SLP-1004 Larkspur Ridge Backcountry Sleeping Pad 187.95     4.0     in_stock
+   stock: {'in_stock': 20, 'low_stock': 3, 'out_of_stock': 1}
+3. sleeping bags on the page: 12 | at $260 or less and available: 6
+   detail pages to fetch: 6 (not 24)
+4. details as scraped:
+     sku             type     weight warranty
+SLP-1002 30F Sleeping Bag    0.81 kg  2 years
+SLP-1007 20F Sleeping Bag    1.26 kg  2 years
+SLP-1008 30F Sleeping Bag    0.95 kg  2 years
+SLP-1014 30F Sleeping Bag    0.95 kg  2 years
+SLP-1015  0F Sleeping Bag    1.73 kg  2 years
+SLP-1019 20F Sleeping Bag Not listed Lifetime
+5. the shortlist, lightest first:
+     sku                                     name  price  rated_to_f  weight_kg warranty
+SLP-1002   Juniper Vane Foothill 30F Sleeping Bag 132.95          30       0.81  2 years
+SLP-1008       Cedar Notch Drift 30F Sleeping Bag 155.95          30       0.95  2 years
+SLP-1014       Quillback Skyline 30F Sleeping Bag 121.95          30       0.95  2 years
+SLP-1007 Granite Fork Switchback 20F Sleeping Bag 138.95          20       1.26  2 years
+SLP-1015        Cedar Notch Ember 0F Sleeping Bag 252.95           0       1.73  2 years
+SLP-1019     Pinecrest Headwater 20F Sleeping Bag 249.95          20        NaN Lifetime
+6. Lightest: Juniper Vane Foothill 30F Sleeping Bag (SLP-1002), 0.81 kg, $132.95, 2 years warranty.
+   No weight listed for: SLP-1019. That is 'unknown', not 'zero' and not 'heaviest'.
+   Warranties: {'2 years': 5, 'Lifetime': 1}
+   saved: sleeping_bag_shortlist.csv in the output folder, 6 rows</pre><ul class="tick">
+  <li><b>TODO 2</b> <code class="inline">float(card.select_one("p.price")["data-price"])</code>; <code class="inline">card.select_one("p.rating").get("data-rating")</code> then <code class="inline">float(...) if rating else None</code>; <code class="inline">card.select_one("p.stock")["class"][1].replace("-", "_")</code>.</li>
+  <li><b>TODO 3</b> <code class="inline">listing[is_bag &amp; (listing["price"] &lt;= 260) &amp; (listing["stock_status"] != "out_of_stock")]</code>: narrowing BEFORE fetching detail pages means 6 requests, not 24.</li>
+  <li><b>TODO 4</b> <code class="inline">{tr.th.get_text(strip=True): tr.td.get_text(strip=True) for tr in soup.select("table.specs tr")}</code> and <code class="inline">specs.get("Weight")</code>.</li>
+  <li><b>TODO 5</b> <code class="inline">pd.to_numeric(details["weight"].str.replace(" kg", ""), errors="coerce")</code> turns <code class="inline">Not listed</code> into NaN; <code class="inline">str.extract(r"(\d+)F")</code> pulls the temperature out of the type.</li>
+  <li><b>The honest sentence:</b> SLP-1019 has no listed weight, so it cannot be ranked; it is not the heaviest.</li>
+</ul>
+<p><b>Common wrong answers.</b> A <code class="inline">KeyError: 'data-rating'</code> (square brackets on an optional attribute). 24 detail requests (fetching before filtering). SLP-1019 reported as lightest or heaviest (NaN read as a number).</p>
+</div>
+<div class="blk"><div class="h">Lab 6.2-B · price_list_tables_solution.py</div>
+<p>File: <code class="inline">labs/module-17/l6_2-beautifulsoup/price_list_tables_solution.py</code>. Output of a real run:</p>
+<pre class="out">mode: offline (saved pages in _fixtures/)
+1. tables on the page: 2 | shapes: [(242, 6), (4, 4)]
+   chosen by id: (242, 6) ['SKU', 'Product', 'Category', 'Price', 'Rating', 'Availability'] | (4, 4) ['City', 'State', 'Open daily', 'Phone']
+2. Price arrives as: str | first value: '$299.95'
+   after cleaning: float64 | total of all list prices: 29475.9
+3. availability by category:
+Availability  In stock  Low stock  Out of stock
+Category                                       
+Accessories         25          5             2
+Apparel             26          7             2
+Camp Kitchen        26          2             1
+Climbing            20          3             1
+Footwear            23          3             2
+Packs               20          1             3
+Sleeping            20          3             1
+Snow                17          3             2
+Tents               21          2             1
+   a) most out of stock: Packs (3 products)
+4. b) products with no rating: 8 | {'Footwear': 3, 'Packs': 2, 'Accessories': 2, 'Camp Kitchen': 1}
+   mean rating, missing left missing: 4.138 | if they had been stored as 0: 4.001
+5. store hours:
+     City State    Open daily  hours_open
+    Boise    ID  9 am to 8 pm          11
+     Bend    OR  9 am to 7 pm          10
+Flagstaff    AZ 10 am to 7 pm           9
+Asheville    NC 10 am to 8 pm          10
+   c) open longest: Boise (11 hours a day)
+6. Accessories: rows in the price list 32 | cards on the category page 32 | matched 32
+   prices agree: True | 'has a rating' agrees: True
+   unrated on the category page: ['ACC-1009', 'ACC-1011']
+7. saved price_list_clean.csv in the output folder: (242, 6)</pre><ul class="tick">
+  <li><b>Tables by id</b>, not by position: <code class="inline">attrs={"id": "price-list"}</code> and <code class="inline">attrs={"id": "store-hours"}</code>.</li>
+  <li><code class="inline">Price</code> arrives as text; <code class="inline">.str.replace("[$,]", "", regex=True).astype(float)</code> gives the same total as the card scrape in the lesson (29,475.90).</li>
+  <li><code class="inline">pd.crosstab(prices["Category"], prices["Availability"])</code> answers (a); keeping missing ratings missing gives a mean of 4.138, while zeros would drag it to 4.001.</li>
+  <li>Store hours: <code class="inline">str.extract(r"(\d+) am to (\d+) pm")</code>, then add 12 to the closing hour.</li>
+</ul>
+<p><b>Common wrong answers.</b> <code class="inline">tables[0]</code> and <code class="inline">tables[1]</code> used without the id (works today, fragile). A total of <code class="inline">nan</code> or a <code class="inline">TypeError</code> (the <code class="inline">$</code> was not removed). Store hours of -1 (forgetting that the closing time is pm).</p>
+</div>
+<div class="blk"><div class="h">Lab 6.3-A · budget_search_solution.py</div>
+<p>File: <code class="inline">labs/module-17/l6_3-selenium/budget_search_solution.py</code>. Output of a real offline run (the online run with headless Chrome printed the same numbers, without the <code class="inline">[offline]</code> line):</p>
+<pre class="out">mode: offline (saved pages in _fixtures/, no browser)
+1. through requests: 0 results | count line: 'Loading…'
+2. query string: max_price=50&amp;in_stock=1
+3. rendering the search page:
+   [offline] no browser started; reading the saved finished page rendered_search_budget.html
+4. parsed from the finished page: (60, 4) | highest price: 49.95
+     sku                              name category  price
+TNT-1016 Quillback Foothill Tent Footprint    Tents  41.95
+TNT-1024  Cedar Notch Cairn Tent Footprint    Tents  41.95
+SLP-1006 Pinecrest Backcountry Camp Pillow Sleeping  30.95
+5. the page says: '73 products found' | rows parsed: 60 | MISMATCH
+6. files the page's script fetches: ['deals.json', 'products.json']
+   products.json: (242, 9) | $50 or less and available: 73
+   the page shows the first 60 of them: True
+7. budget products by category:
+              on_the_page  in_the_data  not_shown
+category                                         
+Accessories             2           15         13
+Camp Kitchen           15           15          0
+Apparel                14           14          0
+Footwear               10           10          0
+Climbing                9            9          0
+Packs                   3            3          0
+Sleeping                3            3          0
+Snow                    2            2          0
+Tents                   2            2          0
+   13 products are in the data but not on the page, all in: ['Accessories']
+   saved budget_shelf.csv in the output folder: 73 rows</pre><ul class="tick">
+  <li><b>TODO 1</b> <code class="inline">urlencode({"max_price": 50, "in_stock": 1})</code> gives <code class="inline">max_price=50&amp;in_stock=1</code>.</li>
+  <li><b>TODO 2</b> <code class="inline">wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '#search-results[data-loaded="true"]')), message=...)</code>: the page's own "finished" signal.</li>
+  <li><b>TODO 3 and 4</b> the result cards have no <code class="inline">data-price</code>, so <code class="inline">float(text.lstrip("$"))</code>; the count is <code class="inline">int(re.search(r"\d+", count_text).group())</code>.</li>
+  <li><b>TODO 5</b> <code class="inline">shop[(shop["price"] &lt;= 50) &amp; (shop["stock_status"] != "out_of_stock")]</code>: 73 rows.</li>
+  <li><b>The finding:</b> the page renders only its first 60 matches. The count line (73) and the data file catch it; a scraper that trusted the rows would report 60 and miss 13 Accessories.</li>
+</ul>
+<p><b>Common wrong answers.</b> 0 rows (no wait, or <code class="inline">time.sleep</code> too short on a slow machine). 60 reported as the answer. 242 in step 6 (the filter in TODO 5 not applied).</p>
+</div>
+<div class="blk"><div class="h">Lab 6.3-B · page_triage_solution.py</div>
+<p>File: <code class="inline">labs/module-17/l6_3-selenium/page_triage_solution.py</code>. Output of a real offline run:</p>
+<pre class="out">mode: offline (saved pages in _fixtures/, no browser)
+1. raw HTML of Climbing category  status 200 | items: 24
+1. raw HTML of Deals              status 200 | items: 0
+1. raw HTML of Search             status 200 | items: 0
+2. rendering Climbing category:
+   [offline] no browser started; reading the saved finished page rendered_category-climbing.html
+   items after JavaScript: 24
+2. rendering Deals:
+   [offline] no browser started; reading the saved finished page rendered_deals.html
+   items after JavaScript: 8
+2. rendering Search:
+   [offline] no browser started; reading the saved finished page rendered_search_climbing.html
+   items after JavaScript: 24
+   deals status line: 'Showing 8 of 24 deals' | search count line: '24 products found'
+3. files the pages' script fetches: ['deals.json', 'products.json']
+4. triage:
+                   in_raw_html  after_javascript                               verdict
+Climbing category           24                24     static: requests + Beautiful Soup
+Deals                        0                 8  dynamic: request the data file first
+Search                       0                24  dynamic: request the data file first
+5. Climbing: category page 24 SKUs | search through the form 24 SKUs | same set: True
+6. Deals: 8 on the finished page | 24 in deals.json | one request for the file beats a browser plus 2 clicks
+   saved page_triage.csv in the output folder: 3 rows</pre><ul class="tick">
+  <li><b>TODO 1</b> the item selectors: <code class="inline">#deal-list li.deal</code> and <code class="inline">#search-results li</code>.</li>
+  <li><b>TODO 2</b> wait for the first deal; <b>TODO 3</b> <code class="inline">Select(...).select_by_visible_text("Climbing")</code>, submit, then two waits (<code class="inline">url_contains</code>, then the results flag).</li>
+  <li><b>TODO 4</b> static when raw and finished counts agree and are not zero; dynamic when the raw count is 0 and the finished one is not.</li>
+  <li>The form search and the category page agree (24 SKUs, same set); the Deals page shows 8 of the 24 in <code class="inline">deals.json</code>.</li>
+</ul>
+</div>
+
+  <div class="sec"><h2>Lesson Quiz Answers</h2><span class="rule"></span></div>
+<div class="blk"><div class="h">Lesson 6.2: Parsing HTML with Beautiful Soup</div>
+<p>The five-question quiz at the end of <code class="inline">webscraping_beautifulsoup.html</code> (three options each).</p>
+<table class="rubric"><thead><tr><th>Item</th><th>Answer</th><th>Reason</th></tr></thead><tbody>
+<tr><td class="crit">Question 1</td><td><b>C</b></td><td>A class selector matches any element whose class list includes it: 2 and 1; <code class="inline">select_one</code> returns <code class="inline">None</code> for no match.</td></tr>
+<tr><td class="crit">Question 2</td><td><b>A</b></td><td>That card has no <code class="inline">span.review-count</code>, so <code class="inline">select_one()</code> returned <code class="inline">None</code>.</td></tr>
+<tr><td class="crit">Question 3</td><td><b>B</b></td><td><code class="inline">li.product-card p.price</code> names block and field by meaning, not position.</td></tr>
+<tr><td class="crit">Question 4</td><td><b>B</b></td><td>Follow "next" until there is none, with a page limit as a seat belt.</td></tr>
+<tr><td class="crit">Question 5</td><td><b>A</b></td><td>From bytes, the parser reads the page's own charset declaration.</td></tr>
+</tbody></table>
+</div>
+<div class="blk"><div class="h">Lesson 6.3: Dynamic Pages with Selenium</div>
+<p>The five-question quiz at the end of <code class="inline">webscraping_selenium.html</code> (three options each).</p>
+<table class="rubric"><thead><tr><th>Item</th><th>Answer</th><th>Reason</th></tr></thead><tbody>
+<tr><td class="crit">Question 1</td><td><b>B</b></td><td>The deals are added by JavaScript after load; <code class="inline">requests</code> does not run JavaScript.</td></tr>
+<tr><td class="crit">Question 2</td><td><b>A</b></td><td>An explicit wait continues as soon as the content is ready and raises clearly if it never is.</td></tr>
+<tr><td class="crit">Question 3</td><td><b>C</b></td><td><code class="inline">find_elements</code> returns an empty list; <code class="inline">find_element</code> raises <code class="inline">NoSuchElementException</code>.</td></tr>
+<tr><td class="crit">Question 4</td><td><b>B</b></td><td>Request the JSON the page itself uses.</td></tr>
+<tr><td class="crit">Question 5</td><td><b>C</b></td><td>The browser keeps running until something ends it: <code class="inline">quit()</code> belongs in <code class="inline">finally</code>.</td></tr>
+</tbody></table>
+</div>
+
+  <div class="sec"><h2>Warm-up and Exit Ticket Answers</h2><span class="rule"></span></div>
+<div class="blk"><div class="h">Warm-up (retrieval from Session 16)</div>
+<ol class="steps">
+  <li>In a pymongo query, what does <code class="inline">{"utm": None}</code> match? <b>Answer:</b> Documents where <code class="inline">utm</code> is null <b>and</b> documents where it is missing. <code class="inline">$exists</code> tells the two apart.</li>
+  <li>Which aggregation stage does what pandas <code class="inline">explode</code> does? <b>Answer:</b> <code class="inline">$unwind</code>: one document per element of a list.</li>
+  <li><code class="inline">requests.get()</code> comes back with status 404. Has an exception been raised? <b>Answer:</b> No. You hold a normal response with <code class="inline">.ok</code> False; <code class="inline">r.raise_for_status()</code> makes it loud.</li>
+  <li>Why does every request in this course carry <code class="inline">timeout=</code>? <b>Answer:</b> Without it <code class="inline">requests</code> waits forever for a server that has gone quiet.</li>
+  <li>You see <code class="inline">â˜…</code> where a star should be. What happened, and what is one fix? <b>Answer:</b> UTF-8 bytes were decoded with the wrong table (no charset sent). Set <code class="inline">r.encoding = "utf-8"</code>, or hand <code class="inline">r.content</code> to a parser that reads the page's <code class="inline">&lt;meta charset&gt;</code>.</li>
+</ol>
+</div>
+<div class="blk"><div class="h">Exit ticket</div>
+<ol class="steps">
+  <li>Which Beautiful Soup method returns <code class="inline">None</code> when nothing matches, and which returns an empty list? <b>Answer:</b> <code class="inline">select_one()</code> (and <code class="inline">find()</code>) return <code class="inline">None</code>; <code class="inline">select()</code> (and <code class="inline">find_all()</code>) return a list, empty if nothing matches.</li>
+  <li>Why is <code class="inline">WebDriverWait(...).until(...)</code> better than <code class="inline">time.sleep(5)</code>? <b>Answer:</b> It continues the moment the condition is true and raises a clear <code class="inline">TimeoutException</code> if it never is. A sleep is always too short or too long.</li>
+  <li>Before you start a browser for a page that JavaScript fills in, what do you look for first? <b>Answer:</b> The data file or API the page loads (Network tab, or the page's script). If you may request it, do that instead.</li>
+</ol>
+<p><b>What wrong answers reveal.</b> "<code class="inline">select</code> returns None": mixing the two families; redo predict item 1. "Sleep is fine if it is long enough": the cost has not landed; ask what a thousand pages times five seconds is. "Use Selenium" for question 3: the order of the routes needs another pass at the start of Session 18.</p>
+</div>
+
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 17 · Answer Key · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

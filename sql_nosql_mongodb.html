@@ -3,1382 +3,1301 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Learn NoSQL databases with MongoDB. Master document stores, aggregation pipelines, and when to choose NoSQL over SQL.">
-    <title>NoSQL Basics (MongoDB) - Python Data Science Path</title>
+    <meta name="description" content="Store and query nested documents with MongoDB and pymongo: CRUD, query operators, projections, the aggregation pipeline, indexes, and flattening results into a pandas DataFrame. Python Data Science Lesson 5.5.">
+    <meta name="author" content="Ray de la Paz">
+    <title>NoSQL with MongoDB - Python Data Science</title>
     <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/enhanced.css">
-    <link rel="icon" href="/favicon.png" type="image/png">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid: rendered (and re-rendered on theme change) by js/course-enhancements.js -->
     <script type="module">
-      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-      mermaid.initialize({ startOnLoad: true });
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        window.__mermaid = mermaid;
+        mermaid.initialize({ startOnLoad: false });
+        document.dispatchEvent(new Event('mermaid-ready'));
     </script>
-    <script src="js/course-enhancements.js" defer></script>
-    <link rel="stylesheet" href="styles/standard.css">
 </head>
 <body>
-    <!-- Skip to main content for accessibility -->
     <a href="#main-content" class="skip-to-main">Skip to main content</a>
-    
-    <!-- Progress indicator -->
+
     <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
         <div class="progress-bar"></div>
     </div>
-    
+
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">📊 Python Data Science</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">☰</button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
+    </nav>
+
     <main id="main-content">
-    <header role="banner">
-        <h1>NoSQL Basics (MongoDB)</h1>
+        <div class="container">
+            <header>
+                <h1>🍃 Lesson 5.5: NoSQL with MongoDB</h1>
+                <p class="lead">Not all data is rows and columns. Meet the document database, where a record can hold lists and nested objects, and learn to query it and bring the answers back into pandas.</p>
 
-    <!-- What You'll Learn (learning objectives) -->
-    <div class="card card-info">
-        <h2>📚 What You'll Learn</h2>
-        <p>By the end of this lesson, you will be able to:</p>
-        <ul>
-            <li>Explain how NoSQL document databases differ from relational databases and decide when each fits</li>
-            <li>Connect to MongoDB with PyMongo and perform full CRUD operations on documents</li>
-            <li>Build queries using comparison, logical, element, and array operators</li>
-            <li>Compose aggregation pipelines with stages like <code>$match</code>, <code>$group</code>, <code>$unwind</code>, <code>$lookup</code>, and <code>$facet</code></li>
-            <li>Model data by choosing between embedding and referencing, and apply common schema design patterns</li>
-            <li>Index collections for performance and move data between MongoDB and pandas for analysis</li>
-        </ul>
-        <p><strong>⏱️ Estimated Time:</strong> 45–60 minutes</p>
-        <p><strong>🎯 Project:</strong> Model an e-commerce dataset as MongoDB documents, load it, and answer a business question with a multi-stage aggregation pipeline, then bring the results into pandas.</p>
-    </div>
-        <div class="reading-time" aria-label="Estimated reading time"></div>
-    </header>
-    
-    <!-- Breadcrumb Navigation -->
-    <nav class="breadcrumb" aria-label="Breadcrumb">
-        <a href="index.html">Home</a>
-        <span class="separator">›</span>
-        <a href="#">Intermediate Module</a>
-        <span class="separator">›</span>
-        <a href="#">SQL for Data Scientists</a>
-        <span class="separator">›</span>
-        <span class="current">NoSQL Basics (MongoDB)</span>
-    </nav>
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Explain how a document differs from a row, and judge when a document store fits a dataset better than relational tables</li>
+                        <li>Insert, find, update and delete documents with <code>pymongo</code></li>
+                        <li>Write queries with operators, dot notation and array conditions, and choose the fields returned with a projection</li>
+                        <li>Build an aggregation pipeline with <code>$match</code>, <code>$group</code>, <code>$sort</code>, <code>$unwind</code> and <code>$addFields</code>, and relate each stage to SQL and pandas</li>
+                        <li>Create indexes on a collection and flatten nested results into a tidy DataFrame</li>
+                    </ul>
+                </div>
 
-    <h2>Beyond Relational: Document Databases for Modern Data! 🚀</h2>
-    
-    <blockquote>
-        <p>NoSQL databases offer flexibility and scalability that traditional SQL databases sometimes can't match. MongoDB, the leading document database, stores data in flexible JSON-like documents, making it perfect for unstructured data, real-time analytics, and modern applications. Learn when and how to leverage NoSQL in your data science projects!</p>
-    </blockquote>
+                <ul class="lesson-meta">
+                    <li><span class="meta-label">⏱️ Time</span> 95 minutes</li>
+                    <li><span class="meta-label">📋 Prerequisites</span> <a href="sql_database_connections.html">Lesson 5.1: Database Connections</a> and <a href="sql_query_optimization.html">Lesson 5.4: Query Optimization</a>; <code>pd.json_normalize</code> from <a href="pandas_data_loading.html">Lesson 2.2: Loading Data</a></li>
+                    <li><span class="meta-label">🛠️ You will build</span> A website funnel report: sessions to cart to checkout to order, overall and by device, with a chart</li>
+                    <li><span class="meta-label">📂 Data</span> <code>data/web_sessions.json</code>, <code>data/orders.csv</code> for checking</li>
+                </ul>
+            </header>
 
-    <h2>SQL vs NoSQL: Understanding the Differences</h2>
-    
-    <div class="mermaid">
-    graph TD
-        A[Database Types] --> B[SQL/Relational]
-        A --> C[NoSQL]
-        
-        B --> D[PostgreSQL]
-        B --> E[MySQL]
-        B --> F[SQL Server]
-        
-        C --> G[Document: MongoDB]
-        C --> H[Key-Value: Redis]
-        C --> I[Column: Cassandra]
-        C --> J[Graph: Neo4j]
-        
-        G --> K[JSON Documents]
-        H --> L[Simple Pairs]
-        I --> M[Wide Columns]
-        J --> N[Nodes & Edges]
-    </div>
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#documents" class="toc-link">Documents vs Rows</a></li>
+                        <li><a href="#when" class="toc-link">When a Document Store Fits</a></li>
+                        <li><a href="#connect" class="toc-link">Connecting with pymongo</a></li>
+                        <li><a href="#crud" class="toc-link">CRUD: Create, Read, Update, Delete</a></li>
+                        <li><a href="#operators" class="toc-link">Query Operators</a></li>
+                        <li><a href="#projection" class="toc-link">Projections, Sorting and Limits</a></li>
+                        <li><a href="#pipeline" class="toc-link">The Aggregation Pipeline</a></li>
+                        <li><a href="#indexes" class="toc-link">Indexes</a></li>
+                        <li><a href="#pandas" class="toc-link">Flattening into a DataFrame</a></li>
+                        <li><a href="#mistakes" class="toc-link">Common Mistakes</a></li>
+                        <li><a href="#project" class="toc-link">Project: The Funnel Report</a></li>
+                        <li><a href="#exercises" class="toc-link">Hands-on Exercises</a></li>
+                        <li><a href="#quiz" class="toc-link">Quick Quiz</a></li>
+                        <li><a href="#faq" class="toc-link">Common Questions</a></li>
+                        <li><a href="#journal" class="toc-link">Learning Journal</a></li>
+                        <li><a href="#summary" class="toc-link">Lesson Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
 
-    <h3>When to Use NoSQL</h3>
-    <pre class="language-python"><code># Comparison: SQL vs NoSQL Use Cases
+            <!-- ============================================================ -->
+            <section id="documents" class="lesson-section">
+                <h2>📄 Documents vs Rows</h2>
 
-sql_use_cases = {
-    "ACID Compliance": "Financial transactions",
-    "Complex Joins": "Multi-table relationships",
-    "Structured Data": "Fixed schema requirements",
-    "Strong Consistency": "Inventory management",
-    "SQL Expertise": "Business intelligence tools"
-}
+                <p>Pinecrest's website records every visit as a <strong>session</strong>. Look at one, straight from <code>data/web_sessions.json</code>.</p>
 
-nosql_use_cases = {
-    "Flexible Schema": "Varying data structures",
-    "Horizontal Scaling": "Distributed systems",
-    "Big Data": "High volume/velocity",
-    "Real-time": "IoT sensor data",
-    "Document Storage": "Content management",
-    "Nested Data": "JSON/XML documents",
-    "Geographic Distribution": "Global applications"
-}
+                <pre><code class="language-python">import json
+from pprint import pprint
 
-# Decision matrix
-def choose_database(requirements):
-    """Simple decision helper for SQL vs NoSQL"""
-    
-    sql_score = 0
-    nosql_score = 0
-    
-    if requirements.get('needs_transactions'):
-        sql_score += 2
-    if requirements.get('fixed_schema'):
-        sql_score += 2
-    if requirements.get('complex_queries'):
-        sql_score += 2
-    
-    if requirements.get('flexible_schema'):
-        nosql_score += 2
-    if requirements.get('horizontal_scaling'):
-        nosql_score += 2
-    if requirements.get('nested_documents'):
-        nosql_score += 2
-    
-    return "SQL" if sql_score > nosql_score else "NoSQL"</code></pre>
+with open("data/web_sessions.json", encoding="utf-8") as f:
+    data = json.load(f)
 
-    <h2>MongoDB Installation and Setup</h2>
-    
-    <pre class="language-python"><code># Install MongoDB and PyMongo
-"""
-# Install MongoDB (varies by OS)
-# macOS: brew install mongodb-community
-# Ubuntu: sudo apt-get install mongodb
-# Windows: Download installer from mongodb.com
+sessions = data["sessions"]
+print(len(sessions), "sessions,", data["period"]["start"], "to", data["period"]["end"])
+pprint(sessions[1], sort_dicts=False, width=100)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>2400 sessions, 2025-11-01 to 2025-11-30
+{'session_id': 'S00002',
+ 'customer_id': None,
+ 'started_at': '2025-11-01T06:48:03',
+ 'device': {'type': 'desktop', 'os': 'macOS', 'browser': 'Safari'},
+ 'utm': {'source': 'newsletter', 'medium': 'email', 'campaign': 'november_trail_notes'},
+ 'pages': [{'path': '/', 'seconds': 18, 'at': '2025-11-01T06:48:03'},
+           {'path': '/product/TNT-1003', 'seconds': 38, 'at': '2025-11-01T06:48:21'},
+           {'path': '/category/camp-kitchen', 'seconds': 41, 'at': '2025-11-01T06:48:59'},
+           {'path': '/product/ACC-1004', 'seconds': 84, 'at': '2025-11-01T06:49:40'},
+           {'path': '/category/climbing', 'seconds': 44, 'at': '2025-11-01T06:51:04'},
+           {'path': '/cart', 'seconds': 94, 'at': '2025-11-01T06:51:48'}],
+ 'cart': {'items': [{'sku': 'TNT-1003', 'qty': 2, 'unit_price': 459.95},
+                    {'sku': 'ACC-1004', 'qty': 1, 'unit_price': 85.95}],
+          'value': 1005.85},
+ 'converted': False,
+ 'order_id': None}</code></pre>
+                </div>
 
-# Install Python driver
-pip install pymongo
-pip install pandas
-pip install python-dotenv  # for environment variables
-"""
+                <p>This one record contains a nested <code>device</code> object, a <code>utm</code> object describing where the visitor came from, a <strong>list</strong> of pages viewed, and a <code>cart</code> holding another list of items. It is not a row. To store it in the relational style of the last four lessons you would split it across at least three tables (sessions, page views, cart items), linked by <code>session_id</code>, and reassemble it with joins whenever you wanted the whole visit back.</p>
 
-# Basic connection
-from pymongo import MongoClient
+                <div class="mermaid">
+graph LR
+    S["session"] --> D["device"]
+    S --> U["utm, optional"]
+    S --> P["pages, a list"]
+    S --> C["cart"]
+    C --> I["items, a list"]
+                </div>
+
+                <div class="card card-info">
+                    <h4>💡 Mental Model: The Ledger and the Folder</h4>
+                    <p>A <strong>relational database</strong> is a set of ledgers. Each ledger has fixed columns, every entry fills the same columns, and facts about one visit are spread over several ledgers that reference each other by number. That is wonderful for consistency and for questions that cut across everything.</p>
+                    <p>A <strong>document database</strong> is a filing cabinet of folders. Each folder holds everything about one thing, in whatever shape that thing has: one visit's pages, cart and all. Pull one folder and you have the complete story, with no assembly. Two folders need not contain the same sheets.</p>
+                </div>
+
+                <p>That last point shows in the data. Compare the keys of the first two sessions:</p>
+
+                <pre><code class="language-python">print(list(sessions[0].keys()))
+print(list(sessions[1].keys()))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>['session_id', 'customer_id', 'started_at', 'device', 'pages', 'cart', 'converted', 'order_id']
+['session_id', 'customer_id', 'started_at', 'device', 'utm', 'pages', 'cart', 'converted', 'order_id']</code></pre>
+                </div>
+
+                <p>The first session has no <code>utm</code> key at all: the visitor typed the address directly. In a table, that would be three columns filled with <code>NULL</code>. In a document it is simply absent. This flexibility is called a <strong>flexible schema</strong>, and it is both the main attraction of document databases and the main thing to be careful about.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Relational (SQL)</th><th>MongoDB</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Database</td><td>Database</td></tr>
+                            <tr><td>Table</td><td>Collection</td></tr>
+                            <tr><td>Row</td><td>Document (like a Python dictionary)</td></tr>
+                            <tr><td>Column</td><td>Field</td></tr>
+                            <tr><td>Primary key</td><td>The <code>_id</code> field, created automatically if you do not supply one</td></tr>
+                            <tr><td>Join to a child table</td><td>Often an embedded list or object inside the document</td></tr>
+                            <tr><td>Schema fixed by <code>CREATE TABLE</code></td><td>Each document carries its own structure</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>"NoSQL" is an umbrella term for databases that are not relational: document stores, key-value stores, graph databases and others. MongoDB is the most widely used document store, and it is the one this lesson teaches.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="when" class="lesson-section">
+                <h2>⚖️ When a Document Store Fits</h2>
+
+                <p>Neither model is better. They are good at different things, and plenty of organizations run both: orders in PostgreSQL, clickstream in MongoDB.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>A document store fits when...</th><th>A relational database fits when...</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Each record is naturally nested, and you usually read or write it whole (a session, a product page, a support ticket with its messages)</td><td>The data is naturally tabular and the same facts are shared by many records (customers, orders, products)</td></tr>
+                            <tr><td>Records vary in shape, or the shape changes often</td><td>Every record has the same fields and you want the database to enforce that</td></tr>
+                            <tr><td>Most questions are about one kind of record at a time</td><td>Questions routinely combine several kinds of record with joins</td></tr>
+                            <tr><td>You are ingesting events or API responses that already arrive as JSON</td><td>Correctness across records matters most: money, inventory, anything double-entry</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>Pinecrest's own data shows the split. Orders, customers and products reference each other constantly, so they live in <code>pinecrest.db</code>. Web sessions are self-contained, nested and irregular, and nobody updates a page view after the fact. They are a natural fit for documents.</p>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Flexible Does Not Mean Free</h4>
+                    <p>A table rejects a row with a misspelled column. A collection accepts a document with a misspelled field without comment, and your queries then quietly miss it. With a flexible schema, the discipline that <code>CREATE TABLE</code> used to provide becomes your job: check what fields are really there before you trust a count. You will see this in <a href="#mistakes">Common Mistakes</a>.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="connect" class="lesson-section">
+                <h2>🔌 Connecting with pymongo</h2>
+
+                <p>MongoDB is a server, like PostgreSQL. Python talks to it through the <code>pymongo</code> library, which you installed in Lesson 0.1. A real connection looks like this:</p>
+
+                <pre data-norun><code class="language-python">from pymongo import MongoClient
+
+client = MongoClient("mongodb://localhost:27017")     # a MongoDB server on your own computer
+# client = MongoClient(os.environ["MONGODB_URI"])     # a hosted cluster: keep the URI, which holds a password, out of your code</code></pre>
+
+                <p>(<code>os.environ</code> reads an environment variable, as in the PostgreSQL example in Lesson 5.1; Lesson 6.4 covers them properly.)</p>
+
+                <p>Installing a database server is more setup than this lesson needs. Instead you will use <strong>mongomock</strong>, a small library (also installed in Lesson 0.1) that imitates a MongoDB server inside your Python process. Its client has the same methods as <code>pymongo</code>'s, so every line you write below is real <code>pymongo</code> code. Only the first line changes when you move to a real server.</p>
+
+                <pre><code class="language-python">import mongomock
 import pandas as pd
-import json
-from datetime import datetime, timedelta
-import numpy as np
 
-# Connect to MongoDB
-# Local connection
-client = MongoClient('mongodb://localhost:27017/')
+pd.set_option("display.width", 150)
+pd.set_option("display.max_columns", 20)
 
-# Connection with authentication
-# client = MongoClient('mongodb://username:password@localhost:27017/')
+client = mongomock.MongoClient()        # with a real server: MongoClient("mongodb://localhost:27017")
+db = client["pinecrest"]                # a database
+coll = db["sessions"]                   # a collection in it
 
-# MongoDB Atlas (cloud) connection
-# client = MongoClient('mongodb+srv://username:password@cluster.mongodb.net/')
+print(coll.count_documents({}))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>0</code></pre>
+                </div>
 
-# Select/create database
-db = client['data_science_db']
+                <p>Nothing had to be created first. A database and a collection come into existence the moment you put a document into them. The collection is empty for now.</p>
 
-# Select/create collection (like a table in SQL)
-collection = db['users']
+                <div class="card card-info">
+                    <h4>💡 What Was Verified, and What Was Not</h4>
+                    <p>Every code block in this lesson was run with mongomock 4.3 and pymongo 4.18, and the output shown is real. A local or hosted MongoDB server behaves the same for these calls. Three things could <strong>not</strong> be verified this way and are marked where they appear: the connection to a real server shown above, the <code>explain()</code> method for query plans, and a few pipeline operators mongomock does not implement (<code>$round</code>, <code>$substrCP</code> and <code>$sortByCount</code> are the ones you are likely to meet). mongomock also keeps data in memory only: when your notebook restarts, the collection is gone, so each session starts by loading the JSON file again.</p>
+                </div>
+            </section>
 
-# Check connection
-print("Databases:", client.list_database_names())
-print("Collections in db:", db.list_collection_names())
+            <!-- ============================================================ -->
+            <section id="crud" class="lesson-section">
+                <h2>🧱 CRUD: Create, Read, Update, Delete</h2>
 
-# Server info
-server_info = client.server_info()
-print(f"MongoDB version: {server_info['version']}")</code></pre>
+                <h3>Create: <code>insert_many</code> and <code>insert_one</code></h3>
+                <p>A document is a Python dictionary, and a list of dictionaries is exactly what <code>json.load</code> gave you. Loading the file into the collection is one call.</p>
 
-    <h2>CRUD Operations in MongoDB</h2>
-    
-    <h3>Create (Insert) Operations</h3>
-    <pre class="language-python"><code># Insert single document
-user = {
-    "name": "Alice Johnson",
-    "email": "alice@example.com",
-    "age": 30,
-    "roles": ["user", "admin"],
-    "address": {
-        "street": "123 Main St",
-        "city": "New York",
-        "country": "USA",
-        "coordinates": {"lat": 40.7128, "lng": -74.0060}
-    },
-    "interests": ["data science", "machine learning", "python"],
-    "created_at": datetime.now(),
-    "metadata": {
-        "source": "web",
-        "campaign": "summer_2024"
-    }
-}
+                <pre><code class="language-python">result = coll.insert_many(sessions)
+print(len(result.inserted_ids), "documents inserted")
+print(coll.count_documents({}))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>2400 documents inserted
+2400</code></pre>
+                </div>
 
-result = collection.insert_one(user)
-print(f"Inserted document ID: {result.inserted_id}")
+                <p>No <code>CREATE TABLE</code>, no column types, no splitting into three tables. Every document was also given a unique <code>_id</code>, MongoDB's primary key.</p>
 
-# Insert multiple documents
-users = [
-    {
-        "name": "Bob Smith",
-        "email": "bob@example.com",
-        "age": 25,
-        "roles": ["user"],
-        "interests": ["python", "mongodb"],
-        "created_at": datetime.now()
-    },
-    {
-        "name": "Carol White",
-        "email": "carol@example.com",
-        "age": 35,
-        "roles": ["user", "moderator"],
-        "interests": ["analytics", "visualization"],
-        "purchase_history": [
-            {"product": "Course A", "price": 99.99, "date": datetime.now()},
-            {"product": "Course B", "price": 149.99, "date": datetime.now()}
-        ],
-        "created_at": datetime.now()
-    }
-]
+                <h3>Read: <code>find_one</code>, <code>find</code> and <code>count_documents</code></h3>
+                <p>A query is itself a dictionary: <em>field: value</em> pairs that a document must match. This is the idea that replaces <code>WHERE</code>. An empty dictionary, <code>{}</code>, matches everything.</p>
 
-result = collection.insert_many(users)
-print(f"Inserted {len(result.inserted_ids)} documents")
+                <pre><code class="language-python">doc = coll.find_one({"session_id": "S00002"})
+print(type(doc["_id"]).__name__)
+print(doc["device"])
+print(doc["cart"]["value"], len(doc["pages"]), "pages")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>ObjectId
+{'type': 'desktop', 'os': 'macOS', 'browser': 'Safari'}
+1005.85 6 pages</code></pre>
+                </div>
 
-# Bulk insert with error handling
-from pymongo.errors import BulkWriteError
+                <p><code>find_one</code> returns one document as a dictionary (or <code>None</code>), nested parts included, with the automatic <code>_id</code> as an <code>ObjectId</code>. <code>find</code> returns a <strong>cursor</strong>, the same idea as in <code>sqlite3</code>: something you loop over, which fetches documents as you go.</p>
 
-def bulk_insert_with_validation(documents):
-    """Bulk insert with error handling"""
-    try:
-        result = collection.insert_many(documents, ordered=False)
-        print(f"Successfully inserted {len(result.inserted_ids)} documents")
-        return result.inserted_ids
-    except BulkWriteError as e:
-        print(f"Bulk write error: {e.details}")
-        # Process successful insertions
-        successful = len(documents) - len(e.details['writeErrors'])
-        print(f"Successfully inserted {successful} documents")
-        return None</code></pre>
+                <pre><code class="language-python">print(coll.count_documents({"converted": True}))
 
-    <h3>Read (Query) Operations</h3>
-    <pre class="language-python"><code># Find one document
-user = collection.find_one({"name": "Alice Johnson"})
-print(json.dumps(user, default=str, indent=2))
+cursor = coll.find({"converted": True, "device": {"type": "tablet", "os": "Android", "browser": "Chrome"}})
+for doc in cursor:
+    print(doc["session_id"], doc["started_at"], doc["cart"]["value"])</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>230
+S00274 2025-11-04T15:46:39 85.95</code></pre>
+                </div>
 
-# Find multiple documents
-users = collection.find({"age": {"$gte": 25}})
-for user in users:
-    print(f"{user['name']}: {user['age']} years old")
+                <p>Several conditions in one dictionary are combined with "and". The second condition compared the whole <code>device</code> object at once, which works but is fragile (the keys must match exactly and in order). The next section shows the usual way to reach inside a nested object.</p>
 
-# Query with multiple conditions
-query = {
-    "$and": [
-        {"age": {"$gte": 25}},
-        {"age": {"$lte": 35}},
-        {"interests": {"$in": ["python", "data science"]}}
-    ]
-}
-results = collection.find(query)
+                <h3>Update: <code>update_one</code> and <code>update_many</code></h3>
+                <p>An update takes two dictionaries: a query that says <em>which</em> documents, and a change that says <em>what to do</em>, written with an <strong>update operator</strong> such as <code>$set</code> (set a field), <code>$inc</code> (add to a number) or <code>$push</code> (append to a list).</p>
 
-# Convert to DataFrame
-df = pd.DataFrame(list(collection.find()))
-print(df.head())
+                <pre><code class="language-python">r = coll.update_one({"session_id": "S00002"}, {"$set": {"reviewed": True}, "$push": {"tags": "big-cart"}})
+print(r.matched_count, r.modified_count)
 
-# Projection (select specific fields)
-projection = {"name": 1, "email": 1, "age": 1, "_id": 0}
-users = collection.find({}, projection)
+r = coll.update_many({"customer_id": None}, {"$set": {"visitor_type": "anonymous"}})
+print(r.matched_count, r.modified_count)
 
-# Complex queries
-# Nested field query
-users_in_ny = collection.find({"address.city": "New York"})
+print(coll.find_one({"session_id": "S00002"}, {"_id": 0, "reviewed": 1, "tags": 1, "visitor_type": 1}))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>1 1
+1547 1547
+{'reviewed': True, 'tags': ['big-cart'], 'visitor_type': 'anonymous'}</code></pre>
+                </div>
 
-# Array queries
-python_users = collection.find({"interests": "python"})
+                <p>Two new fields and a new list appeared on the documents that were updated, and on no others. No <code>ALTER TABLE</code> was needed. The 1,547 sessions with no <code>customer_id</code> are the anonymous visitors, 64% of the total.</p>
 
-# Regex search
-pattern = {"name": {"$regex": "^A", "$options": "i"}}  # Names starting with 'A'
-users = collection.find(pattern)
+                <h3>Delete: <code>delete_one</code> and <code>delete_many</code></h3>
+                <pre><code class="language-python">coll.insert_one({"session_id": "TEST", "note": "a document with a completely different shape"})
+print(coll.count_documents({}))
 
-# Comparison operators
-comparison_queries = {
-    "Equal": {"age": 30},
-    "Not Equal": {"age": {"$ne": 30}},
-    "Greater Than": {"age": {"$gt": 30}},
-    "Greater or Equal": {"age": {"$gte": 30}},
-    "Less Than": {"age": {"$lt": 30}},
-    "Less or Equal": {"age": {"$lte": 30}},
-    "In List": {"age": {"$in": [25, 30, 35]}},
-    "Not In List": {"age": {"$nin": [25, 30, 35]}},
-}
+r = coll.delete_many({"session_id": "TEST"})
+print(r.deleted_count, coll.count_documents({}))
 
-# Logical operators
-logical_queries = {
-    "AND": {"$and": [{"age": {"$gte": 25}}, {"age": {"$lte": 35}}]},
-    "OR": {"$or": [{"age": {"$lt": 25}}, {"age": {"$gt": 35}}]},
-    "NOT": {"age": {"$not": {"$eq": 30}}},
-    "NOR": {"$nor": [{"age": 25}, {"age": 35}]}
-}
+# put the collection back as it was, so the rest of the lesson matches the file
+coll.update_many({}, {"$unset": {"reviewed": "", "tags": "", "visitor_type": ""}})
+print(coll.count_documents({"visitor_type": {"$exists": True}}))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>2401
+1 2400
+0</code></pre>
+                </div>
 
-# Element operators
-element_queries = {
-    "Exists": {"address": {"$exists": True}},
-    "Type": {"age": {"$type": "int"}}
-}
+                <div class="card card-danger">
+                    <h4>🛑 <code>delete_many({})</code> Deletes Everything</h4>
+                    <p>An empty query matches every document, so <code>delete_many({})</code> empties the collection, and there is no undo. Before any delete or update, run <code>count_documents</code> with the same query and check the number is what you expect. It is the same habit as running the <code>SELECT</code> before the <code>DELETE</code> in SQL.</p>
+                </div>
+            </section>
 
-# Array operators
-array_queries = {
-    "All": {"interests": {"$all": ["python", "mongodb"]}},
-    "Element Match": {"purchase_history": {"$elemMatch": {"price": {"$gt": 100}}}},
-    "Size": {"interests": {"$size": 3}}
-}</code></pre>
+            <!-- ============================================================ -->
+            <section id="operators" class="lesson-section">
+                <h2>🔎 Query Operators</h2>
 
-    <h3>Update Operations</h3>
-    <pre class="language-python"><code># Update one document
-result = collection.update_one(
-    {"name": "Alice Johnson"},
-    {"$set": {"age": 31, "updated_at": datetime.now()}}
-)
-print(f"Modified {result.modified_count} document(s)")
+                <p>Exact matches only go so far. For everything else, the value in a query becomes a small dictionary whose key is an <strong>operator</strong> beginning with <code>$</code>.</p>
 
-# Update many documents
-result = collection.update_many(
-    {"age": {"$lt": 30}},
-    {"$inc": {"age": 1}}  # Increment age by 1
-)
-print(f"Modified {result.modified_count} document(s)")
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>MongoDB query</th><th>SQL equivalent</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>{"converted": True}</code></td><td><code>WHERE converted = 1</code></td></tr>
+                            <tr><td><code>{"cart.value": {"$gt": 300}}</code></td><td><code>WHERE cart_value &gt; 300</code> (also <code>$gte</code>, <code>$lt</code>, <code>$lte</code>, <code>$ne</code>)</td></tr>
+                            <tr><td><code>{"utm.medium": {"$in": ["email", "social"]}}</code></td><td><code>WHERE medium IN ('email', 'social')</code></td></tr>
+                            <tr><td><code>{"a": 1, "b": 2}</code></td><td><code>WHERE a = 1 AND b = 2</code></td></tr>
+                            <tr><td><code>{"$or": [{"a": 1}, {"b": 2}]}</code></td><td><code>WHERE a = 1 OR b = 2</code></td></tr>
+                            <tr><td><code>{"utm": {"$exists": False}}</code></td><td>No direct equivalent: the field itself is absent</td></tr>
+                            <tr><td><code>{"pages.path": {"$regex": "^/product/"}}</code></td><td><code>LIKE '/product/%'</code>, on a child table</td></tr>
+                        </tbody>
+                    </table>
+                </div>
 
-# Update operators
-update_operators = {
-    # Field operators
-    "$set": {"field": "value"},  # Set field value
-    "$unset": {"field": ""},  # Remove field
-    "$inc": {"count": 1},  # Increment
-    "$mul": {"price": 1.1},  # Multiply
-    "$rename": {"oldName": "newName"},  # Rename field
-    "$min": {"score": 10},  # Update if less than current
-    "$max": {"score": 100},  # Update if greater than current
-    "$currentDate": {"lastModified": True},  # Set to current date
-    
-    # Array operators
-    "$push": {"tags": "new_tag"},  # Add to array
-    "$pull": {"tags": "old_tag"},  # Remove from array
-    "$addToSet": {"tags": "unique_tag"},  # Add if not exists
-    "$pop": {"tags": 1},  # Remove last element (1) or first (-1)
-    "$pullAll": {"tags": ["tag1", "tag2"]},  # Remove multiple
-}
+                <h3>Dot Notation: Reaching Inside</h3>
+                <p>To query a field of a nested object, join the names with a dot, in quotes.</p>
 
-# Upsert (update or insert)
-result = collection.update_one(
-    {"email": "new@example.com"},
-    {"$set": {"name": "New User", "created_at": datetime.now()}},
-    upsert=True
-)
+                <pre><code class="language-python">print(coll.count_documents({"device.type": "mobile"}))
+print(coll.count_documents({"device.type": "mobile", "cart.value": {"$gt": 300}}))
+print(coll.count_documents({"utm.medium": {"$in": ["email", "social"]}}))
+print(coll.count_documents({"$or": [{"device.os": "iOS"}, {"device.os": "iPadOS"}]}))
+print(sorted(coll.distinct("utm.medium")))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>1326
+93
+433
+876
+['cpc', 'email', 'organic', 'referral', 'social']</code></pre>
+                </div>
 
-# Replace entire document
-result = collection.replace_one(
-    {"name": "Bob Smith"},
-    {
-        "name": "Robert Smith",
-        "email": "robert@example.com",
-        "age": 26,
-        "roles": ["premium_user"],
-        "updated_at": datetime.now()
-    }
-)
+                <h3>Missing Is Not the Same as Null</h3>
+                <p>In a document, a field can hold <code>null</code> (Python <code>None</code>) or it can be absent altogether. <code>customer_id</code> is always present and is <code>null</code> for anonymous visitors. <code>utm</code> is absent for direct visits.</p>
 
-# Bulk updates
-from pymongo import UpdateOne
+                <pre><code class="language-python">print("customer_id is null   :", coll.count_documents({"customer_id": None}))
+print("customer_id is missing:", coll.count_documents({"customer_id": {"$exists": False}}))
+print("utm is missing        :", coll.count_documents({"utm": {"$exists": False}}))
+print("utm equals None       :", coll.count_documents({"utm": None}))
+print("no utm.campaign       :", coll.count_documents({"utm.campaign": {"$exists": False}}))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>customer_id is null   : 1547
+customer_id is missing: 0
+utm is missing        : 916
+utm equals None       : 916
+no utm.campaign       : 1653</code></pre>
+                </div>
 
-bulk_updates = [
-    UpdateOne({"name": "Alice Johnson"}, {"$set": {"status": "active"}}),
-    UpdateOne({"name": "Bob Smith"}, {"$set": {"status": "inactive"}}),
-    UpdateOne({"name": "Carol White"}, {"$inc": {"login_count": 1}})
-]
+                <p>Read the fourth line carefully: <code>{"utm": None}</code> matched the 916 sessions that have <em>no</em> <code>utm</code> field. In a query, <code>None</code> matches both "the field is null" and "the field is not there". When the difference matters, <code>$exists</code> is the precise tool. The last line counts 1,653 sessions without a campaign: the 916 with no <code>utm</code> at all, plus 737 that have a <code>utm</code> object but no campaign in it.</p>
 
-result = collection.bulk_write(bulk_updates)
-print(f"Bulk update: {result.modified_count} modified")</code></pre>
+                <h3>Querying Inside Lists</h3>
+                <p><code>pages</code> is a list of objects. Dot notation works through a list: <code>"pages.path"</code> means "the <code>path</code> of <strong>any</strong> element of <code>pages</code>".</p>
 
-    <h3>Delete Operations</h3>
-    <pre class="language-python"><code># Delete one document
-result = collection.delete_one({"name": "Test User"})
-print(f"Deleted {result.deleted_count} document(s)")
+                <pre><code class="language-python">print("visited /checkout        :", coll.count_documents({"pages.path": "/checkout"}))
+print("viewed a product page    :", coll.count_documents({"pages.path": {"$regex": "^/product/"}}))
+print("exactly one page (bounce):", coll.count_documents({"pages": {"$size": 1}}))
+print("footwear in the cart     :", coll.count_documents({"cart.items.sku": {"$regex": "^FTW"}}))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>visited /checkout        : 230
+viewed a product page    : 1610
+exactly one page (bounce): 200
+footwear in the cart     : 79</code></pre>
+                </div>
 
-# Delete many documents
-result = collection.delete_many({"age": {"$lt": 18}})
-print(f"Deleted {result.deleted_count} document(s)")
+                <p>Each of those would be a join to a child table in SQL. Here the list is inside the document, so the question is a single condition. When you need <strong>two conditions to hold for the same element</strong> of a list, use <code>$elemMatch</code>:</p>
 
-# Delete with conditions
-result = collection.delete_many({
-    "$and": [
-        {"created_at": {"$lt": datetime.now() - timedelta(days=365)}},
-        {"status": "inactive"}
-    ]
-})
+                <pre><code class="language-python">same_element = {"pages": {"$elemMatch": {"path": "/checkout", "seconds": {"$gte": 120}}}}
+any_elements = {"pages.path": "/checkout", "pages.seconds": {"$gte": 120}}
 
-# Delete all documents (careful!)
-# result = collection.delete_many({})
+print("two minutes or more ON the checkout page:", coll.count_documents(same_element))
+print("visited checkout, and some page took two minutes:", coll.count_documents(any_elements))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>two minutes or more ON the checkout page: 25
+visited checkout, and some page took two minutes: 77</code></pre>
+                </div>
 
-# Drop collection entirely
-# collection.drop()</code></pre>
+                <p>Without <code>$elemMatch</code>, each condition may be satisfied by a <em>different</em> page: the session visited checkout, and some page (perhaps a product page) held the visitor for two minutes. The two questions sound alike and differ by a factor of three.</p>
+            </section>
 
-    <h2>Aggregation Pipeline</h2>
-    
-    <h3>Basic Aggregation</h3>
-    <pre class="language-python"><code># MongoDB Aggregation Pipeline - powerful data processing
+            <!-- ============================================================ -->
+            <section id="projection" class="lesson-section">
+                <h2>✂️ Projections, Sorting and Limits</h2>
 
-# Sample e-commerce data
-orders = db['orders']
+                <p>A session document is large. The second argument of <code>find</code> is a <strong>projection</strong>: a dictionary saying which fields to return, with <code>1</code> to include. It is the <code>SELECT a, b</code> to <code>find</code>'s <code>WHERE</code>. <code>_id</code> comes along unless you exclude it with <code>"_id": 0</code>. As in Lesson 5.4, fetch only what you need.</p>
 
-# Insert sample data
-sample_orders = [
-    {
-        "order_id": i,
-        "customer_id": np.random.randint(1, 100),
-        "products": [
-            {
-                "product_id": np.random.randint(1, 50),
-                "name": f"Product_{np.random.randint(1, 50)}",
-                "category": np.random.choice(['Electronics', 'Clothing', 'Books']),
-                "price": round(np.random.uniform(10, 500), 2),
-                "quantity": np.random.randint(1, 5)
-            }
-            for _ in range(np.random.randint(1, 4))
-        ],
-        "order_date": datetime.now() - timedelta(days=np.random.randint(0, 365)),
-        "status": np.random.choice(['pending', 'shipped', 'delivered']),
-        "region": np.random.choice(['North', 'South', 'East', 'West'])
-    }
-    for i in range(1000)
-]
+                <pre><code class="language-python">cursor = (coll.find({"converted": True},
+                    {"_id": 0, "session_id": 1, "device.type": 1, "cart.value": 1})
+          .sort("cart.value", -1)
+          .limit(3))
 
-orders.insert_many(sample_orders)
+for doc in cursor:
+    print(doc)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>{'session_id': 'S02262', 'device': {'type': 'mobile'}, 'cart': {'value': 1590.85}}
+{'session_id': 'S00257', 'device': {'type': 'mobile'}, 'cart': {'value': 1579.8}}
+{'session_id': 'S00039', 'device': {'type': 'desktop'}, 'cart': {'value': 1265.85}}</code></pre>
+                </div>
 
-# Basic aggregation pipeline
-pipeline = [
-    # Stage 1: Match (filter)
-    {"$match": {"status": "delivered"}},
-    
-    # Stage 2: Unwind array
-    {"$unwind": "$products"},
-    
-    # Stage 3: Group and aggregate
+                <p><code>.sort(field, direction)</code> takes <code>1</code> for ascending and <code>-1</code> for descending, and <code>.limit(n)</code> stops after <em>n</em> documents: the largest three converted carts, exactly like <code>ORDER BY cart_value DESC LIMIT 3</code>. Notice that the projection kept the nesting: <code>device</code> is still an object, now with only its <code>type</code>.</p>
+
+                <p>A projection can also <em>exclude</em>: <code>{"pages": 0}</code> returns everything except the bulky list. You cannot mix including and excluding in one projection, apart from <code>_id</code>.</p>
+
+                <pre><code class="language-python">doc = coll.find_one({"session_id": "S00002"}, {"_id": 0, "pages": 0})
+pprint(doc, sort_dicts=False, width=110)</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>{'session_id': 'S00002',
+ 'customer_id': None,
+ 'started_at': '2025-11-01T06:48:03',
+ 'device': {'type': 'desktop', 'os': 'macOS', 'browser': 'Safari'},
+ 'utm': {'source': 'newsletter', 'medium': 'email', 'campaign': 'november_trail_notes'},
+ 'cart': {'items': [{'sku': 'TNT-1003', 'qty': 2, 'unit_price': 459.95},
+                    {'sku': 'ACC-1004', 'qty': 1, 'unit_price': 85.95}],
+          'value': 1005.85},
+ 'converted': False,
+ 'order_id': None}</code></pre>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="pipeline" class="lesson-section">
+                <h2>🏭 The Aggregation Pipeline</h2>
+
+                <p><code>find</code> filters and returns documents. To group, count, sum and reshape, MongoDB uses the <strong>aggregation pipeline</strong>: a list of <strong>stages</strong>, where each stage takes the documents coming out of the one before, transforms them, and passes them on. If you have chained pandas methods, or stacked CTEs in Lesson 5.2, you already think this way.</p>
+
+                <div class="mermaid">
+graph TD
+    A["All documents in the collection"] --> B["$match: keep some"]
+    B --> C["$unwind: one document per list item"]
+    C --> D["$group: one document per key"]
+    D --> E["$sort and $limit"]
+    E --> F["Results"]
+                </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Stage</th><th>What it does</th><th>SQL</th><th>pandas</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="nowrap"><code>$match</code></td><td>Keep matching documents (same syntax as <code>find</code>)</td><td><code>WHERE</code> (or <code>HAVING</code>, after a <code>$group</code>)</td><td>Boolean mask</td></tr>
+                            <tr><td class="nowrap"><code>$group</code></td><td>One output document per <code>_id</code> value, with accumulators such as <code>$sum</code>, <code>$avg</code>, <code>$max</code></td><td><code>GROUP BY</code></td><td><code>groupby().agg()</code></td></tr>
+                            <tr><td class="nowrap"><code>$sort</code>, <code>$limit</code></td><td>Order and cut off</td><td><code>ORDER BY</code>, <code>LIMIT</code></td><td><code>sort_values</code>, <code>head</code></td></tr>
+                            <tr><td class="nowrap"><code>$project</code></td><td>Choose or compute the fields to keep</td><td>The <code>SELECT</code> list</td><td>Column selection</td></tr>
+                            <tr><td class="nowrap"><code>$addFields</code></td><td>Add computed fields, keep the rest</td><td>An extra expression in <code>SELECT</code></td><td><code>assign</code></td></tr>
+                            <tr><td class="nowrap"><code>$unwind</code></td><td>Turn each element of a list into its own document</td><td>A join to the child table</td><td><code>explode</code></td></tr>
+                            <tr><td class="nowrap"><code>$count</code></td><td>Count the documents that reach it</td><td><code>COUNT(*)</code></td><td><code>len</code></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>Results print more clearly as a table, so here is a small helper that turns a pipeline's output into a DataFrame with <code>_id</code> first.</p>
+
+                <pre><code class="language-python">def run(pipeline, collection=None):
+    """Run an aggregation pipeline and return the result as a DataFrame, _id column first."""
+    docs = list((coll if collection is None else collection).aggregate(pipeline))
+    df = pd.DataFrame(docs)
+    return df[["_id"] + [c for c in df.columns if c != "_id"]] if "_id" in df.columns else df
+
+by_device = run([
     {"$group": {
-        "_id": "$products.category",
-        "total_revenue": {"$sum": {"$multiply": ["$products.price", "$products.quantity"]}},
-        "order_count": {"$sum": 1},
-        "avg_price": {"$avg": "$products.price"}
+        "_id": "$device.type",
+        "sessions": {"$sum": 1},
+        "avg_cart": {"$avg": "$cart.value"},
+        "largest_cart": {"$max": "$cart.value"},
     }},
-    
-    # Stage 4: Sort
-    {"$sort": {"total_revenue": -1}},
-    
-    # Stage 5: Limit
-    {"$limit": 10}
-]
+    {"$sort": {"sessions": -1}},
+])
+print(by_device.round(2).to_string(index=False))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>    _id  sessions  avg_cart  largest_cart
+ mobile      1326     57.32       1590.85
+desktop       915     52.85       1265.85
+ tablet       159     70.77       1293.80</code></pre>
+                </div>
 
-results = list(orders.aggregate(pipeline))
-df = pd.DataFrame(results)
-print(df)</code></pre>
+                <p>Read the <code>$group</code> stage piece by piece. <code>_id</code> is the grouping key, and a string that starts with <code>$</code> means "the value of this field": <code>"$device.type"</code>. Each other entry is an output field with an <strong>accumulator</strong>. <code>{"$sum": 1}</code> adds 1 per document, which is how you count. In SQL: <code>SELECT device_type, COUNT(*), AVG(cart_value), MAX(cart_value) ... GROUP BY device_type ORDER BY 2 DESC</code>.</p>
 
-    <h3>Advanced Aggregation</h3>
-    <pre class="language-python"><code># Complex aggregation example: Sales analytics
+                <h3>Conditions Inside a Group, and Missing Fields</h3>
+                <p><code>$cond</code> is the pipeline's <code>CASE WHEN</code>: <code>{"$cond": [test, value_if_true, value_if_false]}</code>. Summing it counts the documents that pass a test, the conditional aggregation you used in Lesson 5.2. <code>$ifNull</code> supplies a value when a field is null or missing, like <code>COALESCE</code>. Together they give conversions by traffic medium (<code>utm.medium</code>: how the visitor arrived), with direct visits labeled.</p>
 
-advanced_pipeline = [
-    # Stage 1: Match recent orders
-    {"$match": {
-        "order_date": {"$gte": datetime.now() - timedelta(days=90)}
-    }},
-    
-    # Stage 2: Add computed fields
-    {"$addFields": {
-        "order_total": {
-            "$reduce": {
-                "input": "$products",
-                "initialValue": 0,
-                "in": {
-                    "$add": ["$$value", {"$multiply": ["$$this.price", "$$this.quantity"]}]
-                }
-            }
-        },
-        "item_count": {"$size": "$products"},
-        "order_month": {"$dateToString": {"format": "%Y-%m", "date": "$order_date"}}
-    }},
-    
-    # Stage 3: Lookup (join) customer data
-    {"$lookup": {
-        "from": "customers",
-        "localField": "customer_id",
-        "foreignField": "customer_id",
-        "as": "customer_info"
-    }},
-    
-    # Stage 4: Unwind customer info
-    {"$unwind": {"path": "$customer_info", "preserveNullAndEmptyArrays": True}},
-    
-    # Stage 5: Group by month and region
+                <pre><code class="language-python">by_medium = run([
     {"$group": {
-        "_id": {
-            "month": "$order_month",
-            "region": "$region"
-        },
-        "total_revenue": {"$sum": "$order_total"},
-        "order_count": {"$sum": 1},
-        "avg_order_value": {"$avg": "$order_total"},
-        "unique_customers": {"$addToSet": "$customer_id"},
-        "max_order": {"$max": "$order_total"},
-        "min_order": {"$min": "$order_total"}
+        "_id": {"$ifNull": ["$utm.medium", "direct"]},
+        "sessions": {"$sum": 1},
+        "converted": {"$sum": {"$cond": ["$converted", 1, 0]}},
     }},
-    
-    # Stage 6: Add customer count
+    {"$sort": {"sessions": -1}},
+])
+by_medium["conversion_pct"] = (100 * by_medium["converted"] / by_medium["sessions"]).round(1)
+print(by_medium.to_string(index=False))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>     _id  sessions  converted  conversion_pct
+  direct       916         90             9.8
+ organic       601         52             8.7
+     cpc       314         33            10.5
+   email       224         16             7.1
+  social       209         27            12.9
+referral       136         12             8.8</code></pre>
+                </div>
+
+                <p>The percentage was computed in pandas. A real MongoDB server could do it inside the pipeline with <code>$divide</code>, <code>$multiply</code> and <code>$round</code>, but mongomock does not implement <code>$round</code>, and finishing a small result in pandas is a perfectly good division of labor. Before reading much into the differences, look at the counts: 27 conversions out of 209 social sessions is a small sample, and Module 4 taught you what to do about that.</p>
+
+                <h3><code>$match</code> First, and <code>$unwind</code> for Lists</h3>
+                <p>Which pages get the most views, and how long do people stay on them? The page views are inside lists, so <code>$unwind</code> first turns every list element into its own document: 2,400 sessions become 9,348 page-view documents, each still carrying its session's other fields.</p>
+
+                <pre><code class="language-python">print(run([{"$unwind": "$pages"}, {"$count": "page_views"}]).to_string(index=False))
+
+top_pages = run([
+    {"$match": {"device.type": "mobile"}},          # filter early: fewer documents to unwind
+    {"$unwind": "$pages"},
+    {"$group": {
+        "_id": "$pages.path",
+        "views": {"$sum": 1},
+        "avg_seconds": {"$avg": "$pages.seconds"},
+    }},
+    {"$match": {"views": {"$gte": 150}}},           # after $group this acts like HAVING
+    {"$sort": {"avg_seconds": -1}},
+    {"$limit": 5},
+])
+print(top_pages.round(1).to_string(index=False))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code> page_views
+       9348
+                   _id  views  avg_seconds
+                 /cart    309         68.2
+     /category/apparel    192         47.5
+    /category/climbing    151         47.2
+/category/camp-kitchen    160         46.8
+                 /sale    171         46.2</code></pre>
+                </div>
+
+                <p>The same stage, <code>$match</code>, appears twice with different jobs. Before <code>$group</code> it filters documents, like <code>WHERE</code>. After <code>$group</code> it filters groups, like <code>HAVING</code>. A stage's meaning comes from where it sits in the pipeline. And, as in Lesson 5.4, <strong>filter as early as you can</strong>, so that later stages handle fewer documents and an index can be used.</p>
+
+                <h3>Computed Fields with <code>$addFields</code></h3>
+                <pre><code class="language-python">engagement = run([
     {"$addFields": {
-        "customer_count": {"$size": "$unique_customers"}
+        "n_pages": {"$size": "$pages"},
+        "total_seconds": {"$sum": "$pages.seconds"},
     }},
-    
-    # Stage 7: Remove customer array (no longer needed)
+    {"$group": {
+        "_id": "$converted",
+        "sessions": {"$sum": 1},
+        "avg_pages": {"$avg": "$n_pages"},
+        "avg_minutes": {"$avg": {"$divide": ["$total_seconds", 60]}},
+    }},
+    {"$sort": {"_id": 1}},
+])
+print(engagement.round(2).to_string(index=False))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>  _id  sessions  avg_pages  avg_minutes
+False      2170       3.54         2.77
+ True       230       7.25         6.40</code></pre>
+                </div>
+
+                <p><code>$size</code> gives the length of a list and <code>{"$sum": "$pages.seconds"}</code> adds up a field across the list, without unwinding. Sessions that ended in an order looked at about twice as many pages. (Careful with the direction of that: buying <em>requires</em> visiting the cart and checkout pages, so converted sessions are longer partly by construction.)</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="indexes" class="lesson-section">
+                <h2>📇 Indexes</h2>
+
+                <p>Everything from Lesson 5.4 carries over. Without an index, MongoDB examines every document in the collection to answer a query (a <em>collection scan</em>). An index is a sorted structure on one or more fields that lets it jump to the matches, and it costs storage and write speed. <code>_id</code> is indexed automatically, like a primary key.</p>
+
+                <pre><code class="language-python">coll.create_index("session_id", unique=True)
+coll.create_index([("device.type", 1), ("started_at", -1)])     # compound: equality field first
+
+for name, info in coll.index_information().items():
+    print(f"{name:&lt;30} {info['key']}  unique={info.get('unique', False)}")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>_id_                           [('_id', 1)]  unique=False
+session_id_1                   [('session_id', 1)]  unique=True
+device.type_1_started_at_-1    [('device.type', 1), ('started_at', -1)]  unique=False</code></pre>
+                </div>
+
+                <p>You can index a nested field with dot notation, and even a field inside a list (<code>"pages.path"</code>), which MongoDB calls a multikey index. A compound index follows the same leftmost-prefix rule as a composite index in SQL. A <strong>unique</strong> index also enforces a rule, one of the few a collection can enforce:</p>
+
+                <pre><code class="language-python">from pymongo.errors import DuplicateKeyError
+
+try:
+    coll.insert_one({"session_id": "S00002", "note": "a second document with an existing id"})
+except DuplicateKeyError:
+    print("DuplicateKeyError: session_id S00002 already exists")
+
+print(coll.count_documents({"session_id": "S00002"}))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>DuplicateKeyError: session_id S00002 already exists
+1</code></pre>
+                </div>
+
+                <p>To see whether a query uses an index, a real server offers <code>explain()</code>, the counterpart of <code>EXPLAIN QUERY PLAN</code>. mongomock does not implement it, so this block is shown for reference and was <strong>not run</strong>. According to MongoDB's documentation, the winning plan names a stage <code>COLLSCAN</code> for a collection scan or <code>IXSCAN</code> for an index scan, and <code>executionStats</code> reports how many documents were examined.</p>
+
+                <pre data-norun><code class="language-python">plan = coll.find({"session_id": "S00002"}).explain()
+print(plan["queryPlanner"]["winningPlan"])</code></pre>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="pandas" class="lesson-section">
+                <h2>🐼 Flattening into a DataFrame</h2>
+
+                <p>Statistics and charts want a flat table. Getting from nested documents to a DataFrame is the last step of almost every MongoDB analysis, and there are three routes.</p>
+
+                <h3>Route 1: Let the Pipeline Produce Flat Documents</h3>
+                <p>The output of <code>$group</code> is already flat, which is why <code>run()</code> could hand it straight to <code>pd.DataFrame</code>. For document-level data, a <code>$project</code> stage can lift nested fields to the top level under new names.</p>
+
+                <pre><code class="language-python">flat = run([
+    {"$match": {"converted": True}},
     {"$project": {
-        "unique_customers": 0
+        "_id": 0,
+        "session_id": 1,
+        "customer_id": 1,
+        "order_id": 1,
+        "device": "$device.type",
+        "medium": {"$ifNull": ["$utm.medium", "direct"]},
+        "cart_value": "$cart.value",
+        "n_pages": {"$size": "$pages"},
     }},
-    
-    # Stage 8: Sort by revenue
-    {"$sort": {"total_revenue": -1}},
-    
-    # Stage 9: Facet for multiple outputs
-    {"$facet": {
-        "by_region": [
-            {"$group": {
-                "_id": "$_id.region",
-                "total": {"$sum": "$total_revenue"}
-            }},
-            {"$sort": {"total": -1}}
-        ],
-        "by_month": [
-            {"$group": {
-                "_id": "$_id.month",
-                "total": {"$sum": "$total_revenue"}
-            }},
-            {"$sort": {"_id": 1}}
-        ],
-        "top_combinations": [
-            {"$limit": 5}
-        ]
-    }}
-]
-
-results = list(orders.aggregate(advanced_pipeline))
-print(json.dumps(results[0], default=str, indent=2))</code></pre>
-
-    <h3>Aggregation Operators</h3>
-    <pre class="language-python"><code># Common aggregation operators
-
-# Arithmetic operators
-arithmetic_ops = {
-    "$add": ["$price", "$tax"],
-    "$subtract": ["$total", "$discount"],
-    "$multiply": ["$quantity", "$unit_price"],
-    "$divide": ["$total", "$quantity"],
-    "$mod": ["$value", 10],
-    "$pow": ["$base", 2],
-    "$sqrt": "$value",
-    "$abs": "$difference"
-}
-
-# String operators
-string_ops = {
-    "$concat": ["$first_name", " ", "$last_name"],
-    "$substr": ["$description", 0, 100],
-    "$toLower": "$email",
-    "$toUpper": "$code",
-    "$split": ["$tags", ","],
-    "$trim": {"input": "$text", "chars": " "}
-}
-
-# Date operators
-date_ops = {
-    "$dayOfMonth": "$date",
-    "$month": "$date",
-    "$year": "$date",
-    "$dayOfWeek": "$date",
-    "$dateToString": {"format": "%Y-%m-%d", "date": "$date"},
-    "$dateDiff": {
-        "startDate": "$start_date",
-        "endDate": "$end_date",
-        "unit": "day"
-    }
-}
-
-# Array operators
-array_ops = {
-    "$size": "$items",
-    "$slice": ["$array", 5],
-    "$arrayElemAt": ["$array", 0],
-    "$filter": {
-        "input": "$items",
-        "as": "item",
-        "cond": {"$gte": ["$$item.price", 100]}
-    },
-    "$map": {
-        "input": "$items",
-        "as": "item",
-        "in": {"$multiply": ["$$item.price", 1.1]}
-    }
-}
-
-# Conditional operators
-conditional_ops = {
-    "$cond": {
-        "if": {"$gte": ["$score", 90]},
-        "then": "A",
-        "else": "B"
-    },
-    "$switch": {
-        "branches": [
-            {"case": {"$gte": ["$score", 90]}, "then": "A"},
-            {"case": {"$gte": ["$score", 80]}, "then": "B"},
-            {"case": {"$gte": ["$score", 70]}, "then": "C"}
-        ],
-        "default": "F"
-    },
-    "$ifNull": ["$optional_field", "default_value"]
-}</code></pre>
-
-    <h2>Indexing in MongoDB</h2>
-    
-    <pre class="language-python"><code># Create indexes for better performance
-
-# Single field index
-collection.create_index("email", unique=True)
-collection.create_index([("age", 1)])  # 1 for ascending, -1 for descending
-
-# Compound index
-collection.create_index([
-    ("category", 1),
-    ("price", -1)
 ])
+print(flat.shape)
+print(flat.head(3).to_string(index=False))
+print(flat.dtypes.to_string())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>(230, 7)
+session_id  customer_id  order_id  device  medium  cart_value  n_pages
+    S00003        11550    118263 desktop  direct      122.90        7
+    S00025        14103    118271  tablet organic       19.50       10
+    S00039        13309    118272 desktop organic     1265.85        9
+session_id         str
+customer_id      int64
+order_id         int64
+device             str
+medium             str
+cart_value     float64
+n_pages          int64</code></pre>
+                </div>
 
-# Text index for search
-collection.create_index([("description", "text"), ("title", "text")])
+                <p>Every column is a plain type, ready for analysis. <code>customer_id</code> is <code>int64</code> here because every converted session belongs to a signed-in customer. Include the anonymous sessions and it becomes <code>float64</code>, since an ordinary integer column cannot hold a missing value; <code>astype("Int64")</code>, from Lesson 2.3, gives you the nullable integer type.</p>
 
-# 2D geospatial index
-collection.create_index([("location", "2dsphere")])
+                <h3>Route 2: <code>pd.json_normalize</code></h3>
+                <p>If you pass raw documents to <code>pd.DataFrame</code>, nested objects stay as dictionaries inside cells. <code>pd.json_normalize</code>, from Lesson 2.2, spreads them into dotted columns instead.</p>
 
-# Partial index (conditional)
-collection.create_index(
-    "age",
-    partialFilterExpression={"age": {"$gte": 18}}
-)
+                <pre><code class="language-python">docs = list(coll.find({}, {"_id": 0, "pages": 0, "cart.items": 0}).limit(500))
 
-# TTL index (auto-delete documents)
-collection.create_index(
-    "expireAt",
-    expireAfterSeconds=3600  # Delete after 1 hour
-)
+raw = pd.DataFrame(docs)
+print(raw.loc[1, "device"])                     # still a dictionary in one cell
 
-# List all indexes
-indexes = collection.list_indexes()
-for index in indexes:
-    print(index)
+wide = pd.json_normalize(docs)
+print(wide.shape)
+print(list(wide.columns))
+print(wide["utm.medium"].isna().sum(), "of 500 have no utm.medium")</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>{'type': 'desktop', 'os': 'macOS', 'browser': 'Safari'}
+(500, 12)
+['session_id', 'customer_id', 'started_at', 'converted', 'order_id', 'device.type', 'device.os', 'device.browser', 'cart.value', 'utm.source', 'utm.medium', 'utm.campaign']
+182 of 500 have no utm.medium</code></pre>
+                </div>
 
-# Index usage statistics
-stats = db.command("collStats", "users", indexDetails=True)
-print(json.dumps(stats['indexSizes'], indent=2))
+                <p>Documents with no <code>utm</code> get <code>NaN</code> in all three <code>utm.</code> columns. The flexible schema became missing values, which you know how to handle. The projection left out the two lists and the <code>_id</code>, since none of them belongs in a flat table.</p>
 
-# Drop index
-collection.drop_index("age_1")
+                <h3>Route 3: One Row per List Element</h3>
+                <p>For the lists, ask <code>json_normalize</code> for one row per element with <code>record_path</code>, and carry identifying fields along with <code>meta</code>.</p>
 
-# Explain query execution
-explanation = collection.find({"age": {"$gte": 25}}).explain()
-print(json.dumps(explanation['executionStats'], default=str, indent=2))</code></pre>
+                <pre><code class="language-python">docs = list(coll.find({}, {"_id": 0, "session_id": 1, "device.type": 1, "pages": 1}))
 
-    <h2>Data Modeling in MongoDB</h2>
-    
-    <h3>Embedding vs Referencing</h3>
-    <pre class="language-python"><code># Embedding Pattern (Denormalized)
-embedded_blog_post = {
-    "_id": ObjectId(),
-    "title": "Introduction to MongoDB",
-    "author": {
-        "name": "John Doe",
-        "email": "john@example.com",
-        "bio": "Database expert"
-    },
-    "comments": [
-        {
-            "user": "Alice",
-            "text": "Great post!",
-            "date": datetime.now()
-        },
-        {
-            "user": "Bob",
-            "text": "Very helpful",
-            "date": datetime.now()
-        }
-    ],
-    "tags": ["mongodb", "nosql", "database"],
-    "created_at": datetime.now()
+page_views = pd.json_normalize(docs, record_path="pages", meta=["session_id", ["device", "type"]])
+page_views["at"] = pd.to_datetime(page_views["at"])
+print(page_views.shape)
+print(page_views.head(3).to_string(index=False))
+print(page_views.groupby("device.type")["seconds"].median().to_string())</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>(9348, 5)
+              path  seconds                  at session_id device.type
+                 /       45 2025-11-01 06:31:45     S00001      mobile
+/category/sleeping       13 2025-11-01 06:32:30     S00001      mobile
+                 /       18 2025-11-01 06:48:03     S00002     desktop
+device.type
+desktop    41.0
+mobile     41.0
+tablet     40.0</code></pre>
+                </div>
+
+                <p>9,348 rows, the same number <code>$unwind</code> counted. This is the pandas version of unwinding, and from here it is ordinary <code>groupby</code> work. Which route to choose follows the rule from Lesson 5.4: reduce in the database when the collection is large, and flatten in pandas when the data already fits comfortably in memory.</p>
+
+                <div class="card card-success">
+                    <h4>✅ You Have Closed the Loop</h4>
+                    <p>CSV, Excel, JSON, SQL and now a document database: five kinds of source, and each one ends in the same place, a DataFrame you know how to clean, summarize, test and plot. The source changes. Your analysis skills do not.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="mistakes" class="lesson-section">
+                <h2>⚠️ Common Mistakes</h2>
+
+                <p>MongoDB is forgiving, which means several of its mistakes produce no error at all, just a wrong number. Those are worth meeting on purpose.</p>
+
+                <h3>1. A Misspelled Field Name Matches Nothing, Silently</h3>
+                <pre><code class="language-python">print(coll.count_documents({"device.typ": "mobile"}))       # typo: "typ"
+print(coll.count_documents({"device.type": "Mobile"}))      # wrong case in the value</code></pre>
+                <div class="card card-output">
+                    <h4>Output (no error, wrong answer)</h4>
+                    <pre><code>0
+0</code></pre>
+                </div>
+                <p><strong>What happened:</strong> SQL would say <code>no such column</code>. A collection has no list of valid fields, so a query on a field nobody has is a legitimate question whose answer is zero. <strong>Fix:</strong> be suspicious of zero. Look at a real document with <code>find_one()</code> and check values with <code>distinct()</code> before trusting a filter.</p>
+
+                <h3>2. An Update Without an Operator</h3>
+                <pre data-raises="ValueError"><code class="language-python">coll.update_one({"session_id": "S00002"}, {"reviewed": True})</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>ValueError: update only works with $ operators</code></pre>
+                </div>
+                <p><strong>What it means:</strong> the second argument must say <em>how</em> to change the document. <strong>Fix:</strong> wrap the change in <code>$set</code>: <code>{"$set": {"reviewed": True}}</code>. The error is a kindness: replacing a whole document by accident is what <code>replace_one</code> is for, and it has a different name so that you have to mean it.</p>
+
+                <h3>3. A Cursor Can Be Read Only Once</h3>
+                <pre><code class="language-python">cursor = coll.find({"converted": True}, {"_id": 0, "session_id": 1})
+print(len(list(cursor)))
+print(len(list(cursor)))</code></pre>
+                <div class="card card-output">
+                    <h4>Output</h4>
+                    <pre><code>230
+0</code></pre>
+                </div>
+                <p><strong>What happened:</strong> like a <code>sqlite3</code> cursor, it moves forward only, and the first <code>list()</code> used it up. <strong>Fix:</strong> store the result, <code>docs = list(coll.find(...))</code>, and reuse <code>docs</code>, or run the query again.</p>
+
+                <h3>4. Two Array Conditions Without <code>$elemMatch</code></h3>
+                <p>Shown in <a href="#operators">Query Operators</a>: <code>{"pages.path": "/checkout", "pages.seconds": {"$gte": 120}}</code> counts 77 sessions where the answer you wanted was 25. <strong>Fix:</strong> when two conditions describe the <em>same</em> list element, put them inside one <code>$elemMatch</code>.</p>
+
+                <h3>5. The <code>_id</code> Field Gets in the Way</h3>
+                <pre data-raises="TypeError"><code class="language-python">json.dumps(coll.find_one({"session_id": "S00002"}))</code></pre>
+                <div class="card card-output">
+                    <h4>Error</h4>
+                    <pre><code>TypeError: Object of type ObjectId is not JSON serializable</code></pre>
+                </div>
+                <p><strong>What it means:</strong> the automatic <code>_id</code> is an <code>ObjectId</code>, a MongoDB type that <code>json</code> does not know (it also turns up as an unwanted column in DataFrames). <strong>Fix:</strong> exclude it with the projection <code>{"_id": 0}</code> when you do not need it, or convert it with <code>str(doc["_id"])</code>.</p>
+
+                <h3>6. Forgetting the <code>$</code> on a Field Reference</h3>
+                <pre><code class="language-python">wrong = run([{"$group": {"_id": "device.type", "sessions": {"$sum": 1}}}])
+print(wrong.to_string(index=False))</code></pre>
+                <div class="card card-output">
+                    <h4>Output (one group instead of three)</h4>
+                    <pre><code>        _id  sessions
+device.type      2400</code></pre>
+                </div>
+                <p><strong>What happened:</strong> without the leading <code>$</code>, <code>"device.type"</code> is just a piece of text, the same for every document, so everything landed in one group. <strong>Fix:</strong> inside a pipeline, a field's <em>value</em> is written <code>"$device.type"</code>. Query dictionaries (<code>find</code>, <code>$match</code>) use the plain name as the key. Mixing these up is the most common pipeline slip, and everyone makes it.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="project" class="lesson-section">
+                <h2>🛠️ Project: The Funnel Report</h2>
+
+                <p>The e-commerce team wants to know where visitors drop out between arriving on the site and placing an order, and whether that differs by device. This is called a <strong>funnel</strong>. The nested session documents hold everything you need. Work in a new notebook, <code>lesson_5_5_project</code>. Allow about 45 minutes.</p>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 1: Load the sessions into a fresh collection <span class="step-time">(5 min)</span></h3>
+                    <pre><code class="language-python">import json
+import mongomock
+import pandas as pd
+import matplotlib.pyplot as plt
+
+with open("data/web_sessions.json", encoding="utf-8") as f:
+    raw_sessions = json.load(f)["sessions"]
+
+web = mongomock.MongoClient()["pinecrest_web"]["sessions"]     # with a real server: MongoClient(uri)[...][...]
+web.insert_many(raw_sessions)
+web.create_index("session_id", unique=True)
+print(web.count_documents({}))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>2400</code></pre>
+                    </div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 2: The overall funnel with four queries <span class="step-time">(10 min)</span></h3>
+                    <p>Define each step as a query and count it. A session "viewed a product" if any page path starts with <code>/product/</code>; it "added to cart" if the first element of <code>cart.items</code> exists.</p>
+                    <pre><code class="language-python">STEPS = {
+    "All sessions": {},
+    "Viewed a product": {"pages.path": {"$regex": "^/product/"}},
+    "Added to cart": {"cart.items.0": {"$exists": True}},
+    "Reached checkout": {"pages.path": "/checkout"},
+    "Placed an order": {"converted": True},
 }
 
-# Pros: Single query gets all data, atomic updates
-# Cons: Document size limit (16MB), data duplication
+funnel = pd.Series({step: web.count_documents(query) for step, query in STEPS.items()}, name="sessions").to_frame()
+funnel["pct_of_all"] = (100 * funnel["sessions"] / funnel["sessions"].iloc[0]).round(1)
+funnel["pct_of_previous"] = (100 * funnel["sessions"] / funnel["sessions"].shift(1)).round(1)
+print(funnel)</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>                  sessions  pct_of_all  pct_of_previous
+All sessions          2400       100.0              NaN
+Viewed a product      1610        67.1             67.1
+Added to cart          543        22.6             33.7
+Reached checkout       230         9.6             42.4
+Placed an order        230         9.6            100.0</code></pre>
+                    </div>
+                    <p>Two thirds of sessions look at a product, a third of those add something to the cart, and fewer than half of the carts reach checkout. That last gap, between cart and checkout, is the largest loss among visitors who had shown intent to buy. Note the final step too: in this dataset every session that reaches checkout places an order. Real funnels lose people at checkout as well, so treat that 100% as a property of the practice data.</p>
+                </div>
 
-# Reference Pattern (Normalized)
-# Authors collection
-author = {
-    "_id": ObjectId(),
-    "name": "John Doe",
-    "email": "john@example.com",
-    "bio": "Database expert"
-}
-
-# Posts collection
-post = {
-    "_id": ObjectId(),
-    "title": "Introduction to MongoDB",
-    "author_id": author["_id"],  # Reference to author
-    "created_at": datetime.now()
-}
-
-# Comments collection
-comment = {
-    "_id": ObjectId(),
-    "post_id": post["_id"],  # Reference to post
-    "user": "Alice",
-    "text": "Great post!",
-    "date": datetime.now()
-}
-
-# Pros: No duplication, smaller documents
-# Cons: Multiple queries needed, no transactions (before MongoDB 4.0)
-
-# Hybrid Pattern
-hybrid_post = {
-    "_id": ObjectId(),
-    "title": "Introduction to MongoDB",
-    "author_id": ObjectId(),  # Reference
-    "author_name": "John Doe",  # Denormalized for display
-    "comment_count": 2,  # Cached count
-    "recent_comments": [  # Embed recent only
-        {"user": "Alice", "text": "Great post!"}
-    ],
-    "tags": ["mongodb", "nosql"],
-    "created_at": datetime.now()
-}</code></pre>
-
-    <h3>Schema Design Patterns</h3>
-    <pre class="language-python"><code># Common MongoDB design patterns
-
-# 1. Polymorphic Pattern - Different types in same collection
-products = [
-    {
-        "type": "book",
-        "title": "MongoDB Guide",
-        "author": "John Doe",
-        "isbn": "978-1234567890",
-        "pages": 350
-    },
-    {
-        "type": "movie",
-        "title": "Data Science Documentary",
-        "director": "Jane Smith",
-        "duration": 120,
-        "format": "BluRay"
-    }
-]
-
-# 2. Attribute Pattern - Flexible attributes
-product_with_attrs = {
-    "name": "Laptop",
-    "attributes": [
-        {"key": "color", "value": "silver"},
-        {"key": "ram", "value": "16GB", "type": "spec"},
-        {"key": "warranty", "value": "2 years", "type": "service"}
-    ]
-}
-
-# 3. Bucket Pattern - Time series data
-sensor_bucket = {
-    "sensor_id": "sensor_001",
-    "start_time": datetime(2024, 1, 1, 0, 0),
-    "end_time": datetime(2024, 1, 1, 1, 0),
-    "measurement_count": 3600,
-    "measurements": [
-        {"timestamp": datetime(2024, 1, 1, 0, 0, 0), "temp": 22.5, "humidity": 45},
-        {"timestamp": datetime(2024, 1, 1, 0, 0, 1), "temp": 22.6, "humidity": 45},
-        # ... up to 3600 measurements
-    ],
-    "summary": {
-        "avg_temp": 22.5,
-        "max_temp": 23.1,
-        "min_temp": 22.0
-    }
-}
-
-# 4. Computed Pattern - Pre-calculated values
-order_with_computed = {
-    "order_id": 1,
-    "items": [
-        {"product": "A", "quantity": 2, "price": 10},
-        {"product": "B", "quantity": 1, "price": 20}
-    ],
-    "subtotal": 40,  # Pre-computed
-    "tax": 4,  # Pre-computed
-    "total": 44,  # Pre-computed
-    "item_count": 3  # Pre-computed
-}
-
-# 5. Subset Pattern - Frequently accessed subset
-user_with_subset = {
-    "_id": ObjectId(),
-    "name": "John Doe",
-    "email": "john@example.com",
-    "recent_posts": [  # Last 10 posts
-        {"title": "Post 1", "date": datetime.now()},
-        {"title": "Post 2", "date": datetime.now()}
-    ],
-    "total_posts": 150  # Full count
-}
-
-# 6. Tree Pattern - Hierarchical data
-category_tree = {
-    "_id": "electronics",
-    "name": "Electronics",
-    "path": ",electronics,",
-    "parent": None,
-    "ancestors": []
-}
-
-subcategory = {
-    "_id": "laptops",
-    "name": "Laptops",
-    "path": ",electronics,laptops,",
-    "parent": "electronics",
-    "ancestors": ["electronics"]
-}</code></pre>
-
-    <h2>MongoDB with Pandas</h2>
-    
-    <pre class="language-python"><code># Working with MongoDB and Pandas
-
-# Load data from MongoDB to DataFrame
-def mongo_to_dataframe(collection, query={}, projection=None):
-    """Convert MongoDB collection to pandas DataFrame"""
-    cursor = collection.find(query, projection)
-    df = pd.DataFrame(list(cursor))
-    
-    # Handle ObjectId
-    if '_id' in df.columns:
-        df['_id'] = df['_id'].astype(str)
-    
-    return df
-
-# Example usage
-df = mongo_to_dataframe(
-    collection,
-    query={"age": {"$gte": 25}},
-    projection={"name": 1, "age": 1, "email": 1}
-)
-print(df.head())
-
-# Save DataFrame to MongoDB
-def dataframe_to_mongo(df, collection, if_exists='append'):
-    """Save pandas DataFrame to MongoDB"""
-    records = df.to_dict('records')
-    
-    if if_exists == 'replace':
-        collection.delete_many({})
-    
-    if records:
-        collection.insert_many(records)
-        print(f"Inserted {len(records)} records")
-
-# Complex analysis with aggregation and pandas
-def analyze_sales_data():
-    """Combine MongoDB aggregation with pandas analysis"""
-    
-    # MongoDB aggregation
-    pipeline = [
-        {"$match": {"status": "delivered"}},
-        {"$group": {
-            "_id": {
-                "date": {"$dateToString": {"format": "%Y-%m-%d", "date": "$order_date"}},
-                "category": "$category"
-            },
-            "revenue": {"$sum": "$total"},
-            "orders": {"$sum": 1}
-        }}
-    ]
-    
-    results = list(orders.aggregate(pipeline))
-    
-    # Convert to DataFrame
-    df = pd.DataFrame(results)
-    df['date'] = pd.to_datetime(df['_id'].apply(lambda x: x['date']))
-    df['category'] = df['_id'].apply(lambda x: x['category'])
-    df = df.drop('_id', axis=1)
-    
-    # Pandas analysis
-    pivot = df.pivot_table(
-        values='revenue',
-        index='date',
-        columns='category',
-        aggfunc='sum',
-        fill_value=0
-    )
-    
-    # Calculate moving averages
-    for col in pivot.columns:
-        pivot[f'{col}_ma7'] = pivot[col].rolling(window=7).mean()
-    
-    return pivot
-
-# Time series analysis
-def time_series_from_mongo():
-    """Extract and analyze time series data"""
-    
-    # Get data
-    df = mongo_to_dataframe(
-        orders,
-        query={"order_date": {"$gte": datetime.now() - timedelta(days=90)}}
-    )
-    
-    # Process dates
-    df['order_date'] = pd.to_datetime(df['order_date'])
-    df = df.set_index('order_date')
-    
-    # Resample to daily
-    daily_sales = df.resample('D')['total'].agg(['sum', 'count', 'mean'])
-    
-    # Add time-based features
-    daily_sales['day_of_week'] = daily_sales.index.dayofweek
-    daily_sales['month'] = daily_sales.index.month
-    daily_sales['is_weekend'] = daily_sales['day_of_week'].isin([5, 6])
-    
-    return daily_sales</code></pre>
-
-    <h2>Performance Optimization</h2>
-    
-    <pre class="language-python"><code># MongoDB performance optimization techniques
-
-# 1. Batch operations
-def batch_operations():
-    """Use bulk operations for better performance"""
-    from pymongo import InsertOne, UpdateOne, DeleteOne
-    
-    operations = []
-    
-    # Prepare bulk operations
-    for i in range(10000):
-        operations.append(
-            InsertOne({
-                "user_id": i,
-                "score": np.random.randint(0, 100)
-            })
-        )
-    
-    # Execute in bulk
-    result = collection.bulk_write(operations)
-    print(f"Inserted: {result.inserted_count}")
-
-# 2. Connection pooling
-from pymongo import MongoClient
-
-# Configure connection pool
-client = MongoClient(
-    'mongodb://localhost:27017/',
-    maxPoolSize=50,
-    minPoolSize=10,
-    maxIdleTimeMS=10000,
-    waitQueueTimeoutMS=10000
-)
-
-# 3. Query optimization
-def optimize_queries():
-    """Query optimization strategies"""
-    
-    # Use projection to limit fields
-    results = collection.find(
-        {"age": {"$gte": 25}},
-        {"name": 1, "email": 1, "_id": 0}
-    )
-    
-    # Use limit for large results
-    results = collection.find().limit(100)
-    
-    # Use skip for pagination (careful with large offsets)
-    page = 2
-    page_size = 20
-    results = collection.find().skip((page - 1) * page_size).limit(page_size)
-    
-    # Use cursor batch size
-    results = collection.find().batch_size(100)
-    
-    # Use hint to force index
-    results = collection.find({"age": 25}).hint("age_1")
-
-# 4. Aggregation optimization
-def optimize_aggregation():
-    """Aggregation pipeline optimization"""
-    
-    # Place $match early in pipeline
-    pipeline = [
-        {"$match": {"status": "active"}},  # Filter first
-        {"$project": {"name": 1, "age": 1}},  # Then project
-        {"$group": {"_id": "$age", "count": {"$sum": 1}}}
-    ]
-    
-    # Use indexes for $match and $sort
-    collection.create_index([("status", 1), ("age", 1)])
-    
-    # Use allowDiskUse for large datasets
-    results = collection.aggregate(pipeline, allowDiskUse=True)
-
-# 5. Monitoring performance
-def monitor_performance():
-    """Monitor MongoDB performance"""
-    
-    # Database statistics
-    stats = db.command("dbStats")
-    print(f"Database size: {stats['dataSize']} bytes")
-    print(f"Index size: {stats['indexSize']} bytes")
-    
-    # Collection statistics
-    coll_stats = db.command("collStats", "users")
-    print(f"Document count: {coll_stats['count']}")
-    print(f"Average document size: {coll_stats['avgObjSize']} bytes")
-    
-    # Current operations
-    current_ops = db.current_op()
-    for op in current_ops['inprog']:
-        if op.get('secs_running', 0) > 5:
-            print(f"Long running operation: {op}")
-    
-    # Profile slow queries
-    db.set_profiling_level(1, slow_ms=100)
-    
-    # Get profiling data
-    profile_data = db.system.profile.find().limit(10)
-    for profile in profile_data:
-        print(f"Slow query: {profile['command']} - {profile['millis']}ms")</code></pre>
-
-    <h2>MongoDB vs SQL: Migration Guide</h2>
-    
-    <pre class="language-python"><code># SQL to MongoDB query translation
-
-# SQL: SELECT * FROM users WHERE age > 25
-mongo_query = collection.find({"age": {"$gt": 25}})
-
-# SQL: SELECT name, email FROM users WHERE age > 25
-mongo_query = collection.find(
-    {"age": {"$gt": 25}},
-    {"name": 1, "email": 1, "_id": 0}
-)
-
-# SQL: SELECT * FROM users WHERE age BETWEEN 25 AND 35
-mongo_query = collection.find({
-    "age": {"$gte": 25, "$lte": 35}
-})
-
-# SQL: SELECT * FROM users WHERE name LIKE 'A%'
-mongo_query = collection.find({
-    "name": {"$regex": "^A", "$options": "i"}
-})
-
-# SQL: SELECT COUNT(*) FROM users GROUP BY status
-mongo_query = collection.aggregate([
+                <div class="card card-info">
+                    <h3>🛠️ Step 3: The funnel by device, in one pipeline <span class="step-time">(10 min)</span></h3>
+                    <p>Compute a true/false flag per session with <code>$addFields</code>, then count the flags per device with <code>$cond</code> inside <code>$sum</code>. Finish the percentages in pandas.</p>
+                    <pre><code class="language-python">by_device = pd.DataFrame(list(web.aggregate([
+    {"$addFields": {
+        "has_cart": {"$gt": [{"$size": "$cart.items"}, 0]},
+        "reached_checkout": {"$in": ["/checkout", "$pages.path"]},
+    }},
     {"$group": {
-        "_id": "$status",
-        "count": {"$sum": 1}
-    }}
-])
-
-# SQL: SELECT * FROM users ORDER BY age DESC LIMIT 10
-mongo_query = collection.find().sort("age", -1).limit(10)
-
-# SQL: SELECT * FROM orders o JOIN customers c ON o.customer_id = c.id
-mongo_query = orders.aggregate([
-    {"$lookup": {
-        "from": "customers",
-        "localField": "customer_id",
-        "foreignField": "_id",
-        "as": "customer"
+        "_id": "$device.type",
+        "sessions": {"$sum": 1},
+        "carts": {"$sum": {"$cond": ["$has_cart", 1, 0]}},
+        "checkouts": {"$sum": {"$cond": ["$reached_checkout", 1, 0]}},
+        "orders": {"$sum": {"$cond": ["$converted", 1, 0]}},
     }},
-    {"$unwind": "$customer"}
+    {"$sort": {"sessions": -1}},
+]))).rename(columns={"_id": "device"}).set_index("device")[["sessions", "carts", "checkouts", "orders"]]
+
+by_device["cart_pct"] = (100 * by_device["carts"] / by_device["sessions"]).round(1)
+by_device["cart_to_order_pct"] = (100 * by_device["orders"] / by_device["carts"]).round(1)
+by_device["conversion_pct"] = (100 * by_device["orders"] / by_device["sessions"]).round(1)
+print(by_device)
+print(by_device[["sessions", "carts", "orders"]].sum().to_dict())</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>         sessions  carts  checkouts  orders  cart_pct  cart_to_order_pct  conversion_pct
+device
+mobile       1326    309        130     130      23.3               42.1             9.8
+desktop       915    194         85      85      21.2               43.8             9.3
+tablet        159     40         15      15      25.2               37.5             9.4
+{'sessions': 2400, 'carts': 543, 'orders': 230}</code></pre>
+                    </div>
+                    <p>The totals row matches Step 2 (2,400, 543, 230), so the pipeline and the simple counts agree. The three devices convert at similar rates; with only 159 tablet sessions, do not read much into its figure.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 4: What is left in abandoned carts? <span class="step-time">(10 min)</span></h3>
+                    <p>An abandoned cart has items and no order. <code>$match</code> them, <code>$unwind</code> the items, and total the value by product category, which is the three-letter prefix of the SKU. <code>$substr</code> takes a substring: field, start, length. (Current MongoDB servers prefer the name <code>$substrCP</code>, which mongomock does not implement; <code>$substr</code> is the older spelling and both accept it.)</p>
+                    <pre><code class="language-python">abandoned_query = {"converted": False, "cart.items.0": {"$exists": True}}
+print(web.count_documents(abandoned_query), "abandoned carts")
+
+abandoned = pd.DataFrame(list(web.aggregate([
+    {"$match": abandoned_query},
+    {"$unwind": "$cart.items"},
+    {"$group": {
+        "_id": {"$substr": ["$cart.items.sku", 0, 3]},
+        "lines": {"$sum": 1},
+        "units": {"$sum": "$cart.items.qty"},
+        "value": {"$sum": {"$multiply": ["$cart.items.qty", "$cart.items.unit_price"]}},
+    }},
+    {"$sort": {"value": -1}},
+]))).rename(columns={"_id": "sku_prefix"})[["sku_prefix", "lines", "units", "value"]]
+
+print(abandoned.round(2).to_string(index=False))
+print("total value left behind:", round(abandoned["value"].sum(), 2))</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>313 abandoned carts
+sku_prefix  lines  units    value
+       TNT     33     45 16349.75
+       SLP     47     72 12570.40
+       APL     57     88  8788.60
+       PCK     40     62  8016.90
+       FTW     41     62  6608.00
+       KIT     58     85  6595.45
+       SNW     39     63  6264.60
+       CLM     37     56  4678.70
+       ACC     57     83  4185.60
+total value left behind: 74058.0</code></pre>
+                    </div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 5: Check the orders against the relational data <span class="step-time">(5 min)</span></h3>
+                    <p>Each converted session carries an <code>order_id</code>. Flatten those sessions and merge with <code>orders.csv</code>: do all of them exist, and are they what they should be?</p>
+                    <pre><code class="language-python">converted = pd.DataFrame(list(web.find({"converted": True},
+                                       {"_id": 0, "session_id": 1, "customer_id": 1, "order_id": 1})))
+orders = pd.read_csv("data/orders.csv")
+
+merged = converted.merge(orders, on="order_id", how="left", indicator=True, suffixes=("_session", "_order"))
+print(merged["_merge"].value_counts().to_dict())
+print(merged["channel"].unique().tolist(), merged["order_date"].min(), "to", merged["order_date"].max())
+print("customer ids agree:", (merged["customer_id_session"] == merged["customer_id_order"]).all())</code></pre>
+                    <div class="card card-output">
+                        <h4>Output</h4>
+                        <pre><code>{'both': 230, 'left_only': 0, 'right_only': 0}
+['online'] 2025-11-01 to 2025-11-30
+customer ids agree: True</code></pre>
+                    </div>
+                    <p>All 230 converted sessions match a real online order from November 2025, placed by the same customer. Two different systems, a document store and a relational one, agree where they overlap.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 6: Draw the funnel <span class="step-time">(5 min)</span></h3>
+                    <pre><code class="language-python">fig, ax = plt.subplots(figsize=(8, 3.6), layout="constrained")
+bars = ax.barh(funnel.index[::-1], funnel["sessions"][::-1], color="#667eea")
+ax.bar_label(bars, labels=[f"{n:,}  ({p:.0f}%)" for n, p in zip(funnel["sessions"][::-1], funnel["pct_of_all"][::-1])], padding=4)
+ax.set_xlim(0, 2900)
+ax.set_xlabel("Sessions, November 2025")
+ax.set_title("Pinecrest website funnel")
+ax.spines[["top", "right"]].set_visible(False)
+plt.show()</code></pre>
+                    <figure>
+                        <img src="images/sql_nosql_mongodb_funnel.png" alt="Horizontal bar chart of the Pinecrest website funnel for November 2025: 2,400 sessions, 1,610 viewed a product (67 percent), 543 added to cart (23 percent), 230 reached checkout (10 percent) and 230 placed an order (10 percent)." width="880" height="396" loading="lazy">
+                        <figcaption>The steepest drop among visitors with intent is from cart to checkout: 543 carts, 230 checkouts.</figcaption>
+                    </figure>
+                </div>
+
+                <div class="card card-success">
+                    <h3>✅ Project Completion Checklist</h3>
+                    <ul class="checklist">
+                        <li>The collection holds 2,400 sessions and has a unique index on <code>session_id</code></li>
+                        <li>Your funnel reads 2,400, 1,610, 543, 230, 230</li>
+                        <li>The by-device pipeline's totals match the simple counts</li>
+                        <li>You found 313 abandoned carts and their value by SKU prefix</li>
+                        <li>All 230 converted sessions merge to an online order by the same customer</li>
+                        <li>Your chart shows each step with its count and its share of all sessions</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="exercises" class="lesson-section">
+                <h2>🏋️ Hands-on Exercises</h2>
+
+                <p>These use the lesson's <code>coll</code> collection and the <code>run()</code> helper. A count of zero is a result to question, not to report: check a document first.</p>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 1: Three Finds</h3>
+                    <p>Count the sessions that (a) used Firefox on Linux, (b) came from the <code>winter_layers</code> campaign and converted, (c) viewed more than ten pages. For (c) you will need a different tool than <code>$size</code>, which only tests for an exact length.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Dot notation for (a) and (b). For (c): a list has more than ten elements exactly when its element at position 10 exists: <code>{"pages.10": {"$exists": True}}</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">print(coll.count_documents({"device.browser": "Firefox", "device.os": "Linux"}))
+print(coll.count_documents({"utm.campaign": "winter_layers", "converted": True}))
+print(coll.count_documents({"pages.10": {"$exists": True}}))
+print(sorted(c for c in coll.distinct("utm.campaign") if c))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>69
+27
+19
+['fall_gear_search', 'november_trail_notes', 'winter_layers']</code></pre>
+                        </div>
+                        <p>The last line is the check that makes (b) trustworthy: it lists the campaign names that really occur.</p>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 2: Tag, Verify, Undo</h3>
+                    <p>Add a field <code>high_value: True</code> to every session whose cart value is at least $500. Before updating, count how many documents the query matches. After updating, confirm the same number carry the field, list the three largest (session id and cart value), and then remove the field again.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>update_many(query, {"$set": {...}})</code> and later <code>{"$unset": {"high_value": ""}}</code>. Compare <code>matched_count</code> with your own count.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">big = {"cart.value": {"$gte": 500}}
+expected = coll.count_documents(big)
+
+r = coll.update_many(big, {"$set": {"high_value": True}})
+print(expected, r.matched_count, coll.count_documents({"high_value": True}))
+
+for doc in coll.find({"high_value": True}, {"_id": 0, "session_id": 1, "cart.value": 1}).sort("cart.value", -1).limit(3):
+    print(doc)
+
+coll.update_many({}, {"$unset": {"high_value": ""}})
+print(coll.count_documents({"high_value": {"$exists": True}}))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>73 73 73
+{'session_id': 'S02262', 'cart': {'value': 1590.85}}
+{'session_id': 'S00257', 'cart': {'value': 1579.8}}
+{'session_id': 'S01248', 'cart': {'value': 1293.8}}
+0</code></pre>
+                        </div>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 3: Busiest Days</h3>
+                    <p><code>started_at</code> is text such as <code>2025-11-28T14:05:11</code>. Build a pipeline that groups sessions by calendar day and returns the five days with the most sessions, with the number of orders on each. Are the busiest days also the days with the most orders?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>The day is the first ten characters: <code>{"$substr": ["$started_at", 0, 10]}</code> as the <code>_id</code> of a <code>$group</code>. Then <code>$sort</code> and <code>$limit</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">busiest = run([
+    {"$group": {
+        "_id": {"$substr": ["$started_at", 0, 10]},
+        "sessions": {"$sum": 1},
+        "orders": {"$sum": {"$cond": ["$converted", 1, 0]}},
+    }},
+    {"$sort": {"sessions": -1, "_id": 1}},
+    {"$limit": 5},
 ])
+print(busiest.to_string(index=False))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>       _id  sessions  orders
+2025-11-22       102       9
+2025-11-17        98      14
+2025-11-29        98      13
+2025-11-28        95      16
+2025-11-20        90       5</code></pre>
+                        </div>
+                        <p>Check the dates against a calendar. November 28, 2025 is Black Friday, and it and the Saturday after it are both in the top five, with the most orders of any of these days. But the busiest day for <em>visits</em> was the Saturday before, November 22, which produced far fewer orders: traffic and sales are different measurements. On a real server you would store <code>started_at</code> as a true date and group with <code>$dateTrunc</code> or <code>$dateToString</code>; with ISO text, a substring does the job.</p>
+                    </details>
+                </div>
 
-# SQL: UPDATE users SET status = 'active' WHERE age > 25
-mongo_update = collection.update_many(
-    {"age": {"$gt": 25}},
-    {"$set": {"status": "active"}}
-)
+                <div class="card">
+                    <h3>🏋️ Exercise 4: Cart Items as a Table (Stretch)</h3>
+                    <p>Using <code>pd.json_normalize</code> with <code>record_path</code>, build a DataFrame with one row per cart item across all sessions, carrying <code>session_id</code> and <code>converted</code> along. Add a <code>line_value</code> column. Then answer in pandas: what share of the total value put into carts ended up in an order? Verify the total against a pipeline that sums <code>cart.value</code>.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p><code>record_path=["cart", "items"]</code> reaches a list nested inside an object. <code>meta=["session_id", "converted"]</code>. Sessions with empty carts contribute no rows.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+                        <pre><code class="language-python">docs = list(coll.find({"cart.items.0": {"$exists": True}},
+                      {"_id": 0, "session_id": 1, "converted": 1, "cart.items": 1}))
 
-# SQL: DELETE FROM users WHERE status = 'inactive'
-mongo_delete = collection.delete_many({"status": "inactive"})
+items = pd.json_normalize(docs, record_path=["cart", "items"], meta=["session_id", "converted"])
+items["line_value"] = items["qty"] * items["unit_price"]
+print(items.shape)
+print(items.head(3).to_string(index=False))
 
-# SQL to MongoDB concept mapping
-sql_to_mongo_concepts = {
-    "Table": "Collection",
-    "Row": "Document",
-    "Column": "Field",
-    "Primary Key": "_id",
-    "Index": "Index",
-    "Join": "$lookup",
-    "GROUP BY": "$group",
-    "WHERE": "$match",
-    "HAVING": "$match (after $group)",
-    "ORDER BY": "$sort",
-    "LIMIT": "$limit",
-    "OFFSET": "$skip"
-}</code></pre>
+by_outcome = items.groupby("converted")["line_value"].sum()
+print(by_outcome.round(2).to_string())
+print("share ordered:", round(100 * by_outcome[True] / by_outcome.sum(), 1), "%")
 
-    <h2>Real-world Use Cases</h2>
-    
-    <pre class="language-python"><code># 1. IoT Sensor Data Storage
-def store_sensor_data():
-    """Time-series data with bucketing"""
-    
-    sensor_collection = db['sensor_data']
-    
-    # Bucket pattern for efficient storage
-    bucket_size = 3600  # 1 hour buckets
-    
-    def add_reading(sensor_id, timestamp, data):
-        bucket_start = timestamp.replace(minute=0, second=0, microsecond=0)
-        
-        sensor_collection.update_one(
-            {
-                "sensor_id": sensor_id,
-                "bucket_start": bucket_start
-            },
-            {
-                "$push": {
-                    "readings": {
-                        "timestamp": timestamp,
-                        **data
-                    }
-                },
-                "$inc": {"count": 1},
-                "$set": {
-                    "bucket_end": bucket_start + timedelta(hours=1)
-                }
-            },
-            upsert=True
-        )
-    
-    # Add sensor reading
-    add_reading(
-        "sensor_001",
-        datetime.now(),
-        {"temperature": 22.5, "humidity": 45}
-    )
+check = run([{"$group": {"_id": None, "total": {"$sum": "$cart.value"}}}])
+print(round(items["line_value"].sum(), 2), round(check.loc[0, "total"], 2))</code></pre>
+                        <div class="card card-output">
+                            <h4>Output</h4>
+                            <pre><code>(734, 6)
+     sku  qty  unit_price session_id converted  line_value
+TNT-1003    2      459.95     S00002     False      919.90
+ACC-1004    1       85.95     S00002     False       85.95
+FTW-1011    1       55.95     S00003      True       55.95
+converted
+False    74058.0
+True     61558.3
+share ordered: 45.4 %
+135616.3 135616.3</code></pre>
+                        </div>
+                        <p>Grouping by <code>None</code> puts every document in one group, which is how a pipeline computes a grand total. The two totals agree, so the flattening lost nothing.</p>
+                    </details>
+                </div>
+            </section>
 
-# 2. Content Management System
-def cms_example():
-    """Flexible schema for content"""
-    
-    content_collection = db['content']
-    
-    # Article with dynamic fields
-    article = {
-        "type": "article",
-        "title": "MongoDB for Data Science",
-        "author": "John Doe",
-        "content": "...",
-        "tags": ["mongodb", "nosql", "data science"],
-        "metadata": {
-            "views": 0,
-            "likes": 0,
-            "reading_time": "5 min"
-        },
-        "comments": [],
-        "created_at": datetime.now(),
-        "published": True
-    }
-    
-    # Video content (different structure)
-    video = {
-        "type": "video",
-        "title": "MongoDB Tutorial",
-        "url": "https://...",
-        "duration": 1200,
-        "thumbnail": "https://...",
-        "transcript": "...",
-        "created_at": datetime.now()
-    }
-    
-    content_collection.insert_many([article, video])
+            <!-- ============================================================ -->
+            <section id="quiz" class="lesson-section">
+                <h2>🎯 Quick Quiz</h2>
+                <div class="card quiz-container">
+                    <h3>🎯 Check Your Understanding</h3>
 
-# 3. Real-time Analytics
-def real_time_analytics():
-    """Stream processing and analytics"""
-    
-    events_collection = db['events']
-    
-    # Watch for changes (Change Streams)
-    with events_collection.watch() as stream:
-        for change in stream:
-            if change['operationType'] == 'insert':
-                doc = change['fullDocument']
-                
-                # Real-time processing
-                if doc['event_type'] == 'page_view':
-                    # Update analytics
-                    db.analytics.update_one(
-                        {"page": doc['page']},
-                        {
-                            "$inc": {"views": 1},
-                            "$set": {"last_viewed": datetime.now()}
-                        },
-                        upsert=True
-                    )
+                    <div class="quiz-question">
+                        <p><strong>Question 1:</strong> Which dataset is the most natural fit for a document database?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Transfers between accounts must stay consistent across many records at once, and are queried across accounts all the time. Which model is built for that?">
+                                A) A bank's accounts and the transfers between them
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="Each ticket is a self-contained record with a nested list of messages and attachments of varying shape, usually read and written as a whole. That is exactly what a document holds well.">
+                                B) Support tickets, each with its own thread of messages and attachments
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="This is flat and tabular, every row has the same four columns, and it is usually joined to stores and products. What does that suggest?">
+                                C) A table of daily sales with the columns date, store, units and revenue
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
 
-# 4. Recommendation Engine
-def recommendation_engine():
-    """User behavior and recommendations"""
-    
-    # Store user interactions
-    interactions = db['interactions']
-    
-    interaction = {
-        "user_id": "user123",
-        "item_id": "product456",
-        "action": "view",
-        "timestamp": datetime.now(),
-        "context": {
-            "source": "search",
-            "device": "mobile",
-            "session_id": "sess789"
-        }
-    }
-    
-    interactions.insert_one(interaction)
-    
-    # Calculate recommendations
-    pipeline = [
-        # Get user's interactions
-        {"$match": {"user_id": "user123"}},
-        
-        # Find similar users
-        {"$lookup": {
-            "from": "interactions",
-            "let": {"items": "$item_id"},
-            "pipeline": [
-                {"$match": {"user_id": {"$ne": "user123"}}},
-                {"$group": {
-                    "_id": "$user_id",
-                    "common_items": {"$sum": {"$cond": [{"$in": ["$item_id", "$$items"]}, 1, 0]}}
-                }},
-                {"$sort": {"common_items": -1}},
-                {"$limit": 10}
-            ],
-            "as": "similar_users"
-        }}
-    ]
-    
-    recommendations = list(interactions.aggregate(pipeline))</code></pre>
+                    <div class="quiz-question">
+                        <p><strong>Question 2:</strong> Of the 2,400 sessions, 916 have no <code>utm</code> field at all, and none has <code>utm</code> set to null. What does this print?</p>
+                        <pre><code class="language-python">print(coll.count_documents({"utm": None}))</code></pre>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="In a query, None matches documents where the field is null and also documents where the field does not exist. Use $exists when you need to tell the two apart.">
+                                A) <code>916</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="That would be right if None matched only an explicit null value. What does a query for None do with documents that lack the field entirely?">
+                                B) <code>0</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="That is every document. The 1,484 sessions that do have a utm object do not equal None.">
+                                C) <code>2400</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
 
-    <h2>Practice Exercises</h2>
-    
-    <h3>Exercise 1: Build a Blog Platform</h3>
-    <p>Create a MongoDB-based blog with:</p>
-    <ol>
-        <li>User profiles with nested preferences</li>
-        <li>Posts with embedded comments (first 10)</li>
-        <li>Tags and categories with counters</li>
-        <li>Full-text search on posts</li>
-        <li>Analytics tracking (views, likes)</li>
-    </ol>
+                    <div class="quiz-question">
+                        <p><strong>Question 3:</strong> You want sessions where the visitor spent at least two minutes <em>on the checkout page</em>. Which query is correct?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="Each of these two conditions can be satisfied by a different element of the pages list: checkout visited, and some other page viewed for two minutes.">
+                                A) <code>{"pages.path": "/checkout", "pages.seconds": {"$gte": 120}}</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="$size tests how many elements a list has. It says nothing about what is inside them.">
+                                B) <code>{"pages": {"$size": 120}, "pages.path": "/checkout"}</code>
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="$elemMatch requires a single element of the list to satisfy all the conditions inside it, so the path and the seconds must belong to the same page view.">
+                                C) <code>{"pages": {"$elemMatch": {"path": "/checkout", "seconds": {"$gte": 120}}}}</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
 
-    <h3>Exercise 2: Time Series Analysis</h3>
-    <p>Implement a sensor data system:</p>
-    <ol>
-        <li>Use bucket pattern for hourly data</li>
-        <li>Calculate rolling averages</li>
-        <li>Detect anomalies</li>
-        <li>Create aggregation for dashboards</li>
-        <li>Implement data archival</li>
-    </ol>
+                    <div class="quiz-question">
+                        <p><strong>Question 4:</strong> In this pipeline, what is the job of the second <code>$match</code>?</p>
+                        <pre data-norun><code class="language-python">[{"$match": {"device.type": "mobile"}},
+ {"$unwind": "$pages"},
+ {"$group": {"_id": "$pages.path", "views": {"$sum": 1}}},
+ {"$match": {"views": {"$gte": 150}}}]</code></pre>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="true" data-explanation="It runs on the output of $group, which has one document per path with a views field. Filtering there keeps only groups with at least 150 views, the role HAVING plays in SQL.">
+                                A) It keeps only the groups with at least 150 views, like <code>HAVING</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Session documents have no field called views. Which stage created it, and what do the documents look like after that stage?">
+                                B) It keeps only sessions that had at least 150 page views, like <code>WHERE</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="A stage only sees the documents handed to it by the stage before. By this point the original sessions have been replaced by one document per path.">
+                                C) Nothing: a second <code>$match</code> is ignored
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
 
-    <h3>Exercise 3: E-commerce Migration</h3>
-    <p>Migrate SQL e-commerce to MongoDB:</p>
-    <ol>
-        <li>Design schema for products, orders, customers</li>
-        <li>Handle relationships (embed vs reference)</li>
-        <li>Implement shopping cart</li>
-        <li>Create analytics pipeline</li>
-        <li>Compare performance with SQL version</li>
-    </ol>
+                    <div class="quiz-question">
+                        <p><strong>Question 5:</strong> <code>docs</code> is a list of session documents fetched with <code>find</code>. You run <code>df = pd.DataFrame(docs)</code>. What is in the <code>device</code> column?</p>
+                        <div class="quiz-options">
+                            <button class="quiz-option" data-correct="false" data-hint="pandas does not pick one of the nested values for you. It stores whatever object was under the key device.">
+                                A) The device type as text, such as <code>mobile</code>
+                            </button>
+                            <button class="quiz-option" data-correct="false" data-hint="Spreading nested fields into dotted columns is what pd.json_normalize does. What does plain pd.DataFrame do with a dictionary inside a dictionary?">
+                                B) Nothing: it is split into <code>device.type</code>, <code>device.os</code> and <code>device.browser</code> columns
+                            </button>
+                            <button class="quiz-option" data-correct="true" data-explanation="pd.DataFrame makes one column per top-level key and leaves nested objects as dictionaries inside the cells. Use pd.json_normalize, or a $project stage, to flatten them.">
+                                C) A dictionary in every cell, such as <code>{'type': 'mobile', 'os': 'iOS', 'browser': 'Safari'}</code>
+                            </button>
+                        </div>
+                        <div class="quiz-feedback"></div>
+                    </div>
+                </div>
+            </section>
 
-    <h2>Key Takeaways</h2>
-    <ul>
-        <li>📄 MongoDB stores data as flexible JSON-like documents</li>
-        <li>🔄 No fixed schema allows for agile development</li>
-        <li>🚀 Horizontal scaling for big data applications</li>
-        <li>🔍 Powerful aggregation pipeline for complex analytics</li>
-        <li>🎯 Choose between embedding and referencing wisely</li>
-        <li>⚡ Proper indexing is crucial for performance</li>
-        <li>🔗 Integrates well with pandas for data science</li>
-    </ul>
+            <!-- ============================================================ -->
+            <section id="faq" class="lesson-section">
+                <h2>❓ Common Questions at This Stage</h2>
 
-    <h2>Further Resources</h2>
-    <ul>
-        <li><a href="https://docs.mongodb.com/">MongoDB Documentation</a></li>
-        <li><a href="https://university.mongodb.com/">MongoDB University (Free Courses)</a></li>
-        <li><a href="https://www.mongodb.com/docs/manual/core/data-modeling-introduction/">Data Modeling Guide</a></li>
-        <li><a href="https://github.com/mongodb/mongo-python-driver">PyMongo GitHub</a></li>
-        <li><a href="https://www.mongodb.com/atlas">MongoDB Atlas (Cloud)</a></li>
-        <li><a href="https://docs.mongodb.com/manual/reference/sql-comparison/">SQL to MongoDB Mapping</a></li>
-    </ul>
+                <details>
+                    <summary>How do I move from mongomock to a real MongoDB?</summary>
+                    <p>Install MongoDB Community Server on your computer, or create a free hosted cluster with a provider, then change one line: <code>client = MongoClient(uri)</code> from <code>pymongo</code> in place of <code>mongomock.MongoClient()</code>. The rest of your code stays the same. The data will then persist between sessions, <code>explain()</code> will work, and every pipeline operator will be available. Keep the connection string out of your code, as with any password.</p>
+                </details>
+                <details>
+                    <summary>Can MongoDB do joins?</summary>
+                    <p>Yes, with the <code>$lookup</code> pipeline stage, which attaches matching documents from another collection, like a left join. It exists for the cases where you need it. If you find yourself using it in most queries, that is a sign the data is relational at heart and would be happier in a relational database, or that related data should be embedded in the document.</p>
+                </details>
+                <details>
+                    <summary>Should related data be embedded in the document or kept in its own collection?</summary>
+                    <p>Embed what you read together and what belongs to exactly one parent: a session's page views. Reference (store an id, as <code>order_id</code> does here) what is shared by many documents or changes on its own schedule: the order, the customer, the product. One practical limit: a single document cannot exceed 16 MB, so a list that grows without bound should not be embedded.</p>
+                </details>
+                <details>
+                    <summary>Is "NoSQL" faster than SQL?</summary>
+                    <p>Not as a rule. Reading one whole nested record is fast in a document store because nothing has to be joined. Questions that cut across many records in several ways are usually easier and faster in a relational database. Speed comes from matching the data's shape and the workload to the tool, and from indexes, in both worlds.</p>
+                </details>
 
-    <!-- Learning Journal (REQUIRED per the Courseware Authoring Standard) -->
-    <section id="journal" class="lesson-section">
-        <h2>📓 Learning Journal</h2>
-        <div class="card card-info">
-            <p>Keep a learning journal — digital or physical. After this lesson, take a few minutes to write down:</p>
-            <ul>
-                <li><strong>Key concepts</strong> you learned</li>
-                <li><strong>Techniques that clicked</strong> for you</li>
-                <li><strong>Questions or confusion points</strong> to revisit</li>
-                <li><strong>Ideas you want to try</strong></li>
-                <li><strong>Your progress and feelings</strong> about learning this</li>
-            </ul>
-            <p><strong>✍️ This lesson's prompt:</strong> MongoDB's flexible schema is a strength and a risk. For a project you can picture, would a rigid SQL schema or a flexible document model serve you better — and what would you give up either way?</p>
+                <div class="card card-accent">
+                    <h3>🌟 Going Further: Bonus Challenge</h3>
+                    <p>Go the other way: turn the documents into relational tables. Create a new SQLite file with <code>sqlite3</code> and use <code>pd.json_normalize</code> plus <code>to_sql</code> to write three tables: <code>sessions</code> (one row per session, flat), <code>page_views</code> and <code>cart_items</code> (one row per list element, each with <code>session_id</code>). Then answer one question both ways, in a MongoDB pipeline and in SQL with joins: average cart value by traffic medium for sessions that viewed <code>/sale</code>. Do the answers match? Which version was easier to write, and which would you rather maintain? There is no right answer, only your reasons.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="journal" class="lesson-section">
+                <h2>📓 Learning Journal</h2>
+                <div class="card card-accent">
+                    <p>Take five minutes to write in your learning journal (the <code>journal.md</code> file you started in Lesson 0.1, or a paper notebook). Jot down:</p>
+                    <ul>
+                        <li><strong>Key concepts</strong> you learned today</li>
+                        <li><strong>Techniques that clicked</strong> (and the ones that have not, yet)</li>
+                        <li><strong>Questions or confusion</strong> to come back to</li>
+                        <li><strong>Ideas to try</strong> on your own</li>
+                        <li><strong>Progress and feelings</strong>: how did this lesson go for you?</li>
+                    </ul>
+                    <p><strong>✍️ This lesson's prompt:</strong> Think of data from your own life or work (not private data about other people): recipes, a music library, workout logs, a reading list. Would you store it as tables or as documents? Sketch one record and give two reasons. Then look back over Module 5 and write down the one SQL idea you expect to use most.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="summary" class="lesson-section">
+                <h2>📝 Lesson Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎓 Key Takeaways</h3>
+                    <ul>
+                        <li>A document holds nested objects and lists in one record; a collection does not force its documents into one shape</li>
+                        <li>Document stores suit self-contained, nested, irregular records; relational databases suit shared, tabular data and questions that join</li>
+                        <li><code>pymongo</code> queries are dictionaries: exact matches, operators such as <code>$gt</code>, <code>$in</code> and <code>$exists</code>, and dot notation for nested fields</li>
+                        <li>In a query, <code>None</code> matches both null and missing; two conditions on the same list element need <code>$elemMatch</code></li>
+                        <li>Updates need an operator (<code>$set</code>, <code>$inc</code>, <code>$push</code>, <code>$unset</code>); count before you update or delete</li>
+                        <li>The aggregation pipeline is a list of stages: <code>$match</code>, <code>$unwind</code>, <code>$group</code>, <code>$sort</code>, <code>$project</code>, <code>$addFields</code>; a field's value is written with a leading <code>$</code></li>
+                        <li>Indexes work as in SQL: faster reads, slower writes, leftmost prefix for compound indexes</li>
+                        <li>Flatten for analysis with a <code>$project</code> stage or <code>pd.json_normalize</code>, using <code>record_path</code> for lists</li>
+                        <li>A flexible schema moves the checking from the database to you: a wrong field name returns zero, not an error</li>
+                    </ul>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🏆 What You've Accomplished</h3>
+                    <ul>
+                        <li>You loaded 2,400 nested session documents into a collection with one call</li>
+                        <li>You created, read, updated and deleted documents, and restored the collection afterward</li>
+                        <li>You queried inside nested objects and lists, and saw how null and missing differ</li>
+                        <li>You wrote aggregation pipelines that group, unwind and compute, and matched each stage to SQL and pandas</li>
+                        <li>You built a funnel report, found where visitors drop out, and tied the web sessions back to real orders</li>
+                    </ul>
+                </div>
+
+                <h3>🔭 Looking Ahead</h3>
+                <p>That completes Module 5: you can now get data out of relational and document databases, efficiently and safely. The next module looks outward, to data that lives on the web. It starts with <a href="webscraping_requests.html"><strong>Lesson 6.1: HTTP with Requests</strong></a>, where you will learn what actually happens when a program asks a web server for something: requests and responses, status codes, headers, query parameters and timeouts. The JSON you receive from web APIs will look very familiar after today.</p>
+
+                <h3>📋 Before the Next Lesson</h3>
+                <ul>
+                    <li>Save your funnel notebook: the capstone project can use it.</li>
+                    <li>Run <code>python -c "import requests; print(requests.__version__)"</code> in your environment to confirm the library for the next module is installed.</li>
+                    <li>In your journal, list the five kinds of data source you can now load into pandas, with one sentence each on when you would meet it.</li>
+                </ul>
+
+                <div class="card card-accent">
+                    <h3>🌱 Encouragement for the Journey</h3>
+                    <p>Five lessons ago you had not written a line of SQL. Since then you have joined tables, walked a hierarchy, ranked and windowed, read query plans, built indexes, and today queried a completely different kind of database, and at every step you checked your answer a second way. That habit of verification is what makes your numbers worth trusting, whatever the data is stored in. Dollar signs and curly braces may still look odd; they will stop looking odd with use, the same way <code>SELECT</code> did. Module 5 is done, and you did it.</p>
+                </div>
+            </section>
+
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="sql_query_optimization.html" class="prev-lesson">← Previous: Query Optimization</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="webscraping_requests.html" class="next-lesson">Next: HTTP with Requests →</a>
+            </nav>
         </div>
-    </section>
-
-    <!-- Lesson Summary (full standard block) -->
-    <section id="summary" class="lesson-section">
-        <h2>📝 Lesson Summary</h2>
-        <div class="card card-success">
-            <h3>🎓 Key Takeaways</h3>
-            <ul>
-                <li>MongoDB stores flexible, JSON-like documents in collections — no fixed schema, which suits varied and evolving data.</li>
-                <li>The aggregation pipeline (<code>$match</code>, <code>$group</code>, <code>$unwind</code>, <code>$lookup</code>, <code>$facet</code>) is MongoDB's engine for complex analytics.</li>
-                <li>Data modeling is a real choice: embed related data for read speed, reference it to avoid duplication, or blend both.</li>
-                <li>NoSQL isn't a replacement for SQL — pick the database that matches your consistency, scaling, and query needs.</li>
-            </ul>
-        </div>
-        <h3>🎉 What You've Accomplished</h3>
-        <p>You can now work with a document database end to end: connect from Python, run CRUD operations, write expressive queries and aggregation pipelines, design a sensible document schema, and pull results into pandas for analysis.</p>
-        <h3>❓ Common Questions at This Stage</h3>
-        <details>
-            <summary>Should I embed related data or reference it?</summary>
-            <p>Embed when the related data is read together and stays reasonably small (like a post and its recent comments) — one query gets everything. Reference when data is large, shared across documents, or updated independently, to avoid duplication and the 16MB document limit.</p>
-        </details>
-        <details>
-            <summary>Is MongoDB always faster or more scalable than SQL?</summary>
-            <p>No. MongoDB scales horizontally well and handles flexible or nested data gracefully, but relational databases excel at multi-table joins, strict consistency, and complex transactional integrity. Choose based on the workload, not hype.</p>
-        </details>
-        <details>
-            <summary>How does the aggregation pipeline compare to SQL?</summary>
-            <p>Think of pipeline stages as SQL clauses: <code>$match</code> is WHERE, <code>$group</code> is GROUP BY, <code>$sort</code> is ORDER BY, <code>$limit</code> is LIMIT, and <code>$lookup</code> is a JOIN. You chain them in order, and placing <code>$match</code> early (like a good WHERE) keeps it fast.</p>
-        </details>
-        <h3>🔭 Looking Ahead</h3>
-        <p>You've now covered both relational and document databases. With data wrangling and databases behind you, the path ahead turns toward statistics and analysis — turning stored data into tested, defensible conclusions.</p>
-        <h3>✅ Before the Next Lesson</h3>
-        <ul>
-            <li>Insert a handful of documents into a local (or in-memory) collection and query them with at least three different operators.</li>
-            <li>Write a short aggregation pipeline that groups documents and computes a total or average, then load the result into a pandas DataFrame.</li>
-            <li>Write your Learning Journal entry for this lesson</li>
-        </ul>
-        <div class="card card-accent" style="text-align: center; padding: 2rem;">
-            <h3>🌟 Encouragement for the Journey</h3>
-            <p>Knowing both SQL and NoSQL makes you a versatile data scientist — you can meet data wherever it lives and choose the right tool with confidence. That flexibility is exactly what real projects reward. Keep exploring!</p>
-        </div>
-    </section>
-
-    <!-- Navigation at the bottom -->
-    <nav class="lesson-nav" aria-label="Lesson navigation">
-        <a href="sql_query_optimization.html" class="prev-lesson" aria-label="Previous lesson">Previous: Query Optimization</a>
-        <a href="index.html" class="home-link" aria-label="Course home">Course Home</a>
-        <a href="statistics_hypothesis_testing.html" class="next-lesson" aria-label="Next lesson">Next: Statistics - Hypothesis Testing</a>
-    </nav>
-    
     </main>
 
-    <!-- Footer -->
     <footer class="site-footer">
         <p>&copy; 2026 Ray de la Paz. Python Data Science. All rights reserved.</p>
         <div class="footer-links">
@@ -1386,6 +1305,10 @@ def recommendation_engine():
             <a href="https://rays-home.netlify.app/contact">Contact</a>
             <a href="#" id="print-button">Print Page</a>
         </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
     </footer>
+
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
 </body>
 </html>

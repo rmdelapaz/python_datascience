@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Answer Key: Session 15</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Instructor copy —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">answers &amp; solutions · not for students</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Answer Key</div>
+    <h1>Session 15: SQL Windows and Query Speed</h1>
+    <p class="sub">Answers with reasoning for every workbook item, reference output for all five labs, the lesson pages' quiz answers, and the warm-up and exit-ticket answers.</p>
+    <div class="meta-row">
+      <span class="chip">Session <b>15</b></span>
+      <span class="chip"><b>12</b> self-check items</span>
+      <span class="chip">Confidential</span>
+    </div>
+  </header>
+
+  <div class="sec"><h2>How to Use This Key</h2><span class="rule"></span></div>
+<ul class="tick">
+  <li>Self-check items repeat the workbook's wording and options exactly; the correct option is highlighted and each wrong option has a one-line reason.</li>
+  <li>Outputs come from running the code on the course data (SQLite 3.53). Plans and counts are stable; any time in milliseconds is from the author's machine and will differ on yours. Nothing in this key depends on a time.</li>
+</ul>
+  <div class="sec"><h2>5.3 · SQL Window Functions: self-check</h2><span class="rule"></span></div>
+<div class="q" data-sc="1"><div class="qn">Q1</div><div class="qt">Which pandas line gives the same column as <code class="inline">SUM(order_total) OVER (PARTITION BY store)</code>, one value on every order row?</div><div class="opts"><div class="opt">A) <code class="inline">orders.groupby("store")["order_total"].sum()</code></div><div class="opt correct">B) <code class="inline">orders.groupby("store")["order_total"].transform("sum")</code></div><div class="opt">C) <code class="inline">orders["order_total"].cumsum()</code></div><div class="opt">D) <code class="inline">orders["order_total"].rolling(5).sum()</code></div></div><div class="why"><b>Why:</b> <code class="inline">transform</code> returns one value per original row, aligned with the rows, exactly like a window function. A window keeps every row; GROUP BY (and <code class="inline">.sum()</code> after groupby) collapses them.<br><b>A</b> is wrong: That returns five numbers, one per store: the GROUP BY version.<br><b>C</b> is wrong: That is a running total over all rows, <code class="inline">SUM(...) OVER (ORDER BY ...)</code>, with no partition.<br><b>D</b> is wrong: That is a moving sum of five rows, unrelated to the store.</div></div>
+<div class="q" data-sc="2" data-kind="short"><div class="qn">Q2</div><div class="qt">What does this print?</div><pre class="code">rows = conn.execute(<span class="s">"""
+    SELECT v, ROW_NUMBER() OVER (ORDER BY v DESC, id),
+           RANK() OVER (ORDER BY v DESC), DENSE_RANK() OVER (ORDER BY v DESC)
+    FROM (SELECT 1 AS id, 50 AS v UNION ALL SELECT 2, 70
+          UNION ALL SELECT 3, 50 UNION ALL SELECT 4, 40)
+    ORDER BY v DESC, id
+"""</span>).fetchall()
+print(rows[-<span class="s">1</span>])</pre><div class="opts"><div class="opt correct"><code class="inline">(40, 4, 4, 3)</code></div></div><div class="why"><b>Why:</b> Order: 70, 50, 50, 40. ROW_NUMBER never repeats: 4. RANK gives both 50s the rank 2 and skips 3, so 40 is 4. DENSE_RANK does not skip: 70 is 1, the 50s are 2, 40 is 3.</div></div>
+<div class="q" data-sc="3"><div class="qn">Q3</div><div class="qt"><code class="inline">SELECT ... ROW_NUMBER() OVER (PARTITION BY category ORDER BY revenue DESC) AS rn FROM ... WHERE rn &lt;= 2</code> fails. Why, and what is the fix?</div><div class="opts"><div class="opt correct">A) WHERE runs before window functions are computed; compute <code class="inline">rn</code> in a CTE and filter it in the outer query</div><div class="opt">B) ROW_NUMBER needs a ROWS BETWEEN frame; add one</div><div class="opt">C) <code class="inline">rn</code> is a reserved word; rename it</div><div class="opt">D) PARTITION BY cannot be combined with ORDER BY; remove the partition</div></div><div class="why"><b>Why:</b> Window functions are computed in the SELECT step, after WHERE. The fix is the recipe: number in a CTE, then filter outside it.<br><b>B</b> is wrong: Ranking functions ignore the frame entirely.<br><b>C</b> is wrong: <code class="inline">rn</code> is an ordinary name; the error says "misuse of aliased window function rn".<br><b>D</b> is wrong: PARTITION BY with ORDER BY is exactly how you number rows within groups.</div></div>
+<div class="q" data-sc="4"><div class="qn">Q4</div><div class="qt">Which frame averages the three months <b>before</b> the current one, without the current month (no leakage)?</div><div class="opts"><div class="opt">A) <code class="inline">ROWS BETWEEN 2 PRECEDING AND CURRENT ROW</code></div><div class="opt correct">B) <code class="inline">ROWS BETWEEN 3 PRECEDING AND 1 PRECEDING</code></div><div class="opt">C) <code class="inline">ROWS BETWEEN 3 PRECEDING AND CURRENT ROW</code></div><div class="opt">D) <code class="inline">ROWS BETWEEN 1 FOLLOWING AND 3 FOLLOWING</code></div></div><div class="why"><b>Why:</b> The frame ends one row before the current row, so the current month never sees itself. It is the SQL form of <code class="inline">shift(1).rolling(3, min_periods=1).mean()</code>.<br><b>A</b> is wrong: Three months including the current one: a moving average, not a prior average.<br><b>C</b> is wrong: Four rows, including the current one.<br><b>D</b> is wrong: The three months AFTER: that looks into the future.</div></div>
+<div class="q" data-sc="5" data-kind="short"><div class="qn">Q5</div><div class="qt">What does this print? (Two rows share d = 1.)</div><pre class="code">sql = <span class="s">"""SELECT d, x, SUM(x) OVER (ORDER BY d)
+         FROM (SELECT 1 AS d, 10 AS x UNION ALL SELECT 1, 20
+               UNION ALL SELECT 2, 5)
+         ORDER BY d, x"""</span>
+print([row[<span class="s">2</span>] <span class="k">for</span> row <span class="k">in</span> conn.execute(sql)])</pre><div class="opts"><div class="opt correct"><code class="inline">[30, 30, 35]</code></div></div><div class="why"><b>Why:</b> The default frame (RANGE ... CURRENT ROW) includes every row that ties with the current one in the window's order, so both d = 1 rows see 10 + 20. With <code class="inline">ORDER BY d, x ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW</code> the answer would be <code class="inline">[10, 30, 35]</code>.</div></div>
+<div class="q" data-sc="6"><div class="qn">Q6</div><div class="qt">A SQL column is <code class="inline">AVG(revenue) OVER (ORDER BY month ROWS BETWEEN 3 PRECEDING AND CURRENT ROW)</code>. A colleague computes <code class="inline">df["revenue"].rolling(4).mean()</code>. Where do they disagree?</div><div class="opts"><div class="opt">A) On every row: SQL counts rows, pandas counts days</div><div class="opt">B) Nowhere: the two are identical</div><div class="opt">C) Only on the last row, because SQL has no following rows</div><div class="opt correct">D) On the first three rows: SQL averages the rows that exist, pandas gives NaN until four rows exist</div></div><div class="why"><b>Why:</b> SQL uses whatever part of the frame exists. pandas <code class="inline">rolling(4)</code> needs a full window unless you add <code class="inline">min_periods=1</code>, which reproduces the SQL column.<br><b>A</b> is wrong: Both count rows here (ROWS in SQL, an integer window in pandas).<br><b>B</b> is wrong: They agree from the fourth row on, not before.<br><b>C</b> is wrong: The frame looks backward; the last row has a full frame in both.</div></div>
+  <div class="sec"><h2>5.3 · Predict, then run</h2><span class="rule"></span></div>
+<div class="q"><div class="qn">P1</div><div class="qt">Output and reasoning</div><pre class="code">show(MONTHLY + <span class="s">"""
+    , lagged AS (
+        SELECT month, LAG(revenue, 12) OVER (ORDER BY month) AS year_before
+        FROM monthly
+    )
+    SELECT COUNT(*) AS months, COUNT(year_before) AS with_a_year_before
+    FROM lagged
+"""</span>)</pre><div class="why"><b>Answer:</b> <pre class="out" style="white-space:pre-wrap"> months  with_a_year_before
+     24                  12</pre>LAG(revenue, 12) looks twelve rows back; only the twelve months of 2025 have one. (COUNT of a value skips the NULLs.)</div></div>
+<div class="q"><div class="qn">P2</div><div class="qt">Output and reasoning</div><pre class="code">show(<span class="s">"""
+    SELECT NTILE(3) OVER (ORDER BY v) AS bucket, v
+    FROM (SELECT 1 AS v UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4
+          UNION ALL SELECT 5 UNION ALL SELECT 6 UNION ALL SELECT 7)
+"""</span>)</pre><div class="why"><b>Answer:</b> <pre class="out" style="white-space:pre-wrap"> bucket  v
+      1  1
+      1  2
+      1  3
+      2  4
+      2  5
+      3  6
+      3  7</pre>Seven rows into three buckets: 3, 2, 2. NTILE gives the extra rows to the first buckets.</div></div>
+<div class="q"><div class="qn">P3</div><div class="qt">Output and reasoning</div><pre class="code">show(MONTHLY + <span class="s">"""
+    SELECT month, revenue,
+           LAST_VALUE(revenue) OVER (ORDER BY month) AS last_value
+    FROM monthly
+    ORDER BY month
+    LIMIT 2
+"""</span>)</pre><div class="why"><b>Answer:</b> <pre class="out" style="white-space:pre-wrap">  month   revenue  last_value
+2024-01 106287.63   106287.63
+2024-02 104687.91   104687.91</pre>The default frame ends at the current row, so the "last" value of the frame is the row itself. Extend the frame to <code class="inline">UNBOUNDED FOLLOWING</code>, or sort the other way and use FIRST_VALUE.</div></div>
+  <div class="sec"><h2>5.3 · Worked example and lab reference notes</h2><span class="rule"></span></div>
+<p><b>Worked example (weakest month per store).</b> Output as printed in the workbook. A learner who writes <code class="inline">ORDER BY revenue DESC</code> gets each store's best month instead; one who forgets the PARTITION gets one row in total. The point to check: the store average is on the same row because it is also a window.</p><p><b><code class="inline">labs/module-15/l5_3-sql-window-functions/staff_rankings_solution.py</code>.</b> Reference output:</p><pre class="out" style="white-space:pre-wrap">location       employee  salary  location_avg  vs_avg
+   Boise     Helga Shah   77800       43950.0 33850.0
+   Boise    Luka Petrov   54900       43950.0 10950.0
+   Boise    Mabel Getty   50500       43950.0  6550.0
+   Boise     Ben Ellery   39700       43950.0 -4250.0
+   Boise   Noor Ekwueme   39000       43950.0 -4950.0
+   Boise  Zara Prescott   39000       43950.0 -4950.0
+   Boise  Sienna Dubois   35300       43950.0 -8650.0
+   Boise   Anton Zeller   34700       43950.0 -9250.0
+   Boise     Bodhi Kato   34500       43950.0 -9450.0
+   Boise Elise Mahlangu   34100       43950.0 -9850.0
+
+location       employee  salary  pct_of_payroll  rnk  dense_rnk
+   Boise     Helga Shah   77800            17.7    1          1
+   Boise    Luka Petrov   54900            12.5    2          2
+   Boise    Mabel Getty   50500            11.5    3          3
+   Boise     Ben Ellery   39700             9.0    4          4
+   Boise   Noor Ekwueme   39000             8.9    5          5
+   Boise  Zara Prescott   39000             8.9    5          5
+   Boise  Sienna Dubois   35300             8.0    7          6
+   Boise   Anton Zeller   34700             7.9    8          7
+   Boise     Bodhi Kato   34500             7.8    9          8
+   Boise Elise Mahlangu   34100             7.8   10          9
+
+ location  rn          employee                   title  salary
+Asheville   1       Bianca Sato           Store Manager   73900
+Asheville   2 Gabriel Underhill       Assistant Manager   55000
+     Bend   1        Leo Mendez           Store Manager   76500
+     Bend   2        Zane Novak       Assistant Manager   54800
+    Boise   1        Helga Shah           Store Manager   77800
+    Boise   2       Luka Petrov       Assistant Manager   54900
+Flagstaff   1      Uma Quintero           Store Manager   68900
+Flagstaff   2    Darius Pacheco       Assistant Manager   55700
+       HQ   1        Clara Soto Chief Executive Officer  185000
+       HQ   2      Tamar Kimura            VP of Retail  140700
+Warehouse   1    Bianca Ferrand       Warehouse Manager   71100
+Warehouse   2    Gideon Rinaldi     Warehouse Associate   42100
+rows: 12 (6 locations x 2)
+
+pandas top two match SQL: True
+Boise average in pandas: 43950.0</pre><p><b>Common wrong answers:</b> <code class="inline">rn &lt;= 2</code> in the same SELECT (<code class="inline">misuse of window function</code>); RANK used for the top two, which can return three rows on a tie; <code class="inline">ORDER BY salary DESC</code> with no tiebreaker (the 39,000 pair in Boise could swap places between runs); percentages computed with integer arithmetic.</p><p><b><code class="inline">labs/module-15/l5_3-sql-window-functions/silver_milestone_solution.py</code>.</b> Reference output:</p><pre class="out" style="white-space:pre-wrap"> customer_id  order_id order_date  order_total  n  spent_so_far
+       10034    100002 2024-01-01       278.90  1        278.90
+       10034    101642 2024-03-20       159.80  2        438.70
+       10034    102130 2024-04-08       115.80  3        554.50
+       10034    103801 2024-06-09       136.95  4        691.45
+       10034    103897 2024-06-13       283.90  5        975.35
+       10034    106224 2024-09-04       303.90  6       1279.25
+
+ customers_reaching_600  avg_order_number  fewest  most
+                   2028               3.5       1     9
+ order_number  customers
+            1         80
+            2        424
+            3        578
+            4        502
+            5        286
+            6        123
+            7         31
+            8          3
+            9          1
+
+customers in the Silver or Gold tier (customers table): 2028
+The two counts agree: the running total reproduces the tier rule exactly.
+
+ which_order  gaps  avg_days_since_previous
+     order 2  3223                    118.2
+     order 3  2615                    103.8
+     order 4  2134                     89.4
+     order 5  1703                     78.2
+6th or later  6685                     57.2
+Caution: later orders come only from customers who keep buying, and frequent buyers have
+short gaps by definition. The table describes WHO reaches a 6th order, not a change in anyone.</pre><p>The check in Step 3 is the heart of the lab: a running total over completed orders reproduces the documented tier rule exactly (2,028 = 1,294 Silver + 734 Gold). <b>Common wrong answers:</b> leaving out the join to <code class="inline">customers</code> (closed accounts add customers who reach $600 but have no tier, so the counts no longer match); counting all statuses (returns are not spend); the default frame without <code class="inline">order_id</code> as a tiebreaker (two orders on one day get the same running total, and the milestone can land on the wrong order); reading the gap table as "customers order more often over time" (it is a selection effect: only frequent buyers reach a 6th order).</p><p><b><code class="inline">labs/module-15/l5_3-sql-window-functions/weekly_trend_solution.py</code>.</b> Reference output:</p><pre class="out" style="white-space:pre-wrap">weeks: 51 (full Monday-to-Sunday weeks of 2025)
+week  orders  change  avg_4wk  weeks_in_frame  prior_4wk
+  01     113     NaN    113.0               1        NaN
+  02      94   -19.0    103.5               2      113.0
+  03     110    16.0    105.7               3      103.5
+  04     119     9.0    109.0               4      105.7
+  05     109   -10.0    108.0               4      109.0
+
+week  orders  prior_4wk  vs_prior_pct
+  20     170      126.8          34.1
+  34     184      131.0          40.5
+  47     171      132.3          29.3
+week 20: 2025-05-19 to 2025-05-25
+week 34: 2025-08-25 to 2025-08-31
+week 47: 2025-11-24 to 2025-11-30
+All three hold a sale weekend (May 23-26, Aug 29-Sep 1, Nov 28-Dec 1): the spikes are the promotions.
+
+avg_4wk   against rolling(4, min_periods=1): largest difference 0.0e+00
+prior_4wk against shift(1).rolling(4, min_periods=1): largest difference 0.0e+00
+rolling(4) WITHOUT min_periods has 3 NaN rows at the start
+
+ quartile  weeks  fewest  most
+        1     13      94   116
+        2     13     116   128
+        3     13     129   141
+        4     12     142   201</pre><p>Week 01 is the first full Monday-to-Sunday week of 2025 (from January 6); the query uses 51 full weeks. The three spikes are the three sale weekends. <b>Common wrong answers:</b> including the partial weeks at the start and end of the year (week 00 and a short last week look like collapses); comparing with <code class="inline">avg_4wk</code> instead of <code class="inline">prior_4wk</code> (the spike week is inside its own average and hides itself); expecting <code class="inline">rolling(4)</code> to match without <code class="inline">min_periods=1</code>.</p>
+  <div class="sec"><h2>5.3 · The lesson page's own quiz</h2><span class="rule"></span></div>
+<ol class="steps">
+  <li><b>Question 1: B.</b> 20,302, one per order: a window function keeps every row.</li>
+  <li><b>Question 2: A.</b> (30, 4, 3): RANK skips after the tie (10, 20, 20, 30 gives 1, 2, 2, 4); DENSE_RANK does not (1, 2, 2, 3).</li>
+  <li><b>Question 3: C.</b> Compute ROW_NUMBER() per customer in a CTE (newest first, with a tiebreaker) and keep rn = 1 outside it.</li>
+  <li><b>Question 4: C.</b> They match from the third row on; SQL averages the rows that exist, pandas gives NaN until the window is full.</li>
+  <li><b>Question 5: A.</b> Each store's first month gets the previous store's last month instead of NULL: the partition is missing.</li>
+</ol>
+  <div class="sec"><h2>5.4 · Query Optimization: self-check</h2><span class="rule"></span></div>
+<div class="q" data-sc="7"><div class="qn">Q7</div><div class="qt">Which plan line means the engine answered from the index alone and never opened the table?</div><div class="opts"><div class="opt">A) <code class="inline">SCAN orders</code></div><div class="opt">B) <code class="inline">SEARCH orders USING INDEX idx_orders_store_date (store=?)</code></div><div class="opt correct">C) <code class="inline">SEARCH orders USING COVERING INDEX idx_orders_store_date_total (store=? AND order_date&gt;? AND order_date&lt;?)</code></div><div class="opt">D) <code class="inline">USE TEMP B-TREE FOR ORDER BY</code></div></div><div class="why"><b>Why:</b> COVERING means the index holds every column the query needs, so the table is not touched.<br><b>A</b> is wrong: A SCAN reads every row of the table.<br><b>B</b> is wrong: A plain index search finds the rows in the index, then fetches each one from the table.<br><b>D</b> is wrong: That is a sorting step, not a way of finding rows.</div></div>
+<div class="q" data-sc="8"><div class="qn">Q8</div><div class="qt"><code class="inline">orders</code> has an index on <code class="inline">(store, order_date)</code> and no other. Which filter can NOT seek in it?</div><div class="opts"><div class="opt correct">A) <code class="inline">WHERE order_date = '2025-07-04'</code></div><div class="opt">B) <code class="inline">WHERE store = 'Bend'</code></div><div class="opt">C) <code class="inline">WHERE store = 'Bend' AND order_date = '2025-07-04'</code></div><div class="opt">D) <code class="inline">WHERE store = 'Bend' AND order_date &gt;= '2025-07-01'</code></div></div><div class="why"><b>Why:</b> The leftmost-prefix rule: dates are sorted only within each store, so there is no single place to jump to for a date alone (before ANALYZE, the plan is a SCAN of the index).<br><b>B</b> is wrong: The first column of a composite index works on its own.<br><b>C</b> is wrong: Both columns, equality on each: the best case.<br><b>D</b> is wrong: Equality on the first column and a range on the second: exactly what the index was built for.</div></div>
+<div class="q" data-sc="9"><div class="qn">Q9</div><div class="qt">After <code class="inline">DROP INDEX</code>, you run the same <code class="inline">EXPLAIN QUERY PLAN</code> text again on the same connection and it still names the dropped index. What is going on?</div><div class="opts"><div class="opt">A) The DROP did not happen until you commit</div><div class="opt">B) SQLite keeps dropped indexes until VACUUM</div><div class="opt correct">C) Python's sqlite3 reused its cached prepared statement, planned while the index existed; connect with <code class="inline">cached_statements=0</code> or open a new connection</div><div class="opt">D) EXPLAIN QUERY PLAN always shows the plan from the first time a query ran</div></div><div class="why"><b>Why:</b> The connection caches prepared statements by their text. Lesson 5.4 opens its connection with <code class="inline">cached_statements=0</code> so that every plan is made afresh, which matters only in a lesson about plans.<br><b>A</b> is wrong: DROP INDEX takes effect on your connection at once; committing makes it permanent for others.<br><b>B</b> is wrong: VACUUM reclaims space; the index is gone from the schema as soon as it is dropped.<br><b>D</b> is wrong: EXPLAIN plans the statement it is given; the stale answer comes from the cache in Python, not from SQLite.</div></div>
+<div class="q" data-sc="10" data-kind="short"><div class="qn">Q10</div><div class="qt">What does this print?</div><pre class="code">conn = sqlite3.connect(<span class="s">":memory:"</span>)
+conn.execute(<span class="s">"CREATE TABLE t (a INTEGER, b TEXT)"</span>)
+conn.execute(<span class="s">"CREATE INDEX idx_t_a ON t (a)"</span>)
+sql = <span class="s">"EXPLAIN QUERY PLAN SELECT * FROM t WHERE a + 0 = 5"</span>
+print(conn.execute(sql).fetchone()[<span class="s">3</span>])</pre><div class="opts"><div class="opt correct"><code class="inline">SCAN t</code></div></div><div class="why"><b>Why:</b> The index is sorted by <code class="inline">a</code>, not by <code class="inline">a + 0</code>. Arithmetic or a function around the column hides it from the index; <code class="inline">WHERE a = 5</code> would give <code class="inline">SEARCH t USING INDEX idx_t_a (a=?)</code>. The same happens with <code class="inline">strftime('%Y', order_date) = '2025'</code>: write a range on the bare column.</div></div>
+<div class="q" data-sc="11"><div class="qn">Q11</div><div class="qt">A table receives thousands of inserts a minute and has nine indexes, most added "to be safe". What does each extra index cost?</div><div class="opts"><div class="opt">A) Nothing: indexes only affect reads</div><div class="opt">B) Wrong query results when two indexes cover the same column</div><div class="opt">C) A full table scan on every SELECT</div><div class="opt correct">D) Slower inserts and a larger file, because every index is a sorted copy that must be kept up to date</div></div><div class="why"><b>Why:</b> The lesson measured it: the same 45,490-row load got slower and the file larger with every index added. Index for the queries that are slow and matter; drop the rest.<br><b>A</b> is wrong: Every insert, update and delete must update every index.<br><b>B</b> is wrong: Results stay correct; only speed and size change.<br><b>C</b> is wrong: Indexes never force a scan; the planner may simply not use them.</div></div>
+<div class="q" data-sc="12"><div class="qn">Q12</div><div class="qt">Before adding an index a query took 12 ms; after, 4 ms, each measured once. What should you do before reporting "3 times faster"?</div><div class="opts"><div class="opt">A) Nothing: the numbers speak for themselves</div><div class="opt">B) Run ANALYZE and report the plan instead of times</div><div class="opt correct">C) Repeat each measurement several times, take the best, and check the plan changed from SCAN to SEARCH</div><div class="opt">D) Measure on a different computer</div></div><div class="why"><b>Why:</b> Single timings vary, and the first run is often slowest because later runs find pages already in memory. Best-of-N timings plus a changed plan are evidence; one pair of numbers is not.<br><b>A</b> is wrong: One before and one after can show nothing but the cache warming up.<br><b>B</b> is wrong: ANALYZE gives the planner statistics; it does not replace measuring.<br><b>D</b> is wrong: Another machine gives different absolute numbers and the same noise problem.</div></div>
+  <div class="sec"><h2>5.4 · Predict, then run</h2><span class="rule"></span></div>
+<div class="q"><div class="qn">P1</div><div class="qt">Output and reasoning</div><pre class="code">plan(<span class="s">"SELECT * FROM order_items WHERE sku = ?"</span>, (<span class="s">"TNT-1001"</span>,))</pre><div class="why"><b>Answer:</b> <pre class="out" style="white-space:pre-wrap">    SCAN order_items</pre>No index on <code class="inline">sku</code>, so a SCAN. The Tuning Report adds <code class="inline">idx_order_items_sku</code> for exactly this lookup.</div></div>
+<div class="q"><div class="qn">P2</div><div class="qt">Output and reasoning</div><pre class="code">plan(<span class="s">"SELECT sku FROM products WHERE name LIKE ?"</span>, (<span class="s">"%Tent%"</span>,))</pre><div class="why"><b>Answer:</b> <pre class="out" style="white-space:pre-wrap">    SCAN products</pre>A pattern starting with <code class="inline">%</code> can match anywhere, so sorted order is no help: a SCAN whatever indexes exist.</div></div>
+<div class="q"><div class="qn">P3</div><div class="qt">Output and reasoning</div><pre class="code">plan(<span class="s">"SELECT * FROM orders WHERE customer_id = ? ORDER BY order_date"</span>, (<span class="s">12673</span>,))</pre><div class="why"><b>Answer:</b> <pre class="out" style="white-space:pre-wrap">    SEARCH orders USING INDEX idx_orders_customer_id (customer_id=?)
+    USE TEMP B-TREE FOR ORDER BY</pre>A SEARCH on the customer index, then a TEMP B-TREE to sort that customer's handful of orders: cheap, because only a few rows are sorted.</div></div>
+  <div class="sec"><h2>5.4 · Worked example and lab reference notes</h2><span class="rule"></span></div>
+<p><b>Worked example (product lookup).</b> The plan changes; the time barely does, because <code class="inline">products</code> has 242 rows. The point is the judgment: an index that changes the plan is not automatically worth keeping. Learners who say "SEARCH, so keep it" have skipped the measurement and the cost.</p><p><b><code class="inline">labs/module-15/l5_4-query-optimization/customer_lookup_plans_solution.py</code>.</b> Reference output (times will differ):</p><pre class="out" style="white-space:pre-wrap">state and city
+    SCAN customers
+city only
+    SCAN customers
+state and city, newest first
+    SCAN customers
+    USE TEMP B-TREE FOR ORDER BY
+
+state and city
+    SEARCH customers USING INDEX idx_customers_state_city (state=? AND city=?)
+city only
+    SCAN customers USING COVERING INDEX idx_customers_state_city
+state and city, newest first
+    SEARCH customers USING INDEX idx_customers_state_city (state=? AND city=?)
+    USE TEMP B-TREE FOR ORDER BY
+
+200 lookups: 49.2 ms before, 26.2 ms after (your numbers will differ)
+same answer: True | 488 customers in Boise, ID
+
+state and city, newest first, with (state, city, signup_date):
+    SEARCH customers USING COVERING INDEX idx_customers_state_city_signup (state=? AND city=?)
+
+after DROP INDEX:
+    SCAN customers
+indexes named idx_... left in the copy: 0</pre><p>Points to draw out: city-only is <code class="inline">SCAN customers USING COVERING INDEX</code> after the composite index, which is still a scan (leftmost prefix); the speedup for state and city is modest because about one customer in ten matches; the third column removes the TEMP B-TREE because, within a state and city, the index is already in sign-up order. <b>Common wrong answers:</b> calling the covering-index scan a SEARCH; putting <code class="inline">city</code> first "because it is more selective" (then a state-only filter cannot seek); re-planning after DROP INDEX on a connection without <code class="inline">cached_statements=0</code> and reporting that the drop failed.</p><p><b><code class="inline">labs/module-15/l5_4-query-optimization/n_plus_one_solution.py</code>.</b> Reference output (times will differ):</p><pre class="out" style="white-space:pre-wrap">Gold customers in the list: 300
+
+plan of the per-customer query:
+    SCAN orders
+300 queries in a loop: 133 ms (your numbers will differ)
+one GROUP BY query:    2.6 ms
+same answers: True
+
+plan with idx_orders_customer_id:
+    SEARCH orders USING INDEX idx_orders_customer_id (customer_id=?)
+300 queries in a loop: 3.0 ms
+one GROUP BY query:    1.2 ms
+same answers: True
+
+       orders   spent
+count   300.0   300.0
+mean     10.6  2335.2
+min       3.0  1502.0
+max      31.0  6079.0
+
+The loop was the slow part, not SQL: 300 scans of 20,302 orders. Either fix works; together
+they are best. On a server database each loop query also pays a network round trip, which no
+index can remove, so the one-query version is the habit to keep.</pre><p>The IN list is built from one <code class="inline">?</code> per id and the ids are passed as parameters, so the Lesson 5.1 rule holds. <b>Common wrong answers:</b> pasting the ids into the SQL with <code class="inline">str(tuple(ids))</code> (works on integers, and is exactly the habit that breaks on text); forgetting to sort before comparing the two results (row order is not guaranteed); concluding "the index makes the loop fine": it does on a local file, not where each query is a network round trip.</p>
+  <div class="sec"><h2>5.4 · The lesson page's own quiz</h2><span class="rule"></span></div>
+<ol class="steps">
+  <li><b>Question 1: C.</b> The engine read every row of the table to find the three.</li>
+  <li><b>Question 2: A.</b> A range on the bare column can seek in the index; a function or a leading wildcard cannot.</li>
+  <li><b>Question 3: B.</b> Inserts are slower and the database is larger than it needs to be.</li>
+  <li><b>Question 4: B.</b> Almost every row matches, so there is almost nothing to skip.</li>
+  <li><b>Question 5: A.</b> SCAN inventory: location is the second column of the primary-key index, so there is no place to jump to (leftmost-prefix rule).</li>
+</ol>
+  <div class="sec"><h2>Warm-up and Exit Ticket</h2><span class="rule"></span></div>
+      <div class="blk"><div class="h">Warm-up: retrieval from Session 14</div>
+<ol class="steps">
+  <li>In one sentence each: what does WHERE filter, and what does HAVING filter? <b>Answer:</b> WHERE filters rows before grouping; HAVING filters groups after GROUP BY. (Today adds a third stage: window functions run after both, in the SELECT step.)</li>
+  <li><code class="inline">orders</code> has 20,302 rows and 739 have no customer row. How many rows from <code class="inline">JOIN customers</code>, and from <code class="inline">LEFT JOIN customers</code>? <b>Answer:</b> 19,563 and 20,302.</li>
+  <li>Total revenue came out as $10.3 million instead of $3.7 million after joining <code class="inline">order_items</code>. What happened, and what is the rule? <b>Answer:</b> Fan-out: each order's total was repeated once per line, then summed. Sum a column at the level where it lives; aggregate first (a CTE), then join.</li>
+  <li>Why does <code class="inline">WHERE employee_id NOT IN (SELECT manager_id FROM employees)</code> return 0 rows? <b>Answer:</b> The list contains a NULL (the CEO's <code class="inline">manager_id</code>), and a comparison with NULL is unknown, so NOT IN is never true. Use <code class="inline">NOT EXISTS</code> or filter the NULLs out of the list.</li>
+  <li>A value travels into SQL through a placeholder. What can a placeholder NOT stand for, and what do you do then? <b>Answer:</b> A table name, a column name or a keyword. Check the name against a fixed list of allowed names in Python, and only then put it in the query text.</li>
+</ol>
+      </div>
+      <div class="blk"><div class="h">Exit ticket</div>
+<ol class="steps">
+  <li><code class="inline">orders</code> has 20,302 rows and 5 stores. How many rows from <code class="inline">SELECT store, AVG(order_total) FROM orders GROUP BY store</code>, and from <code class="inline">SELECT store, AVG(order_total) OVER (PARTITION BY store) FROM orders</code>? <b>Answer:</b> 5 and 20,302. GROUP BY collapses the rows; a window function keeps every row and attaches the group value to it.</li>
+  <li>Give the three steps of "top N per group". <b>Answer:</b> Number the rows with ROW_NUMBER() OVER (PARTITION BY group ORDER BY measure DESC, tiebreaker); put that in a CTE; filter the CTE with WHERE rn &lt;= N. (WHERE cannot see a window function in the same SELECT.)</li>
+  <li>You have just created an index. Name two things you check before saying it helped. <b>Answer:</b> Any two of: the plan for the query it was meant for now says SEARCH ... USING INDEX (or COVERING INDEX) instead of SCAN; best-of-several timings before and after; the query returns exactly the same rows; what it costs in file size and write speed.</li>
+</ol>
+      </div>
+      <div class="blk warn"><div class="h">Common wrong answers and what they reveal</div>
+<ul class="tick">
+  <li><b>"5 rows" for the window query (exit 1, Q1).</b> The learner still reads OVER as a kind of GROUP BY. Show the two results side by side and count.</li>
+  <li><b>Filtering in the same SELECT (Q3, exit 2).</b> The running order from Session 14 has not absorbed the window step. Add it to the board: FROM, WHERE, GROUP BY, HAVING, <b>windows</b>, SELECT, ORDER BY, LIMIT.</li>
+  <li><b><code class="inline">[10, 30, 35]</code> for the tie item (Q5).</b> The answer for an explicit ROWS frame, which means the learner has not met the default frame's RANGE behavior. That is the bug they will ship in a running total.</li>
+  <li><b>"The index makes it faster" with no plan (exit 3, Q12).</b> Belief without evidence. Ask for the plan line and a best-of-N time every time.</li>
+  <li><b><code class="inline">SEARCH</code> for the arithmetic item (Q10).</b> The learner thinks an index is about a column name, not about sorted values. Ask: "Is the index sorted by a, or by a + 0?"</li>
+</ul>
+      </div>
+
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 15 · Answer Key · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facilitator Guide: Session 11</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="../../kit.css">
+</head>
+<body>
+
+<div class="toolbar">
+  <span class="lbl">Instructor copy —</span>
+  <button type="button" onclick="window.print()">🖨 Print / Save as PDF</button>
+  <span class="hint">contains answers &amp; timing · not for students</span>
+</div>
+
+<div class="sheet">
+
+  <header class="mast">
+    <div class="kit-eyebrow">Instructor Kit · Facilitator Guide</div>
+    <h1>Session 11: Shape, Outliers and Distributions</h1>
+    <p class="sub">How to teach the session that finishes describing data and starts reasoning about data not yet seen. Before the break learners measure the shape of a column, locate values in it with percentiles and z-scores, run two outlier rules that disagree, and learn that a flag is a question, not a verdict. After the break they meet four workhorse distributions through <code class="inline">scipy.stats</code>, watch the central limit theorem turn a skew of 5.3 into a bell, and build their first confidence interval.</p>
+    <div class="meta-row">
+      <span class="chip"><b>2</b> lessons</span>
+      <span class="chip"><b>3 hrs</b> session</span>
+      <span class="chip">Lessons <b>4.2–4.3</b></span>
+      <span class="chip">Session <b>11</b> of 21</span>
+    </div>
+  </header>
+
+  <div class="sec"><h2>How to Use This Guide</h2><span class="rule"></span></div>
+  <ul class="tick">
+          <li>Same rhythm as every session: <b>Frame</b> (the goal and a mental model) → <b>Live demo</b> (you type, they type along) → <b>Guided lab</b> (the kit's lab files) → <b>Start the lesson project</b>. The lesson's exercises, quiz and journal are homework.</li>
+          <li><b>Type, do not paste.</b> Every code block in the demo scripts is what to type, one notebook cell per step, in the course project folder. Every output shown was produced by running that code with the course environment (pandas 3.0, SciPy 1.18).</li>
+          <li><b>Ask for a prediction before you run.</b> Rank the columns by skew, guess the share of days above $12,000, guess whether two outlier rules agree, guess the shape of 20,000 sample means. The surprise only teaches if they committed first.</li>
+          <li><b>The lessons are the reference.</b> Keep <code class="inline">statistics_descriptive.html</code> and <code class="inline">statistics_probability_distributions.html</code> open in browser tabs for the figures (the labeled box plot, the stacked survey bars, the normal curve over the spend histogram, the four-panel central limit figure, the fifty intervals) and the tables (skewness cutoffs, what to do with an outlier, the four methods, which distribution when).</li>
+          <li><span style="color:var(--lab);font-weight:600">Teal</span> = hands-on, <span style="color:var(--warn);font-weight:600">amber</span> = watch-outs. Labs for this session live in <code class="inline">labs/module-11/</code>: starters for learners, solutions for you.</li>
+        </ul>
+  <div class="note warn"><div class="t">The risk of Session 11: the densest three hours of Module 4</div>
+    <p>Lesson 4.2 has eight ideas and Lesson 4.3 has more: four distributions, four methods, simulation, the central limit theorem, the standard error and a confidence interval. Nobody holds all of that after one pass. Decide in advance what must land in the room: before the break, <b>a flag is a question, not a verdict</b>, and <b>every grouped number carries its n</b>; after the break, <b>freeze a distribution, ask it a question, check it against data</b>, and <b>the 95% describes the method</b>. The rest is exposure that the lesson pages and the homework will consolidate. Say so to the room: "You will not remember all four distributions tonight. You will remember how to ask one a question." The second risk is random numbers: a learner who runs a cell twice gets different results from yours and thinks they made an error. Tell them in advance that the conclusions will match even when the digits do not.</p>
+  </div>
+
+  <div class="sec"><h2>Before Session 11</h2><span class="rule"></span></div>
+  <ul class="tick lab">
+          <li>☐ Run the lab check from the kit folder: <code class="inline">python3 labs/check_labs.py module-11</code>. Eight lines should say PASS.</li>
+          <li>☐ Copy the starters and the two debug handouts (<code class="inline">*_starter.py</code>, <code class="inline">debug_*.py</code>) from <code class="inline">labs/module-11/</code> to the shared folder. Keep every <code class="inline">*_solution.py</code> on your machine.</li>
+          <li>☐ Projector machine: Jupyter (or VS Code notebooks) opened in the course project folder; font size at least 18 pt.</li>
+          <li>☐ Files used today: <code class="inline">data/orders.csv</code>, <code class="inline">data/order_items.csv</code>, <code class="inline">data/daily_sales.csv</code>, <code class="inline">data/products.csv</code>, <code class="inline">data/survey.csv</code>, <code class="inline">data/store_weather.csv</code>. No servers to start, no accounts, nothing new to install: <code class="inline">scipy</code> is already in the course environment (check once with <code class="inline">python -c "import scipy; print(scipy.__version__)"</code>).</li>
+          <li>☐ Run the 4.3 demo once, top to bottom, on the projector machine and confirm your outputs match this guide (they will, with <code class="inline">default_rng(42)</code> and the cells run once each in order). Then restart the kernel so the generator is fresh for class.</li>
+          <li>☐ Whiteboard, written before learners arrive: on the left <b>center · spread · shape · position</b> and <b>A flag is a question, not a verdict.</b>; on the right an empty four-row table headed <b>cdf · sf · ppf · pmf</b>.</li>
+          <li>☐ Optional, for the central limit theorem: a handful of dice (three per learner).</li>
+          <li>☐ <b>Known environment traps.</b> (1) Random results depend on the order in which cells are run; restart and run all to get back in step. (2) <code class="inline">ax.boxplot()</code> on a column with missing values draws an empty frame with no error: <code class="inline">dropna()</code> first. (3) Matplotlib 3.9 and later use <code class="inline">orientation="horizontal"</code> and <code class="inline">tick_labels=</code> in <code class="inline">boxplot</code>; a learner on an older Matplotlib needs <code class="inline">vert=False</code> and <code class="inline">labels=</code>. (4) pandas <code class="inline">.quantile()</code> wants 0 to 1 and raises a ValueError for 25; <code class="inline">np.percentile()</code> wants 0 to 100 and raises nothing for 0.25. (5) <code class="inline">scipy.stats.zscore</code> divides by n (<code class="inline">ddof=0</code>) unless told otherwise; the lesson computes z-scores by hand with the pandas SD. (6) <code class="inline">stats.skew()</code> (NumPy-style, used on arrays in the CLT step) and pandas <code class="inline">.skew()</code> use slightly different formulas; on 20,302 rows both print 5.48.</li>
+          <li>☐ Skim the Session 10 homework: the Chart Pack manifest (9 files) and the Typical Order Memo. Two "before the next lesson" tasks feed today's opening: which line of <code class="inline">describe()</code> could they not name, and is <code class="inline">visitors</code> skewed (its mean is 355.9 and its median 322, so yes, to the right).</li>
+          <li>☐ Sticky notes or slips of paper for the exit ticket.</li>
+        </ul>
+
+  <div class="sec"><h2>Session 11 Agenda (3 hours)</h2><span class="rule"></span></div>
+  <table class="timing">
+    <thead><tr><th>Clock</th><th>Minutes</th><th>Segment</th><th>What happens</th></tr></thead>
+    <tbody>
+      <tr><td class="t">0:00</td><td class="t">10</td><td>Warm-up</td><td>Five retrieval questions on Session 10 (saving figures, center and spread), homework check.</td></tr>
+      <tr><td class="t">0:10</td><td class="t">10</td><td><b>4.2</b> Frame and mental model</td><td>A pile of sand: center, spread, shape, and one value's position in the pile.</td></tr>
+      <tr><td class="t">0:20</td><td class="t">25</td><td><b>4.2</b> Live demo</td><td>Skew, quantiles, z-scores, two outlier rules that disagree, describe(), a box plot, survey answers by group.</td></tr>
+      <tr><td class="t">0:45</td><td class="t">20</td><td><b>4.2</b> Guided lab</td><td><code class="inline">labs/module-11/l4_2-shape-position-outliers/catalog_weights_starter.py</code>, then TODO 1 to 3 of <code class="inline">price_satisfaction_starter.py</code>.</td></tr>
+      <tr><td class="t">1:05</td><td class="t">10</td><td><b>4.2</b> Start the lesson project</td><td>The Store Profile Sheet, Step 1: the grouped profile table prints.</td></tr>
+      <tr><td class="t">1:15</td><td class="t">10</td><td>Break</td><td>Leave the four-store profile table on the projector.</td></tr>
+      <tr><td class="t">1:25</td><td class="t">15</td><td><b>4.3</b> Frame and mental model</td><td>The vending machine: a distribution as a stocking list; discrete or continuous.</td></tr>
+      <tr><td class="t">1:40</td><td class="t">30</td><td><b>4.3</b> Live demo</td><td>Simulate, freeze a normal, the four methods, binomial, Poisson, the central limit theorem, a confidence interval.</td></tr>
+      <tr><td class="t">2:10</td><td class="t">25</td><td><b>4.3</b> Guided lab</td><td><code class="inline">labs/module-11/l4_3-probability-distributions/conversion_model_starter.py</code>, then Steps 1 to 4 of <code class="inline">lines_per_order_ci_starter.py</code>.</td></tr>
+      <tr><td class="t">2:35</td><td class="t">15</td><td><b>4.3</b> Start the lesson project</td><td>The Returns Forecast, Steps 1 and 2: 731 days counted, mean against variance.</td></tr>
+      <tr><td class="t">2:50</td><td class="t">10</td><td>Wrap-up</td><td>Exit ticket (3 questions), homework, bring list for Session 12.</td></tr>
+      <tr><td class="t"><b>Total</b></td><td class="t"><b>180</b></td><td></td><td>Ends at 3:00.</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:.9rem;color:var(--ink-2)">The lesson pages estimate 90 + 100 = 190 minutes for a solo learner, and the room has 150 after the warm-up, break and wrap-up, of which 45 go to the kit labs. So this session leans on homework more than most. <b>Done in the room:</b> both mental models; skewness and the log trick; quantiles and z-scores; both outlier rules and the investigation of the bulk orders; <code class="inline">describe()</code> and the box plot; the survey table with its n; simulation with one generator; the normal model and the four methods; one binomial and one Poisson example with its mean-against-variance check; the central limit theorem table; one confidence interval and its coverage; the <code class="inline">catalog_weights</code> and <code class="inline">conversion_model</code> labs; the first step or two of each lesson project. <b>Goes home:</b> the rest of both projects (Store Profile Sheet Steps 2 to 6, Returns Forecast Steps 3 to 6), the unfinished lab steps, the lessons' exercises, Quick Quizzes and journals, and the reading-only parts: quantile interpolation, histogram bins, named aggregation with <code class="inline">q1</code> and <code class="inline">q3</code>, the full survey section (the distribution table, the stacked bar chart), the binomial check against 507 real batches, the fifty-interval figure and the six common mistakes of 4.3.</p>
+
+  <div class="sec"><h2>Session at a Glance</h2><span class="rule"></span></div>
+  <table class="timing">
+    <thead><tr><th>Lesson</th><th>Topic</th><th>Room time</th><th>Learners leave able to…</th></tr></thead>
+    <tbody>
+      <tr><td class="t">4.2</td><td>Descriptive Statistics II: Shape, Position and Outliers</td><td class="t">65 of 90 min</td><td>put a number on skew, locate a value with percentiles and z-scores, run both outlier rules and investigate what they flag, read <code class="inline">describe()</code> and a box plot, and summarize survey answers by group with their n</td></tr>
+      <tr><td class="t">4.3</td><td>Probability Distributions</td><td class="t">85 of 100 min</td><td>choose among uniform, normal, binomial and Poisson, answer probability questions with <code class="inline">cdf</code>, <code class="inline">sf</code>, <code class="inline">ppf</code> and <code class="inline">pmf</code>, check a model against data, and build and interpret a 95% confidence interval for a mean</td></tr>
+    </tbody>
+  </table>
+
+  <div class="sec"><h2>Warm-up</h2><span class="rule"></span></div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">0:00</span><h3>Warm-up: Retrieval from Session 10</h3><span class="dur">10 min</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Timing</div>
+        <table class="timing"><tbody>
+          <tr><td class="t">6m</td><td>Five questions, no notes: answer alone on paper, compare with a neighbor, then one answer per question out loud</td></tr>
+          <tr><td class="t">3m</td><td>Homework check: the Chart Pack, the Typical Order Memo, the two "before the next lesson" tasks</td></tr>
+          <tr><td class="t">1m</td><td>Bridge to today</td></tr>
+        </tbody></table>
+      </div>
+      <div class="blk"><div class="h">Five retrieval questions (no notes, pairs, 60 seconds each)</div>
+        <ol class="steps">
+          <li>A figure with <code class="inline">figsize=(10, 5)</code> is saved with <code class="inline">dpi=200</code>. How many pixels wide and high is the PNG? <b>Answer:</b> 2,000 wide by 1,000 high: pixels = inches x dpi.</li>
+          <li>The labels on your slide image are too small. Which two settings do you change, and what stays the same? <b>Answer:</b> A smaller <code class="inline">figsize</code> and a higher <code class="inline">dpi</code>, so the pixel size stays the same. Raising the dpi alone does not make text bigger.</li>
+          <li>Pinecrest's mean order is $194.60 and the median is $146.85. Why do they differ, and which describes a typical order? <b>Answer:</b> The totals are right-skewed: a long tail of large orders pulls the mean up. The median describes a typical order; the mean is for totals.</li>
+          <li><code class="inline">np.std(x)</code> and <code class="inline">pd.Series(x).std()</code>: which divides by n and which by n - 1? <b>Answer:</b> NumPy divides by n (<code class="inline">ddof=0</code>); pandas divides by n - 1 (<code class="inline">ddof=1</code>).</li>
+          <li>What is the IQR, and why prefer it to the SD for a skewed column? <b>Answer:</b> Q3 minus Q1, the width of the middle half of the data. It is robust: extreme values cannot inflate it.</li>
+        </ol>
+      </div>
+      <div class="blk"><div class="h">Homework check</div>
+        <p>Show of hands: whose Chart Pack manifest showed 9 files with every web PNG at 990 x 495? Whose memo was generated entirely from variables? Then the two tasks from the end of Lesson 4.1. "You ran <code class="inline">orders["order_total"].describe()</code>. Which line could you not name?" (Most say <code class="inline">std</code> or the percent lines; all of them are explained in today's first demo.) "Is <code class="inline">visitors</code> skewed?" Take a guess, then the numbers: mean 355.9, median 322, so the mean is about 10% above the median: a right skew.</p>
+      </div>
+      <div class="blk"><div class="h">Bridge to today</div>
+        <p>Say: "Last session we described a column with a center and a spread, and we kept saying 'it depends on the shape'. Today we measure the shape, locate single values inside it, and decide what to do with the ones that stand apart. After the break the subject changes from data you have to data you have not seen yet."</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="sec"><h2>Lesson Plans</h2><span class="rule"></span></div>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">4.2</span><h3>Descriptive Statistics II: Shape, Position and Outliers</h3><span class="dur">65 min</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Timing</div>
+        <table class="timing"><tbody>
+          <tr><td class="t">10m</td><td>Frame: the pile of sand; shape is the first thing to check</td></tr>
+          <tr><td class="t">25m</td><td>Live demo: 11 short steps on order totals, daily revenue and the survey</td></tr>
+          <tr><td class="t">20m</td><td>Guided lab: <code class="inline">catalog_weights</code>, then the start of <code class="inline">price_satisfaction</code></td></tr>
+          <tr><td class="t">10m</td><td>Start the lesson project: the Store Profile Sheet, Step 1</td></tr>
+        </tbody></table>
+      </div>
+      <div class="blk"><div class="h">Objectives (the lesson's own)</div>
+        <ul class="tick">
+          <li>Describe the shape of a distribution with a histogram and a skewness value, and say what the shape implies for your choice of summary</li>
+          <li>Locate a value within its column using percentiles, quantiles and z-scores</li>
+          <li>Apply the IQR and z-score outlier rules, explain why they disagree, and choose a defensible action for flagged values</li>
+          <li>Read every line of <code class="inline">describe()</code> and every part of a box plot</li>
+          <li>Summarize by group with <code class="inline">groupby().agg()</code>, and summarize 1-to-5 survey answers as the ordered categories they are</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Mental model to say</div>
+        <p>Say: "Pour every value of a column onto a number line, like sand. The pile that forms is the distribution, and a histogram is a photograph of it. Center says where the pile sits. Spread says how wide it is. Shape says whether it is one even mound, a mound with a long ramp on one side, or two mounds. Every other summary is an attempt to describe that pile without showing the photograph."</p>
+        <p>Draw three piles on the board: an even mound, a mound with a ramp to the right, two mounds. Under them write the four words of the module so far: <b>center, spread, shape, position</b>. Last session covered the first two; today adds the other two and the question that follows from them: what do you do with the values that stand apart? Give the answer away early and repeat it all session: <b>a flag is a question, not a verdict.</b></p>
+      </div>
+      <div class="blk"><div class="h">Live demo (you type, they follow)</div>
+        <p>New notebook <code class="inline">session11_shape.ipynb</code>. The numbers are the lesson's own, so learners can find every step again on the lesson page tonight. The demo saves one figure with <code class="inline">fig.savefig</code> (in a notebook it also appears under the cell). Ask for a prediction before each comparison. If time is short, say steps 4 and 8 instead of typing them.</p>
+        <ol class="steps">
+          <li><b>Put a number on shape (3m).</b> New notebook. Say: "Last session we judged shape by eye and by mean against median. Skewness is the number: zero for a symmetric pile, positive when the long tail is on the right." Have the room rank the four columns from most symmetric to most skewed before you run.
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+<span class="k">import</span> pandas <span class="k">as</span> pd
+<span class="k">import</span> matplotlib.pyplot <span class="k">as</span> plt
+
+orders = pd.read_csv(<span class="s">"data/orders.csv"</span>, parse_dates=[<span class="s">"order_date"</span>])
+daily = pd.read_csv(<span class="s">"data/daily_sales.csv"</span>, parse_dates=[<span class="s">"date"</span>])
+products = pd.read_csv(<span class="s">"data/products.csv"</span>)
+totals = orders[<span class="s">"order_total"</span>]
+daily[<span class="s">"spend_per_visitor"</span>] = daily[<span class="s">"revenue"</span>] / daily[<span class="s">"visitors"</span>]
+spend = daily[<span class="s">"spend_per_visitor"</span>].dropna()
+
+print(<span class="s">"product ratings   :"</span>, round(products[<span class="s">"rating"</span>].skew(), <span class="s">2</span>))
+print(<span class="s">"spend per visitor :"</span>, round(spend.skew(), <span class="s">2</span>))
+print(<span class="s">"daily revenue     :"</span>, round(daily[<span class="s">"revenue"</span>].skew(), <span class="s">2</span>))
+print(<span class="s">"order totals      :"</span>, round(totals.skew(), <span class="s">2</span>))
+no_bulk = totals[totals &lt;= <span class="s">2000</span>]
+print(<span class="s">"  without the 12 bulk orders:"</span>, round(no_bulk.skew(), <span class="s">2</span>))
+print(<span class="s">"  log(order totals)         :"</span>, round(np.log(totals).skew(), <span class="s">2</span>))</pre>
+<pre class="out">product ratings   : -0.02
+spend per visitor : 0.27
+daily revenue     : 1.51
+order totals      : 5.48
+  without the 12 bulk orders: 1.64
+  log(order totals)         : -0.41</pre>
+            Write the convention on the board: between -0.5 and 0.5 roughly symmetric (mean and SD are fair), beyond 1 strongly skewed (median and IQR). Two cautions from the output: skewness is not robust (twelve orders move it from 1.64 to 5.48), and it says nothing about the number of humps. The last line is the log trick: 5.48 becomes -0.41.</li>
+          <li><b>Position by rank (3m).</b> Say: "Center, spread and shape describe the whole pile. Position describes one value's place in it. 'This order was $517' says little. 'Larger than 95% of orders' says a lot."
+<pre class="code">cuts = [<span class="s">0.10</span>, <span class="s">0.25</span>, <span class="s">0.50</span>, <span class="s">0.75</span>, <span class="s">0.90</span>, <span class="s">0.95</span>, <span class="s">0.99</span>]
+print(totals.quantile(cuts).to_string())
+
+print(<span class="s">"share of orders at or below $500:"</span>, round((totals &lt;= <span class="s">500</span>).mean(), <span class="s">4</span>))</pre>
+<pre class="out">0.10     41.9500
+0.25     78.8500
+0.50    146.8500
+0.75    264.9500
+0.90    405.3950
+0.95    516.7975
+0.99    737.4430
+share of orders at or below $500: 0.9443</pre>
+            Read down the list out loud: one order in ten is under $42, half are under $147, one in a hundred is over $737. Then the reverse question, with last session's tool: the mean of a boolean is a proportion, so a $500 order sits at about the 94th percentile. Warn now: pandas <code class="inline">.quantile()</code> takes 0 to 1, NumPy's <code class="inline">np.percentile()</code> takes 0 to 100.</li>
+          <li><b>Position by distance: the z-score (3m).</b> Write <b>z = (value - mean) / SD</b> on the board. Ask: "Is a $12,000 day a big deal?" Let them argue, then run.
+<pre class="code"><span class="k">for</span> store <span class="k">in</span> [<span class="s">"Asheville"</span>, <span class="s">"Boise"</span>]:
+    revenue = daily.loc[daily[<span class="s">"store"</span>] == store, <span class="s">"revenue"</span>]
+    z = (<span class="s">12000</span> - revenue.mean()) / revenue.std()
+    share = (revenue &gt;= <span class="s">12000</span>).mean()
+    print(<span class="s">f"{store:&lt;9} mean {revenue.mean():7,.0f} SD {revenue.std():5,.0f}"</span>
+          <span class="s">f"  z = {z:5.2f}  days at or above: {share:.1%}"</span>)</pre>
+<pre class="out">Asheville mean   5,704 SD 2,064  z =  3.05  days at or above: 1.5%
+Boise     mean  10,144 SD 3,715  z =  0.50  days at or above: 24.3%</pre>
+            Say: "The same $12,000 is three standard deviations above Asheville's average and half a standard deviation above Boise's. The raw number cannot tell you that."</li>
+          <li><b>Standardizing does not change the shape (2m).</b> Say: "Convert the whole column." Ask what the mean and SD of a z-scored column must be.
+<pre class="code">z_totals = (totals - totals.mean()) / totals.std()
+print(<span class="s">"mean of z:"</span>, abs(round(z_totals.mean(), <span class="s">6</span>)),
+      <span class="s">"  SD of z:"</span>, round(z_totals.std(), <span class="s">6</span>))
+print(<span class="s">"largest z:"</span>, round(z_totals.max(), <span class="s">1</span>),
+      <span class="s">"  smallest z:"</span>, round(z_totals.min(), <span class="s">2</span>))</pre>
+<pre class="out">mean of z: 0.0   SD of z: 1.0
+largest z: 26.3   smallest z: -1.05</pre>
+            Mean 0 and SD 1, always. But the largest order is 26 SDs above the mean and the smallest barely 1 below: the pile is as lopsided as before. "95% within 2 SDs" belongs to one bell-shaped distribution, which is the second half of today.</li>
+          <li><b>Outlier rule 1: the IQR fences (3m).</b> Say: "An outlier is a value far from the rest. 'Far' needs a definition. Rule one: a fence 1.5 IQRs beyond each quartile. This is the rule box plots use."
+<pre class="code">q1, q3 = totals.quantile(<span class="s">0.25</span>), totals.quantile(<span class="s">0.75</span>)
+iqr = q3 - q1
+lower_fence = q1 - <span class="s">1.5</span> * iqr
+upper_fence = q3 + <span class="s">1.5</span> * iqr
+flag_iqr = (totals &lt; lower_fence) | (totals &gt; upper_fence)
+
+print(<span class="s">"fences:"</span>, round(lower_fence, <span class="s">2</span>), <span class="s">"to"</span>, round(upper_fence, <span class="s">2</span>))
+print(<span class="s">"flagged:"</span>, flag_iqr.sum(), <span class="s">f"({flag_iqr.mean():.1%} of orders)"</span>)</pre>
+<pre class="out">fences: -200.3 to 544.1
+flagged: 848 (4.2% of orders)</pre>
+            Point at the lower fence: minus $200.30. No order can ever be flagged as too small, and 4% are flagged as too large.</li>
+          <li><b>Outlier rule 2 disagrees (3m).</b> Say: "Rule two: z beyond 3. Same data. Same answer?"
+<pre class="code">flag_z = z_totals.abs() &gt; <span class="s">3</span>
+print(<span class="s">"flagged:"</span>, flag_z.sum(), <span class="s">f"({flag_z.mean():.1%} of orders)"</span>)
+print(<span class="s">"smallest flagged order:"</span>, totals[flag_z].min())
+
+print(<span class="s">f"IQR-flagged orders: {flag_iqr.mean():.1%} of orders, "</span>
+      <span class="s">f"{totals[flag_iqr].sum() / totals.sum():.1%} of revenue"</span>)</pre>
+<pre class="out">flagged: 217 (1.1% of orders)
+smallest flagged order: 731.85
+IQR-flagged orders: 4.2% of orders, 15.4% of revenue</pre>
+            848 or 217. Ask why. (The mean and SD are inflated by the very values being judged; the quartiles are not.) Then the last line: deleting what the IQR rule flags would throw away 4% of the orders and over 15% of the money. Say the sentence of the lesson: <b>"A flag is a question, not a verdict."</b></li>
+          <li><b>Investigate before you remove (3m).</b> Say: "So ask the question. Are the twelve largest orders errors? Look them up."
+<pre class="code">items = pd.read_csv(<span class="s">"data/order_items.csv"</span>)
+bulk_ids = orders.loc[totals &gt; <span class="s">2000</span>, <span class="s">"order_id"</span>]
+bulk_lines = items[items[<span class="s">"order_id"</span>].isin(bulk_ids)]
+largest = bulk_lines.groupby(<span class="s">"order_id"</span>)[<span class="s">"quantity"</span>].max()
+
+print(<span class="s">"orders above $2,000:"</span>, len(bulk_ids))
+print(<span class="s">"largest quantity on each:"</span>, sorted(largest.tolist()))
+print(orders.loc[totals &gt; <span class="s">2000</span>, [<span class="s">"channel"</span>, <span class="s">"status"</span>]].value_counts())</pre>
+<pre class="out">orders above $2,000: 12
+largest quantity on each: [25, 26, 27, 28, 30, 30, 30, 32, 35, 38, 39, 39]
+channel  status   
+online   completed    12
+Name: count, dtype: int64</pre>
+            Every one is a completed online order with one line of 25 to 39 units: outfitters buying in bulk. Real sales. Walk the lesson's decision chart on the board: provable error? fix or remove it. Not an error but not part of your question? analyze separately and say so. Otherwise keep it and stay robust (median, IQR).</li>
+          <li><b>Read describe() properly (2m).</b> Say: "You have run this since the first lesson. You can now read every line."
+<pre class="code">print(totals.describe().round(<span class="s">2</span>).to_string())</pre>
+<pre class="out">count    20302.00
+mean       194.60
+std        178.76
+min          6.38
+25%         78.85
+50%        146.85
+75%        264.95
+max       4893.00</pre>
+            Three checks to do in your head every time: is <code class="inline">count</code> lower than the number of rows; are <code class="inline">mean</code> and <code class="inline">50%</code> far apart; are the two halves of the box unequal (264.95 - 146.85 against 146.85 - 78.85)? <code class="inline">std</code> is the sample SD (<code class="inline">ddof=1</code>).</li>
+          <li><b>A box plot is the IQR rule, drawn (3m).</b> Say: "A box plot shows the median, the quartiles, and the fence rule in one shape." Type it with <code class="inline">dropna()</code> and say why: with a missing value Matplotlib draws an empty frame and raises nothing.
+<pre class="code">asheville = daily.loc[daily[<span class="s">"store"</span>] == <span class="s">"Asheville"</span>, <span class="s">"revenue"</span>].dropna()
+a_q1, a_med, a_q3 = asheville.quantile([<span class="s">0.25</span>, <span class="s">0.5</span>, <span class="s">0.75</span>])
+a_iqr = a_q3 - a_q1
+whisker_hi = asheville[asheville &lt;= a_q3 + <span class="s">1.5</span> * a_iqr].max()
+whisker_lo = asheville[asheville &gt;= a_q1 - <span class="s">1.5</span> * a_iqr].min()
+
+fig, ax = plt.subplots(figsize=(<span class="s">9</span>, <span class="s">2.6</span>), layout=<span class="s">"constrained"</span>)
+ax.boxplot(asheville, orientation=<span class="s">"horizontal"</span>, widths=<span class="s">0.5</span>)
+ax.set_yticks([])
+ax.set_xlabel(<span class="s">"Asheville daily revenue ($)"</span>)
+fig.savefig(<span class="s">"asheville_box.png"</span>, dpi=<span class="s">110</span>)
+
+print(<span class="s">"Q1, median, Q3:"</span>, round(a_q1), round(a_med), round(a_q3))
+print(<span class="s">"whiskers end at:"</span>, round(whisker_lo), <span class="s">"and"</span>, round(whisker_hi))
+print(<span class="s">"points beyond the upper fence:"</span>,
+      (asheville &gt; a_q3 + <span class="s">1.5</span> * a_iqr).sum())</pre>
+<pre class="out">Q1, median, Q3: 4263 5208 6652
+whiskers end at: 2268 and 10229
+points beyond the upper fence: 23</pre>
+            Point at the picture: the line in the box is the median, not the mean; the box is the middle half; each whisker ends at the last real data point inside the fence, not at the fence and not at the maximum; separate points are what the rule flags. A box plot compares groups well and hides humps.</li>
+          <li><b>Summaries by group carry their n (2m).</b> Say: "Most real questions are comparisons, so most real summaries are grouped."
+<pre class="code">by_store = daily.groupby(<span class="s">"store"</span>)[<span class="s">"revenue"</span>].agg(
+    [<span class="s">"count"</span>, <span class="s">"mean"</span>, <span class="s">"median"</span>, <span class="s">"std"</span>])
+print(by_store.round(<span class="s">0</span>))</pre>
+<pre class="out">           count     mean  median     std
+store                                    
+Asheville    726   5704.0  5208.0  2064.0
+Bend         721   6998.0  6456.0  2546.0
+Boise        726  10144.0  9360.0  3715.0
+Flagstaff    724   6890.0  6405.0  2686.0</pre>
+            Say: "A mean with no n beside it cannot be judged: is that group 700 days or 7?" The counts differ by the six missing revenue values. The lesson goes on to named aggregation with <code class="inline">q1</code> and <code class="inline">q3</code> functions; that is the project's Step 1.</li>
+          <li><b>Survey answers are ordered categories (4m).</b> Say: "Pinecrest surveyed 1,800 customers on a 1-to-5 scale. That looks like numeric data. It is not, quite: 4 is more satisfied than 3, but nothing says the steps are equal. The word is <b>ordinal</b>."
+<pre class="code">survey = pd.read_csv(<span class="s">"data/survey.csv"</span>)
+
+<span class="k">def</span> top_two(values):
+    <span class="k">return</span> (values.dropna() &gt;= <span class="s">4</span>).mean() * <span class="s">100</span>
+
+<span class="k">def</span> bottom_two(values):
+    <span class="k">return</span> (values.dropna() &lt;= <span class="s">2</span>).mean() * <span class="s">100</span>
+
+staff = survey.groupby(<span class="s">"store"</span>)[<span class="s">"sat_staff"</span>].agg(
+    n=<span class="s">"count"</span>, rows=<span class="s">"size"</span>, median=<span class="s">"median"</span>,
+    satisfied_pct=top_two, dissatisfied_pct=bottom_two)
+print(staff.round(<span class="s">1</span>))</pre>
+<pre class="out">             n  rows  median  satisfied_pct  dissatisfied_pct
+store                                                        
+Asheville  193   202     4.0           57.5              14.0
+Bend       228   232     4.0           78.9               4.4
+Boise      320   329     4.0           76.9               2.2
+Flagstaff  206   213     4.0           74.8               4.4
+Online     248   824     4.0           74.6               2.8</pre>
+            Two findings in one table. First: the median is 4 in every store and tells you nothing, while the shares do: Asheville has 57.5% satisfied against 75 to 79% elsewhere, and 14% dissatisfied. Second: compare <code class="inline">n</code> with <code class="inline">rows</code> for Online: 248 answers from 824 respondents. Most online shoppers never met the staff, so the answers are <b>not missing at random</b>. Whether Asheville's gap could be a fluke is a question for Session 12; describing it clearly, with counts, comes first.</li>
+        </ol>
+      </div>
+      <div class="blk warn"><div class="h">Three mistakes to expect, and how to coach each</div>
+        <ul class="tick">
+          <li><b>Passing a percentage where a fraction is wanted, or the reverse.</b> <code class="inline">totals.quantile(25)</code> raises <code class="inline">ValueError: percentiles should all be in the interval [0, 1]</code>; the dangerous twin raises nothing: <code class="inline">np.percentile(totals, 0.9)</code> quietly returns the 0.9th percentile. Coach: "Which function, and which scale does it take? pandas <code class="inline">.quantile()</code>: 0 to 1. NumPy <code class="inline">np.percentile()</code>: 0 to 100." Have them check a result against <code class="inline">describe()</code>.</li>
+          <li><b>Deleting whatever the rule flags.</b> "The IQR rule says they are outliers, so I removed them." Coach with two questions from the lesson's chart: "Is it a provable error? Is it part of your question?" Then make it concrete: the 848 flagged orders are 15.4% of revenue. Remove only provable errors, write down what was removed, and use the median and IQR so the rest cannot distort the summary.</li>
+          <li><b>A grouped statistic without its n, or a Likert mean on its own.</b> A table of group means looks finished. Coach: "How many answers is each mean based on? Add <code class="inline">count</code> and <code class="inline">size</code>." For 1-to-5 answers: "Show me the distribution, or the share satisfied, next to that mean." A related silent failure worth naming: <code class="inline">ax.boxplot()</code> on a column with missing values draws an empty frame; <code class="inline">dropna()</code> first.</li>
+        </ul>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab</div>
+        <p><b>First 12 minutes, everyone:</b> <code class="inline">labs/module-11/l4_2-shape-position-outliers/catalog_weights_starter.py</code> (reference: <code class="inline">labs/module-11/l4_2-shape-position-outliers/catalog_weights_solution.py</code>). The shipping team asked to "remove the outlier weights first". Learners run the whole workflow on <code class="inline">weight_kg</code>: shape, position, both rules, then look at what was flagged. Expected: skew 3.46 (0.18 after a log); 26 products flagged by the IQR rule and 4 by the z-score rule; 11 of the 26 are tents; nothing removed. Watch Step 2: 14 products have no weight, and comparing a missing value with 2 gives False, so the share needs <code class="inline">dropna()</code> (89.9%, not 84.7%). Debrief with one question: "What do you send back to the shipping team?"</p>
+        <p><b>Last 8 minutes:</b> <code class="inline">labs/module-11/l4_2-shape-position-outliers/price_satisfaction_starter.py</code>, TODO 1 to 3 (the distribution table, <code class="inline">bottom_two()</code>, the grouped table). The grouped table is the payoff: ages 18 to 24 are 19.4% satisfied and 38.2% dissatisfied with prices, against about 44% and 15% for everyone else, and the medians hide it. TODO 4 to 6 (who skipped, saving the chart, the sentence) go home. The chart is saved to <code class="inline">OUTPUT</code>; the lab never calls <code class="inline">plt.show()</code>.</p>
+        <p><b>Early finishers:</b> <code class="inline">labs/module-11/l4_2-shape-position-outliers/debug_summary_report.py</code>: four results that run without an error and are wrong.</p>
+      </div>
+      <div class="blk lab"><div class="h">Start the lesson project</div>
+        <p>The lesson's project is <b>The Store Profile Sheet</b> (about 40 minutes alone, in a new notebook <code class="inline">lesson_4_2_project</code>). The operations manager wants a profile of daily revenue at the four stores and has asked to "take out the weird days first". In the room do <b>Step 1</b>: drop the six store-days with no revenue (2,903 rows become 2,897), add the weekday name, and build the grouped profile with <code class="inline">q1</code> and <code class="inline">q3</code> functions and named aggregation. Everyone should see four rows: Asheville's median 5,208, Bend's 6,456, Boise's 9,360, Flagstaff's 6,405, and Boise's maximum of 27,677 far beyond its 95th percentile of 16,834. Do not give away the ending (all 91 flagged days turn out to be weekends, promotions or December days). Steps 2 to 6 are homework.</p>
+      </div>
+      <div class="blk"><div class="h">Checks for understanding</div>
+        <p>Ask these out loud during the demo and the lab (cold call, then pair-share):</p>
+        <ol class="steps">
+          <li>"Daily revenue has a skewness of 1.51. Which center and spread do you report, and what would you draw first?" <b>Answer:</b> Median and IQR (beyond 1 is strongly skewed), and a histogram first: skewness does not show how many humps there are.</li>
+          <li>"A value is flagged by the IQR rule. What are the two questions you ask before doing anything?" <b>Answer:</b> Is it a provable error? Is it part of the question I am answering? Remove only provable errors; otherwise keep it (and stay robust) or analyze it separately and say so.</li>
+          <li>"On a box plot, where does the upper whisker end?" <b>Answer:</b> At the largest data value that is still within 1.5 IQRs above Q3. Not at the fence itself, and not at the maximum unless nothing is flagged.</li>
+        </ol>
+        <p>Workbook self-check, items Q1 to Q6 (do two in the room if time allows; the rest is homework):</p>
+        <p style="font-size:.9rem;margin:.2rem 0">Answers: <b>Q1</b> <span data-sc="1">C) On the log scale the pile is roughly symmetric, so methods that prefer symmetric data will behave better there</span>; <b>Q2</b> <span data-sc="2"><code class="inline">25.0</code></span>; <b>Q3</b> <span data-sc="3">A) The day is far above Asheville's own average, measured in Asheville's SDs, and only a little above Boise's</span>; <b>Q4</b> <span data-sc="4">D) The mean and SD are inflated by the same large orders being judged, which pushes the z-score line outward; the quartiles are not</span>; <b>Q5</b> <span data-sc="5"><code class="inline">14.5 1</code></span>; <b>Q6</b> <span data-sc="6">B) Report it with its n and say who answered: 70% of Online shoppers skipped the question, so it describes the minority who dealt with staff</span>. Full set with explanations in the Answer Key.</p>
+      </div>
+      <div class="blk"><div class="h">Differentiation</div>
+        <p><b>Support:</b> keep the lesson's outlier decision chart on screen during the lab and have learners trace it with a finger for one flagged product. For z-scores, do one by hand on the board with round numbers (a store with mean 300 and SD 100: what is the z of a 500-visitor day?) before any code. Give anyone lost in named aggregation the pattern on paper: <code class="inline">agg(new_name="function")</code>.</p>
+        <p><b>Stretch:</b> lesson Exercise 4 (the outlier rule on the log scale), or extend the lab: z-scores of weight within each category with <code class="inline">groupby().transform()</code>, the technique the project's Step 2 uses. Does a 6-person tent still look unusual among tents?</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="lesson">
+    <div class="lesson-head"><span class="lcode">4.3</span><h3>Probability Distributions</h3><span class="dur">85 min</span></div>
+    <div class="lesson-body">
+      <div class="blk"><div class="h">Timing</div>
+        <table class="timing"><tbody>
+          <tr><td class="t">15m</td><td>Frame: the vending machine; discrete or continuous; why the rest of the module needs this</td></tr>
+          <tr><td class="t">30m</td><td>Live demo: 12 short steps, one seeded generator, run in order</td></tr>
+          <tr><td class="t">25m</td><td>Guided lab: <code class="inline">conversion_model</code>, then Steps 1 to 4 of <code class="inline">lines_per_order_ci</code></td></tr>
+          <tr><td class="t">15m</td><td>Start the lesson project: the Returns Forecast, Steps 1 and 2</td></tr>
+        </tbody></table>
+      </div>
+      <div class="blk"><div class="h">Objectives (the lesson's own)</div>
+        <ul class="tick">
+          <li>Explain what a random variable and a probability distribution are, and tell discrete from continuous</li>
+          <li>Choose between the uniform, normal, binomial and Poisson distributions for a situation, and check the choice against data</li>
+          <li>Answer probability questions with <code class="inline">scipy.stats</code> using <code class="inline">pmf</code>/<code class="inline">pdf</code>, <code class="inline">cdf</code>, <code class="inline">sf</code> and <code class="inline">ppf</code></li>
+          <li>Simulate random outcomes reproducibly with <code class="inline">np.random.default_rng</code> and use simulation to check a calculation</li>
+          <li>Demonstrate the central limit theorem by simulation, compute a standard error, and build and correctly interpret a 95% confidence interval for a mean</li>
+        </ul>
+      </div>
+      <div class="blk"><div class="h">Mental model to say</div>
+        <p>Say: "Picture a vending machine that drops a random snack each time you press the button. You cannot say what the next press will give you. But if someone tells you the machine is stocked with 50% chips, 30% candy and 20% cookies, you know a great deal: what to expect most often, how surprised to be by three cookies in a row, and roughly what 100 presses will produce. That stocking list is a probability distribution: every possible outcome, with its probability."</p>
+        <p>Then the two kinds, as two columns on the board: <b>discrete</b> (counted: returns in a day; binomial, Poisson; one exact value has a real probability) and <b>continuous</b> (measured: spend per visitor; uniform, normal; only ranges have probability). Finish the frame with why this lesson exists: "Every tool in the rest of this module, tests, A/B tests, confidence intervals, is built by asking 'what would chance alone produce?' Distributions are how that question gets an answer."</p>
+      </div>
+      <div class="blk"><div class="h">Live demo (you type, they follow)</div>
+        <p>New notebook <code class="inline">session11_distributions.ipynb</code>. <b>Create the generator once, in the first cell, and run every cell once, in order.</b> A generator hands out its numbers in sequence: run a cell twice or skip one and every random result after it changes a little (the conclusions do not). The outputs below come from running these cells top to bottom with <code class="inline">default_rng(42)</code>. The lesson page runs a longer sequence of cells, so its random results (the auditor's sample, the coverage percentage) differ slightly from the ones here: same method, different draws. That difference is itself a teaching point.</p>
+        <ol class="steps">
+          <li><b>One generator, and the law of large numbers (3m).</b> New notebook. Say: "Until now we described data that exists. A business also plans for data that does not exist yet. We cannot know tomorrow's number. We can know how it behaves." Create the generator once and say so.
+<pre class="code"><span class="k">import</span> numpy <span class="k">as</span> np
+<span class="k">import</span> pandas <span class="k">as</span> pd
+<span class="k">import</span> matplotlib.pyplot <span class="k">as</span> plt
+<span class="k">from</span> scipy <span class="k">import</span> stats
+
+rng = np.random.default_rng(<span class="s">42</span>)
+
+orders = pd.read_csv(<span class="s">"data/orders.csv"</span>, parse_dates=[<span class="s">"order_date"</span>])
+daily = pd.read_csv(<span class="s">"data/daily_sales.csv"</span>, parse_dates=[<span class="s">"date"</span>])
+
+many = rng.integers(<span class="s">1</span>, <span class="s">7</span>, size=<span class="s">100_000</span>)      <span class="c"># 100,000 rolls of a die</span>
+shares = pd.Series(many).value_counts(normalize=<span class="k">True</span>).sort_index()
+print(shares.round(<span class="s">3</span>).tolist())
+print(<span class="s">"mean of the rolls:"</span>, round(many.mean(), <span class="s">3</span>))</pre>
+<pre class="out">[0.167, 0.167, 0.165, 0.167, 0.168, 0.166]
+mean of the rolls: 3.5</pre>
+            Each face comes up very close to 1/6, and the average roll settles on 3.5, the <b>expected value</b>: no single roll is ever 3.5. Say: "That is why simulation works. If you can simulate a process, you can estimate any probability about it by counting." Tell learners their random numbers will match yours only if they run the same cells in the same order, once each.</li>
+          <li><b>Two routes to one answer (2m).</b> Say: "A customer is equally likely to walk in at any moment of an hour. Chance they arrive in the first 15 minutes?"
+<pre class="code">arrivals = rng.uniform(<span class="s">0</span>, <span class="s">60</span>, size=<span class="s">100_000</span>)       <span class="c"># minutes past the hour</span>
+print(<span class="s">"simulated:"</span>, round((arrivals &lt; <span class="s">15</span>).mean(), <span class="s">3</span>))
+
+arrival = stats.uniform(loc=<span class="s">0</span>, scale=<span class="s">60</span>)          <span class="c"># a frozen distribution</span>
+print(<span class="s">"exact    :"</span>, arrival.cdf(<span class="s">15</span>))</pre>
+<pre class="out">simulated: 0.25
+exact    : 0.25</pre>
+            The simulation counted; the scipy object calculated. Name the object: a <b>frozen distribution</b>, parameters fixed, ready to answer questions. For the uniform, <code class="inline">scale</code> is the width, not the end.</li>
+          <li><b>Freeze a normal with the data's own mean and SD (3m).</b> Say: "Last lesson's even mound: revenue per visitor. A normal distribution is completely described by two numbers."
+<pre class="code">spend = (daily[<span class="s">"revenue"</span>] / daily[<span class="s">"visitors"</span>]).dropna()
+mu, sigma = spend.mean(), spend.std()
+spend_model = stats.norm(loc=mu, scale=sigma)
+print(<span class="s">"mean:"</span>, round(mu, <span class="s">2</span>), <span class="s">" SD:"</span>, round(sigma, <span class="s">2</span>), <span class="s">" n:"</span>, len(spend))
+
+<span class="k">for</span> k <span class="k">in</span> (<span class="s">1</span>, <span class="s">2</span>, <span class="s">3</span>):
+    in_data = ((spend - mu).abs() &lt; k * sigma).mean()
+    in_theory = stats.norm.cdf(k) - stats.norm.cdf(-k)
+    print(<span class="s">f"within {k} SD:  data {in_data:.1%}   normal {in_theory:.1%}"</span>)</pre>
+<pre class="out">mean: 20.87  SD: 3.0  n: 2897
+within 1 SD:  data 68.6%   normal 68.3%
+within 2 SD:  data 95.1%   normal 95.4%
+within 3 SD:  data 99.6%   normal 99.7%</pre>
+            The 68-95-99.7 rule, and its fine print: it is a property of the normal shape. The spend data follows it to within a fraction of a percentage point; order totals would not. Show the lesson's histogram with the curve laid over it from the lesson page.</li>
+          <li><b>Four questions, four methods (4m).</b> Draw the lesson's table on the board as you go: <code class="inline">cdf(x)</code> this or less; <code class="inline">sf(x)</code> more than this; <code class="inline">ppf(q)</code> which value has q below it; <code class="inline">pmf(k)</code> exactly k (discrete). Have learners say the method before you type each line.
+<pre class="code">print(<span class="s">"P(spend below $15): model"</span>, round(spend_model.cdf(<span class="s">15</span>), <span class="s">3</span>),
+      <span class="s">" data"</span>, round((spend &lt; <span class="s">15</span>).mean(), <span class="s">3</span>))
+print(<span class="s">"P(spend above $25): model"</span>, round(spend_model.sf(<span class="s">25</span>), <span class="s">3</span>),
+      <span class="s">" data"</span>, round((spend &gt; <span class="s">25</span>).mean(), <span class="s">3</span>))
+print(<span class="s">"P($18 to $24)     : model"</span>,
+      round(spend_model.cdf(<span class="s">24</span>) - spend_model.cdf(<span class="s">18</span>), <span class="s">3</span>),
+      <span class="s">" data"</span>, round(((spend &gt;= <span class="s">18</span>) &amp; (spend &lt;= <span class="s">24</span>)).mean(), <span class="s">3</span>))
+print(<span class="s">"95th percentile   : model"</span>, round(spend_model.ppf(<span class="s">0.95</span>), <span class="s">2</span>),
+      <span class="s">" data"</span>, round(spend.quantile(<span class="s">0.95</span>), <span class="s">2</span>))</pre>
+<pre class="out">P(spend below $15): model 0.025  data 0.019
+P(spend above $25): model 0.084  data 0.087
+P($18 to $24)     : model 0.683  data 0.686
+95th percentile   : model 25.8  data 26.01</pre>
+            Say: "A model summarizes 2,897 numbers with two. It buys the ability to ask about values you have never seen, at the cost of small errors you can measure." It is close in the middle and a little off in the tails. One warning: for a continuous variable <code class="inline">pdf</code> is the height of the curve, not a probability. Probabilities are areas: differences of <code class="inline">cdf</code>.</li>
+          <li><b>Binomial: successes out of n tries (3m).</b> Say: "A counting question. Out of the next 40 orders, how many will come back?" Fixed number of tries, independent, same probability each time.
+<pre class="code">is_returned = orders[<span class="s">"status"</span>] == <span class="s">"returned"</span>
+p_return = is_returned.mean()
+returns_in_40 = stats.binom(n=<span class="s">40</span>, p=p_return)
+print(<span class="s">"return rate:"</span>, round(p_return, <span class="s">4</span>),
+      <span class="s">" expected in 40:"</span>, round(returns_in_40.mean(), <span class="s">2</span>))
+
+<span class="k">for</span> k <span class="k">in</span> range(<span class="s">4</span>):
+    print(<span class="s">f"P(exactly {k} returns) = {returns_in_40.pmf(k):.3f}"</span>)
+print(<span class="s">f"P(5 or more)        = {returns_in_40.sf(4):.3f}"</span>)</pre>
+<pre class="out">return rate: 0.0563  expected in 40: 2.25
+P(exactly 0 returns) = 0.098
+P(exactly 1 returns) = 0.235
+P(exactly 2 returns) = 0.273
+P(exactly 3 returns) = 0.207
+P(5 or more)        = 0.072</pre>
+            Circle <code class="inline">sf(4)</code>: "more than 4" is "5 or more" for a count. Off-by-one slips here are the most common binomial error. Mention the assumption that matters at Pinecrest: online orders come back about twice as often as store orders (6.9% against 3.4%), so an all-online batch is not this model.</li>
+          <li><b>Check it by simulation (1m).</b> Say: "Do not take the formula on faith. Count."
+<pre class="code">sim = rng.binomial(n=<span class="s">40</span>, p=p_return, size=<span class="s">100_000</span>)
+print(<span class="s">"simulated P(5 or more):"</span>, round((sim &gt;= <span class="s">5</span>).mean(), <span class="s">3</span>))</pre>
+<pre class="out">simulated P(5 or more): 0.073</pre>
+            Formula (0.072) and simulation agree to within a thousandth. The lesson adds a third check, against 507 real batches.</li>
+          <li><b>Poisson: events in an interval (4m).</b> Say: "A different counting question. How many returned orders does a day produce? There is no fixed number of tries, just events scattered through time. One parameter: the average rate."
+<pre class="code">all_days = pd.date_range(<span class="s">"2024-01-01"</span>, <span class="s">"2025-12-31"</span>)
+returns_per_day = (orders[is_returned].groupby(<span class="s">"order_date"</span>).size()
+                   .reindex(all_days, fill_value=<span class="s">0</span>))
+lam = returns_per_day.mean()
+print(<span class="s">"days:"</span>, len(returns_per_day), <span class="s">" mean:"</span>, round(lam, <span class="s">3</span>),
+      <span class="s">" variance:"</span>, round(returns_per_day.var(), <span class="s">3</span>))
+
+returns_model = stats.poisson(mu=lam)
+observed = returns_per_day.value_counts().sort_index()
+expected = returns_model.pmf(observed.index) * len(returns_per_day)
+print(pd.DataFrame({<span class="s">"days observed"</span>: observed,
+                    <span class="s">"Poisson expects"</span>: expected.round(<span class="s">1</span>)}))</pre>
+<pre class="out">days: 731  mean: 1.564  variance: 1.526
+   days observed  Poisson expects
+0            151            153.1
+1            239            239.3
+2            190            187.1
+3             98             97.5
+4             39             38.1
+5             11             11.9
+6              2              3.1
+7              1              0.7</pre>
+            Two things to stress. The <code class="inline">reindex(..., fill_value=0)</code> puts the zero-return days back; without it the mean is wrong. And the check: <b>mean about equal to variance</b> is the fingerprint of a Poisson. The fit is striking: 151 zero-return days observed against 153 expected.</li>
+          <li><b>A count that is not Poisson (2m).</b> Say: "Do not assume every count is Poisson. Total orders per day."
+<pre class="code">orders_per_day = orders.groupby(<span class="s">"order_date"</span>).size()
+print(<span class="s">"mean    :"</span>, round(orders_per_day.mean(), <span class="s">1</span>))
+print(<span class="s">"variance:"</span>, round(orders_per_day.var(), <span class="s">1</span>))
+
+print(<span class="s">"count covering 95% of days:"</span>, returns_model.ppf(<span class="s">0.95</span>))
+print(<span class="s">"P(5 or more returns)      :"</span>, round(returns_model.sf(<span class="s">4</span>), <span class="s">3</span>))</pre>
+<pre class="out">mean    : 27.8
+variance: 64.4
+count covering 95% of days: 4.0
+P(5 or more returns)      : 0.022</pre>
+            The variance is more than twice the mean: weekends, seasons and sale days move the rate. The word is <b>overdispersion</b>, and a Poisson model there would be far too confident. The last two lines are the planning questions the returns model can answer; they are the heart of the lesson project.</li>
+          <li><b>The central limit theorem, watched (4m).</b> The big idea of the lesson. Say: "Order totals are about as far from a bell as data gets: skew 5.5. Draw a sample of n orders, take its mean. Do that 20,000 times. What does the pile of means look like?"
+<pre class="code">population = orders[<span class="s">"order_total"</span>].to_numpy()
+sd = population.std()
+print(<span class="s">"    n  mean of means  SD of means  sigma/sqrt(n)   skew"</span>)
+<span class="k">for</span> n <span class="k">in</span> (<span class="s">5</span>, <span class="s">30</span>, <span class="s">200</span>):
+    means = rng.choice(population, size=(<span class="s">20_000</span>, n)).mean(axis=<span class="s">1</span>)
+    print(<span class="s">f"{n:&gt;5} {means.mean():&gt;14.2f} {means.std():&gt;12.2f} "</span>
+          <span class="s">f"{sd / np.sqrt(n):&gt;14.2f} {stats.skew(means):&gt;6.2f}"</span>)</pre>
+<pre class="out">    n  mean of means  SD of means  sigma/sqrt(n)   skew
+    5         194.58        79.08          79.94   2.21
+   30         194.70        32.42          32.64   0.93
+  200         194.43        12.49          12.64   0.39</pre>
+            Three things, one per column: the means center on the true mean ($194.60); their spread shrinks like sigma over root n (to halve it you need four times the data); their shape approaches the normal (skew falls toward 0). Then what the CLT does <b>not</b> say: it does not make the data normal. A million orders are exactly as skewed as before. Show the lesson's four-panel figure.</li>
+          <li><b>One sample, a standard error, an interval (4m).</b> Say: "In real work you get one sample and never see the population. An auditor pulls 200 orders."
+<pre class="code">sample = rng.choice(population, size=<span class="s">200</span>, replace=<span class="k">False</span>)
+x_bar, s = sample.mean(), sample.std(ddof=<span class="s">1</span>)
+se = s / np.sqrt(len(sample))
+low, high = stats.t.interval(<span class="s">0.95</span>, df=len(sample) - <span class="s">1</span>, loc=x_bar, scale=se)
+
+print(<span class="s">"sample mean:"</span>, round(x_bar, <span class="s">2</span>), <span class="s">" sample SD:"</span>, round(s, <span class="s">2</span>))
+print(<span class="s">"standard error:"</span>, round(se, <span class="s">2</span>),
+      <span class="s">" scipy.stats.sem:"</span>, round(stats.sem(sample), <span class="s">2</span>))
+print(<span class="s">f"95% CI: {low:.2f} to {high:.2f}"</span>)
+print(<span class="s">"true mean:"</span>, round(population.mean(), <span class="s">2</span>))</pre>
+<pre class="out">sample mean: 182.93  sample SD: 147.89
+standard error: 10.46  scipy.stats.sem: 10.46
+95% CI: 162.31 to 203.55
+true mean: 194.6</pre>
+            Write <b>SE = s / sqrt(n)</b> and <b>mean plus or minus about 2 SE</b> on the board. SD against SE: the SD (about $148 here) says how much single orders vary and does not shrink with more data; the SE (about $10) says how much the sample mean would vary from sample to sample. This auditor's sample mean is $12 below the truth, and the interval still contains $194.60. (The lesson page's sample differs, because its generator had been used for different draws: same method, different 200 orders.)</li>
+          <li><b>What "95% confident" means (2m).</b> Say: "The 95% describes the method, not this one interval. We own the population, so we can check: 10,000 samples, 10,000 intervals."
+<pre class="code">n = <span class="s">200</span>
+big = rng.choice(population, size=(<span class="s">10_000</span>, n))
+m = big.mean(axis=<span class="s">1</span>)
+e = big.std(axis=<span class="s">1</span>, ddof=<span class="s">1</span>) / np.sqrt(n)
+t_mult = stats.t.ppf(<span class="s">0.975</span>, df=n - <span class="s">1</span>)
+covered = ((m - t_mult * e &lt;= population.mean())
+           &amp; (population.mean() &lt;= m + t_mult * e))
+print(<span class="s">f"{covered.mean():.1%} of 10,000 intervals contain the true mean"</span>)</pre>
+<pre class="out">93.9% of 10,000 intervals contain the true mean</pre>
+            Close to 95%, a little short because the data is so skewed. Say exactly this: "If we repeated the whole procedure many times, about 95% of the intervals would contain the true mean. Any single interval either contains it or does not." And what an interval is not: it is not a range that holds 95% of the orders.</li>
+          <li><b>Make the classic mistake on purpose (1m).</b> Say: "scipy rarely complains. Watch."
+<pre class="code">wrong = stats.norm(loc=mu, scale=sigma ** <span class="s">2</span>)     <span class="c"># variance passed as scale</span>
+right = stats.norm(loc=mu, scale=sigma)
+print(round(wrong.cdf(<span class="s">15</span>), <span class="s">3</span>), round(right.cdf(<span class="s">15</span>), <span class="s">3</span>))</pre>
+<pre class="out">0.257 0.025</pre>
+            <code class="inline">scale</code> is the standard deviation. Passing the variance makes the bell three times too wide, with no error: 25.7% instead of 2.5%. Textbooks write N(mean, variance), which is where the habit comes from.</li>
+        </ol>
+      </div>
+      <div class="blk warn"><div class="h">Three mistakes to expect, and how to coach each</div>
+        <ul class="tick">
+          <li><b>Giving scipy the wrong meaning for an argument.</b> <code class="inline">scale=sigma ** 2</code> (the variance where the SD is wanted), or <code class="inline">stats.uniform(10, 20)</code> read as low and high when the second argument is the width (the range is 10 to 30). No error either way. Coach: "Name the arguments, <code class="inline">loc=</code> and <code class="inline">scale=</code>, and print <code class="inline">model.ppf([0.025, 0.975])</code> to see whether the range is believable."</li>
+          <li><b>Off by one with <code class="inline">sf</code> on a count, or <code class="inline">cdf</code> and <code class="inline">ppf</code> swapped.</b> "5 or more" is <code class="inline">sf(4)</code>, not <code class="inline">sf(5)</code>. And <code class="inline">ppf(15)</code> returns <code class="inline">nan</code> because <code class="inline">ppf</code> takes a probability and returns a value. Coach: "Say the question in words first: this or less, more than this, or which value has this much below it? Then pick the method."</li>
+          <li><b>Misreading a confidence interval.</b> Two versions: "95% of orders are between $162 and $204" (it is a statement about the mean, not about single orders: only about a tenth of orders fall in such a range), and "there is a 95% probability the true mean is in this interval" (the 95% describes the method: about 95 of 100 intervals built this way contain the true mean). Coach by rerunning the coverage cell and asking: "What is the 95% a percentage of?"</li>
+        </ul>
+      </div>
+      <div class="blk lab"><div class="h">Guided lab</div>
+        <p><b>First 13 minutes, everyone:</b> <code class="inline">labs/module-11/l4_3-probability-distributions/conversion_model_starter.py</code> (reference: <code class="inline">labs/module-11/l4_3-probability-distributions/conversion_model_solution.py</code>). Conversion is transactions divided by visitors. Learners describe it, freeze <code class="inline">stats.norm</code>, check the 68-95-99.7 rule against the data, then answer three managers' questions. Have them write the method name next to each question before coding it (the starter has blanks for this). Expected: mean 0.2354, SD 0.0271, skew 0.05; within 1, 2 and 3 SD the data has 69.4%, 95.6%, 99.5%; P(below 20%) model 0.096 against 0.090 in the data; a bad day (5th percentile) is about 19.1%.</p>
+        <p><b>Next 12 minutes:</b> <code class="inline">labs/module-11/l4_3-probability-distributions/lines_per_order_ci_starter.py</code>, Steps 1 to 4: an intern's sample of 150 orders, the standard error two ways, a 95% t interval, and the prediction in Step 4 (what share of individual orders lies inside the interval?). Expected: sample mean 2.093, SE 0.0821, interval 1.931 to 2.256, which contains the true mean of 2.241. Steps 5 and 6 (coverage over 5,000 repeats; four times the sample) go home. The file is seeded: run top to bottom, everyone gets the same numbers.</p>
+        <p><b>Early finishers:</b> <code class="inline">labs/module-11/l4_3-probability-distributions/debug_delivery_model.py</code>: four model answers that run without an error, all wrong.</p>
+      </div>
+      <div class="blk lab"><div class="h">Start the lesson project</div>
+        <p>The lesson's project is <b>The Returns Forecast</b> (about 40 minutes alone, in a new notebook <code class="inline">lesson_4_3_project</code>): a checked Poisson model of daily returns, with capacity numbers and a confidence interval. In the room do <b>Steps 1 and 2</b>. Step 1 builds the daily series including the zero days (<code class="inline">reindex(days, fill_value=0)</code>): 731 days, 1,143 returned orders, busiest day 7, 151 days with none. Step 2 checks the model before trusting it: mean 1.564 against variance 1.526, then the observed-against-expected table, where no count is off by more than about three days. Say what the remaining steps answer so nobody opens them cold: how much capacity covers 95% of days, what a simulated year looks like, and a margin of error on the rate. Steps 3 to 6 are homework.</p>
+      </div>
+      <div class="blk"><div class="h">Checks for understanding</div>
+        <p>Ask these out loud during the demo and the lab (cold call, then pair-share):</p>
+        <ol class="steps">
+          <li>"A warehouse checks 60 parcels, each with the same 2% chance of damage, independently. Which distribution, and which parameters?" <b>Answer:</b> Binomial with n = 60 and p = 0.02: a fixed number of independent tries with the same probability.</li>
+          <li>"I have <code class="inline">model = stats.norm(loc=20.87, scale=3.0)</code>. Which method tells me the spend that only 5% of days fall below?" <b>Answer:</b> <code class="inline">model.ppf(0.05)</code>: <code class="inline">ppf</code> takes a probability and returns a value (about $15.94).</li>
+          <li>"The standard deviation of my sample is $148 and the standard error is $10. Which one shrinks if I collect four times as much data, and by how much?" <b>Answer:</b> The standard error: it halves (it divides by the square root of n). The SD describes single orders and stays about the same.</li>
+        </ol>
+        <p>Workbook self-check, items Q7 to Q12 (do two in the room if time allows; the rest is homework):</p>
+        <p style="font-size:.9rem;margin:.2rem 0">Answers: <b>Q7</b> <span data-sc="7">D) Poisson; check that the mean and the variance are about equal</span>; <b>Q8</b> <span data-sc="8"><code class="inline">0.5</code></span>; <b>Q9</b> <span data-sc="9">A) <code class="inline">batch.sf(2)</code></span>; <b>Q10</b> <span data-sc="10">B) About $8.94</span>; <b>Q11</b> <span data-sc="11">C) 800</span>; <b>Q12</b> <span data-sc="12">A) They are identical: each pass builds a new generator from the same seed, which replays the same numbers</span>. Full set with explanations in the Answer Key.</p>
+      </div>
+      <div class="blk"><div class="h">Differentiation</div>
+        <p><b>Support:</b> give learners the lesson's four-methods table on paper and have them tick the method for each question before typing. For the CLT, do it physically if you can: three dice per person, each person reports the mean of their three, and you tally the means on the board; the tally is a mound even though one die is flat. Learners who are shaky on simulation should rerun the dice cell with 10, 1,000 and 100,000 rolls and watch the shares settle.</p>
+        <p><b>Stretch:</b> lesson Exercise 4 (how the interval's width depends on n, for 50, 200, 800 and 3,200), or extend the lab: is conversion more variable than a binomial model allows? For a store-day with 330 visitors and p = 0.235, the binomial SD of the rate is sqrt(p(1 - p) / 330); compare it with the observed SD (0.0271) and explain the gap.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="sec"><h2>Closing</h2><span class="rule"></span></div>
+  <div class="blk"><div class="h">Exit ticket (3 questions, on paper or sticky notes, no notes)</div>
+    <ol class="steps">
+          <li>The IQR rule flags 91 store-days as unusually high. What do you do before removing any of them? <b>Answer:</b> Investigate them: are they provable errors, and are they part of the question? (In the lesson's project all 91 are weekends, promotions or December days: real, and kept.)</li>
+          <li>You have a frozen distribution called <code class="inline">model</code>. Which method returns the value that 95% of the distribution lies below? <b>Answer:</b> <code class="inline">model.ppf(0.95)</code>. (<code class="inline">cdf</code> goes from a value to a probability; <code class="inline">ppf</code> goes back.)</li>
+          <li>A 95% confidence interval for the mean order total is $162 to $204. Does that mean 95% of orders are between $162 and $204? If not, what does the 95% describe? <b>Answer:</b> No. It is a statement about the mean, not about single orders. The 95% describes the method: about 95 of 100 intervals built this way contain the true mean.</li>
+        </ol>
+    <p>Read the slips before Session 12. Question 3 matters most: Session 12's hypothesis tests are built on the same standard error and the same "what would chance alone produce" logic. If more than a quarter answer "yes, 95% of orders", open Session 12 with the coverage simulation again.</p>
+  </div>
+  <div class="note"><div class="t">Homework (about 2 to 3 hours)</div>
+    <ul class="tick">
+          <li><b>Lesson 4.2 project:</b> finish the Store Profile Sheet (Steps 2 to 6): z-scores within each store, the flagged days and what they turn out to be, the box plot saved as <code class="inline">store_profile.png</code>, the written profile.</li>
+          <li><b>Lesson 4.2 practice:</b> Exercises 1 to 3 (Exercise 4 is a stretch), the five-question Quick Quiz, and the journal prompt. Read the survey section in full, including "Who Did Not Answer?"</li>
+          <li><b>Lesson 4.3 project:</b> finish the Returns Forecast (Steps 3 to 6): planning questions with <code class="inline">pmf</code>, <code class="inline">sf</code> and <code class="inline">ppf</code>, a simulated year, a week, a confidence interval for the rate.</li>
+          <li><b>Lesson 4.3 practice:</b> Exercises 1 to 3 (Exercise 4 is a stretch), the Quick Quiz, and the journal prompt. Read "Common Mistakes" in full: all six are silent.</li>
+          <li><b>Kit labs:</b> finish <code class="inline">price_satisfaction</code> (TODO 4 to 6) and <code class="inline">lines_per_order_ci</code> (Steps 5 and 6).</li>
+          <li><b>Workbook:</b> the 12 self-check items and anything left in Predict, then run.</li>
+          <li><b>Before Lesson 4.4</b> (from the lesson page): make a scatter plot of <code class="inline">visitors</code> against <code class="inline">revenue</code> from <code class="inline">daily_sales.csv</code> and describe the pattern in one sentence. Then predict: do stores take more revenue on days when more staff are on duty? Why might that be true even if adding staff did nothing?</li>
+        </ul>
+  </div>
+  <div class="note lab"><div class="t">Bring list for Session 12</div>
+    <ul class="tick">
+          <li>Their notes on the pattern <b>mean plus or minus t x s / sqrt(n)</b>: the t-test in Lesson 4.5 is built on the same standard error.</li>
+          <li>The scatter plot of visitors against revenue and their written prediction about staffing: Session 12 opens with it.</li>
+          <li>Data files for Session 12: <code class="inline">daily_sales.csv</code>, <code class="inline">store_weather.csv</code>, <code class="inline">products.csv</code>, <code class="inline">order_items.csv</code>, <code class="inline">survey.csv</code>, <code class="inline">orders.csv</code>, <code class="inline">customers.csv</code> (all already in <code class="inline">data/</code>).</li>
+          <li>Installs: none new. Session 12 uses <code class="inline">scipy.stats</code> and, for two cells, <code class="inline">statsmodels</code>; both are in the course environment. Anyone unsure runs <code class="inline">python -c "import statsmodels; print(statsmodels.__version__)"</code> at home.</li>
+          <li>Servers to start: none. Accounts: none needed.</li>
+          <li>This workbook, with the Session 11 self-check done.</li>
+        </ul>
+  </div>
+
+  <div class="sec"><h2>If You Run Long or Short</h2><span class="rule"></span></div>
+  <p><b>Protect:</b> the two outlier rules disagreeing and the bulk-order investigation (4.2 demo steps 5 to 7), the survey table with <code class="inline">n</code> beside <code class="inline">rows</code> (step 11), the <code class="inline">catalog_weights</code> lab, freezing a normal and asking it questions (4.3 demo steps 3 and 4), the central limit theorem table (step 9), one confidence interval with its coverage check (steps 10 and 11), and the first step of each lesson project.</p>
+  <p><b>Running long, cut in this order:</b> (1) 4.2 demo step 4 (standardizing: one sentence) and step 8 (<code class="inline">describe()</code>: point at the lesson's table); (2) <code class="inline">price_satisfaction</code> in the room (all of it goes home; show the solution's table for one minute instead); (3) 4.3 demo step 6 (the simulation check) and step 8 (overdispersion: say it, show the two numbers from the lesson); (4) the binomial step shortened to the frozen object and <code class="inline">sf(4)</code>; (5) <code class="inline">lines_per_order_ci</code> in the room. Never cut the central limit theorem or the coverage check: Session 12 stands on them.</p>
+  <p><b>Running short:</b> do the dice version of the central limit theorem physically, run a debug handout as a whole-room hunt, do the Predict items together, then let learners continue the Store Profile Sheet to Step 3 (the flagged days) and ask them to guess what the flagged days are before Step 4.</p>
+  <div class="foot">
+    <div class="who">
+      <span class="bio">© 2026 Ray de la Paz · Python Data Science</span>
+    </div>
+    <div class="ver">Instructor Kit · Session 11 · Facilitator Guide · v1.0</div>
+  </div>
+
+</div>
+</body>
+</html>

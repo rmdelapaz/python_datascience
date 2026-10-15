@@ -1,1415 +1,1264 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Replace loops with whole-array arithmetic, universal functions, boolean masks, np.where and axis-aware summaries in NumPy. Python Data Science Lesson 1.2.">
+    <meta name="author" content="Ray de la Paz">
     <title>Vectorized Operations - Python Data Science</title>
-    <link href="styles/main.css" rel="stylesheet"/>
-    <link href="/styles/enhanced.css" rel="stylesheet"/>
-    <link href="/favicon.png" rel="icon" type="image/png"/>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+    <!-- Mermaid: rendered (and re-rendered on theme change) by js/course-enhancements.js -->
     <script type="module">
         import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({ startOnLoad: true });
+        window.__mermaid = mermaid;
+        mermaid.initialize({ startOnLoad: false });
+        document.dispatchEvent(new Event('mermaid-ready'));
     </script>
-    <style>
-        .breadcrumb {
-            background: #f8f9fa;
-            padding: 1rem;
-            border-radius: 5px;
-            margin-bottom: 2rem;
-            font-size: 0.9rem;
-        }
-        
-        .breadcrumb a {
-            color: #667eea;
-            text-decoration: none;
-        }
-        
-        .breadcrumb a:hover {
-            text-decoration: underline;
-        }
-        
-        .navigation-links {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 2rem 0;
-            margin-top: 3rem;
-            border-top: 2px solid #e0e0e0;
-        }
-        
-        .navigation-links a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 500;
-            padding: 0.5rem 1rem;
-            border-radius: 5px;
-            transition: all 0.3s ease;
-        }
-        
-        .navigation-links a:hover {
-            background: #f0f0f0;
-        }
-        
-        .nav-prev, .nav-next {
-            flex: 1;
-        }
-        
-        .nav-next {
-            text-align: right;
-        }
-        
-        .nav-home {
-            text-align: center;
-        }
-        
-        canvas {
-            display: block;
-            margin: 20px auto;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        
-        .operation-comparison {
-            display: flex;
-            justify-content: space-around;
-            margin: 20px 0;
-            gap: 20px;
-        }
-        
-        .operation-box {
-            flex: 1;
-            padding: 15px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            background: #f9f9f9;
-        }
-        
-        .operation-box h4 {
-            margin: 0 0 10px 0;
-            padding: 5px;
-            background: none;
-            color: #333;
-        }
-        
-        .slow-operation {
-            border-color: #ff6b6b;
-            background: #fff5f5;
-        }
-        
-        .fast-operation {
-            border-color: #51cf66;
-            background: #f0fff4;
-        }
-        
-        .performance-meter {
-            width: 100%;
-            height: 20px;
-            background: #e0e0e0;
-            border-radius: 10px;
-            overflow: hidden;
-            margin: 10px 0;
-        }
-        
-        .performance-fill {
-            height: 100%;
-            background: linear-gradient(to right, #667eea, #764ba2);
-            transition: width 0.5s ease;
-        }
-    </style>
-    <script src="/js/course-enhancements.js" defer></script>
-    <link rel="stylesheet" href="styles/standard.css">
 </head>
 <body>
-    <!-- Skip to main content for accessibility -->
     <a href="#main-content" class="skip-to-main">Skip to main content</a>
-    
-    <!-- Progress indicator -->
+
     <div class="progress-indicator" role="progressbar" aria-label="Page scroll progress">
         <div class="progress-bar"></div>
     </div>
-    <nav class="breadcrumb">
-        <a href="index.html">Home</a> &gt; 
-        <a href="index.html#foundation">Foundation Module</a> &gt; 
-        <a href="index.html#numpy-fundamentals">NumPy Fundamentals</a> &gt;
-        <span>Vectorized Operations</span>
+
+    <nav class="main-nav">
+        <div class="nav-container">
+            <a href="index.html" class="nav-logo">📊 Python Data Science</a>
+            <button id="mobile-menu-toggle" class="mobile-menu-toggle" aria-expanded="false" aria-controls="nav-links">☰</button>
+            <div class="nav-links" id="nav-links">
+                <a href="index.html">Home</a>
+                <a href="index.html#modules">All Modules</a>
+                <span class="nav-divider"></span>
+                <a href="https://rays-home.netlify.app/">Ray's House of Fun</a>
+                <a href="https://rays-home.netlify.app/contact">Contact</a>
+                <button id="theme-toggle" aria-label="Toggle dark/light mode">🌙</button>
+            </div>
+        </div>
     </nav>
 
-
     <main id="main-content">
-    <h1>⚡ Vectorized Operations: The Secret to NumPy's Lightning Speed</h1>
-
-    <!-- What You'll Learn (learning objectives) -->
-    <div class="card card-info">
-        <h2>📚 What You'll Learn</h2>
-        <p>By the end of this lesson, you will be able to:</p>
-        <ul>
-            <li>Explain what vectorization is and why array-wide operations run 10–100× faster than Python loops (C backend + SIMD)</li>
-            <li>Write element-wise arithmetic, comparison, and universal-function (ufunc) operations on whole arrays</li>
-            <li>Replace loops and if-statements with boolean masks and <code>np.where()</code></li>
-            <li>Use aggregation functions and the <code>axis</code> parameter to summarize multi-dimensional data</li>
-            <li>Apply vectorized patterns to real tasks: portfolio metrics, image filters, sensor analysis, and ML preprocessing</li>
-            <li>Avoid common pitfalls such as growing arrays in loops, unnecessary copies, and wrong axis selection</li>
-        </ul>
-        <p><strong>⏱️ Estimated Time:</strong> 45–60 minutes</p>
-        <p><strong>🎯 Project:</strong> Take a loop-based computation over a million numbers, rewrite it as a single vectorized expression, and measure the speedup you achieve.</p>
-    </div>
-
-    <p>Imagine you're a chef preparing dinner for 1000 guests. Would you cook each meal one by one, or fire up all your burners and cook everything simultaneously? That's vectorization! 🍳 It's the difference between a loop that crawls and code that flies. In this lesson, we'll unlock the superpower that makes NumPy 10-100x faster than pure Python.</p>
-
-    <h2>What is Vectorization? The Parallel Universe 🌌</h2>
-    
-    <p>Vectorization is like having an army of tiny workers all doing the same task simultaneously, instead of one worker doing everything sequentially. When you write <code>array * 2</code>, NumPy doesn't loop through each element - it processes ALL elements at once using optimized C code and CPU vector instructions (SIMD - Single Instruction, Multiple Data).</p>
-
-    <div class="mermaid">
-    graph TB
-        A[Vectorized Operation] --> B[Single Python Call]
-        B --> C[NumPy C Backend]
-        C --> D[SIMD Instructions]
-        D --> E[CPU Vector Units]
-        E --> F[Process 4-16 values simultaneously]
-        
-        G[Loop-based Operation] --> H[Python Loop]
-        H --> I[Python Interpreter]
-        I --> J[Type Check Each Element]
-        J --> K[Function Call Each Element]
-        K --> L[Process 1 value at a time]
-        
-        F --> M[Result in ~1ms]
-        L --> N[Result in ~100ms]
-        
-        style A fill:#4ecdc4
-        style G fill:#ff6b6b
-        style M fill:#51cf66
-        style N fill:#ff6b6b
-    </div>
-
-    <h3>The Assembly Line Analogy 🏭</h3>
-    
-    <p>Think of a car factory. The <strong>loop approach</strong> is like having one worker who installs the engine, then walks to get the wheels, installs them, then gets the doors, installs them, and so on for each car. The <strong>vectorized approach</strong> is like an assembly line where specialized stations handle all engines at once, all wheels at once, all doors at once - dramatically faster and more efficient!</p>
-
-    <canvas id="vectorizationCanvas" width="800" height="400"></canvas>
-    <script>
-        const canvas = document.getElementById('vectorizationCanvas');
-        const ctx = canvas.getContext('2d');
-        
-        // Animation variables
-        let frame = 0;
-        let loopPosition = 0;
-        let vectorPositions = [0, 0, 0, 0];
-        
-        function drawVisualization() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Title
-            ctx.fillStyle = '#333';
-            ctx.font = 'bold 16px Arial';
-            ctx.fillText('Loop vs Vectorization Animation', 300, 30);
-            
-            // Loop-based (top half)
-            ctx.fillStyle = '#ff6b6b';
-            ctx.font = '14px Arial';
-            ctx.fillText('Loop-based (Sequential)', 50, 80);
-            
-            // Draw array elements
-            for(let i = 0; i < 8; i++) {
-                ctx.strokeStyle = '#333';
-                ctx.strokeRect(150 + i*60, 100, 50, 40);
-                ctx.fillStyle = '#ffd93d';
-                if(i < loopPosition) {
-                    ctx.fillRect(150 + i*60, 100, 50, 40);
-                }
-                ctx.fillStyle = '#333';
-                ctx.font = '12px Arial';
-                ctx.fillText(String(i+1), 170 + i*60, 125);
-            }
-            
-            // Draw loop pointer
-            if(loopPosition < 8) {
-                ctx.fillStyle = '#ff6b6b';
-                ctx.beginPath();
-                ctx.moveTo(175 + loopPosition*60, 90);
-                ctx.lineTo(165 + loopPosition*60, 95);
-                ctx.lineTo(185 + loopPosition*60, 95);
-                ctx.closePath();
-                ctx.fill();
-            }
-            
-            // Vectorized (bottom half)
-            ctx.fillStyle = '#4ecdc4';
-            ctx.font = '14px Arial';
-            ctx.fillText('Vectorized (Parallel)', 50, 250);
-            
-            // Draw array elements
-            for(let i = 0; i < 8; i++) {
-                ctx.strokeStyle = '#333';
-                ctx.strokeRect(150 + i*60, 270, 50, 40);
-                
-                // All elements processed together
-                ctx.fillStyle = `rgba(149, 225, 211, ${vectorPositions[0]})`;
-                ctx.fillRect(150 + i*60, 270, 50, 40);
-                
-                ctx.fillStyle = '#333';
-                ctx.font = '12px Arial';
-                ctx.fillText(String(i+1), 170 + i*60, 295);
-            }
-            
-            // Draw parallel processing arrows
-            if(vectorPositions[0] < 1) {
-                for(let i = 0; i < 8; i++) {
-                    ctx.strokeStyle = `rgba(78, 205, 196, ${vectorPositions[0]})`;
-                    ctx.beginPath();
-                    ctx.moveTo(175 + i*60, 260);
-                    ctx.lineTo(175 + i*60, 265);
-                    ctx.stroke();
-                    
-                    // Arrow heads
-                    ctx.beginPath();
-                    ctx.moveTo(175 + i*60, 265);
-                    ctx.lineTo(170 + i*60, 260);
-                    ctx.lineTo(180 + i*60, 260);
-                    ctx.closePath();
-                    ctx.fillStyle = `rgba(78, 205, 196, ${vectorPositions[0]})`;
-                    ctx.fill();
-                }
-            }
-            
-            // Progress bars
-            ctx.fillStyle = '#333';
-            ctx.font = '12px Arial';
-            ctx.fillText('Progress:', 50, 180);
-            
-            // Loop progress
-            ctx.strokeRect(120, 170, 200, 15);
-            ctx.fillStyle = '#ff6b6b';
-            ctx.fillRect(120, 170, (loopPosition/8)*200, 15);
-            
-            ctx.fillText('Progress:', 50, 350);
-            // Vector progress
-            ctx.strokeRect(120, 340, 200, 15);
-            ctx.fillStyle = '#4ecdc4';
-            ctx.fillRect(120, 340, vectorPositions[0]*200, 15);
-            
-            // Speed indicators
-            ctx.fillStyle = '#666';
-            ctx.font = '11px Arial';
-            ctx.fillText(`Speed: ${(loopPosition/8*100).toFixed(0)}% (${loopPosition} ops)`, 330, 180);
-            ctx.fillText(`Speed: ${(vectorPositions[0]*100).toFixed(0)}% (1 parallel op)`, 330, 350);
-        }
-        
-        function animate() {
-            frame++;
-            
-            // Update loop position (slow)
-            if(frame % 30 === 0 && loopPosition < 8) {
-                loopPosition++;
-            }
-            
-            // Update vector positions (fast - all at once)
-            if(frame > 20 && vectorPositions[0] < 1) {
-                vectorPositions[0] = Math.min(1, vectorPositions[0] + 0.05);
-            }
-            
-            // Reset animation
-            if(frame > 300) {
-                frame = 0;
-                loopPosition = 0;
-                vectorPositions = [0, 0, 0, 0];
-            }
-            
-            drawVisualization();
-            requestAnimationFrame(animate);
-        }
-        
-        animate();
-    </script>
-
-    <pre><code>import numpy as np
-import time
-
-# The Power of Vectorization: A Speed Comparison 🏎️
-
-def demonstrate_vectorization_power():
-    """
-    Let's see vectorization in action with real numbers!
-    """
-    size = 1_000_000  # 1 million numbers
-    
-    # Create test data
-    python_list = list(range(size))
-    numpy_array = np.arange(size, dtype=np.float64)
-    
-    print("⚡ Vectorization Speed Test")
-    print("=" * 60)
-    print(f"Operating on {size:,} numbers\n")
-    
-    # Test 1: Squaring all elements
-    print("📊 Operation: Square all elements")
-    print("-" * 40)
-    
-    # Python loop approach
-    start = time.perf_counter()
-    result_loop = []
-    for x in python_list:
-        result_loop.append(x ** 2)
-    loop_time = time.perf_counter() - start
-    
-    # NumPy vectorized approach
-    start = time.perf_counter()
-    result_vector = numpy_array ** 2
-    vector_time = time.perf_counter() - start
-    
-    print(f"Loop approach:      {loop_time*1000:.2f} ms")
-    print(f"Vectorized approach: {vector_time*1000:.2f} ms")
-    print(f"Speedup: {loop_time/vector_time:.1f}x faster! 🚀\n")
-    
-    # Test 2: Complex mathematical expression
-    print("📊 Operation: (x * 2 + 10) / 3 - 5")
-    print("-" * 40)
-    
-    # Python loop approach
-    start = time.perf_counter()
-    result_loop = []
-    for x in python_list:
-        result_loop.append((x * 2 + 10) / 3 - 5)
-    loop_time = time.perf_counter() - start
-    
-    # NumPy vectorized approach
-    start = time.perf_counter()
-    result_vector = (numpy_array * 2 + 10) / 3 - 5
-    vector_time = time.perf_counter() - start
-    
-    print(f"Loop approach:      {loop_time*1000:.2f} ms")
-    print(f"Vectorized approach: {vector_time*1000:.2f} ms")
-    print(f"Speedup: {loop_time/vector_time:.1f}x faster! 🚀\n")
-    
-    # Test 3: Conditional operations
-    print("📊 Operation: Set negative values to zero")
-    print("-" * 40)
-    
-    # Create array with positive and negative values
-    test_array = np.random.randn(size)
-    test_list = test_array.tolist()
-    
-    # Python loop approach
-    start = time.perf_counter()
-    result_loop = []
-    for x in test_list:
-        result_loop.append(max(0, x))
-    loop_time = time.perf_counter() - start
-    
-    # NumPy vectorized approach
-    start = time.perf_counter()
-    result_vector = np.maximum(test_array, 0)
-    vector_time = time.perf_counter() - start
-    
-    print(f"Loop approach:      {loop_time*1000:.2f} ms")
-    print(f"Vectorized approach: {vector_time*1000:.2f} ms")
-    print(f"Speedup: {loop_time/vector_time:.1f}x faster! 🚀")
-
-demonstrate_vectorization_power()</code></pre>
-
-    <h2>The Anatomy of Vectorized Operations 🔬</h2>
-    
-    <p>Vectorization isn't just about speed - it's about expressing operations more clearly and concisely. Instead of telling the computer HOW to loop, you tell it WHAT you want to achieve. This declarative style is not only faster but also less error-prone and easier to read!</p>
-
-    <div class="operation-comparison">
-        <div class="operation-box slow-operation">
-            <h4>❌ Loop-Based (Imperative)</h4>
-            <pre><code># Calculate distance from origin
-distances = []
-for i in range(len(x_coords)):
-    dist = np.sqrt(x_coords[i]**2 + y_coords[i]**2)
-    distances.append(dist)
-    
-# Normalize values
-normalized = []
-max_val = max(values)
-min_val = min(values)
-for val in values:
-    norm = (val - min_val) / (max_val - min_val)
-    normalized.append(norm)</code></pre>
-            <div class="performance-meter">
-                <div class="performance-fill" style="width: 20%"></div>
-            </div>
-            <p>Speed: 🐌 Slow</p>
-        </div>
-        
-        <div class="operation-box fast-operation">
-            <h4>✅ Vectorized (Declarative)</h4>
-            <pre><code># Calculate distance from origin
-distances = np.sqrt(x_coords**2 + y_coords**2)
-
-# Normalize values
-normalized = (values - values.min()) / (values.max() - values.min())</code></pre>
-            <div class="performance-meter">
-                <div class="performance-fill" style="width: 95%"></div>
-            </div>
-            <p>Speed: ⚡ Lightning Fast</p>
-        </div>
-    </div>
-
-    <pre><code>import numpy as np
-
-class VectorizedOperations:
-    """
-    Master class for understanding vectorized operations.
-    Think of this as your vectorization cookbook! 👨‍🍳
-    """
-    
-    def __init__(self):
-        self.size = 10000
-        np.random.seed(42)
-    
-    def basic_arithmetic_operations(self):
-        """Fundamental vectorized arithmetic operations"""
-        print("🔢 Basic Arithmetic Operations")
-        print("=" * 50)
-        
-        a = np.array([1, 2, 3, 4, 5])
-        b = np.array([10, 20, 30, 40, 50])
-        
-        # All operations work element-wise
-        print(f"Arrays: a = {a}, b = {b}")
-        print(f"Addition:       a + b = {a + b}")
-        print(f"Subtraction:    a - b = {a - b}")
-        print(f"Multiplication: a * b = {a * b}")
-        print(f"Division:       b / a = {b / a}")
-        print(f"Power:          a ** 2 = {a ** 2}")
-        print(f"Modulo:         b % 7 = {b % 7}")
-        
-        # Scalar operations broadcast automatically
-        print(f"\nScalar operations (broadcasting):")
-        print(f"a + 100 = {a + 100}")
-        print(f"a * 10  = {a * 10}")
-        print(f"a / 2   = {a / 2}")
-    
-    def comparison_operations(self):
-        """Vectorized comparison operations return boolean arrays"""
-        print("\n🔍 Comparison Operations")
-        print("=" * 50)
-        
-        arr = np.array([1, 5, 3, 8, 2, 7, 4, 6])
-        
-        print(f"Array: {arr}")
-        print(f"arr > 4:   {arr > 4}")
-        print(f"arr == 5:  {arr == 5}")
-        print(f"arr <= 3:  {arr <= 3}")
-        
-        # Boolean arrays can be used for filtering
-        mask = arr > 4
-        print(f"\nFiltering with boolean mask:")
-        print(f"Values > 4: {arr[mask]}")
-        
-        # Compound conditions
-        mask = (arr > 2) & (arr < 7)  # Note: use & not 'and'
-        print(f"Values between 2 and 7: {arr[mask]}")
-    
-    def universal_functions_ufuncs(self):
-        """NumPy's universal functions - vectorized mathematical operations"""
-        print("\n🌟 Universal Functions (ufuncs)")
-        print("=" * 50)
-        
-        angles = np.array([0, np.pi/6, np.pi/4, np.pi/3, np.pi/2])
-        
-        print("Trigonometric functions:")
-        print(f"Angles (radians): {angles/np.pi} * π")
-        print(f"sin(angles): {np.sin(angles).round(3)}")
-        print(f"cos(angles): {np.cos(angles).round(3)}")
-        print(f"tan(angles): {np.tan(angles).round(3)}")
-        
-        values = np.array([1, 4, 9, 16, 25])
-        print(f"\nMathematical functions:")
-        print(f"Values: {values}")
-        print(f"sqrt: {np.sqrt(values)}")
-        print(f"log: {np.log(values).round(3)}")
-        print(f"exp: {np.exp(values/10).round(3)}")
-        print(f"abs: {np.abs([-5, -3, 0, 3, 5])}")
-    
-    def aggregation_operations(self):
-        """Vectorized aggregation operations"""
-        print("\n📊 Aggregation Operations")
-        print("=" * 50)
-        
-        # 1D aggregations
-        arr = np.random.randn(1000) * 10 + 50
-        
-        print("1D Array Statistics:")
-        print(f"  Shape: {arr.shape}")
-        print(f"  Mean: {arr.mean():.2f}")
-        print(f"  Std Dev: {arr.std():.2f}")
-        print(f"  Min: {arr.min():.2f}")
-        print(f"  Max: {arr.max():.2f}")
-        print(f"  Sum: {arr.sum():.2f}")
-        print(f"  Median: {np.median(arr):.2f}")
-        print(f"  95th percentile: {np.percentile(arr, 95):.2f}")
-        
-        # 2D aggregations with axis
-        matrix = np.random.randint(1, 10, size=(3, 4))
-        print(f"\n2D Matrix:\n{matrix}")
-        print(f"Sum along rows (axis=1): {matrix.sum(axis=1)}")
-        print(f"Sum along columns (axis=0): {matrix.sum(axis=0)}")
-        print(f"Mean of entire matrix: {matrix.mean():.2f}")
-    
-    def advanced_vectorization_patterns(self):
-        """Advanced patterns for complex operations"""
-        print("\n🎯 Advanced Vectorization Patterns")
-        print("=" * 50)
-        
-        # Pattern 1: Outer operations
-        x = np.array([1, 2, 3])
-        y = np.array([4, 5, 6])
-        
-        print("Outer product (all pairs multiplication):")
-        outer_product = x[:, np.newaxis] * y
-        print(f"x = {x}, y = {y}")
-        print(f"Outer product:\n{outer_product}")
-        
-        # Pattern 2: Moving window operations
-        data = np.array([1, 3, 5, 7, 9, 11, 13])
-        window_size = 3
-        
-        # Create sliding windows using stride tricks (advanced!)
-        print(f"\nMoving average (window size={window_size}):")
-        print(f"Data: {data}")
-        
-        # Simple approach using convolution
-        weights = np.ones(window_size) / window_size
-        moving_avg = np.convolve(data, weights, mode='valid')
-        print(f"Moving averages: {moving_avg.round(2)}")
-        
-        # Pattern 3: Vectorized string operations (structured arrays)
-        names = np.array(['Alice', 'Bob', 'Charlie', 'David'])
-        scores = np.array([85, 92, 78, 95])
-        
-        print(f"\nVectorized filtering:")
-        print(f"Names: {names}")
-        print(f"Scores: {scores}")
-        
-        # Find high scorers
-        high_scorers = names[scores > 80]
-        print(f"High scorers (>80): {high_scorers}")
-
-# Example usage
-ops = VectorizedOperations()
-ops.basic_arithmetic_operations()
-ops.comparison_operations()
-ops.universal_functions_ufuncs()
-ops.aggregation_operations()
-ops.advanced_vectorization_patterns()</code></pre>
-
-    <h2>Real-World Vectorization: From Theory to Practice 🌍</h2>
-    
-    <p>Let's apply vectorization to real data science problems. These examples show how vectorization transforms complex computations into elegant, fast solutions.</p>
-
-    <div class="mermaid">
-    graph LR
-        A[Raw Data] --> B[Vectorized Operations]
-        B --> C[Element-wise Ops]
-        B --> D[Aggregations]
-        B --> E[Broadcasting]
-        B --> F[Boolean Indexing]
-        
-        C --> G[Transform]
-        D --> H[Summarize]
-        E --> I[Combine]
-        F --> J[Filter]
-        
-        G --> K[Results]
-        H --> K
-        I --> K
-        J --> K
-        
-        style B fill:#4ecdc4
-        style K fill:#51cf66
-    </div>
-
-    <pre><code>import numpy as np
-import time
-
-class RealWorldVectorization:
-    """
-    Real-world applications of vectorization in data science.
-    These are patterns you'll use every day! 🎯
-    """
-    
-    def __init__(self):
-        np.random.seed(42)
-    
-    def financial_portfolio_analysis(self):
-        """
-        Vectorized portfolio analysis - calculate returns, risk, Sharpe ratio
-        """
-        print("💰 Financial Portfolio Analysis")
-        print("=" * 60)
-        
-        # Simulate daily stock prices for 5 stocks over 252 trading days
-        n_days = 252
-        n_stocks = 5
-        stock_names = ['AAPL', 'GOOGL', 'MSFT', 'AMZN', 'TSLA']
-        
-        # Generate random returns (vectorized)
-        daily_returns = np.random.randn(n_days, n_stocks) * 0.02 + 0.001
-        
-        # Calculate cumulative prices (vectorized)
-        initial_prices = np.array([150, 2800, 300, 3300, 800])
-        prices = initial_prices * np.cumprod(1 + daily_returns, axis=0)
-        
-        # Portfolio calculations (all vectorized!)
-        portfolio_weights = np.array([0.2, 0.2, 0.2, 0.2, 0.2])
-        
-        # Daily portfolio value
-        portfolio_values = prices @ portfolio_weights
-        
-        # Portfolio metrics
-        portfolio_returns = np.diff(portfolio_values) / portfolio_values[:-1]
-        
-        print(f"Portfolio Performance Metrics:")
-        print(f"  Initial value: ${portfolio_values[0]:,.2f}")
-        print(f"  Final value: ${portfolio_values[-1]:,.2f}")
-        print(f"  Total return: {((portfolio_values[-1]/portfolio_values[0]) - 1)*100:.2f}%")
-        print(f"  Daily volatility: {portfolio_returns.std()*100:.3f}%")
-        print(f"  Annualized volatility: {portfolio_returns.std()*np.sqrt(252)*100:.2f}%")
-        print(f"  Sharpe ratio: {(portfolio_returns.mean()/portfolio_returns.std())*np.sqrt(252):.2f}")
-        
-        # Value at Risk (VaR) - 95% confidence
-        var_95 = np.percentile(portfolio_returns, 5) * portfolio_values[-1]
-        print(f"  Value at Risk (95%): ${-var_95:,.2f}")
-        
-        # Find best and worst days (vectorized)
-        best_day_idx = np.argmax(portfolio_returns)
-        worst_day_idx = np.argmin(portfolio_returns)
-        
-        print(f"\nExtreme days:")
-        print(f"  Best day: Day {best_day_idx+1}, Return: {portfolio_returns[best_day_idx]*100:.2f}%")
-        print(f"  Worst day: Day {worst_day_idx+1}, Return: {portfolio_returns[worst_day_idx]*100:.2f}%")
-    
-    def image_processing_filters(self):
-        """
-        Vectorized image processing operations
-        """
-        print("\n🖼️ Image Processing with Vectorization")
-        print("=" * 60)
-        
-        # Create a sample "image" (2D array)
-        image_size = 100
-        image = np.random.randint(0, 256, (image_size, image_size), dtype=np.uint8)
-        
-        # Vectorized image operations
-        print("Image operations (all vectorized):")
-        
-        # 1. Brightness adjustment
-        start = time.perf_counter()
-        brightened = np.clip(image + 50, 0, 255)
-        bright_time = time.perf_counter() - start
-        print(f"  ✓ Brightness adjustment: {bright_time*1000:.3f} ms")
-        
-        # 2. Contrast adjustment
-        start = time.perf_counter()
-        mean = image.mean()
-        contrasted = np.clip((image - mean) * 1.5 + mean, 0, 255)
-        contrast_time = time.perf_counter() - start
-        print(f"  ✓ Contrast adjustment: {contrast_time*1000:.3f} ms")
-        
-        # 3. Thresholding
-        start = time.perf_counter()
-        threshold = 128
-        binary = (image > threshold).astype(np.uint8) * 255
-        thresh_time = time.perf_counter() - start
-        print(f"  ✓ Thresholding: {thresh_time*1000:.3f} ms")
-        
-        # 4. Edge detection (simple gradient)
-        start = time.perf_counter()
-        grad_x = np.abs(np.diff(image, axis=1))
-        grad_y = np.abs(np.diff(image, axis=0))
-        edge_time = time.perf_counter() - start
-        print(f"  ✓ Edge detection: {edge_time*1000:.3f} ms")
-        
-        # 5. Histogram equalization (advanced vectorization)
-        start = time.perf_counter()
-        hist, bins = np.histogram(image.flatten(), 256, [0, 256])
-        cdf = hist.cumsum()
-        cdf_normalized = cdf * 255 / cdf[-1]
-        equalized = cdf_normalized[image].astype(np.uint8)
-        hist_time = time.perf_counter() - start
-        print(f"  ✓ Histogram equalization: {hist_time*1000:.3f} ms")
-        
-        total_time = bright_time + contrast_time + thresh_time + edge_time + hist_time
-        print(f"\nTotal time for all operations: {total_time*1000:.2f} ms")
-        print(f"Processing rate: {5*image_size*image_size/total_time/1e6:.1f} Megapixels/second")
-    
-    def sensor_data_analysis(self):
-        """
-        Analyze time-series sensor data using vectorization
-        """
-        print("\n📡 IoT Sensor Data Analysis")
-        print("=" * 60)
-        
-        # Simulate sensor data: temperature readings every minute for 24 hours
-        n_sensors = 10
-        n_readings = 24 * 60  # 1440 readings
-        
-        # Generate realistic temperature data with daily pattern
-        time = np.linspace(0, 24, n_readings)
-        base_temp = 20  # Base temperature
-        
-        # Vectorized data generation
-        daily_pattern = 5 * np.sin(2 * np.pi * (time - 6) / 24)  # Peak at noon
-        noise = np.random.randn(n_readings, n_sensors) * 0.5
-        sensor_data = base_temp + daily_pattern[:, np.newaxis] + noise
-        
-        print(f"Analyzing {n_sensors} sensors with {n_readings} readings each")
-        
-        # Vectorized analysis
-        # 1. Statistics per sensor
-        sensor_stats = {
-            'mean': sensor_data.mean(axis=0),
-            'std': sensor_data.std(axis=0),
-            'min': sensor_data.min(axis=0),
-            'max': sensor_data.max(axis=0),
-            'range': sensor_data.max(axis=0) - sensor_data.min(axis=0)
-        }
-        
-        print(f"\nSensor Statistics:")
-        print(f"  Mean temperatures: {sensor_stats['mean'].round(1)}")
-        print(f"  Std deviations: {sensor_stats['std'].round(2)}")
-        print(f"  Temperature ranges: {sensor_stats['range'].round(1)}")
-        
-        # 2. Anomaly detection (vectorized)
-        threshold = 3  # Standard deviations
-        mean = sensor_data.mean(axis=0)
-        std = sensor_data.std(axis=0)
-        
-        # Broadcasting to create z-scores
-        z_scores = np.abs((sensor_data - mean) / std)
-        anomalies = z_scores > threshold
-        
-        n_anomalies = anomalies.sum(axis=0)
-        print(f"\nAnomaly Detection:")
-        print(f"  Anomalies per sensor: {n_anomalies}")
-        print(f"  Total anomalies: {anomalies.sum()}")
-        
-        # 3. Cross-correlation between sensors (fully vectorized)
-        # Normalize data
-        normalized = (sensor_data - sensor_data.mean(axis=0)) / sensor_data.std(axis=0)
-        
-        # Compute correlation matrix
-        correlation_matrix = (normalized.T @ normalized) / n_readings
-        
-        print(f"\nSensor Correlations:")
-        print(f"  Highest correlation: {correlation_matrix[correlation_matrix < 1].max():.3f}")
-        print(f"  Lowest correlation: {correlation_matrix.min():.3f}")
-        
-        # 4. Moving statistics (vectorized with convolution)
-        window_size = 60  # 1-hour window
-        kernel = np.ones(window_size) / window_size
-        
-        # Moving average for first sensor
-        moving_avg = np.convolve(sensor_data[:, 0], kernel, mode='valid')
-        
-        print(f"\nMoving Statistics (1-hour window):")
-        print(f"  Original variance: {sensor_data[:, 0].var():.3f}")
-        print(f"  Smoothed variance: {moving_avg.var():.3f}")
-        print(f"  Noise reduction: {(1 - moving_avg.var()/sensor_data[:, 0].var())*100:.1f}%")
-    
-    def machine_learning_preprocessing(self):
-        """
-        Vectorized data preprocessing for machine learning
-        """
-        print("\n🤖 Machine Learning Data Preprocessing")
-        print("=" * 60)
-        
-        # Generate sample dataset
-        n_samples = 10000
-        n_features = 20
-        
-        # Create features with different scales
-        X = np.random.randn(n_samples, n_features)
-        X[:, 0] *= 1000  # Large scale
-        X[:, 1] *= 0.001  # Small scale
-        X[:, 5:10] = np.random.randint(0, 5, (n_samples, 5))  # Categorical-like
-        
-        print(f"Dataset shape: {X.shape}")
-        print(f"Feature ranges: [{X.min():.1f}, {X.max():.1f}]")
-        
-        # 1. Standardization (Z-score normalization)
-        start = time.perf_counter()
-        mean = X.mean(axis=0)
-        std = X.std(axis=0)
-        X_standardized = (X - mean) / (std + 1e-8)  # Avoid division by zero
-        standard_time = time.perf_counter() - start
-        
-        print(f"\n1. Standardization: {standard_time*1000:.3f} ms")
-        print(f"   New range: [{X_standardized.min():.2f}, {X_standardized.max():.2f}]")
-        
-        # 2. Min-Max Normalization
-        start = time.perf_counter()
-        X_min = X.min(axis=0)
-        X_max = X.max(axis=0)
-        X_normalized = (X - X_min) / (X_max - X_min + 1e-8)
-        norm_time = time.perf_counter() - start
-        
-        print(f"2. Min-Max Normalization: {norm_time*1000:.3f} ms")
-        print(f"   New range: [{X_normalized.min():.2f}, {X_normalized.max():.2f}]")
-        
-        # 3. One-hot encoding simulation
-        categorical_feature = X[:, 5].astype(int) % 5  # 5 categories
-        n_categories = 5
-        
-        start = time.perf_counter()
-        one_hot = np.eye(n_categories)[categorical_feature]
-        onehot_time = time.perf_counter() - start
-        
-        print(f"3. One-hot encoding: {onehot_time*1000:.3f} ms")
-        print(f"   Shape: {categorical_feature.shape} → {one_hot.shape}")
-        
-        # 4. Polynomial features (vectorized)
-        start = time.perf_counter()
-        X_subset = X[:, :3]  # Use first 3 features
-        X_poly = np.column_stack([
-            X_subset,
-            X_subset**2,  # Squared terms
-            X_subset[:, 0:1] * X_subset[:, 1:2],  # x1*x2
-            X_subset[:, 0:1] * X_subset[:, 2:3],  # x1*x3
-            X_subset[:, 1:2] * X_subset[:, 2:3]   # x2*x3
-        ])
-        poly_time = time.perf_counter() - start
-        
-        print(f"4. Polynomial features: {poly_time*1000:.3f} ms")
-        print(f"   Shape: {X_subset.shape} → {X_poly.shape}")
-        
-        # 5. Outlier removal (vectorized)
-        start = time.perf_counter()
-        z_scores = np.abs((X - X.mean(axis=0)) / X.std(axis=0))
-        outlier_mask = (z_scores < 3).all(axis=1)
-        X_clean = X[outlier_mask]
-        outlier_time = time.perf_counter() - start
-        
-        print(f"5. Outlier removal: {outlier_time*1000:.3f} ms")
-        print(f"   Samples removed: {n_samples - X_clean.shape[0]}")
-        
-        total_time = standard_time + norm_time + onehot_time + poly_time + outlier_time
-        print(f"\nTotal preprocessing time: {total_time*1000:.2f} ms")
-        print(f"Processing rate: {n_samples/total_time:.0f} samples/second")
-
-# Run real-world examples
-real_world = RealWorldVectorization()
-real_world.financial_portfolio_analysis()
-real_world.image_processing_filters()
-real_world.sensor_data_analysis()
-real_world.machine_learning_preprocessing()</code></pre>
-
-    <h2>Vectorization Best Practices and Patterns 📚</h2>
-    
-    <p>Mastering vectorization requires recognizing patterns and knowing when to apply them. Here are the essential patterns every data scientist should know.</p>
-
-    <pre><code>import numpy as np
-
-class VectorizationPatterns:
-    """
-    Essential vectorization patterns and best practices.
-    Your toolbox for writing blazing-fast NumPy code! 🛠️
-    """
-    
-    def pattern_1_avoid_loops(self):
-        """Pattern 1: Replace loops with vectorized operations"""
-        print("📌 Pattern 1: Eliminate Loops")
-        print("=" * 50)
-        
-        n = 100000
-        arr = np.random.randn(n)
-        
-        # ❌ BAD: Loop-based approach
-        def loop_cumsum(arr):
-            result = np.zeros_like(arr)
-            result[0] = arr[0]
-            for i in range(1, len(arr)):
-                result[i] = result[i-1] + arr[i]
-            return result
-        
-        # ✅ GOOD: Vectorized approach
-        def vector_cumsum(arr):
-            return np.cumsum(arr)
-        
-        # Compare
-        import time
-        start = time.perf_counter()
-        loop_result = loop_cumsum(arr)
-        loop_time = time.perf_counter() - start
-        
-        start = time.perf_counter()
-        vector_result = vector_cumsum(arr)
-        vector_time = time.perf_counter() - start
-        
-        print(f"Loop time: {loop_time*1000:.2f} ms")
-        print(f"Vectorized time: {vector_time*1000:.2f} ms")
-        print(f"Speedup: {loop_time/vector_time:.1f}x")
-        print(f"Results match: {np.allclose(loop_result, vector_result)}")
-    
-    def pattern_2_use_broadcasting(self):
-        """Pattern 2: Leverage broadcasting for dimension mismatches"""
-        print("\n📌 Pattern 2: Smart Broadcasting")
-        print("=" * 50)
-        
-        # Example: Normalize each row of a matrix
-        matrix = np.random.randn(100, 50) * 10 + 50
-        
-        # ❌ BAD: Loop through rows
-        def loop_normalize(matrix):
-            result = np.zeros_like(matrix)
-            for i in range(matrix.shape[0]):
-                row = matrix[i]
-                result[i] = (row - row.mean()) / row.std()
-            return result
-        
-        # ✅ GOOD: Use broadcasting
-        def broadcast_normalize(matrix):
-            row_means = matrix.mean(axis=1, keepdims=True)
-            row_stds = matrix.std(axis=1, keepdims=True)
-            return (matrix - row_means) / row_stds
-        
-        # Time comparison
-        import time
-        start = time.perf_counter()
-        loop_norm = loop_normalize(matrix)
-        loop_time = time.perf_counter() - start
-        
-        start = time.perf_counter()
-        broadcast_norm = broadcast_normalize(matrix)
-        broadcast_time = time.perf_counter() - start
-        
-        print(f"Loop normalization: {loop_time*1000:.2f} ms")
-        print(f"Broadcast normalization: {broadcast_time*1000:.2f} ms")
-        print(f"Speedup: {loop_time/broadcast_time:.1f}x")
-        
-        # Show broadcasting shapes
-        print(f"\nBroadcasting shapes:")
-        print(f"  Matrix shape: {matrix.shape}")
-        print(f"  Row means shape: {matrix.mean(axis=1, keepdims=True).shape}")
-        print(f"  Broadcasting: {matrix.shape} - {matrix.mean(axis=1, keepdims=True).shape} → Works!")
-    
-    def pattern_3_boolean_indexing(self):
-        """Pattern 3: Use boolean masks instead of if statements"""
-        print("\n📌 Pattern 3: Boolean Indexing")
-        print("=" * 50)
-        
-        # Example: Apply different operations based on conditions
-        data = np.random.randn(100000) * 10
-        
-        # ❌ BAD: Loop with if statements
-        def loop_conditional(data):
-            result = np.zeros_like(data)
-            for i in range(len(data)):
-                if data[i] > 0:
-                    result[i] = np.sqrt(data[i])
-                else:
-                    result[i] = -np.sqrt(-data[i])
-            return result
-        
-        # ✅ GOOD: Vectorized with boolean indexing
-        def vector_conditional(data):
-            result = np.zeros_like(data)
-            positive_mask = data > 0
-            negative_mask = ~positive_mask
-            
-            result[positive_mask] = np.sqrt(data[positive_mask])
-            result[negative_mask] = -np.sqrt(-data[negative_mask])
-            return result
-        
-        # Even better: Using np.where
-        def where_conditional(data):
-            return np.where(data > 0, np.sqrt(np.abs(data)), -np.sqrt(np.abs(data)))
-        
-        # Time all three
-        import time
-        times = {}
-        
-        start = time.perf_counter()
-        loop_result = loop_conditional(data)
-        times['loop'] = time.perf_counter() - start
-        
-        start = time.perf_counter()
-        vector_result = vector_conditional(data)
-        times['boolean'] = time.perf_counter() - start
-        
-        start = time.perf_counter()
-        where_result = where_conditional(data)
-        times['where'] = time.perf_counter() - start
-        
-        print("Execution times:")
-        for method, t in times.items():
-            print(f"  {method:10s}: {t*1000:.2f} ms")
-        
-        print(f"\nSpeedup vs loop:")
-        print(f"  Boolean indexing: {times['loop']/times['boolean']:.1f}x")
-        print(f"  np.where: {times['loop']/times['where']:.1f}x")
-    
-    def pattern_4_axis_operations(self):
-        """Pattern 4: Use axis parameter for multi-dimensional operations"""
-        print("\n📌 Pattern 4: Axis-wise Operations")
-        print("=" * 50)
-        
-        # 3D array: think of it as (batch, height, width)
-        data_3d = np.random.randn(10, 100, 100)
-        
-        print(f"3D array shape: {data_3d.shape}")
-        print("(batch_size, height, width)")
-        
-        # Operations along different axes
-        print("\nAxis operations:")
-        print(f"  Mean over batch (axis=0): shape {data_3d.mean(axis=0).shape}")
-        print(f"  Mean over height (axis=1): shape {data_3d.mean(axis=1).shape}")
-        print(f"  Mean over width (axis=2): shape {data_3d.mean(axis=2).shape}")
-        print(f"  Mean over spatial (axis=(1,2)): shape {data_3d.mean(axis=(1,2)).shape}")
-        
-        # Practical example: Batch normalization
-        def batch_normalize(data):
-            """Normalize each image in the batch"""
-            # Compute statistics per image (over spatial dimensions)
-            means = data.mean(axis=(1, 2), keepdims=True)
-            stds = data.std(axis=(1, 2), keepdims=True)
-            return (data - means) / (stds + 1e-8)
-        
-        normalized = batch_normalize(data_3d)
-        print(f"\nBatch normalization:")
-        print(f"  Input range: [{data_3d.min():.2f}, {data_3d.max():.2f}]")
-        print(f"  Output range: [{normalized.min():.2f}, {normalized.max():.2f}]")
-        print(f"  Mean per image: {normalized.mean(axis=(1,2)).round(3)}")  # Should be ~0
-        print(f"  Std per image: {normalized.std(axis=(1,2)).round(3)}")   # Should be ~1
-    
-    def pattern_5_einsum_power(self):
-        """Pattern 5: Use einsum for complex tensor operations"""
-        print("\n📌 Pattern 5: Einstein Summation (einsum)")
-        print("=" * 50)
-        
-        # Einsum is incredibly powerful for complex operations
-        A = np.random.randn(3, 4)
-        B = np.random.randn(4, 5)
-        C = np.random.randn(5, 3)
-        
-        print("Einsum examples:")
-        
-        # Matrix multiplication
-        result1 = np.einsum('ij,jk->ik', A, B)
-        check1 = A @ B
-        print(f"  Matrix multiply: {np.allclose(result1, check1)}")
-        
-        # Transpose
-        result2 = np.einsum('ij->ji', A)
-        check2 = A.T
-        print(f"  Transpose: {np.allclose(result2, check2)}")
-        
-        # Trace
-        square_matrix = np.random.randn(4, 4)
-        result3 = np.einsum('ii->', square_matrix)
-        check3 = np.trace(square_matrix)
-        print(f"  Trace: {np.allclose(result3, check3)}")
-        
-        # Batch matrix multiplication
-        batch_A = np.random.randn(10, 3, 4)
-        batch_B = np.random.randn(10, 4, 5)
-        result4 = np.einsum('bij,bjk->bik', batch_A, batch_B)
-        print(f"  Batch matmul shape: {batch_A.shape} × {batch_B.shape} → {result4.shape}")
-        
-        # Complex chain multiplication (A @ B @ C.T)
-        result5 = np.einsum('ij,jk,lk->il', A, B, C)
-        check5 = A @ B @ C.T
-        print(f"  Chain multiplication: {np.allclose(result5, check5)}")
-    
-    def optimization_tips(self):
-        """General optimization tips for vectorization"""
-        print("\n💡 Vectorization Optimization Tips")
-        print("=" * 50)
-        
-        tips = [
-            "1. **Preallocate arrays**: Use np.empty() instead of growing arrays",
-            "2. **Use views, not copies**: Slicing creates views, fancy indexing creates copies",
-            "3. **Choose right dtype**: float32 vs float64 can be 2x speed difference",
-            "4. **Avoid repeated calculations**: Store intermediate results",
-            "5. **Use numexpr for complex expressions**: Can be faster than NumPy",
-            "6. **Profile your code**: Use %timeit to find bottlenecks",
-            "7. **Consider memory layout**: C-order vs Fortran-order matters",
-            "8. **Batch operations**: Process multiple items at once",
-            "9. **Use specialized functions**: np.dot() faster than np.sum(a*b)",
-            "10. **Avoid Python scalars in loops**: Keep everything in NumPy"
-        ]
-        
-        for tip in tips:
-            print(f"  {tip}")
-        
-        # Practical example: dtype optimization
-        print("\n📊 Example: Data type optimization")
-        n = 1_000_000
-        
-        # Float64 (default)
-        arr_64 = np.random.randn(n)
-        start = time.perf_counter()
-        result_64 = np.sqrt(np.abs(arr_64)) * 2 + arr_64**2
-        time_64 = time.perf_counter() - start
-        
-        # Float32
-        arr_32 = arr_64.astype(np.float32)
-        start = time.perf_counter()
-        result_32 = np.sqrt(np.abs(arr_32)) * 2 + arr_32**2
-        time_32 = time.perf_counter() - start
-        
-        print(f"  Float64 time: {time_64*1000:.2f} ms")
-        print(f"  Float32 time: {time_32*1000:.2f} ms")
-        print(f"  Speedup: {time_64/time_32:.2f}x")
-        print(f"  Memory saved: {(arr_64.nbytes - arr_32.nbytes) / 1024**2:.1f} MB")
-
-# Execute all patterns
-patterns = VectorizationPatterns()
-patterns.pattern_1_avoid_loops()
-patterns.pattern_2_use_broadcasting()
-patterns.pattern_3_boolean_indexing()
-patterns.pattern_4_axis_operations()
-patterns.pattern_5_einsum_power()
-patterns.optimization_tips()</code></pre>
-
-    <h2>Common Vectorization Pitfalls and Solutions 🚧</h2>
-    
-    <p>Even experienced developers fall into these traps. Let's learn how to avoid them!</p>
-
-    <pre><code>import numpy as np
-
-print("⚠️ Common Vectorization Pitfalls")
-print("=" * 60)
-
-# Pitfall 1: Unnecessary Loops
-print("\n❌ Pitfall 1: Hidden Loops in List Comprehensions")
-print("-" * 40)
-
-# Bad: List comprehension that could be vectorized
-data = np.random.randn(10000)
-# result = np.array([x**2 if x > 0 else 0 for x in data])  # SLOW!
-
-# Good: Vectorized solution
-result = np.where(data > 0, data**2, 0)  # FAST!
-print("✅ Solution: Use np.where() or boolean indexing")
-
-# Pitfall 2: Growing Arrays
-print("\n❌ Pitfall 2: Growing Arrays in Loops")
-print("-" * 40)
-
-# Bad: Appending to arrays
-# result = np.array([])
-# for i in range(1000):
-#     result = np.append(result, i**2)  # Creates new array each time!
-
-# Good: Preallocate
-result = np.empty(1000)
-for i in range(1000):
-    result[i] = i**2
-
-# Better: Fully vectorized
-result = np.arange(1000)**2
-print("✅ Solution: Preallocate or vectorize completely")
-
-# Pitfall 3: Row-by-row Processing
-print("\n❌ Pitfall 3: Processing 2D Arrays Row by Row")
-print("-" * 40)
-
-matrix = np.random.randn(100, 100)
-
-# Bad: Loop over rows
-# for i in range(len(matrix)):
-#     matrix[i] = matrix[i] - matrix[i].mean()
-
-# Good: Vectorized with broadcasting
-matrix = matrix - matrix.mean(axis=1, keepdims=True)
-print("✅ Solution: Use axis operations with keepdims=True")
-
-# Pitfall 4: Not Using In-place Operations
-print("\n❌ Pitfall 4: Creating Unnecessary Copies")
-print("-" * 40)
-
-large_array = np.random.randn(1000000)
-
-# Bad: Creates new array
-# large_array = large_array * 2
-
-# Good: In-place operation
-large_array *= 2  # Modifies in place, saves memory
-print("✅ Solution: Use in-place operations when possible")
-
-# Pitfall 5: Chain of Operations
-print("\n❌ Pitfall 5: Inefficient Operation Chains")
-print("-" * 40)
-
-data = np.random.randn(1000000)
-
-# Bad: Multiple passes through data
-# result = np.sqrt(np.abs(data))
-# result = result * 2
-# result = result + 1
-
-# Good: Single expression (NumPy optimizes better)
-result = np.sqrt(np.abs(data)) * 2 + 1
-
-# Better: Use numexpr for complex expressions
-# import numexpr as ne
-# result = ne.evaluate('sqrt(abs(data)) * 2 + 1')
-print("✅ Solution: Combine operations into single expressions")
-
-# Pitfall 6: Wrong Axis Selection
-print("\n❌ Pitfall 6: Confusion with Axis Parameter")
-print("-" * 40)
-
-data_3d = np.random.randn(10, 20, 30)
-print(f"3D array shape: {data_3d.shape}")
-
-# Remember: axis=0 operates ALONG first dimension
-# It "collapses" that dimension
-print(f"sum(axis=0) shape: {data_3d.sum(axis=0).shape}")  # (20, 30)
-print(f"sum(axis=1) shape: {data_3d.sum(axis=1).shape}")  # (10, 30)
-print(f"sum(axis=2) shape: {data_3d.sum(axis=2).shape}")  # (10, 20)
-
-print("✅ Tip: axis=n collapses the n-th dimension")
-
-# Performance comparison summary
-print("\n📊 Vectorization Performance Summary")
-print("=" * 60)
-print("Operation               | Loop Time | Vectorized | Speedup")
-print("-" * 60)
-print("Element-wise math       | 100ms     | 1ms        | 100x")
-print("Conditional logic       | 80ms      | 3ms        | 27x")
-print("Matrix operations       | 500ms     | 5ms        | 100x")
-print("Aggregations           | 50ms      | 0.5ms      | 100x")
-print("Broadcasting           | 200ms     | 2ms        | 100x")</code></pre>
-
-    <h2>Summary: Your Vectorization Mastery Checklist ✅</h2>
-    
-    <div class="comment-block">
-        <p><strong>🎯 Key Takeaways:</strong></p>
-        <ul>
-            <li><strong>Think in Arrays:</strong> Stop thinking about individual elements, think about entire arrays as single entities.</li>
-            <li><strong>Eliminate Loops:</strong> If you're writing a for loop over array elements, there's probably a vectorized alternative.</li>
-            <li><strong>Use Broadcasting:</strong> Let NumPy handle dimension mismatches automatically instead of writing loops.</li>
-            <li><strong>Boolean Indexing:</strong> Replace if-statements with boolean masks for conditional operations.</li>
-            <li><strong>Axis Operations:</strong> Master the axis parameter for multi-dimensional operations.</li>
-            <li><strong>Profile First:</strong> Measure before optimizing - vectorization isn't always the bottleneck.</li>
-        </ul>
-    </div>
-
-    <pre><code># Quick Vectorization Reference Card
-import numpy as np
-
-# COMMON VECTORIZATION PATTERNS
-# ------------------------------
-
-# Instead of loops, use:
-arr = np.arange(1000)
-
-# Element-wise operations
-result = arr * 2 + 10           # Instead of: [x*2+10 for x in arr]
-
-# Conditional operations  
-result = np.where(arr > 500, arr*2, arr/2)  # Instead of if/else in loop
-
-# Aggregations
-total = arr.sum()                # Instead of: sum(arr)
-running_sum = arr.cumsum()       # Instead of: manual accumulation
-
-# Broadcasting (automatic)
-matrix = np.random.randn(10, 5)
-row_means = matrix.mean(axis=1, keepdims=True)
-centered = matrix - row_means    # Subtracts from each row
-
-# Boolean indexing
-positive_values = arr[arr > 0]   # Instead of: filter with if
-
-# Multiple conditions
-mask = (arr > 100) & (arr < 500)
-filtered = arr[mask]
-
-# In-place operations (save memory)
-arr *= 2                         # Instead of: arr = arr * 2
-arr += 10                        # Instead of: arr = arr + 10
-
-# Axis operations
-matrix.sum(axis=0)   # Sum each column
-matrix.sum(axis=1)   # Sum each row
-matrix.sum()          # Sum everything
-
-# PERFORMANCE TIPS
-# ----------------
-# 1. Vectorize everything possible
-# 2. Use appropriate dtype (float32 vs float64)
-# 3. Preallocate arrays with np.empty()
-# 4. Use views (slicing) not copies when possible
-# 5. Combine operations into single expressions
-# 6. Profile with %timeit to find bottlenecks
-
-print("🚀 You're now a vectorization expert!")</code></pre>    </main>
-
-
-    <footer>
-        <!-- Learning Journal (REQUIRED per the Courseware Authoring Standard) -->
-        <section id="journal" class="lesson-section">
-            <h2>📓 Learning Journal</h2>
-            <div class="card card-info">
-                <p>Keep a learning journal — digital or physical. After this lesson, take a few minutes to write down:</p>
-                <ul>
-                    <li><strong>Key concepts</strong> you learned</li>
-                    <li><strong>Techniques that clicked</strong> for you</li>
-                    <li><strong>Questions or confusion points</strong> to revisit</li>
-                    <li><strong>Ideas you want to try</strong></li>
-                    <li><strong>Your progress and feelings</strong> about learning this</li>
+        <div class="container">
+            <header>
+                <h1>⚡ Lesson 1.2: Vectorized Operations</h1>
+                <p class="lead">Stop writing loops over numbers: describe what you want done to the whole array, and let NumPy do it in one step.</p>
+
+                <div class="card card-info">
+                    <h2>🎯 Learning Objectives</h2>
+                    <p>By the end of this lesson, you will be able to:</p>
+                    <ul>
+                        <li>Combine arrays element by element with arithmetic and with universal functions such as <code>np.sqrt</code>, <code>np.log10</code> and <code>np.maximum</code></li>
+                        <li>Build boolean masks with comparisons, combine them with <code>&amp;</code>, <code>|</code> and <code>~</code>, and use them to count, filter and assign</li>
+                        <li>Choose values by condition with <code>np.where</code> and <code>np.select</code></li>
+                        <li>Summarize a two-dimensional array along rows or columns with <code>axis=</code>, and predict the shape of the result</li>
+                        <li>Rewrite a Python loop over numbers as an array expression and check that both give the same answer</li>
+                    </ul>
+                </div>
+
+                <ul class="lesson-meta">
+                    <li><span class="meta-label">⏱️ Time</span> 85 minutes</li>
+                    <li><span class="meta-label">📋 Prerequisites</span> <a href="numpy_arrays_vs_lists.html">Lesson 1.1: Arrays vs Lists</a> (creating arrays, <code>dtype</code> and <code>shape</code>, slicing, <code>nan</code>)</li>
+                    <li><span class="meta-label">🛠️ You will build</span> A store scorecard: conversion rate, basket value and sale-weekend lift for all four Pinecrest stores, with no loop over the 2,903 rows</li>
+                    <li><span class="meta-label">📂 Data</span> <code>data/daily_sales.csv</code></li>
                 </ul>
-                <p><strong>✍️ This lesson's prompt:</strong> Vectorization asks you to describe <em>what</em> you want instead of <em>how</em> to loop. Which loop from your past code could become a one-line vectorized expression, and what made the loop feel necessary at the time?</p>
-            </div>
-        </section>
+            </header>
 
-        <!-- Lesson Summary (full standard block) -->
-        <section id="summary" class="lesson-section">
-            <h2>📝 Lesson Summary</h2>
-            <div class="card card-success">
-                <h3>🎓 Key Takeaways</h3>
+            <details class="card toc-card" open>
+                <summary aria-label="Toggle table of contents">
+                    <span class="toc-icon" aria-hidden="true">📑</span>
+                    <span class="toc-label">In This Lesson</span>
+                    <span class="toc-chevron" aria-hidden="true">▾</span>
+                </summary>
+                <nav aria-label="Table of Contents">
+                    <ol>
+                        <li><a href="#idea" class="toc-link">Think in Whole Arrays</a></li>
+                        <li><a href="#arithmetic" class="toc-link">Array-with-Array Arithmetic</a></li>
+                        <li><a href="#ufuncs" class="toc-link">Universal Functions</a></li>
+                        <li><a href="#masks" class="toc-link">Comparisons and Boolean Masks</a></li>
+                        <li><a href="#where" class="toc-link">Choosing Values with np.where</a></li>
+                        <li><a href="#axis" class="toc-link">Summaries and the axis Argument</a></li>
+                        <li><a href="#sorting" class="toc-link">Sorting and Picking by Position</a></li>
+                        <li><a href="#loops" class="toc-link">From Loop to Array Expression</a></li>
+                        <li><a href="#mistakes" class="toc-link">Common Mistakes</a></li>
+                        <li><a href="#project" class="toc-link">Project: The Store Scorecard</a></li>
+                        <li><a href="#exercises" class="toc-link">Hands-on Exercises</a></li>
+                        <li><a href="#quiz" class="toc-link">Quick Quiz</a></li>
+                        <li><a href="#faq" class="toc-link">Common Questions</a></li>
+                        <li><a href="#journal" class="toc-link">Learning Journal</a></li>
+                        <li><a href="#summary" class="toc-link">Lesson Summary</a></li>
+                    </ol>
+                </nav>
+            </details>
+
+            <!-- ============================================================ -->
+            <section id="idea" class="lesson-section">
+                <h2>🏭 Think in Whole Arrays</h2>
+
+                <p>In Lesson 1.1 you wrote <code>week * 2</code> and <code>revenue / visitors</code>, and you measured how much faster those are than a loop. This lesson turns that one trick into a way of working. The goal is that by the end, when someone asks "which days beat $15,000, and what was the average on sale weekends?", your first thought is an array expression and not a <code>for</code> statement.</p>
+
+                <div class="card card-info">
+                    <h4>💡 Mental Model: The Workbench and the Assembly Line</h4>
+                    <p>A Python loop is a craftsperson at a workbench: pick up one item, inspect it, work on it, put it down, pick up the next. Careful, flexible, and slow.</p>
+                    <p>A vectorized operation is an assembly line. You set the machine up once ("multiply by 1.08") and the whole batch flows through it. The machine can be fast precisely because every item on the belt is the same kind of thing, which is the one-<code>dtype</code> rule you met in Lesson 1.1.</p>
+                </div>
+
+                <p>"Vectorized" simply means <strong>one operation, applied to a whole array, with the loop running inside NumPy's compiled code</strong>. You get three things from it: speed, shorter code, and code that reads like the question you are asking.</p>
+
+                <p>Start a new notebook. Every column of <code>daily_sales.csv</code> will be useful today, so a small helper saves typing. It is the <code>np.genfromtxt</code> call from Lesson 1.1 with the column number as a parameter.</p>
+            <pre><code class="language-python">import numpy as np
+
+def load(col, dtype=float):
+    """Read one column of daily_sales.csv into an array."""
+    return np.genfromtxt("data/daily_sales.csv", delimiter=",",
+                         skip_header=1, usecols=col, dtype=dtype)
+
+visitors = load(2)
+transactions = load(3)
+units = load(4)
+revenue = load(5)
+
+print(visitors.shape, transactions.shape, revenue.shape)
+print(visitors[:4])
+print(transactions[:4])
+print(revenue[:4])</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>(2903,) (2903,) (2903,)
+[201. 200. 333. 144.]
+[51. 52. 68. 33.]
+[5017.07 4132.92 5962.   3061.66]</code></pre>
+            </div>
+
+                <p>Four arrays, each with one value per store per day, all in the same order. Position 0 in every array describes the same store-day (Asheville on January 1, 2024), position 1 the next, and so on. Arrays that line up like this are sometimes called <strong>parallel arrays</strong>, and they are what makes the next section work.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="arithmetic" class="lesson-section">
+                <h2>➗ Array-with-Array Arithmetic</h2>
+
+                <p>When both sides of an operator are arrays of the same shape, NumPy pairs them up by position: first with first, second with second. Two retail measures fall straight out of that.</p>
+            <pre><code class="language-python">conversion = transactions / visitors     # share of visitors who bought something
+basket = revenue / transactions          # dollars per purchase
+
+print(conversion[:4].round(3))
+print(basket[:4].round(2))</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[0.254 0.26  0.204 0.229]
+[98.37 79.48 87.68 92.78]</code></pre>
+            </div>
+
+                <p>On the first day in Asheville, 51 of 201 visitors bought something (25.4%), and the average purchase was $98.37. You computed that for all 2,903 store-days in two lines.</p>
+
+                <p>Every arithmetic operator works this way, and so do the comparison operators you will meet shortly.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Operator</th><th>Meaning</th><th>Example on <code>[7, 8, 9]</code> and <code>[2, 2, 4]</code></th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>+</code> <code>-</code> <code>*</code> <code>/</code></td><td>Add, subtract, multiply, divide</td><td><code>a / b</code> gives <code>[3.5  4.  2.25]</code></td></tr>
+                            <tr><td><code>//</code></td><td>Whole-number division</td><td><code>a // b</code> gives <code>[3 4 2]</code></td></tr>
+                            <tr><td><code>%</code></td><td>Remainder</td><td><code>a % b</code> gives <code>[1 0 1]</code></td></tr>
+                            <tr><td><code>**</code></td><td>Power</td><td><code>a ** 2</code> gives <code>[49 64 81]</code></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            <pre><code class="language-python">a = np.array([7, 8, 9])
+b = np.array([2, 2, 4])
+print(a / b)
+print(a // b)
+print(a % b)
+print(a ** 2)</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[3.5  4.   2.25]
+[3 4 2]
+[1 0 1]
+[49 64 81]</code></pre>
+            </div>
+
+                <p>You can chain as many operations as you like in one expression. Each step produces a new array, and the originals are left alone. Here is the profit on a list of products, given a price, a cost, and how many of each were sold:</p>
+            <pre><code class="language-python">price = np.array([299.95, 82.95, 24.50, 149.00])
+cost = np.array([187.74, 41.20, 11.76, 80.46])
+sold = np.array([12, 40, 115, 22])
+
+profit = (price - cost) * sold
+margin_pct = (price - cost) / price * 100
+
+print(profit.round(2))
+print(margin_pct.round(1))
+print(price)                 # unchanged</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[1346.52 1670.   1465.1  1507.88]
+[37.4 50.3 52.  46. ]
+[299.95  82.95  24.5  149.  ]</code></pre>
+            </div>
+
+                <div class="card card-warning">
+                    <h4>⚠️ <code>*</code> Is Not Matrix Multiplication</h4>
+                    <p><code>*</code> between two arrays multiplies matching positions. It is not the row-times-column multiplication you may remember from a math class. That operation exists too, it is written <code>@</code>, and it has its own lesson (<a href="numpy_linear_algebra.html">Lesson 1.5</a>).</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="ufuncs" class="lesson-section">
+                <h2>🧮 Universal Functions</h2>
+
+                <p>Operators cover arithmetic. For everything else (square roots, logarithms, rounding, absolute values) NumPy provides <strong>universal functions</strong>, or <strong>ufuncs</strong>: functions that take an array and apply themselves to every element. In fact <code>a + b</code> is just a shorthand for the ufunc <code>np.add(a, b)</code>.</p>
+
+                <p>To keep the output small, here is Boise's first week of 2024 again.</p>
+            <pre><code class="language-python">week = np.array([5962.00, 6583.13, 3866.59, 7667.88, 9570.46, 12388.57, 9361.59])
+
+print(np.sqrt(week).round(1))
+print(np.log10(week).round(2))
+print(np.round(week, -2))                     # nearest hundred
+print(np.abs(week - week.mean()).round(0))    # distance from the weekly average</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[ 77.2  81.1  62.2  87.6  97.8 111.3  96.8]
+[3.78 3.82 3.59 3.88 3.98 4.09 3.97]
+[ 6000.  6600.  3900.  7700.  9600. 12400.  9400.]
+[1952. 1331. 4048.  246. 1656. 4474. 1447.]</code></pre>
+            </div>
+
+                <p>The last line is worth reading slowly, because it is three vectorized steps in a row. <code>week.mean()</code> is one number. <code>week - week.mean()</code> subtracts that number from every day. <code>np.abs(...)</code> removes the minus signs. No loop anywhere.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>You want</th><th>ufunc</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Square root, powers</td><td><code>np.sqrt(x)</code>, <code>np.square(x)</code>, <code>x ** 3</code></td></tr>
+                            <tr><td>Logarithms and exponentials</td><td><code>np.log(x)</code> (natural), <code>np.log10(x)</code>, <code>np.log1p(x)</code>, <code>np.exp(x)</code></td></tr>
+                            <tr><td>Rounding</td><td><code>np.round(x, 2)</code>, <code>np.floor(x)</code>, <code>np.ceil(x)</code></td></tr>
+                            <tr><td>Size and sign</td><td><code>np.abs(x)</code>, <code>np.sign(x)</code></td></tr>
+                            <tr><td>Tests</td><td><code>np.isnan(x)</code>, <code>np.isfinite(x)</code></td></tr>
+                            <tr><td>The larger or smaller of two arrays, pair by pair</td><td><code>np.maximum(x, y)</code>, <code>np.minimum(x, y)</code></td></tr>
+                            <tr><td>Force values into a range</td><td><code>np.clip(x, low, high)</code></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>Functions of Two Arrays</h3>
+
+                <p>Some ufuncs take two inputs. <code>np.maximum</code> compares two arrays position by position and keeps the larger value from each pair. Suppose Boise has a daily target of $8,000 and you want to know how far short each day fell, counting days that beat the target as zero.</p>
+            <pre><code class="language-python">target = 8000
+shortfall = np.maximum(target - week, 0)
+print(shortfall)
+
+print(np.clip(week, 5000, 10000))    # nothing below 5,000 or above 10,000</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[2038.   1416.87 4133.41  332.12    0.      0.      0.  ]
+[ 5962.    6583.13  5000.    7667.88  9570.46 10000.    9361.59]</code></pre>
+            </div>
+
+                <div class="card card-info">
+                    <h4>💡 Three Things Named "max"</h4>
+                    <p><code>week.max()</code> (or <code>np.max(week)</code>) collapses one array to its single largest value. <code>np.maximum(x, y)</code> compares <em>two</em> arrays and returns an array. Python's built-in <code>max(week)</code> also works on a 1-D array, but it loops in Python, so it is slow on large arrays. When in doubt, use the method: <code>week.max()</code>.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="masks" class="lesson-section">
+                <h2>🎭 Comparisons and Boolean Masks</h2>
+
+                <p>Comparison operators are vectorized too. Comparing an array with a number asks the question of every element and gives back an array of answers.</p>
+            <pre><code class="language-python">busy = week &gt; 9000
+print(busy)
+print(busy.dtype)</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[False False False False  True  True  True]
+bool</code></pre>
+            </div>
+
+                <p>An array of <code>True</code> and <code>False</code> like this is called a <strong>boolean mask</strong>. Think of it as a sheet of cardboard with holes punched where the answer is <code>True</code>. It is useful in three ways.</p>
+
+                <h3>1. Count and Measure</h3>
+
+                <p>In arithmetic, <code>True</code> counts as 1 and <code>False</code> as 0. So the <strong>sum</strong> of a mask is how many are true, and its <strong>mean</strong> is the fraction that are true.</p>
+            <pre><code class="language-python">print(busy.sum())      # how many days beat 9,000?
+print(busy.mean())     # what fraction of days?
+
+big = revenue &gt; 15000
+print(big.sum(), "store-days above $15,000")
+print(f"{big.mean():.1%} of all store-days")</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>3
+0.42857142857142855
+101 store-days above $15,000
+3.5% of all store-days</code></pre>
+            </div>
+
+                <h3>2. Filter</h3>
+
+                <p>Put a mask inside the square brackets and you get only the elements where the mask is <code>True</code>. Lay the cardboard over the data and read what shows through the holes.</p>
+            <pre><code class="language-python">print(week[busy])
+print(week[week &lt; 6000])           # the mask can be written in place
+
+print(revenue[big][:5])            # the first five of the big days
+print(revenue[big].mean().round(2))</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[ 9570.46 12388.57  9361.59]
+[5962.   3866.59]
+[16262.39 15993.3  19117.36 17442.78 22093.08]
+17683.61</code></pre>
+            </div>
+
+                <p>The mask and the array it filters must have the same shape, but they do not have to be the <em>same array</em>. That is where parallel arrays shine: build the mask from one column and use it on another.</p>
+            <pre><code class="language-python">stores = load(1, dtype=str)
+promo = load(7)
+
+print(stores[:5])
+
+is_boise = stores == "Boise"
+print(is_boise.sum(), "Boise rows")
+print(np.nanmean(revenue[is_boise]).round(2))     # mean revenue on Boise days
+print(visitors[is_boise].mean().round(1))         # mean visitors on Boise days</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>['Asheville' 'Bend' 'Boise' 'Flagstaff' 'Asheville']
+727 Boise rows
+10144.21
+485.2</code></pre>
+            </div>
+
+                <p>(<code>np.nanmean</code> is needed for revenue because six store-days have no revenue recorded, as you found in Lesson 1.1.)</p>
+
+                <h3>Combining Masks: <code>&amp;</code>, <code>|</code>, <code>~</code></h3>
+
+                <p>Real questions usually have two parts: "Boise <em>and</em> a sale day". Masks combine with three operators.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Operator</th><th>Meaning</th><th>True where</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>m1 &amp; m2</code></td><td>and</td><td>both are true</td></tr>
+                            <tr><td><code>m1 | m2</code></td><td>or</td><td>at least one is true</td></tr>
+                            <tr><td><code>~m1</code></td><td>not</td><td><code>m1</code> is false</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            <pre><code class="language-python">is_promo = promo == 1
+
+print((is_boise &amp; is_promo).sum())     # Boise sale days
+print((is_boise | is_promo).sum())     # any Boise day, or any store's sale day
+print((~is_promo).sum())               # ordinary days
+
+print(np.nanmean(revenue[is_promo]).round(2))
+print(np.nanmean(revenue[~is_promo]).round(2))</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>24
+799
+2807
+13950.46
+7211.74</code></pre>
+            </div>
+
+                <p>There is a finding in those last two lines: an average sale day brings in $13,950 against $7,212 on an ordinary day. Whether the sale <em>caused</em> all of that difference is a harder question (sale weekends are also holiday weekends), and Module 4 gives you the tools for it. Counting and comparing is where every such investigation starts.</p>
+
+                <div class="card card-warning">
+                    <h4>⚠️ Two Rules for Combining Masks</h4>
+                    <p><strong>Use <code>&amp;</code> and <code>|</code>, not <code>and</code> and <code>or</code>.</strong> Python's words want a single true-or-false value, and an array is many.</p>
+                    <p><strong>Put parentheses around each comparison:</strong> <code>(revenue &gt; 10000) &amp; (promo == 1)</code>. Python evaluates <code>&amp;</code> before <code>&gt;</code>, so without parentheses it tries to compute <code>10000 &amp; promo</code> first. Both errors are shown in <a href="#mistakes">Common Mistakes</a>.</p>
+                </div>
+
+                <p>To test membership in a set of values, <code>np.isin</code> is tidier than a chain of <code>|</code>:</p>
+            <pre><code class="language-python">west = np.isin(stores, ["Boise", "Bend"])
+print(west.sum())</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>1451</code></pre>
+            </div>
+
+                <h3>3. Assign</h3>
+
+                <p>A mask on the left side of <code>=</code> changes only the selected elements. Here every day above $10,000 is capped at $10,000. Working on a copy keeps the original safe.</p>
+            <pre><code class="language-python">capped = week.copy()
+capped[capped &gt; 10000] = 10000
+print(capped)
+print(week)</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[ 5962.    6583.13  3866.59  7667.88  9570.46 10000.    9361.59]
+[ 5962.    6583.13  3866.59  7667.88  9570.46 12388.57  9361.59]</code></pre>
+            </div>
+
+                <div class="card card-info">
+                    <h4>💡 A Mask Gives a Copy, a Slice Gives a View</h4>
+                    <p>In Lesson 1.1 a slice such as <code>week[1:4]</code> was a view: a window onto the same memory. Selecting with a mask is different. The chosen elements can be scattered anywhere, so NumPy has to gather them into a <strong>new array</strong>. Changing <code>picked = week[busy]</code> afterward does not touch <code>week</code>. Assigning <em>through</em> the mask in one step, as in <code>capped[capped &gt; 10000] = 10000</code>, does change the array, because there the mask is on the left of the <code>=</code>.</p>
+                </div>
+            <pre><code class="language-python">picked = week[busy]
+picked[0] = 0
+print(week)                              # still intact
+print(np.shares_memory(week, picked))</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[ 5962.    6583.13  3866.59  7667.88  9570.46 12388.57  9361.59]
+False</code></pre>
+            </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="where" class="lesson-section">
+                <h2>🔀 Choosing Values with np.where</h2>
+
+                <p>A mask answers "which ones?". Often you want the next step: "use this value where the condition holds, and that value where it does not". That is an <code>if</code>/<code>else</code> for every element, and <code>np.where(condition, value_if_true, value_if_false)</code> is its vectorized form.</p>
+            <pre><code class="language-python">print(np.where(week &gt; 9000, "strong", "normal"))
+print(np.where(week &gt; 9000, week * 0.02, 0).round(2))    # a 2% bonus pool on strong days</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>['normal' 'normal' 'normal' 'normal' 'strong' 'strong' 'strong']
+[  0.     0.     0.     0.   191.41 247.77 187.23]</code></pre>
+            </div>
+
+                <p>The two "value" arguments can be single values, arrays, or one of each. A common use is filling in missing values. Here the six missing revenues are replaced by the average of the rest. (Whether that is a <em>wise</em> way to fill a gap is a question for the data-cleaning lesson. The mechanics are what matter now.)</p>
+            <pre><code class="language-python">filled = np.where(np.isnan(revenue), np.nanmean(revenue), revenue)
+
+print(np.isnan(revenue).sum(), "missing before")
+print(np.isnan(filled).sum(), "missing after")</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>6 missing before
+0 missing after</code></pre>
+            </div>
+
+                <h3>More Than Two Outcomes: <code>np.select</code></h3>
+
+                <p>For three or more outcomes, <code>np.select</code> takes a list of conditions and a matching list of values. Conditions are checked in order and <strong>the first one that is true wins</strong>, exactly like an <code>if</code>/<code>elif</code> chain.</p>
+            <pre><code class="language-python">conditions = [np.isnan(revenue), revenue &gt;= 12000, revenue &gt;= 6000]
+labels = ["missing", "high", "medium"]
+tier = np.select(conditions, labels, default="low")
+
+print(tier[:8])
+
+names, counts = np.unique(tier, return_counts=True)
+print(names)
+print(counts)</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>['low' 'low' 'low' 'low' 'low' 'low' 'medium' 'low']
+['high' 'low' 'medium' 'missing']
+[ 260 1120 1517    6]</code></pre>
+            </div>
+
+                <p><code>np.unique</code> returns the distinct values in sorted order, and with <code>return_counts=True</code> it also tells you how many times each appears. It is the quickest way to tally a column of categories in NumPy.</p>
+
+                <div class="mermaid">
+            graph TD
+                A["A calculation on every element"] --> B{"Same rule for all?"}
+                B -->|yes| C["Operator or ufunc"]
+                B -->|no| D{"Two outcomes?"}
+                D -->|yes| E["np.where"]
+                D -->|no, more| F["np.select"]
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="axis" class="lesson-section">
+                <h2>📐 Summaries and the axis Argument</h2>
+
+                <p>Operations so far kept the array's shape: 2,903 values in, 2,903 values out. <strong>Aggregations</strong> go the other way and boil many values down to one.</p>
+            <pre><code class="language-python">print(week.sum(), week.mean().round(2), week.min(), week.max())
+print(week.std().round(2))         # spread around the mean
+print(np.median(week))             # the middle value
+print(week.argmax(), week.argmin())   # POSITION of the largest and smallest
+print(week.cumsum())               # running total</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>55400.22 7914.32 3866.59 12388.57
+2588.02
+7667.88
+5 2
+[ 5962.   12545.13 16411.72 24079.6  33650.06 46038.63 55400.22]</code></pre>
+            </div>
+
+                <p><code>argmax</code> deserves a second look. It does not return the largest value, it returns <em>where</em> the largest value is: position 5, which is Saturday. That position can then be used to look something up in a parallel array, as you will do in the project.</p>
+
+                <h3>Two Dimensions: Which Way to Collapse?</h3>
+
+                <p>With a table, "the sum" is ambiguous. The sum of everything? Of each column? Of each row? The <code>axis</code> argument decides. Here are the units sold on the first three days of 2024 (rows) at Asheville, Bend, Boise and Flagstaff (columns), the same table as in Lesson 1.1.</p>
+            <pre><code class="language-python">units3 = np.array([[110, 105, 148,  69],
+                   [ 88,  84, 152,  82],
+                   [103, 133,  90,  92]])
+
+print(units3.sum())           # everything
+print(units3.sum(axis=0))     # collapse the rows: one total per store
+print(units3.sum(axis=1))     # collapse the columns: one total per day</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>1256
+[301 322 390 243]
+[432 406 418]</code></pre>
+            </div>
+
+                <div class="diagram">
+                    <svg viewBox="0 0 440 250" width="440" height="250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A table of 3 rows and 4 columns. Summing with axis 0 moves down the rows and leaves one total per column: 301, 322, 390, 243. Summing with axis 1 moves across the columns and leaves one total per row: 432, 406, 418.">
+                        <defs>
+                            <marker id="arrow-axis" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                                <path d="M0,0 L8,4 L0,8 Z" class="svg-arrow"/>
+                            </marker>
+                        </defs>
+                        <text x="64" y="18" class="svg-accent" font-size="13" font-weight="bold">axis=1: across the columns</text>
+                        <path d="M64,30 L282,30" class="svg-line-accent" marker-end="url(#arrow-axis)"/>
+                        <text x="24" y="88" text-anchor="middle" class="svg-accent" font-size="13" font-weight="bold" transform="rotate(-90 24 88)">axis=0: down</text>
+                        <path d="M40,44 L40,128" class="svg-line-accent" marker-end="url(#arrow-axis)"/>
+
+                        <rect x="64" y="42" width="56" height="30" class="svg-box-1"/><rect x="120" y="42" width="56" height="30" class="svg-box-1"/><rect x="176" y="42" width="56" height="30" class="svg-box-1"/><rect x="232" y="42" width="56" height="30" class="svg-box-1"/>
+                        <rect x="64" y="72" width="56" height="30" class="svg-box-1"/><rect x="120" y="72" width="56" height="30" class="svg-box-1"/><rect x="176" y="72" width="56" height="30" class="svg-box-1"/><rect x="232" y="72" width="56" height="30" class="svg-box-1"/>
+                        <rect x="64" y="102" width="56" height="30" class="svg-box-1"/><rect x="120" y="102" width="56" height="30" class="svg-box-1"/><rect x="176" y="102" width="56" height="30" class="svg-box-1"/><rect x="232" y="102" width="56" height="30" class="svg-box-1"/>
+                        <text x="92" y="62" text-anchor="middle" class="svg-text svg-mono" font-size="13">110</text><text x="148" y="62" text-anchor="middle" class="svg-text svg-mono" font-size="13">105</text><text x="204" y="62" text-anchor="middle" class="svg-text svg-mono" font-size="13">148</text><text x="260" y="62" text-anchor="middle" class="svg-text svg-mono" font-size="13">69</text>
+                        <text x="92" y="92" text-anchor="middle" class="svg-text svg-mono" font-size="13">88</text><text x="148" y="92" text-anchor="middle" class="svg-text svg-mono" font-size="13">84</text><text x="204" y="92" text-anchor="middle" class="svg-text svg-mono" font-size="13">152</text><text x="260" y="92" text-anchor="middle" class="svg-text svg-mono" font-size="13">82</text>
+                        <text x="92" y="122" text-anchor="middle" class="svg-text svg-mono" font-size="13">103</text><text x="148" y="122" text-anchor="middle" class="svg-text svg-mono" font-size="13">133</text><text x="204" y="122" text-anchor="middle" class="svg-text svg-mono" font-size="13">90</text><text x="260" y="122" text-anchor="middle" class="svg-text svg-mono" font-size="13">92</text>
+
+                        <rect x="318" y="42" width="60" height="30" class="svg-box-2"/><rect x="318" y="72" width="60" height="30" class="svg-box-2"/><rect x="318" y="102" width="60" height="30" class="svg-box-2"/>
+                        <text x="348" y="62" text-anchor="middle" class="svg-text svg-mono" font-size="13">432</text><text x="348" y="92" text-anchor="middle" class="svg-text svg-mono" font-size="13">406</text><text x="348" y="122" text-anchor="middle" class="svg-text svg-mono" font-size="13">418</text>
+                        <text x="388" y="82" class="svg-muted" font-size="12">shape</text>
+                        <text x="388" y="98" class="svg-muted svg-mono" font-size="12">(3,)</text>
+
+                        <rect x="64" y="156" width="56" height="30" class="svg-box-3"/><rect x="120" y="156" width="56" height="30" class="svg-box-3"/><rect x="176" y="156" width="56" height="30" class="svg-box-3"/><rect x="232" y="156" width="56" height="30" class="svg-box-3"/>
+                        <text x="92" y="176" text-anchor="middle" class="svg-text svg-mono" font-size="13">301</text><text x="148" y="176" text-anchor="middle" class="svg-text svg-mono" font-size="13">322</text><text x="204" y="176" text-anchor="middle" class="svg-text svg-mono" font-size="13">390</text><text x="260" y="176" text-anchor="middle" class="svg-text svg-mono" font-size="13">243</text>
+                        <text x="300" y="176" class="svg-muted" font-size="12">shape <tspan class="svg-mono">(4,)</tspan></text>
+
+                        <text x="64" y="212" class="svg-muted" font-size="12">sum(axis=0): one result per column (per store).</text>
+                        <text x="64" y="230" class="svg-muted" font-size="12">sum(axis=1): one result per row (per day).</text>
+                    </svg>
+                </div>
+
+                <div class="card card-info">
+                    <h4>💡 The Axis You Name Is the Axis That Disappears</h4>
+                    <p>The shape of <code>units3</code> is <code>(3, 4)</code>. Axis 0 is the first number (3 rows), axis 1 is the second (4 columns). <code>sum(axis=0)</code> squashes the 3 away and leaves shape <code>(4,)</code>. <code>sum(axis=1)</code> squashes the 4 away and leaves shape <code>(3,)</code>. If you cannot remember which is which, print the shape of the result: it tells you what survived.</p>
+                </div>
+
+                <p>Every aggregation accepts <code>axis</code>. Using the first week of revenue as a 7×4 table (days by stores), as in the Lesson 1.1 project:</p>
+            <pre><code class="language-python">week1 = revenue[:28].reshape(7, 4)       # 7 days x 4 stores
+
+print(week1.mean(axis=0).round(2))       # average day at each store
+print(week1.max(axis=1))                 # best store's revenue on each day
+print(week1.argmax(axis=0))              # which day (0 = Monday) was best at each store
+print(week1.argmax(axis=1))              # which store (0 = Asheville) won each day</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[5099.55 5446.93 7914.32 4681.29]
+[ 5962.    6583.13  6275.05  7667.88  9570.46 12388.57  9361.59]
+[4 5 5 5]
+[2 2 1 2 2 2 2]</code></pre>
+            </div>
+
+                <p>Read the third line as: Asheville's best day was day 4 (Friday), while Bend, Boise and Flagstaff all peaked on day 5 (Saturday). The fourth line says Boise (column 2) took the top spot on six of the seven days, and Bend (column 1) won Wednesday.</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Aggregation</th><th>Gives</th><th>Skips <code>nan</code> version</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>sum</code>, <code>mean</code></td><td>Total, average</td><td><code>np.nansum</code>, <code>np.nanmean</code></td></tr>
+                            <tr><td><code>min</code>, <code>max</code></td><td>Smallest, largest value</td><td><code>np.nanmin</code>, <code>np.nanmax</code></td></tr>
+                            <tr><td><code>argmin</code>, <code>argmax</code></td><td>Position of the smallest, largest</td><td><code>np.nanargmin</code>, <code>np.nanargmax</code></td></tr>
+                            <tr><td><code>std</code>, <code>var</code></td><td>Spread (Module 4 explains them)</td><td><code>np.nanstd</code>, <code>np.nanvar</code></td></tr>
+                            <tr><td><code>np.median</code>, <code>np.percentile</code></td><td>Middle value, any percentile</td><td><code>np.nanmedian</code>, <code>np.nanpercentile</code></td></tr>
+                            <tr><td><code>cumsum</code></td><td>Running total (keeps the shape)</td><td><code>np.nancumsum</code></td></tr>
+                            <tr><td><code>any</code>, <code>all</code></td><td>Is at least one true? Are all true?</td><td></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="sorting" class="lesson-section">
+                <h2>🔢 Sorting and Picking by Position</h2>
+
+                <p><code>np.sort</code> returns a sorted copy. Its more useful sibling is <code>np.argsort</code>, which returns the <em>positions</em> that would sort the array. Like <code>argmax</code>, positions are valuable because they work on parallel arrays.</p>
+            <pre><code class="language-python">days = np.array(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])
+
+print(np.sort(week))
+order = np.argsort(week)         # positions, from smallest value to largest
+print(order)
+print(days[order])               # the days, from worst to best
+print(days[order][::-1][:3])     # the top three days</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[ 3866.59  5962.    6583.13  7667.88  9361.59  9570.46 12388.57]
+[2 0 1 3 6 4 5]
+['Wed' 'Mon' 'Tue' 'Thu' 'Sun' 'Fri' 'Sat']
+['Sat' 'Fri' 'Sun']</code></pre>
+            </div>
+
+                <p><code>days[order]</code> is a new kind of indexing: an <strong>array of positions</strong> inside the brackets. NumPy returns the elements at those positions, in that order. (You will see it called "fancy indexing". Like mask indexing, it returns a copy.)</p>
+            <pre><code class="language-python">print(week[[0, 5, 6]])           # Monday, Saturday, Sunday
+print(days[week.argmax()], week.max())</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[ 5962.   12388.57  9361.59]
+Sat 12388.57</code></pre>
+            </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="loops" class="lesson-section">
+                <h2>🔁 From Loop to Array Expression</h2>
+
+                <p>Here is a realistic piece of loop code, the kind you might have written after the Python courses. A store earns a bonus of 2% of whatever it sells above $10,000 in a day. Days with no revenue recorded earn nothing.</p>
+            <pre><code class="language-python">def bonus_loop(values):
+    out = []
+    for r in values:
+        if r != r:               # nan is the only value not equal to itself
+            out.append(0.0)
+        elif r &gt; 10000:
+            out.append((r - 10000) * 0.02)
+        else:
+            out.append(0.0)
+    return out
+
+def bonus_vectorized(values):
+    over = np.maximum(values - 10000, 0)        # amount above 10,000, never negative
+    return np.where(np.isnan(values), 0, over * 0.02)
+
+loop_result = bonus_loop(revenue.tolist())
+fast_result = bonus_vectorized(revenue)
+
+print(np.allclose(loop_result, fast_result))
+print(round(fast_result.sum(), 2))</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>True
+29708.28</code></pre>
+            </div>
+
+                <p><code>np.allclose</code> checks that two arrays are equal to within a tiny rounding tolerance. It is the right tool for comparing floating-point results, and "same answer as the slow version" is the best test a vectorized rewrite can have. Now time them.</p>
+            <pre><code class="language-python">import timeit
+
+as_list = revenue.tolist()
+t_loop = min(timeit.repeat(lambda: bonus_loop(as_list), number=20, repeat=5)) / 20
+t_fast = min(timeit.repeat(lambda: bonus_vectorized(revenue), number=20, repeat=5)) / 20
+
+print(f"loop      : {t_loop * 1e6:7.1f} microseconds")
+print(f"vectorized: {t_fast * 1e6:7.1f} microseconds")
+print(f"speedup   : {t_loop / t_fast:.0f}x")</code></pre>
+
+            <div class="card card-output">
+                <h4>Output (your numbers will differ)</h4>
+                <pre><code>loop      :    82.1 microseconds
+vectorized:     5.5 microseconds
+speedup   : 15x</code></pre>
+            </div>
+
+                <p>The translation followed a pattern you can reuse:</p>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>In the loop</th><th>In array code</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>for x in values: out.append(x * k)</code></td><td><code>values * k</code></td></tr>
+                            <tr><td><code>if x &gt; limit:</code> ... <code>else:</code> ...</td><td><code>np.where(values &gt; limit, ..., ...)</code></td></tr>
+                            <tr><td><code>if</code> / <code>elif</code> / <code>else</code></td><td><code>np.select([...], [...], default=...)</code></td></tr>
+                            <tr><td><code>if cond: count += 1</code></td><td><code>(cond).sum()</code></td></tr>
+                            <tr><td><code>if cond: keep.append(x)</code></td><td><code>values[cond]</code></td></tr>
+                            <tr><td><code>total += x</code></td><td><code>values.sum()</code></td></tr>
+                            <tr><td><code>max(0, x)</code> for each x</td><td><code>np.maximum(values, 0)</code></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="card card-success">
+                    <h4>✅ Loops Are Not Forbidden</h4>
+                    <p>A loop over four store names, twelve months or five files is fine. What you want to avoid is a Python loop over the <em>rows</em>, because that is where the thousands or millions are. If a calculation truly depends on the previous result (a running balance with rules, a simulation step), a loop may be the honest answer. Write it, make it correct, and only then ask whether it is slow enough to matter.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="mistakes" class="lesson-section">
+                <h2>⚠️ Common Mistakes</h2>
+
+                <p>Most of these produce a clear error message, and the message names the problem once you know how to read it. The last two produce no message at all, which is why they are worth meeting here first.</p>
+
+                <h3>1. Using <code>and</code> Instead of <code>&amp;</code></h3>
+            <pre data-raises="ValueError"><code class="language-python">both = (revenue &gt; 10000) and (promo == 1)</code></pre>
+
+            <div class="card card-output">
+                <h4>Error</h4>
+                <pre><code>ValueError: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()</code></pre>
+            </div>
+                <p><strong>What it means:</strong> <code>and</code> needs one true-or-false value on each side, and each side is an array of 2,903 answers. It is the same message you saw in Lesson 1.1 for <code>if week &gt; 6000</code>. <strong>Fix:</strong> <code>(revenue &gt; 10000) &amp; (promo == 1)</code>.</p>
+
+                <h3>2. Forgetting the Parentheses</h3>
+            <pre data-raises="TypeError"><code class="language-python">both = revenue &gt; 10000 &amp; promo == 1</code></pre>
+
+            <div class="card card-output">
+                <h4>Error</h4>
+                <pre><code>TypeError: ufunc 'bitwise_and' not supported for the input types, and the inputs could not be safely coerced to any supported types according to the casting rule ''safe''</code></pre>
+            </div>
+                <p><strong>What it means:</strong> <code>&amp;</code> binds more tightly than <code>&gt;</code>, so Python tried <code>10000 &amp; promo</code> first, and "bitwise and" between an integer and an array of floats is not defined. The message is cryptic, but whenever you see <code>bitwise_and</code> in an error, look for missing parentheses. <strong>Fix:</strong> wrap each comparison: <code>(revenue &gt; 10000) &amp; (promo == 1)</code>.</p>
+
+                <h3>3. Calling a <code>math</code> Function on an Array</h3>
+            <pre data-raises="TypeError"><code class="language-python">import math
+roots = math.sqrt(week)</code></pre>
+
+            <div class="card card-output">
+                <h4>Error</h4>
+                <pre><code>TypeError: only 0-dimensional arrays can be converted to Python scalars</code></pre>
+            </div>
+                <p><strong>What it means:</strong> the functions in Python's <code>math</code> module work on one number at a time. <strong>Fix:</strong> use the NumPy function of the same name: <code>np.sqrt(week)</code>.</p>
+
+                <h3>4. Arrays That Do Not Line Up</h3>
+            <pre data-raises="ValueError"><code class="language-python">seven = np.arange(7)
+four = np.arange(4)
+total = seven + four</code></pre>
+
+            <div class="card card-output">
+                <h4>Error</h4>
+                <pre><code>ValueError: operands could not be broadcast together with shapes (7,) (4,)</code></pre>
+            </div>
+                <p><strong>What it means:</strong> element-by-element arithmetic needs a partner for every element, and 7 values cannot pair up with 4. <strong>Fix:</strong> print both shapes and find out why they differ. Often one array was filtered and the other was not. (Some different shapes <em>can</em> be combined, by rules called broadcasting. That is the whole of the next lesson.)</p>
+
+                <h3>5. Forgetting That <code>nan</code> Fails Every Comparison</h3>
+            <pre><code class="language-python">print(revenue.size)
+print((revenue &gt; 0).sum() + (revenue &lt;= 0).sum())
+print((revenue == np.nan).sum())</code></pre>
+
+            <div class="card card-output">
+                <h4>Output (six rows have gone missing, and nothing equals nan)</h4>
+                <pre><code>2903
+2897
+0</code></pre>
+            </div>
+                <p><strong>What happened:</strong> a missing value is neither greater than zero nor less than or equal to zero. Every comparison with <code>nan</code> is <code>False</code>, including <code>nan == nan</code>. So the six store-days with no revenue silently drop out of both groups, and "the rest" is not the same as "not the first group". <strong>Fix:</strong> test for missing values explicitly with <code>np.isnan(revenue)</code>, and decide on purpose which group they belong to.</p>
+
+                <h3>6. Summarizing Along the Wrong Axis</h3>
+            <pre><code class="language-python">print(week1.mean(axis=1).shape)    # 7 values: one per DAY
+print(week1.mean(axis=0).shape)    # 4 values: one per STORE</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>(7,)
+(4,)</code></pre>
+            </div>
+                <p><strong>What happens:</strong> no error, just numbers that answer a different question. "Average per store" needs the days collapsed, which is <code>axis=0</code>. <strong>Fix:</strong> check the shape of the result against what you expect. Four stores should give four numbers.</p>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="project" class="lesson-section">
+                <h2>🛠️ Project: The Store Scorecard</h2>
+
+                <p>Pinecrest's regional manager wants one page that compares the four stores: how busy each is, how well it turns visitors into buyers, how much a typical purchase is worth, and what the sale weekends do. You will build it from the raw columns with masks and aggregations, and without a single loop over the rows. Work in a new notebook called <code>lesson_1_2_project</code> or a script called <code>scorecard.py</code>. Allow about 35 minutes.</p>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 1: Load the columns <span class="step-time">(5 min)</span></h3>
+                    <p>Load the numeric columns as floats, the store names as text, and the dates as NumPy dates (<code>datetime64[D]</code> means "dates, to the day").</p>
+            <pre><code class="language-python">import numpy as np
+
+def load(col, dtype=float):
+    return np.genfromtxt("data/daily_sales.csv", delimiter=",",
+                         skip_header=1, usecols=col, dtype=dtype)
+
+dates = load(0, dtype="datetime64[D]")
+stores = load(1, dtype=str)
+visitors, transactions, units, revenue = load(2), load(3), load(4), load(5)
+promo = load(7)
+
+print(dates[:2], dates.dtype)
+print(np.unique(stores))
+print(revenue.size, "store-days,", np.isnan(revenue).sum(), "with no revenue")</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>['2024-01-01' '2024-01-01'] datetime64[D]
+['Asheville' 'Bend' 'Boise' 'Flagstaff']
+2903 store-days, 6 with no revenue</code></pre>
+            </div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 2: Three measures for every store-day <span class="step-time">(5 min)</span></h3>
+                    <p>Compute conversion rate, basket value and units per transaction for all rows at once, then look at the overall averages. Revenue has gaps, so anything built from it needs the <code>nan</code>-aware functions.</p>
+            <pre><code class="language-python">conversion = transactions / visitors
+basket = revenue / transactions
+units_per_sale = units / transactions
+
+print(f"conversion     : {conversion.mean():.1%}")
+print(f"basket value   : ${np.nanmean(basket):.2f}")
+print(f"units per sale : {units_per_sale.mean():.2f}")</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>conversion     : 23.5%
+basket value   : $88.64
+units per sale : 2.11</code></pre>
+            </div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 3: One line per store <span class="step-time">(8 min)</span></h3>
+                    <p>Build a mask for each store and use it on every measure. The loop here runs four times, once per store, which is exactly the kind of loop that is fine: the work on the 2,903 rows happens inside NumPy.</p>
+            <pre><code class="language-python">print(f"{'store':&lt;10} {'days':&gt;5} {'visitors':&gt;9} {'convert':&gt;8} {'basket':&gt;8} {'revenue':&gt;10}")
+for name in np.unique(stores):
+    m = stores == name
+    print(f"{name:&lt;10} {m.sum():&gt;5} {visitors[m].mean():&gt;9.0f} {conversion[m].mean():&gt;8.1%} "
+          f"{np.nanmean(basket[m]):&gt;8.2f} {np.nanmean(revenue[m]):&gt;10,.2f}")</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>store       days  visitors  convert   basket    revenue
+Asheville    727       275    23.5%    88.44   5,703.83
+Bend         724       335    23.5%    88.71   6,997.87
+Boise        727       485    23.6%    88.66  10,144.21
+Flagstaff    725       328    23.6%    88.77   6,889.75</code></pre>
+            </div>
+                    <p>Read the columns side by side. Conversion and basket value are nearly identical everywhere. Boise's higher revenue comes almost entirely from more people walking in. That is a useful thing to know before anyone proposes "fixing" the smaller stores' sales technique.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 4: Sale days and weekends <span class="step-time">(7 min)</span></h3>
+                    <p>Compare sale days with ordinary days, then weekends with weekdays. For the weekday you need one new idea: subtracting two dates gives a number of days. January 1, 2024 (the first row) was a Monday, so "days since the first row, remainder after dividing by 7" is 0 for Monday through 6 for Sunday.</p>
+            <pre><code class="language-python">is_promo = promo == 1
+lift = np.nanmean(revenue[is_promo]) / np.nanmean(revenue[~is_promo])
+print(f"sale days    : ${np.nanmean(revenue[is_promo]):,.2f}")
+print(f"ordinary days: ${np.nanmean(revenue[~is_promo]):,.2f}   ({lift:.2f}x)")
+
+weekday = (dates - dates[0]).astype(int) % 7      # 0 = Monday ... 6 = Sunday
+is_weekend = weekday &gt;= 5
+print(f"weekend      : ${np.nanmean(revenue[is_weekend]):,.2f}")
+print(f"weekday      : ${np.nanmean(revenue[~is_weekend]):,.2f}")
+
+quiet = ~is_weekend &amp; ~is_promo
+print(f"ordinary weekdays: {quiet.sum()} rows, ${np.nanmean(revenue[quiet]):,.2f}")</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>sale days    : $13,950.46
+ordinary days: $7,211.74   (1.93x)
+weekend      : $10,073.19
+weekday      : $6,373.91
+ordinary weekdays: 2023 rows, $6,258.52</code></pre>
+            </div>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 5: Label every store-day <span class="step-time">(5 min)</span></h3>
+                    <p>Give each row a label with <code>np.select</code>, then tally the labels. Remember that the first true condition wins, so the missing rows must be caught first.</p>
+            <pre><code class="language-python">conditions = [np.isnan(revenue), is_promo, is_weekend]
+day_type = np.select(conditions, ["no data", "sale day", "weekend"], default="weekday")
+
+names, counts = np.unique(day_type, return_counts=True)
+for n, c in zip(names, counts):
+    print(f"{n:&lt;9} {c:&gt;5}   mean revenue ${np.nanmean(revenue[day_type == n]):&gt;10,.2f}")</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>no data       6   mean revenue $       nan
+sale day     96   mean revenue $ 13,950.46
+weekday    2018   mean revenue $  6,258.52
+weekend     783   mean revenue $  9,668.42</code></pre>
+            </div>
+                    <p>The <code>nan</code> beside "no data" is honest: there is no revenue to average on those six days. NumPy also prints a <code>RuntimeWarning: Mean of empty slice</code> for that line, which is its way of saying the same thing. The weekday count is 2,018, five fewer than the 2,023 ordinary weekdays of Step 4, because five of the six no-data rows fell on ordinary weekdays and were labeled first.</p>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🛠️ Step 6: The five biggest days <span class="step-time">(5 min)</span></h3>
+                    <p>Use <code>np.argsort</code> to find the positions of the five largest revenues, then use those positions on the parallel arrays to say when and where they happened. <code>argsort</code> puts <code>nan</code> at the end, so sort a version with the gaps filled by zero.</p>
+            <pre><code class="language-python">order = np.argsort(np.where(np.isnan(revenue), 0, revenue))
+top5 = order[::-1][:5]
+
+for i in top5:
+    print(dates[i], f"{stores[i]:&lt;10} ${revenue[i]:&gt;10,.2f}   sale day: {bool(promo[i])}")</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>2024-08-31 Boise      $ 27,677.10   sale day: True
+2024-11-30 Boise      $ 27,199.33   sale day: True
+2025-11-30 Boise      $ 25,457.62   sale day: True
+2025-11-29 Boise      $ 25,419.88   sale day: True
+2024-12-01 Boise      $ 25,160.28   sale day: True</code></pre>
+            </div>
+                    <p>All five are at Boise, and all five are sale days. The scorecard has told a consistent story from three directions.</p>
+                </div>
+
+                <div class="card card-success">
+                    <h3>✅ Project Completion Checklist</h3>
+                    <ul class="checklist">
+                        <li>Seven arrays are loaded, each with 2,903 values, and you know which six revenues are missing</li>
+                        <li>Conversion, basket value and units per sale are computed with one array expression each</li>
+                        <li>Your per-store table shows four rows, and the only loop runs once per store</li>
+                        <li>You report a sale-day lift of 1.93x and a weekend mean of $10,073.19</li>
+                        <li>Every store-day has a label, and the four counts add up to 2,903</li>
+                        <li>Your top five list shows dates and store names looked up by position, not typed in</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="exercises" class="lesson-section">
+                <h2>🏋️ Hands-on Exercises</h2>
+
+                <p>These continue from the project, so <code>dates</code>, <code>stores</code>, <code>visitors</code>, <code>transactions</code>, <code>units</code>, <code>revenue</code>, <code>promo</code> and <code>weekday</code> are already defined. Try each one before opening the solution.</p>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 1: Units per Visitor</h3>
+                    <p>Compute units sold per visitor for every store-day. Print its mean, its smallest and largest values (rounded to two decimals), and how many store-days sold more than 300 units.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>One division gives the new array. <code>units</code> and <code>visitors</code> have no missing values, so the ordinary <code>.mean()</code>, <code>.min()</code> and <code>.max()</code> work. Counting is the sum of a mask.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+            <pre><code class="language-python">per_visitor = units / visitors
+print(per_visitor.mean().round(2), per_visitor.min().round(2), per_visitor.max().round(2))
+print((units &gt; 300).sum())</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>0.5 0.27 0.8
+211</code></pre>
+            </div>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 2: Two Conditions</h3>
+                    <p>(a) How many Flagstaff sale days are in the data, and what was Flagstaff's mean revenue on them? (b) On what percentage of all store-days was the conversion rate below 20%? (c) How many store-days had more than 600 visitors <em>or</em> more than $20,000 in revenue?</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Parentheses around every comparison, <code>&amp;</code> for "and", <code>|</code> for "or". The mean of a mask is a fraction.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+            <pre><code class="language-python">flag_promo = (stores == "Flagstaff") &amp; (promo == 1)
+print(flag_promo.sum(), np.nanmean(revenue[flag_promo]).round(2))
+
+conversion = transactions / visitors
+print(f"{(conversion &lt; 0.20).mean():.1%}")
+
+print(((visitors &gt; 600) | (revenue &gt; 20000)).sum())</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>24 12583.02
+9.0%
+196</code></pre>
+            </div>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 3: Along Each Axis</h3>
+                    <p>Rebuild the first week as a table with <code>week1 = revenue[:28].reshape(7, 4)</code> (rows are Monday to Sunday, columns are Asheville, Bend, Boise, Flagstaff). Find: (a) each store's total for the week, (b) each day's total across the four stores, (c) the range (largest minus smallest day) for each store, (d) the name of the best day at each store, using <code>argmax</code> and an array of day names.</p>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>"Each store" means one number per column, so the rows are what collapses: <code>axis=0</code>. For (d), <code>argmax(axis=0)</code> gives four positions, and an array of positions can index another array.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+            <pre><code class="language-python">week1 = revenue[:28].reshape(7, 4)
+day_names = np.array(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])
+
+print(week1.sum(axis=0))                               # (a)
+print(week1.sum(axis=1))                               # (b)
+print((week1.max(axis=0) - week1.min(axis=0)).round(2))  # (c)
+print(day_names[week1.argmax(axis=0)])                 # (d)</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[35696.85 38128.49 55400.22 32769.02]
+[18173.65 17439.75 18382.12 22016.02 27292.05 32531.48 26159.51]
+[3754.01 3407.79 8521.98 3195.36]
+['Fri' 'Sat' 'Sat' 'Sat']</code></pre>
+            </div>
+                    </details>
+                </div>
+
+                <div class="card">
+                    <h3>🏋️ Exercise 4: Retire a Loop (Stretch)</h3>
+                    <p>This function prices shipping for a list of order totals: free at $75 or more, $6.95 from $25 up to $75, and $14.95 below $25. Write <code>shipping_vectorized(totals)</code> that takes an array and returns the same answers with no loop. Check it against the loop on <code>totals = np.array([12.50, 25.00, 74.99, 75.00, 310.20, 48.00])</code>, then on one million made-up totals built with <code>np.linspace(5, 400, 1_000_000)</code>, and time both.</p>
+            <pre data-norun><code class="language-python">def shipping_loop(totals):
+    out = []
+    for t in totals:
+        if t &gt;= 75:
+            out.append(0.0)
+        elif t &gt;= 25:
+            out.append(6.95)
+        else:
+            out.append(14.95)
+    return out</code></pre>
+                    <details>
+                        <summary>💡 Hint</summary>
+                        <p>Three outcomes: <code>np.select</code> with two conditions and a <code>default</code>, in the same order as the <code>if</code>/<code>elif</code>.</p>
+                    </details>
+                    <details>
+                        <summary>✅ Solution</summary>
+            <pre><code class="language-python">import timeit
+
+def shipping_loop(totals):
+    out = []
+    for t in totals:
+        if t &gt;= 75:
+            out.append(0.0)
+        elif t &gt;= 25:
+            out.append(6.95)
+        else:
+            out.append(14.95)
+    return out
+
+def shipping_vectorized(totals):
+    return np.select([totals &gt;= 75, totals &gt;= 25], [0.0, 6.95], default=14.95)
+
+totals = np.array([12.50, 25.00, 74.99, 75.00, 310.20, 48.00])
+print(shipping_vectorized(totals))
+print(np.allclose(shipping_loop(totals), shipping_vectorized(totals)))
+
+many = np.linspace(5, 400, 1_000_000)
+many_list = many.tolist()
+print(np.allclose(shipping_loop(many_list), shipping_vectorized(many)))</code></pre>
+
+            <div class="card card-output">
+                <h4>Output</h4>
+                <pre><code>[14.95  6.95  6.95  0.    0.    6.95]
+True
+True</code></pre>
+            </div>
+
+            <pre><code class="language-python">t_loop = min(timeit.repeat(lambda: shipping_loop(many_list), number=1, repeat=3))
+t_fast = min(timeit.repeat(lambda: shipping_vectorized(many), number=1, repeat=3))
+print(f"loop {t_loop * 1000:.1f} ms, vectorized {t_fast * 1000:.1f} ms, {t_loop / t_fast:.0f}x")</code></pre>
+
+            <div class="card card-output">
+                <h4>Output (your numbers will differ)</h4>
+                <pre><code>loop 20.5 ms, vectorized 3.0 ms, 7x</code></pre>
+            </div>
+                        <p>The edge cases in the small test (exactly 25.00, 74.99, exactly 75.00) are the ones most likely to expose a <code>&gt;</code> typed where <code>&gt;=</code> was meant. Test the boundaries first, then the big array.</p>
+                    </details>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="quiz" class="lesson-section">
+                <h2>🎯 Quick Quiz</h2>
+                <div class="card quiz-container">
+                    <h3>🎯 Check Your Understanding</h3>
+            <div class="quiz-question">
+                <p><strong>Question 1:</strong> What does this print?</p>
+            <pre><code class="language-python">q1 = np.array([3, 8, 5, 10])
+print((q1 &gt; 4).sum())</code></pre>
+                <div class="quiz-options">
+                    <button class="quiz-option" data-correct="true" data-explanation="The comparison gives [False True True True]. In arithmetic True counts as 1, so the sum of a mask is the number of elements that passed the test.">
+                        A) <code>3</code>
+                    </button>
+                    <button class="quiz-option" data-correct="false" data-hint="That is 8 + 5 + 10, the sum of the values that pass. But the sum here is taken of the mask itself. What does each True count as?">
+                        B) <code>23</code>
+                    </button>
+                    <button class="quiz-option" data-correct="false" data-hint="That would be the filtered values, q1 indexed with the mask. Here nothing is being indexed. What does summing True and False values give?">
+                        C) <code>[ 8  5 10]</code>
+                    </button>
+                </div>
+                <div class="quiz-feedback"></div>
+            </div>
+
+            <div class="quiz-question">
+                <p><strong>Question 2:</strong> <code>revenue</code> and <code>promo</code> are float arrays of the same length. Which line correctly counts sale days with revenue above 10,000?</p>
+                <div class="quiz-options">
+                    <button class="quiz-option" data-correct="false" data-hint="The word and needs a single True or False on each side, and each side here is a whole array. Which operator combines masks element by element?">
+                        A) <code>(revenue &gt; 10000 and promo == 1).sum()</code>
+                    </button>
+                    <button class="quiz-option" data-correct="false" data-hint="Python evaluates the ampersand before the comparisons, so this tries 10000 and promo first. What is missing around each comparison?">
+                        B) <code>(revenue &gt; 10000 &amp; promo == 1).sum()</code>
+                    </button>
+                    <button class="quiz-option" data-correct="true" data-explanation="Each comparison is wrapped in parentheses so it is evaluated first, the ampersand combines the two masks element by element, and the sum counts the True values.">
+                        C) <code>((revenue &gt; 10000) &amp; (promo == 1)).sum()</code>
+                    </button>
+                </div>
+                <div class="quiz-feedback"></div>
+            </div>
+
+            <div class="quiz-question">
+                <p><strong>Question 3:</strong> What does this print?</p>
+            <pre><code class="language-python">q3 = np.array([[1, 2, 3],
+               [4, 5, 6]])
+print(q3.sum(axis=0))</code></pre>
+                <div class="quiz-options">
+                    <button class="quiz-option" data-correct="false" data-hint="Those are the row totals, which is axis=1. The axis you name is the one that disappears. The shape is (2, 3), so which number goes away with axis=0?">
+                        A) <code>[ 6 15]</code>
+                    </button>
+                    <button class="quiz-option" data-correct="true" data-explanation="axis=0 collapses the rows, leaving one total per column: 1+4, 2+5, 3+6. The shape goes from (2, 3) to (3,).">
+                        B) <code>[5 7 9]</code>
+                    </button>
+                    <button class="quiz-option" data-correct="false" data-hint="That is the sum of everything, which is what you get with no axis argument at all. With axis=0 one dimension survives.">
+                        C) <code>21</code>
+                    </button>
+                </div>
+                <div class="quiz-feedback"></div>
+            </div>
+
+            <div class="quiz-question">
+                <p><strong>Question 4:</strong> What does this print?</p>
+            <pre><code class="language-python">q4 = np.array([-2, 5, -1, 3])
+print(np.where(q4 &gt; 0, q4, 0))</code></pre>
+                <div class="quiz-options">
+                    <button class="quiz-option" data-correct="false" data-hint="That is what filtering q4 with the mask gives. np.where with three arguments returns one value for every position. How long is the result?">
+                        A) <code>[5 3]</code>
+                    </button>
+                    <button class="quiz-option" data-correct="false" data-hint="That is the mask on its own. np.where uses the mask to choose between the second and third arguments.">
+                        B) <code>[False  True False  True]</code>
+                    </button>
+                    <button class="quiz-option" data-correct="true" data-explanation="np.where keeps the shape. Where the condition is true it takes the value from q4, and everywhere else it takes 0.">
+                        C) <code>[0 5 0 3]</code>
+                    </button>
+                </div>
+                <div class="quiz-feedback"></div>
+            </div>
+
+            <div class="quiz-question">
+                <p><strong>Question 5:</strong> You run <code>high = revenue[revenue &gt; 15000]</code> and then <code>high[0] = 0</code>. What happens to <code>revenue</code>?</p>
+                <div class="quiz-options">
+                    <button class="quiz-option" data-correct="false" data-hint="That is true for slices such as revenue[10:20]. The elements chosen by a mask can be scattered anywhere in memory. Can a single window show them?">
+                        A) Its first value above 15,000 becomes 0, because indexing an array always gives a view
+                    </button>
+                    <button class="quiz-option" data-correct="true" data-explanation="Mask indexing gathers the chosen elements into a new array, unlike a slice. To change the original through a mask, assign in one step, with the mask in brackets on the left of the equals sign.">
+                        B) Nothing: selecting with a mask builds a new array, so <code>high</code> is a copy
+                    </button>
+                    <button class="quiz-option" data-correct="false" data-hint="The filtered array is an ordinary array that you can change freely. The question is whether it shares memory with the original.">
+                        C) NumPy raises an error, because a filtered array is read-only
+                    </button>
+                </div>
+                <div class="quiz-feedback"></div>
+            </div>
+
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="faq" class="lesson-section">
+                <h2>❓ Common Questions at This Stage</h2>
+
+                <details>
+                    <summary>Is it ever right to loop over an array?</summary>
+                    <p>Yes. Loop over a small number of groups (stores, months, files) whenever it makes the code clearer. Loop when each step depends on the result of the previous one and no NumPy function expresses it. And loop when you are still working out what the calculation should be: a correct loop is a fine first draft, and it gives you something to check the vectorized version against.</p>
+                </details>
+                <details>
+                    <summary>What about <code>np.vectorize</code>? The name sounds like exactly what I need.</summary>
+                    <p>The name is misleading. <code>np.vectorize(my_function)</code> lets you <em>call</em> an ordinary Python function with an array, but underneath it still runs your function once per element in Python. It is a convenience, and it is no faster than the loop. Real speed comes from expressing the calculation with operators, ufuncs, <code>np.where</code> and aggregations.</p>
+                </details>
+                <details>
+                    <summary>Why do I sometimes see a <code>RuntimeWarning</code> but still get a result?</summary>
+                    <p>For floating-point arrays, NumPy does not stop on a division by zero or the mean of nothing. It stores <code>inf</code> or <code>nan</code> in that position, prints a warning, and carries on with the rest of the array, because one bad row should not throw away a million good ones. Treat the warning as a prompt to look: use <code>np.isfinite(result).all()</code> to check whether anything odd got in.</p>
+                </details>
+                <details>
+                    <summary>Does a long expression like <code>(a - b) / a * 100</code> waste memory?</summary>
+                    <p>Each step creates a temporary array that is thrown away afterward. For arrays of thousands or a few million values this does not matter. For very large arrays you can update in place with <code>a *= 100</code> or <code>np.multiply(a, 100, out=a)</code>, which reuse the existing memory. Reach for that only when memory is a measured problem, since in-place code is harder to reason about.</p>
+                </details>
+
+                <div class="card card-accent">
+                    <h3>🌟 Going Further: Bonus Challenge</h3>
+                    <p>Build a 7×4 table of mean revenue by weekday (rows, Monday to Sunday) and store (columns), using all two years of data. Start with <code>table = np.zeros((7, 4))</code> and fill each cell with a mask that combines <code>weekday == d</code> and <code>stores == name</code>: 28 masks, two short loops. Then use <code>argmax</code> to find each store's best weekday, and divide Saturday's row by Tuesday's row. Is the Saturday effect the same size at every store? Keep the table: the next lesson shows how to compare each store with its own average in one line.</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="journal" class="lesson-section">
+                <h2>📓 Learning Journal</h2>
+                <div class="card card-accent">
+                    <p>Take five minutes to write in your learning journal (the <code>journal.md</code> file you started in Lesson 0.1, or a paper notebook). Jot down:</p>
+                    <ul>
+                        <li><strong>Key concepts</strong> you learned today</li>
+                        <li><strong>Techniques that clicked</strong> (and the ones that have not, yet)</li>
+                        <li><strong>Questions or confusion</strong> to come back to</li>
+                        <li><strong>Ideas to try</strong> on your own</li>
+                        <li><strong>Progress and feelings</strong>: how did this lesson go for you?</li>
+                    </ul>
+                    <p><strong>✍️ This lesson's prompt:</strong> Find a loop over numbers in something you wrote before this course (or invent a small one). Write the loop and its array version side by side. Which lines of the loop turned into which piece of the array expression? Then finish this sentence in your own words: "The axis I name is the axis that..."</p>
+                </div>
+            </section>
+
+            <!-- ============================================================ -->
+            <section id="summary" class="lesson-section">
+                <h2>📝 Lesson Summary</h2>
+
+                <div class="card card-success">
+                    <h3>🎓 Key Takeaways</h3>
+                    <ul>
+                        <li><strong>Vectorized</strong> means one operation on a whole array, with the loop inside NumPy's compiled code</li>
+                        <li>Operators and <strong>ufuncs</strong> (<code>np.sqrt</code>, <code>np.log10</code>, <code>np.abs</code>, <code>np.maximum</code>, <code>np.clip</code>) work element by element on arrays of the same shape</li>
+                        <li>A comparison produces a <strong>boolean mask</strong>; its <code>sum</code> counts, its <code>mean</code> is a fraction, and in brackets it filters</li>
+                        <li>Combine masks with <code>&amp;</code>, <code>|</code>, <code>~</code> and parentheses around every comparison, never <code>and</code> / <code>or</code></li>
+                        <li>Mask and position indexing return <strong>copies</strong>; assign through the mask to change the original</li>
+                        <li><code>np.where</code> is a vectorized <code>if</code>/<code>else</code>; <code>np.select</code> handles three or more outcomes, first match wins</li>
+                        <li>Aggregations collapse an array; <strong>the axis you name is the axis that disappears</strong></li>
+                        <li><code>argmax</code> and <code>argsort</code> return positions, which you can use on parallel arrays</li>
+                        <li><code>nan</code> fails every comparison, so handle missing values on purpose with <code>np.isnan</code></li>
+                    </ul>
+                </div>
+
+                <div class="card card-info">
+                    <h3>🏆 What You've Accomplished</h3>
+                    <ul>
+                        <li>You computed conversion rate and basket value for 2,903 store-days in one line each</li>
+                        <li>You answered two-part questions about the data with combined masks</li>
+                        <li>You labeled every row with <code>np.select</code> and tallied the labels with <code>np.unique</code></li>
+                        <li>You summarized a table by row and by column and predicted the shape of each result</li>
+                        <li>You rewrote a loop as an array expression, proved the two agree, and measured the speedup</li>
+                        <li>You built a four-store scorecard that showed where Boise's extra revenue really comes from</li>
+                    </ul>
+                </div>
+
+                <h3>🔭 Looking Ahead</h3>
+                <p>Everything today combined arrays of the <em>same</em> shape, or an array with a single number. In <a href="numpy_broadcasting.html"><strong>Lesson 1.3: Broadcasting</strong></a> you will learn the rules that let NumPy combine <em>different</em> shapes: subtract each store's average from its own column of a table, divide every day by its row total, or build a whole price-by-discount grid from two short arrays. It is the idea behind <code>week * 2</code>, taken to tables.</p>
+
+                <h3>📋 Before the Next Lesson</h3>
                 <ul>
-                    <li>Vectorized operations run in optimized C with SIMD instructions, processing a whole array in one call instead of a slow Python loop.</li>
-                    <li>Element-wise arithmetic, ufuncs, comparisons, and aggregations all work array-wide without you writing any loop.</li>
-                    <li>Boolean masks and <code>np.where()</code> replace per-element if-statements; the <code>axis</code> parameter drives multi-dimensional reductions.</li>
-                    <li>Vectorized code is usually shorter, clearer, and 10–100× faster than the loop it replaces.</li>
+                    <li>Keep your project notebook. Lesson 1.3 uses the same columns of <code>daily_sales.csv</code>.</li>
+                    <li>Run <code>week1 - week1.mean(axis=0)</code> and look at the result. A 7×4 table minus 4 numbers worked. Write down what you think NumPy did.</li>
+                    <li>Now try <code>week1 - week1.mean(axis=1)</code> and read the error message. You will understand it fully by the end of the next lesson.</li>
                 </ul>
-            </div>
-            <h3>🎉 What You've Accomplished</h3>
-            <p>You can now express computations as operations on entire arrays — the single most important habit for writing fast, readable data-science code in Python.</p>
-            <h3>❓ Common Questions at This Stage</h3>
-            <details>
-                <summary>Why can't I use Python's <code>and</code> / <code>or</code> with array conditions?</summary>
-                <p>Those keywords expect a single True/False, but a comparison on an array returns a whole boolean array. Use the element-wise operators <code>&amp;</code> (and), <code>|</code> (or), and <code>~</code> (not), and wrap each condition in parentheses because of operator precedence.</p>
-            </details>
-            <details>
-                <summary>Is a list comprehension the same as vectorization?</summary>
-                <p>No. A list comprehension is still a Python loop under the hood, so it pays the same per-element interpreter cost. True vectorization pushes the loop down into NumPy's C code, which is where the big speedups come from.</p>
-            </details>
-            <details>
-                <summary>What does the <code>axis</code> argument actually do?</summary>
-                <p><code>axis=n</code> collapses the n-th dimension. For a 2D array, <code>axis=0</code> reduces down the columns (one value per column) and <code>axis=1</code> reduces across the rows (one value per row). Add <code>keepdims=True</code> when you want the result to stay broadcast-compatible.</p>
-            </details>
-            <h3>🔭 Looking Ahead</h3>
-            <p>Vectorization shines even more when arrays have different shapes — which is exactly where broadcasting comes in. That's the natural next topic to pair with what you've just learned.</p>
-            <h3>✅ Before the Next Lesson</h3>
-            <ul>
-                <li>Rewrite a small loop that squares or filters numbers as a single vectorized expression and time both versions.</li>
-                <li>Take a 2D array and compute means along <code>axis=0</code> and <code>axis=1</code>, predicting each result shape first.</li>
-                <li>Write your Learning Journal entry for this lesson</li>
-            </ul>
-            <div class="card card-accent" style="text-align: center; padding: 2rem;">
-                <h3>🌟 Encouragement for the Journey</h3>
-                <p>Every time you delete a loop in favor of an array operation, your code gets faster <em>and</em> clearer. Keep training your eye to "think in arrays" — it's the mindset that separates slow scripts from professional data science.</p>
-            </div>
-        </section>
 
-        <div class="navigation-links">
-            <a class="nav-prev" href="numpy_arrays_vs_lists.html">← Previous: Arrays vs Lists</a>
-            <a class="nav-home" href="index.html">🏠 Course Home</a>
-            <a class="nav-next" href="numpy_broadcasting.html">Next: Broadcasting →</a>
+                <div class="card card-accent">
+                    <h3>🌱 Encouragement for the Journey</h3>
+                    <p>Thinking in whole arrays is a real shift, and it does not happen in one sitting. For a while you will write the loop in your head first and translate it. That is fine, and it is how everyone starts. Each time you do the translation it gets a little quicker, until one day the array expression arrives first. You answered genuine business questions today with a handful of one-line expressions. That is what the rest of this course is made of.</p>
+                </div>
+            </section>
+
+            <nav class="lesson-nav" aria-label="Lesson Navigation">
+                <a href="numpy_arrays_vs_lists.html" class="prev-lesson">← Previous: Arrays vs Lists</a>
+                <a href="index.html" class="home-link">🏠 Course Home</a>
+                <a href="numpy_broadcasting.html" class="next-lesson">Next: Broadcasting →</a>
+            </nav>
         </div>
-    </footer>
-    
-    <!-- Footer -->
+    </main>
+
     <footer class="site-footer">
         <p>&copy; 2026 Ray de la Paz. Python Data Science. All rights reserved.</p>
         <div class="footer-links">
@@ -1417,9 +1266,10 @@ print("🚀 You're now a vectorization expert!")</code></pre>    </main>
             <a href="https://rays-home.netlify.app/contact">Contact</a>
             <a href="#" id="print-button">Print Page</a>
         </div>
+        <p><small>Press <kbd>?</kbd> for keyboard shortcuts</small></p>
     </footer>
 
-    <!-- Copy to Clipboard functionality -->
-    <script src="scripts/clipboard.js"></script>
+    <script src="js/clipboard.js"></script>
+    <script src="js/course-enhancements.js"></script>
 </body>
 </html>
